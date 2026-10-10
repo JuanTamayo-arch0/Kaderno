@@ -1,0 +1,101 @@
+# Cada push a main compila la versión web de Kaderno y la publica en el droplet.
+# También se puede lanzar a mano desde GitHub → Actions → "Desplegar en el droplet".
+#
+# Secretos del repositorio (Settings → Secrets and variables → Actions):
+#   DROPLET_HOST          IP o dominio del droplet
+#   DROPLET_SSH_KEY       llave privada de despliegue (la que autorizó droplet-setup.sh)
+#   DROPLET_KNOWN_HOSTS   huella del servidor (salida de ssh-keyscan)
+#   DROPLET_PORT          opcional, si SSH no está en el 22
+#   EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_ANON_KEY
+#                         opcionales: el servidor usa su propio kaderno-config.js
+# Variable del repositorio:
+#   SITE_URL              https://testssecurelocal.website (para la comprobación final)
+
+name: Desplegar en el droplet
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'supabase/**'
+  workflow_dispatch:
+
+concurrency:
+  group: despliegue-produccion
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  desplegar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SITE_URL: ${{ vars.SITE_URL || 'https://testssecurelocal.website' }}
+      SSH_PORT: ${{ secrets.DROPLET_PORT || '22' }}
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci --no-audit --no-fund
+
+      - name: Compilar la versión web
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+          CI: '1'
+        run: npx expo export --platform web --output-dir dist
+
+      - name: Revisar el build
+        run: |
+          test -f dist/index.html || { echo "No se generó dist/index.html"; exit 1; }
+          grep -q '_expo/static/js' dist/index.html || { echo "index.html no carga el bundle"; exit 1; }
+          du -sh dist
+          tar -czf kaderno-web.tgz -C dist .
+
+      - name: Preparar la conexión SSH
+        env:
+          SSH_KEY: ${{ secrets.DROPLET_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DROPLET_KNOWN_HOSTS }}
+        run: |
+          test -n "$SSH_KEY" || { echo "Falta el secreto DROPLET_SSH_KEY"; exit 1; }
+          test -n "$KNOWN_HOSTS" || { echo "Falta el secreto DROPLET_KNOWN_HOSTS"; exit 1; }
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/kaderno_deploy
+          chmod 600 ~/.ssh/kaderno_deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Subir y activar
+        id: activar
+        env:
+          HOST: ${{ secrets.DROPLET_HOST }}
+        run: |
+          ssh -i ~/.ssh/kaderno_deploy -p "$SSH_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            "deploy@$HOST" "deploy ${GITHUB_SHA::7}" < kaderno-web.tgz
+
+      - name: Comprobar que el sitio carga
+        run: bash deploy/comprobar-sitio.sh "$SITE_URL"
+
+      - name: Volver a la versión anterior si la comprobación falló
+        if: failure() && steps.activar.outcome == 'success'
+        env:
+          HOST: ${{ secrets.DROPLET_HOST }}
+        run: |
+          ssh -i ~/.ssh/kaderno_deploy -p "$SSH_PORT" -o BatchMode=yes "deploy@$HOST" rollback
+          echo "::error::El sitio no respondió bien con la versión nueva y se volvió a la anterior."
+
+      - name: Resumen
+        if: success()
+        run: |
+          echo "### Kaderno publicado" >> "$GITHUB_STEP_SUMMARY"
+          echo "Versión \`${GITHUB_SHA::7}\` activa en $SITE_URL" >> "$GITHUB_STEP_SUMMARY"

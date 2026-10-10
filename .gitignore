@@ -1,0 +1,15 @@
+node_modules/
+.expo/
+dist/
+web-build/
+*.tgz
+*.log
+.DS_Store
+
+# Credenciales: nunca al repositorio
+.env
+.env.*
+!.env.example
+
+# Host del droplet para el script local
+deploy/.host

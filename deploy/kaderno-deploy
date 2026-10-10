@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+# =====================================================================
+# kaderno-deploy · se instala en el droplet como /usr/local/bin/kaderno-deploy
+#
+# Es el ÚNICO comando que puede correr la llave de despliegue (usuario
+# "deploy"): en authorized_keys va como command="..." con "restrict".
+# Así, aunque alguien robe la llave de GitHub, solo puede publicar o
+# devolver versiones de Kaderno, no entrar al servidor.
+#
+# Órdenes (llegan en SSH_ORIGINAL_COMMAND):
+#   deploy <etiqueta>   lee un .tgz del build web por stdin y lo activa
+#   rollback [versión]  vuelve a la versión anterior (o a la indicada)
+#   list                lista las versiones guardadas
+#   current             muestra la versión activa
+#
+# Estructura en el servidor:
+#   /var/www/kaderno-app/releases/<fecha>-<etiqueta>/   una carpeta por versión
+#   /var/www/kaderno-app/shared/kaderno-config.js       config real (no se toca)
+#   /var/www/kaderno-app/current -> releases/<...>      versión activa
+#   /var/www/kaderno -> /var/www/kaderno-app/current    lo que sirve el servidor web
+# =====================================================================
+set -euo pipefail
+umask 022
+
+BASE="${KADERNO_BASE:-/var/www/kaderno-app}"
+RELEASES="$BASE/releases"
+SHARED="$BASE/shared"
+CURRENT="$BASE/current"
+KEEP="${KADERNO_KEEP:-5}"
+MAX_MB="${KADERNO_MAX_MB:-150}"
+LOCK="$BASE/.lock"
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+log() { echo "· $*" >&2; }
+
+[ -d "$RELEASES" ] || die "no existe $RELEASES (¿corriste droplet-setup.sh?)"
+
+# Una sola operación a la vez.
+exec 9>"$LOCK"
+flock -w 60 9 || die "hay otro despliegue en curso"
+
+CMD="${SSH_ORIGINAL_COMMAND:-${*:-}}"
+read -r ACTION ARG EXTRA <<<"$CMD" || true
+[ -z "${EXTRA:-}" ] || die "demasiados argumentos"
+
+current_name() {
+  if [ -L "$CURRENT" ]; then basename "$(readlink "$CURRENT")"; fi
+}
+
+# Versiones de la más vieja a la más nueva (el nombre empieza por la fecha).
+releases_sorted() {
+  find "$RELEASES" -mindepth 1 -maxdepth 1 -type d ! -name '.*' -printf '%f\n' | LC_ALL=C sort
+}
+
+activate() {
+  local name="$1"
+  [ -f "$RELEASES/$name/index.html" ] || die "la versión $name no existe o está incompleta"
+  ln -sfn "releases/$name" "$CURRENT.new"
+  mv -Tf "$CURRENT.new" "$CURRENT"   # cambio atómico: nunca hay un instante sin página
+}
+
+prune() {
+  local cur; cur="$(current_name)"
+  local total; total="$(releases_sorted | wc -l)"
+  local extra=$(( total - KEEP ))
+  [ "$extra" -gt 0 ] || return 0
+  releases_sorted | head -n "$extra" | while read -r old; do
+    [ "$old" = "$cur" ] && continue
+    rm -rf -- "${RELEASES:?}/$old"
+    log "borrada versión vieja $old"
+  done
+}
+
+case "${ACTION:-}" in
+  deploy)
+    [[ "${ARG:-}" =~ ^[A-Za-z0-9._-]{1,40}$ ]] || die "etiqueta inválida (usa letras, números, . _ -)"
+    NAME="$(date -u +%Y%m%d-%H%M%S)-$ARG"
+    TMP="$RELEASES/.tmp-$NAME"
+    trap 'rm -rf -- "$TMP"' EXIT
+    mkdir -p "$TMP"
+
+    # Se limita el tamaño para que nadie llene el disco por este canal.
+    head -c "$(( MAX_MB * 1024 * 1024 + 1 ))" > "$TMP/.upload.tgz"
+    SIZE=$(stat -c %s "$TMP/.upload.tgz")
+    [ "$SIZE" -gt 0 ] || die "no llegó ningún archivo"
+    [ "$SIZE" -le $(( MAX_MB * 1024 * 1024 )) ] || die "el build pesa más de ${MAX_MB} MB"
+
+    tar -xzf "$TMP/.upload.tgz" -C "$TMP" --no-same-owner --no-same-permissions \
+      || die "el archivo recibido no es un .tgz válido"
+    rm -f "$TMP/.upload.tgz"
+    find "$TMP" -type l -delete                       # el build no necesita enlaces
+    [ -f "$TMP/index.html" ] || die "el build no trae index.html"
+
+    # La configuración real del servidor manda sobre la del build.
+    if [ -f "$SHARED/kaderno-config.js" ]; then
+      rm -f "$TMP/kaderno-config.js"
+      ln -s "$SHARED/kaderno-config.js" "$TMP/kaderno-config.js"
+    else
+      log "AVISO: no existe $SHARED/kaderno-config.js; se usa el del build"
+    fi
+
+    find "$TMP" -type d -exec chmod 755 {} +
+    find "$TMP" -type f -exec chmod 644 {} +
+
+    mv "$TMP" "$RELEASES/$NAME"
+    trap - EXIT
+    PREV="$(current_name)"
+    activate "$NAME"
+    echo "$(date -u +%FT%TZ) deploy $NAME (antes: ${PREV:-ninguna})" >> "$BASE/historial.log"
+    prune
+    echo "OK $NAME"
+    ;;
+
+  rollback)
+    CUR="$(current_name)"
+    if [ -n "${ARG:-}" ]; then
+      [[ "$ARG" =~ ^[A-Za-z0-9._-]{1,80}$ ]] || die "versión inválida"
+      TARGET="$ARG"
+    else
+      TARGET="$(releases_sorted | awk -v cur="$CUR" '$0 == cur { print prev; exit } { prev = $0 }')"
+      [ -n "$TARGET" ] || die "no hay una versión anterior a $CUR"
+    fi
+    [ "$TARGET" != "$CUR" ] || die "$TARGET ya es la versión activa"
+    activate "$TARGET"
+    echo "$(date -u +%FT%TZ) rollback $CUR -> $TARGET" >> "$BASE/historial.log"
+    echo "OK $TARGET"
+    ;;
+
+  list)
+    CUR="$(current_name)"
+    releases_sorted | while read -r r; do
+      if [ "$r" = "$CUR" ]; then echo "* $r   (activa)"; else echo "  $r"; fi
+    done
+    ;;
+
+  current)
+    current_name
+    ;;
+
+  *)
+    die "orden desconocida. Usa: deploy <etiqueta> | rollback [versión] | list | current"
+    ;;
+esac

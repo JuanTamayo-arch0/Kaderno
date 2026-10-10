@@ -1,0 +1,75 @@
+{
+  "tareas": [
+    {
+      "titulo": "Leer el enunciado y definir el alcance",
+      "descripcion": "Acordar entre todos qué se entrega y cómo se reparte",
+      "estado": "Hecho",
+      "responsable": "integrante1@ejemplo.edu.co",
+      "inicio": "2026-10-12T08:00",
+      "entrega": "2026-10-13T18:00",
+      "checklist": [
+        {
+          "texto": "Leer el enunciado",
+          "hecho": true
+        },
+        {
+          "texto": "Lista de entregables",
+          "hecho": true
+        },
+        {
+          "texto": "Repartir tareas",
+          "hecho": false
+        }
+      ]
+    },
+    {
+      "titulo": "Marco teórico",
+      "descripcion": "Mínimo 5 fuentes, 2 en inglés",
+      "estado": "En curso",
+      "responsable": "integrante2@ejemplo.edu.co",
+      "inicio": "2026-10-13T08:00",
+      "entrega": "2026-10-17T23:59",
+      "checklist": [
+        {
+          "texto": "Buscar fuentes",
+          "hecho": false
+        },
+        {
+          "texto": "Resumir",
+          "hecho": false
+        },
+        {
+          "texto": "Citar en APA",
+          "hecho": false
+        }
+      ]
+    },
+    {
+      "titulo": "Diseño y simulación",
+      "descripcion": "",
+      "estado": "Por hacer",
+      "responsable": "integrante1@ejemplo.edu.co",
+      "inicio": "2026-10-16T08:00",
+      "entrega": "2026-10-22T14:00",
+      "checklist": [
+        {
+          "texto": "Esquema",
+          "hecho": false
+        },
+        {
+          "texto": "Simulación",
+          "hecho": false
+        }
+      ]
+    },
+    {
+      "titulo": "Revisión final y entrega",
+      "descripcion": "Unir todo, revisar formato y subir",
+      "estado": "Por hacer",
+      "responsable": "",
+      "inicio": null,
+      "entrega": "2026-10-30T18:00",
+      "checklist": []
+    }
+  ]
+}

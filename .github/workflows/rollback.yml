@@ -1,0 +1,57 @@
+# Volver a una versión anterior desde GitHub → Actions → "Volver a una versión anterior".
+# Sin versión: vuelve a la inmediatamente anterior a la activa.
+
+name: Volver a una versión anterior
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versión exacta (déjalo vacío para la anterior). Se ven con "Listar versiones".'
+        required: false
+        default: ''
+      solo_listar:
+        description: 'Solo listar las versiones guardadas, sin cambiar nada'
+        type: boolean
+        default: false
+
+concurrency:
+  group: despliegue-produccion
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  volver:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SSH_PORT: ${{ secrets.DROPLET_PORT || '22' }}
+    steps:
+      - name: Preparar la conexión SSH
+        env:
+          SSH_KEY: ${{ secrets.DROPLET_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DROPLET_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/kaderno_deploy && chmod 600 ~/.ssh/kaderno_deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Ejecutar
+        env:
+          HOST: ${{ secrets.DROPLET_HOST }}
+          VERSION: ${{ inputs.version }}
+          SOLO_LISTAR: ${{ inputs.solo_listar }}
+        run: |
+          SSH="ssh -i $HOME/.ssh/kaderno_deploy -p $SSH_PORT -o BatchMode=yes deploy@$HOST"
+          if [ "$SOLO_LISTAR" = "true" ]; then
+            $SSH list
+            exit 0
+          fi
+          if [ -n "$VERSION" ] && ! [[ "$VERSION" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo "Versión inválida"; exit 1
+          fi
+          $SSH "rollback $VERSION"
+          echo "--- versiones ---"
+          $SSH list
