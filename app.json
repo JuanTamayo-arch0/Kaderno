@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "Kaderno",
+    "slug": "kaderno",
+    "scheme": "kaderno",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#0f1115",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tuusuario.kaderno",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Kaderno usa la cámara para digitalizar tus apuntes.",
+        "NSPhotoLibraryUsageDescription": "Kaderno accede a tus fotos para importar apuntes."
+      }
+    },
+    "android": {
+      "package": "com.tuusuario.kaderno",
+      "adaptiveIcon": { "backgroundColor": "#0f1115" }
+    },
+    "plugins": [
+      "expo-router",
+      ["expo-image-picker", { "cameraPermission": "Kaderno usa la cámara para digitalizar tus apuntes." }],
+      ["expo-notifications", {}]
+    ]
+  }
+}
