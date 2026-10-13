@@ -70,9 +70,14 @@ jobs:
           test -n "$SSH_KEY" || { echo "Falta el secreto DROPLET_SSH_KEY"; exit 1; }
           test -n "$KNOWN_HOSTS" || { echo "Falta el secreto DROPLET_KNOWN_HOSTS"; exit 1; }
           install -m 700 -d ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/kaderno_deploy
+          # tr quita los \r que quedan si la llave se pegó desde Windows.
+          printf '%s\n' "$SSH_KEY" | tr -d '\r' > ~/.ssh/kaderno_deploy
           chmod 600 ~/.ssh/kaderno_deploy
-          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          if ! ssh-keygen -y -f ~/.ssh/kaderno_deploy > /dev/null 2>&1; then
+            echo "::error::DROPLET_SSH_KEY no es una llave privada válida. Debe ser el archivo ~/.ssh/kaderno_deploy completo (sin .pub), desde -----BEGIN OPENSSH PRIVATE KEY----- hasta -----END OPENSSH PRIVATE KEY-----. En la Mac: pbcopy < ~/.ssh/kaderno_deploy"
+            exit 1
+          fi
+          printf '%s\n' "$KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
 
       - name: Subir y activar
