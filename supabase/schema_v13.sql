@@ -3,16 +3,18 @@
 -- Importar tareas, actualizar por archivo, editar en masa y deshacer,
 -- todo dentro de Proyectos.
 --
--- Requiere schema_v8 a schema_v12 aplicados (en ese orden).
+-- Requiere schema_v12.sql (Proyectos) aplicado.
 -- Es idempotente: se puede correr dos veces sin romper nada.
 --
--- Supuestos sobre las tablas de schema_v12 (se verifican contra el código real
--- antes de la entrega final; si algo cambia, solo hay que tocar las funciones
--- auxiliares _kaderno_insert_task y _kaderno_replace_steps):
---   project_tasks(id, project_id, title, description, status, assignee_id,
---                 due_date o due_at, position)
---   project_task_steps(id, task_id, title, done, position)
---   project_members(project_id, user_id, role in owner|editor|viewer)
+-- Qué agrega:
+--   · project_tasks.start_at y project_tasks.due_at (fecha CON hora).
+--     due_date (solo fecha) se mantiene y un trigger la sincroniza con
+--     due_at, así las pantallas que leen due_date siguen igual.
+--   · project_batches: cada cambio masivo queda guardado para deshacerlo.
+--   · Funciones import_project_tasks, apply_project_file,
+--     bulk_update_project_tasks y undo_project_batch. Todas validan con
+--     can_edit_project() de schema_v12, trabajan en una sola transacción
+--     y dejan un renglón en project_activity.
 -- =====================================================================
 
 
@@ -139,18 +141,20 @@ create policy "project_batches read members" on public.project_batches
 -- 4. Funciones auxiliares (no se pueden llamar desde la app)
 -- ---------------------------------------------------------------------
 
--- ¿Quien llama puede editar el proyecto? (owner o editor)
-create or replace function public._kaderno_can_edit(p uuid) returns boolean
-language sql stable security definer set search_path = public as $$
-  select exists (
-    select 1 from project_members
-     where project_id = p and user_id = auth.uid() and role in ('owner', 'editor')
-  );
-$$;
-
 create or replace function public._kaderno_is_member(p uuid, u uuid) returns boolean
 language sql stable set search_path = public as $$
   select u is not null and exists (select 1 from project_members where project_id = p and user_id = u);
+$$;
+
+-- Devuelve `s` si es la clave de una columna del tablero del proyecto; si no,
+-- la clave de la primera columna (igual que hace la app con estados huérfanos).
+create or replace function public._kaderno_valid_status(p uuid, s text) returns text
+language sql stable set search_path = public as $$
+  select coalesce(
+    (select c->>'key' from projects x cross join lateral jsonb_array_elements(x.board_columns) c
+      where x.id = p and c->>'key' = s limit 1),
+    (select x.board_columns->0->>'key' from projects x where x.id = p),
+    'todo');
 $$;
 
 -- Texto para comparar ítems de checklist sin tildes ni mayúsculas.
@@ -180,7 +184,9 @@ declare
   v_title text;
   v_done boolean;
   v_pos int := 0;
+  v_project uuid;
 begin
+  select project_id into v_project from project_tasks where id = p_task;
   select coalesce(jsonb_object_agg(_kaderno_norm(title), done), '{}'::jsonb)
     into v_prev
     from (select distinct on (_kaderno_norm(title)) title, done
@@ -197,9 +203,8 @@ begin
       v_done := coalesce((v_prev->>_kaderno_norm(v_title))::boolean, false);
     end if;
     v_pos := v_pos + 1;
-    -- AJUSTAR si project_task_steps tiene más columnas obligatorias.
-    insert into project_task_steps (task_id, title, done, position, batch_id)
-    values (p_task, v_title, v_done, v_pos, p_batch);
+    insert into project_task_steps (project_id, task_id, title, done, position, batch_id)
+    values (v_project, p_task, v_title, v_done, v_pos, p_batch);
   end loop;
   return v_pos;
 end $$;
@@ -214,22 +219,29 @@ begin
   if v_title is null or v_title = '' then
     raise exception 'KADERNO_NO_TITLE';
   end if;
-  -- AJUSTAR si project_tasks tiene más columnas obligatorias.
   insert into project_tasks (project_id, title, description, status, assignee_id,
-                             start_at, due_at, position, batch_id, updated_by)
+                             start_at, due_at, position, batch_id, created_by, updated_by)
   values (p_project,
           v_title,
           left(nullif(btrim(t->>'description'), ''), 5000),
-          coalesce(nullif(t->>'status', ''), 'todo'),
+          _kaderno_valid_status(p_project, nullif(t->>'status', '')),
           nullif(t->>'assignee_id', '')::uuid,
           nullif(t->>'start_at', '')::timestamptz,
           nullif(t->>'due_at', '')::timestamptz,
           p_position,
           p_batch,
+          auth.uid(),
           auth.uid())
   returning id into v_id;
   return v_id;
 end $$;
+
+-- Renglón en la bitácora del proyecto ("Movimientos recientes").
+create or replace function public._kaderno_log(p uuid, p_kind text, p_summary text, p_batch uuid) returns void
+language sql set search_path = public as $$
+  insert into project_activity (project_id, actor_id, kind, summary, meta)
+  values (p, auth.uid(), p_kind, p_summary, jsonb_build_object('batch_id', p_batch));
+$$;
 
 -- Ninguna tarea del lote puede quedar con inicio después de la entrega.
 create or replace function public._kaderno_check_dates(p_ids uuid[]) returns void
@@ -242,10 +254,12 @@ begin
 end $$;
 
 revoke all on function public._kaderno_is_member(uuid, uuid) from public, anon, authenticated;
+revoke all on function public._kaderno_valid_status(uuid, text) from public, anon, authenticated;
 revoke all on function public._kaderno_task_snapshot(uuid, boolean) from public, anon, authenticated;
 revoke all on function public._kaderno_replace_steps(uuid, jsonb, uuid) from public, anon, authenticated;
 revoke all on function public._kaderno_insert_task(uuid, jsonb, numeric, uuid) from public, anon, authenticated;
 revoke all on function public._kaderno_check_dates(uuid[]) from public, anon, authenticated;
+revoke all on function public._kaderno_log(uuid, text, text, uuid) from public, anon, authenticated;
 
 
 -- ---------------------------------------------------------------------
@@ -272,7 +286,7 @@ declare
   v_touched uuid[] := '{}';
   n_created int := 0; n_updated int := 0; n_skipped int := 0; n_steps int := 0; n_unassigned int := 0;
 begin
-  if not _kaderno_can_edit(p_project) then
+  if not can_edit_project(p_project) then
     raise exception 'KADERNO_FORBIDDEN' using errcode = '42501';
   end if;
   if jsonb_typeof(p_tasks) <> 'array' then
@@ -315,7 +329,7 @@ begin
         jsonb_build_object('op', 'update') || _kaderno_task_snapshot(v_dup, t->'checklist' is not null and jsonb_typeof(t->'checklist') = 'array'));
       update project_tasks set
         description = coalesce(left(nullif(btrim(t->>'description'), ''), 5000), description),
-        status      = coalesce(nullif(t->>'status', ''), status),
+        status      = case when nullif(t->>'status', '') is null then status else _kaderno_valid_status(p_project, t->>'status') end,
         assignee_id = coalesce(nullif(t->>'assignee_id', '')::uuid, assignee_id),
         start_at    = coalesce(nullif(t->>'start_at', '')::timestamptz, start_at),
         updated_at  = now(),
@@ -347,6 +361,12 @@ begin
                              'steps', n_steps, 'unassigned', n_unassigned),
           v_snapshot);
 
+  perform _kaderno_log(p_project, 'import',
+    case when n_updated > 0
+      then format('importó %s %s y actualizó %s', n_created, case when n_created = 1 then 'tarea' else 'tareas' end, n_updated)
+      else format('importó %s %s', n_created, case when n_created = 1 then 'tarea' else 'tareas' end) end,
+    v_batch);
+
   return jsonb_build_object('batch_id', v_batch, 'created', n_created, 'updated', n_updated,
                             'skipped', n_skipped, 'steps', n_steps, 'unassigned', n_unassigned);
 end $$;
@@ -373,7 +393,7 @@ declare
   v_assignee uuid;
   n int;
 begin
-  if not _kaderno_can_edit(p_project) then
+  if not can_edit_project(p_project) then
     raise exception 'KADERNO_FORBIDDEN' using errcode = '42501';
   end if;
 
@@ -393,6 +413,7 @@ begin
     delete from project_tasks where id = any(v_ids);
     insert into project_batches (id, project_id, user_id, kind, summary, snapshot)
     values (v_batch, p_project, auth.uid(), 'bulk_edit', jsonb_build_object('deleted', n), v_snapshot);
+    perform _kaderno_log(p_project, 'bulk', format('borró %s %s', n, case when n = 1 then 'tarea' else 'tareas' end), v_batch);
     return jsonb_build_object('batch_id', v_batch, 'updated', 0, 'deleted', n,
                               'ignored_ids', coalesce(array_length(p_ids, 1), 0) - n);
   end if;
@@ -413,7 +434,7 @@ begin
   end loop;
 
   update project_tasks set
-    status = case when p_patch ? 'status' then coalesce(nullif(p_patch->>'status', ''), status) else status end,
+    status = case when nullif(p_patch->>'status', '') is not null then _kaderno_valid_status(p_project, p_patch->>'status') else status end,
     assignee_id = case when p_patch ? 'assignee_id' then v_assignee else assignee_id end,
     start_at = case
       when p_patch ? 'start_at' then nullif(p_patch->>'start_at', '')::timestamptz
@@ -432,6 +453,14 @@ begin
   insert into project_batches (id, project_id, user_id, kind, summary, snapshot)
   values (v_batch, p_project, auth.uid(), 'bulk_edit',
           jsonb_build_object('updated', n, 'patch', p_patch - 'delete'), v_snapshot);
+
+  perform _kaderno_log(p_project, 'bulk',
+    case when v_shift is not null
+      then format('corrió las fechas de %s %s %s %s', n, case when n = 1 then 'tarea' else 'tareas' end,
+                  abs(round((p_patch->>'shift_minutes')::numeric / 1440, 1)),
+                  case when (p_patch->>'shift_minutes')::int >= 0 then 'días hacia adelante' else 'días hacia atrás' end)
+      else format('cambió %s %s en masa', n, case when n = 1 then 'tarea' else 'tareas' end) end,
+    v_batch);
 
   return jsonb_build_object('batch_id', v_batch, 'updated', n, 'deleted', 0,
                             'ignored_ids', coalesce(array_length(p_ids, 1), 0) - n);
@@ -462,7 +491,7 @@ declare
   n_created int := 0; n_updated int := 0; n_deleted int := 0; n_steps int := 0;
   n_ignored int := 0; n_unassigned int := 0;
 begin
-  if not _kaderno_can_edit(p_project) then
+  if not can_edit_project(p_project) then
     raise exception 'KADERNO_FORBIDDEN' using errcode = '42501';
   end if;
   if jsonb_typeof(p_rows) <> 'array' then
@@ -529,7 +558,7 @@ begin
       title       = case when f ? 'title' and nullif(btrim(r->>'title'), '') is not null
                          then left(btrim(r->>'title'), 200) else title end,
       description = case when f ? 'description' then left(nullif(btrim(r->>'description'), ''), 5000) else description end,
-      status      = case when f ? 'status' then coalesce(nullif(r->>'status', ''), status) else status end,
+      status      = case when f ? 'status' and nullif(r->>'status', '') is not null then _kaderno_valid_status(p_project, r->>'status') else status end,
       assignee_id = case when v_keep_assignee then assignee_id else v_assignee end,
       start_at    = case when f ? 'start_at' then nullif(r->>'start_at', '')::timestamptz else start_at end,
       due_at      = case when f ? 'due_at' then nullif(r->>'due_at', '')::timestamptz else due_at end,
@@ -551,6 +580,10 @@ begin
           jsonb_build_object('created', n_created, 'updated', n_updated, 'deleted', n_deleted,
                              'steps', n_steps, 'ignored_ids', n_ignored, 'unassigned', n_unassigned),
           v_snapshot);
+
+  perform _kaderno_log(p_project, 'file_update',
+    format('actualizó el proyecto desde un archivo (%s cambiadas, %s nuevas, %s borradas)', n_updated, n_created, n_deleted),
+    v_batch);
 
   return jsonb_build_object('batch_id', v_batch, 'created', n_created, 'updated', n_updated,
                             'deleted', n_deleted, 'steps', n_steps, 'ignored_ids', n_ignored,
@@ -577,7 +610,7 @@ begin
   if not found then
     raise exception 'KADERNO_NOT_FOUND';
   end if;
-  if not _kaderno_can_edit(b.project_id) then
+  if not can_edit_project(b.project_id) then
     raise exception 'KADERNO_FORBIDDEN' using errcode = '42501';
   end if;
   if b.undone_at is not null then
@@ -629,6 +662,7 @@ begin
   end loop;
 
   update project_batches set undone_at = now() where id = b.id;
+  perform _kaderno_log(b.project_id, 'undo', 'deshizo el último cambio masivo', b.id);
 
   return jsonb_build_object('batch_id', b.id, 'removed', n_removed, 'restored', n_restored, 'recreated', n_recreated);
 end $$;

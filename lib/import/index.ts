@@ -10,3 +10,4 @@ export * from './shift';
 export * from './prompt';
 export * from './export';
 export * from './payload';
+export * from './templates';

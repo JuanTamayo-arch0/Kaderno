@@ -85,7 +85,7 @@ export function previewShift(
 
 /** Tareas pendientes (no hechas) que se moverían al correr la entrega final del proyecto. */
 export function pendingForProjectShift(tasks: ExistingTask[]): ExistingTask[] {
-  return tasks.filter((t) => t.status !== 'done' && (t.start_at || t.due_at));
+  return tasks.filter((t) => !t.done && (t.start_at || t.due_at));
 }
 
 /** Diferencia en días (con decimales) entre la entrega final vieja y la nueva. */

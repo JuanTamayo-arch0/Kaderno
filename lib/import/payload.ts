@@ -1,6 +1,5 @@
 // Convierte las tareas normalizadas en lo que reciben las funciones RPC de schema_v13.sql.
 
-import { STATUS_DB } from './values';
 import type { Field, NormalizedTask, ProjectStatus, ShiftTarget } from './types';
 import type { TaskUpdate } from './diff';
 
@@ -39,12 +38,15 @@ function steps(t: NormalizedTask, forCreate: boolean): RpcStep[] | null {
   return t.checklist.map((c) => ({ title: c.text, done: forCreate ? c.done === true : c.done }));
 }
 
-/** Una tarea nueva: todos sus campos. */
-export function toCreatePayload(t: NormalizedTask): RpcTask {
+/**
+ * Una tarea nueva: todos sus campos. Sin estado va a `defaultStatus`
+ * (la primera columna del tablero).
+ */
+export function toCreatePayload(t: NormalizedTask, defaultStatus: ProjectStatus): RpcTask {
   return {
     title: t.title ?? '',
     description: t.description,
-    status: STATUS_DB[(t.status ?? 'todo') as ProjectStatus],
+    status: t.status ?? defaultStatus,
     assignee_id: t.assignee_id,
     start_at: t.start_at,
     due_at: t.due_at,
@@ -53,8 +55,8 @@ export function toCreatePayload(t: NormalizedTask): RpcTask {
 }
 
 /** Lo que recibe import_project_tasks. */
-export function toImportPayload(tasks: NormalizedTask[]): RpcTask[] {
-  return tasks.filter((t) => !t.skip && !t.id).map(toCreatePayload);
+export function toImportPayload(tasks: NormalizedTask[], defaultStatus: ProjectStatus): RpcTask[] {
+  return tasks.filter((t) => !t.skip && !t.id).map((t) => toCreatePayload(t, defaultStatus));
 }
 
 /** Una fila con id: solo los campos que venían en el archivo. */
@@ -64,7 +66,7 @@ export function toUpdatePayload(u: TaskUpdate): RpcTask {
   const out: RpcTask = { id: t.id!, fields };
   if (fields.includes('title')) out.title = t.title!;
   if (fields.includes('description')) out.description = t.description;
-  if (fields.includes('status')) out.status = STATUS_DB[t.status!];
+  if (fields.includes('status')) out.status = t.status!;
   if (fields.includes('assignee_id')) out.assignee_id = t.assignee_id;
   if (fields.includes('start_at')) out.start_at = t.start_at;
   if (fields.includes('due_at')) out.due_at = t.due_at;
@@ -77,10 +79,10 @@ export function toFilePayload(diff: {
   creates: NormalizedTask[];
   updates: TaskUpdate[];
   deletes: { task: NormalizedTask }[];
-}): RpcTask[] {
+}, defaultStatus: ProjectStatus): RpcTask[] {
   return [
     ...diff.updates.map(toUpdatePayload),
-    ...diff.creates.map(toCreatePayload),
+    ...diff.creates.map((t) => toCreatePayload(t, defaultStatus)),
     ...diff.deletes.map((d) => ({ id: d.task.id!, delete: true })),
   ];
 }
@@ -98,7 +100,7 @@ export interface BulkPatch {
 
 export function toBulkPatch(p: BulkPatch): Record<string, unknown> {
   const out: Record<string, unknown> = {};
-  if (p.status !== undefined) out.status = STATUS_DB[p.status];
+  if (p.status !== undefined) out.status = p.status;
   if (p.assignee_id !== undefined) out.assignee_id = p.assignee_id;
   if (p.start_at !== undefined) out.start_at = p.start_at;
   if (p.due_at !== undefined) out.due_at = p.due_at;

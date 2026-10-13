@@ -1,7 +1,7 @@
 import { formatHuman, sameInstant } from './dates';
 import { FIELD_LABELS } from './fields';
-import { STATUS_LABEL, mergeChecklist } from './values';
-import type { ExistingTask, Field, Member, NormalizedTask, RowIssue } from './types';
+import { columnLabel, mergeChecklist } from './values';
+import type { ExistingTask, Field, Member, NormalizedTask, ProjectContext, RowIssue } from './types';
 
 export interface FieldChange {
   field: Field;
@@ -55,7 +55,8 @@ function short(s: string | null, n = 60): string {
  * venía con valor en el archivo y es distinto del actual. Nada se borra porque falte:
  * borrar exige la columna eliminar.
  */
-export function computeFileDiff(tasks: NormalizedTask[], existing: ExistingTask[], members: Member[]): FileDiff {
+export function computeFileDiff(tasks: NormalizedTask[], existing: ExistingTask[], ctx: ProjectContext): FileDiff {
+  const { members, columns } = ctx;
   const byId = new Map(existing.map((e) => [e.id.toLowerCase(), e]));
   const diff: FileDiff = { creates: [], updates: [], deletes: [], unchanged: 0, unknownIds: [], issues: [] };
 
@@ -82,7 +83,7 @@ export function computeFileDiff(tasks: NormalizedTask[], existing: ExistingTask[
 
     if (has('title') && t.title !== e.title) push('title', short(e.title), short(t.title));
     if (has('description') && t.description !== (e.description ?? null)) push('description', short(e.description), short(t.description));
-    if (has('status') && t.status !== e.status) push('status', STATUS_LABEL[e.status], STATUS_LABEL[t.status!]);
+    if (has('status') && t.status !== e.status) push('status', columnLabel(columns, e.status), columnLabel(columns, t.status));
     if (has('assignee') && t.assignee_id !== e.assignee_id) push('assignee', memberName(members, e.assignee_id), memberName(members, t.assignee_id));
     if (has('start') && !sameInstant(t.start_at, e.start_at)) push('start', formatHuman(e.start_at), formatHuman(t.start_at));
     if (has('due') && !sameInstant(t.due_at, e.due_at)) push('due', formatHuman(e.due_at), formatHuman(t.due_at));
