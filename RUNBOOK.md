@@ -522,3 +522,47 @@ mirar ahí: que Proyectos tenga su flecha de volver arriba a la izquierda, que e
 tablero se deslice de lado y se asome la siguiente columna, y que cada tarjeta
 tenga el botón ⇄ para moverla (con el dedo no se puede arrastrar; eso es del
 navegador, no de la app).
+
+---
+
+## Entrega v11: importar, exportar y editar en masa (Proyectos)
+
+### Antes de usarla: una migración
+
+Corre `supabase/schema_v13.sql` en Supabase → SQL Editor. Necesita que el v12 ya esté corrido y, como los anteriores, se puede correr dos veces sin problema.
+
+Si todavía no la corres, la app sigue funcionando igual; solo los botones nuevos avisan «Falta correr supabase/schema_v13.sql».
+
+### Dónde está
+
+Dentro de cada proyecto, arriba a la derecha: **Seleccionar**, **Importar** y **Exportar**. En el celular están en el botón **···**.
+
+### Importar tareas
+
+- Desde un **CSV** (Excel o Google Sheets, separado por `,` o `;`) o un **JSON**. También se puede **pegar el texto** directamente, por ejemplo la respuesta de una IA.
+- Cada tarea puede traer título, descripción, columna, responsable (correo o nombre), inicio y entrega **con hora**, y checklist (ítems separados por `|`; `[x]` adelante marca un ítem como hecho).
+- Antes de guardar se ve una **vista previa** fila por fila: errores en rojo (esas filas no se importan), avisos en amarillo, y un lápiz para corregir cada fila ahí mismo.
+- Si una tarea ya existe (mismo título y misma entrega) se puede omitir, actualizar o crear igual.
+- **Planéalo con IA**: copia un prompt que ya trae los integrantes, la materia, las columnas del tablero y la entrega final. Se pega en la IA con el enunciado y lo que devuelve se pega en el importador.
+- Plantillas para descargar en CSV y JSON dentro de la misma ventana (también están en la carpeta `plantillas/`).
+
+### Editar en masa
+
+**Seleccionar** (o mantener presionada una tarjeta) y luego, en la barra de abajo: mover de columna, cambiar responsable, poner una entrega, **correr fechas** N días (inicio y entrega, o solo entrega; la hora se conserva) o borrar.
+
+### Actualizar por archivo
+
+**Exportar** baja el proyecto en CSV (se abre directo en Excel en español) o JSON, con una columna `id`. Se edita y se vuelve a subir con **Importar**: las tareas con `id` se actualizan, las filas sin `id` se crean. Nada se borra por faltar en el archivo; para borrar una tarea hay que escribir `sí` en la columna `eliminar`.
+
+### Deshacer
+
+Después de cada importación o cambio masivo aparece un aviso con **Deshacer** durante 20 segundos. Solo se puede deshacer el último cambio masivo del proyecto, y hasta 7 días después. Todo queda en «Movimientos recientes» (pestaña Equipo).
+
+### Hora de entrega
+
+Las tareas de proyecto ahora guardan la hora (`due_at`). En el computador, la ventana de cada tarea tiene un campo de hora junto a la fecha, y las tarjetas muestran la hora cuando no es la de por defecto (11:59 p. m.). La columna `due_date` sigue existiendo y se mantiene sincronizada, así que «Hoy» y lo demás no cambian.
+
+### Pruebas
+
+- `npm test`: lectura de archivos, fechas, columnas, checklist, exportar y volver a subir, correr fechas y el prompt.
+- `bash tests/run_sql.sh`: corre `schema_v13.sql` sobre el `schema_v12.sql` real en un Postgres local, con cuatro usuarios (dueña, editor, viewer y alguien externo), y prueba permisos, deshacer y bitácora.

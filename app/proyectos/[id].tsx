@@ -10,6 +10,9 @@ import { confirm, notify } from '../../lib/confirm';
 import { ProgressBar } from '../../components/ProgressBar';
 import { SideNav } from '../../components/SideNav';
 import { useAuth } from '../../lib/auth';
+import { ImportSheet } from '../../components/projects/ImportSheet';
+import { BulkAction, BulkBar, BulkDialog, ExportSheet, confirmBulkDelete } from '../../components/projects/BulkTools';
+import { undoProjectBatch } from '../../lib/projectsBulk';
 import { Subject, getSubjects } from '../../lib/db';
 import {
   Activity, BoardColumn, Load, Member, PStep, PTask, Profile, Project, ProjectRole,
@@ -79,6 +82,16 @@ function ProyectoDetalle() {
   const [colsModal, setColsModal] = useState(false);
   const [moving, setMoving] = useState<PTask | null>(null);  // tarjeta en el menú "mover a"
 
+  // Importar / exportar / edición en masa
+  const [importOpen, setImportOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkAction, setBulkAction] = useState<BulkAction | null>(null);
+  const [undo, setUndo] = useState<{ batchId: string; text: string } | null>(null);
+  const [moreOpen, setMoreOpen] = useState(false);   // menú de acciones en el celular
+  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const load = useCallback(async () => {
     if (!projectId) return;
     try {
@@ -124,6 +137,36 @@ function ProyectoDetalle() {
   }, [tasks, cols]);
 
   const doneCount = tasks.filter((t) => t.done).length;
+
+  function toggleSelect(id: string) {
+    setSelected((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+  function endSelecting() { setSelecting(false); setSelected(new Set()); }
+
+  // Aviso con "Deshacer" tras cualquier cambio masivo. Se va solo a los 20 s.
+  function showUndo(batchId: string, text: string) {
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    setUndo({ batchId, text });
+    undoTimer.current = setTimeout(() => setUndo(null), 20000);
+  }
+  async function doUndo() {
+    if (!undo) return;
+    const u = undo;
+    setUndo(null);
+    try { await undoProjectBatch(u.batchId); await load(); }
+    catch (e: any) { notify('No se pudo deshacer', e.message); }
+  }
+  async function onBulkAction(a: BulkAction) {
+    const sel = tasks.filter((t) => selected.has(t.id));
+    if (a !== 'borrar') return setBulkAction(a);
+    try {
+      const res = await confirmBulkDelete(projectId, sel);
+      if (!res) return;
+      endSelecting();
+      await load();
+      if (res.r.batch_id) showUndo(res.r.batch_id, res.text);
+    } catch (e: any) { notify('No se pudo borrar', e.message); }
+  }
 
   function goBack() {
     if (router.canGoBack()) router.back();
@@ -191,13 +234,24 @@ function ProyectoDetalle() {
               {role === 'viewer' ? ' · solo lectura' : ''}
             </Text>
           </View>
-          {editable && view === 'tablero' && (
-            <Pressable onPress={() => setColsModal(true)} hitSlop={8}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: C.line, backgroundColor: C.surface2, borderRadius: R.pill, paddingVertical: 7, paddingHorizontal: 12 }}>
-              <Ionicons name="options-outline" size={15} color={C.muted} />
-              {isWide && <Text style={{ color: C.text, fontSize: 12.5, fontWeight: '600' }}>Columnas</Text>}
-            </Pressable>
-          )}
+          {isWide ? (
+            <>
+              {editable && view !== 'equipo' && !selecting && (
+                <HeaderBtn icon="checkbox-outline" label="Seleccionar" wide onPress={() => setSelecting(true)} />
+              )}
+              {editable && project && (
+                <HeaderBtn icon="cloud-upload-outline" label="Importar" wide onPress={() => setImportOpen(true)} />
+              )}
+              {project && (
+                <HeaderBtn icon="download-outline" label="Exportar" wide onPress={() => setExportOpen(true)} />
+              )}
+              {editable && view === 'tablero' && (
+                <HeaderBtn icon="options-outline" label="Columnas" wide onPress={() => setColsModal(true)} />
+              )}
+            </>
+          ) : project ? (
+            <HeaderBtn icon="ellipsis-horizontal" label="Más opciones" wide={false} onPress={() => setMoreOpen(true)} />
+          ) : null}
         </View>
 
         {/* pestañas */}
@@ -222,6 +276,7 @@ function ProyectoDetalle() {
         <Tablero
           cols={cols} grouped={grouped} steps={steps} members={members} subject={subject}
           editable={editable} isWide={isWide} myId={myId}
+          selecting={selecting} selected={selected} onToggleSelect={toggleSelect}
           onOpen={setEditingTask}
           onAdd={(k) => setNewIn(k)}
           onMove={(t) => setMoving(t)}
@@ -231,6 +286,7 @@ function ProyectoDetalle() {
         <Lista
           tasks={tasks} cols={cols} steps={steps} members={members}
           editable={editable} isWide={isWide}
+          selecting={selecting} selected={selected} onToggleSelect={toggleSelect}
           onOpen={setEditingTask}
           onAdd={() => setNewIn(cols[0]?.key ?? 'todo')}
           onToggle={async (t) => {
@@ -291,7 +347,114 @@ function ProyectoDetalle() {
         onClose={() => setMoving(null)}
         onPick={(k) => { const t = moving; setMoving(null); if (t) drop(t.id, k, null); }}
       />
+
+      <MoreMenu
+        visible={moreOpen}
+        onClose={() => setMoreOpen(false)}
+        items={[
+          ...(editable && view !== 'equipo' && !selecting ? [{ icon: 'checkbox-outline', label: 'Seleccionar varias', hint: 'Cambiar columna, responsable o fechas a la vez', onPress: () => setSelecting(true) }] : []),
+          ...(editable ? [{ icon: 'cloud-upload-outline', label: 'Importar tareas', hint: 'Desde un CSV, un JSON o una IA', onPress: () => setImportOpen(true) }] : []),
+          { icon: 'download-outline', label: 'Exportar tareas', hint: 'Para editarlas en Excel y volver a subirlas', onPress: () => setExportOpen(true) },
+          ...(editable && view === 'tablero' ? [{ icon: 'options-outline', label: 'Columnas del tablero', onPress: () => setColsModal(true) }] : []),
+        ]}
+      />
+
+      {project && (
+        <ImportSheet
+          visible={importOpen}
+          project={project}
+          members={members}
+          subjectName={subject?.name ?? null}
+          onClose={() => setImportOpen(false)}
+          onDone={async ({ batchId, text }) => {
+            setImportOpen(false);
+            await load();
+            if (batchId) showUndo(batchId, text);
+          }}
+        />
+      )}
+      {project && (
+        <ExportSheet visible={exportOpen} project={project} members={members} onClose={() => setExportOpen(false)} />
+      )}
+
+      <BulkDialog
+        action={bulkAction}
+        projectId={projectId}
+        tasks={tasks.filter((t) => selected.has(t.id))}
+        cols={cols}
+        members={members}
+        onClose={() => setBulkAction(null)}
+        onDone={async (r, text) => {
+          setBulkAction(null);
+          endSelecting();
+          await load();
+          if (r.batch_id) showUndo(r.batch_id, text);
+        }}
+      />
+
+      {selecting && view !== 'equipo' && (
+        <BulkBar
+          count={selected.size}
+          total={tasks.length}
+          isWide={isWide}
+          onSelectAll={() => setSelected(new Set(tasks.map((t) => t.id)))}
+          onClear={endSelecting}
+          onAction={onBulkAction}
+        />
+      )}
+
+      {undo && !selecting && (
+        <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: isWide ? 22 : 16, alignItems: 'center', paddingHorizontal: 12, paddingLeft: isWide ? SIDEBAR_W + 12 : 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.text, borderRadius: 14, paddingVertical: 11, paddingHorizontal: 14, maxWidth: 560, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 8 }}>
+            <Ionicons name="checkmark-circle" size={18} color={C.good} />
+            <Text style={{ color: C.bg, fontSize: 13, fontWeight: '600', flexShrink: 1 }}>{undo.text}</Text>
+            <Pressable onPress={doUndo} hitSlop={8}>
+              <Text style={{ color: C.brand, fontSize: 13, fontWeight: '800' }}>Deshacer</Text>
+            </Pressable>
+            <Pressable onPress={() => setUndo(null)} hitSlop={8} accessibilityLabel="Cerrar aviso">
+              <Ionicons name="close" size={16} color={C.bg} />
+            </Pressable>
+          </View>
+        </View>
+      )}
     </View>
+  );
+}
+
+function MoreMenu({ visible, items, onClose }: {
+  visible: boolean; onClose: () => void;
+  items: { icon: string; label: string; hint?: string; onPress: () => void }[];
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
+        <Pressable onPress={() => {}} style={{ backgroundColor: C.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 14, paddingBottom: 30, borderTopWidth: 1, borderColor: C.line }}>
+          {items.map((it) => (
+            <Pressable key={it.label} onPress={() => { onClose(); it.onPress(); }}
+              style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 13, paddingHorizontal: 10, borderRadius: 12, backgroundColor: pressed ? C.surface2 : 'transparent' })}>
+              <Ionicons name={it.icon as any} size={20} color={C.brand} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '600' }}>{it.label}</Text>
+                {it.hint ? <Text style={{ color: C.muted, fontSize: 12, marginTop: 1 }}>{it.hint}</Text> : null}
+              </View>
+            </Pressable>
+          ))}
+          <Pressable onPress={onClose} style={{ alignItems: 'center', marginTop: 8 }}>
+            <Text style={{ color: C.muted }}>Cancelar</Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+function HeaderBtn({ icon, label, wide, onPress }: { icon: string; label: string; wide: boolean; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} hitSlop={6} accessibilityLabel={label}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: C.line, backgroundColor: C.surface2, borderRadius: R.pill, paddingVertical: 7, paddingHorizontal: wide ? 12 : 9 }}>
+      <Ionicons name={icon as any} size={15} color={C.muted} />
+      {wide && <Text style={{ color: C.text, fontSize: 12.5, fontWeight: '600' }}>{label}</Text>}
+    </Pressable>
   );
 }
 
@@ -334,7 +497,10 @@ function DropZone({ enabled, onOver, onLeave, onDrop, grow, children }: {
 //  Vista TABLERO
 // ============================================================
 
-function Tablero({ cols, grouped, steps, members, subject, editable, isWide, myId, onOpen, onAdd, onMove, onDrop }: {
+function Tablero({ cols, grouped, steps, members, subject, editable, isWide, myId, selecting, selected, onToggleSelect, onOpen, onAdd, onMove, onDrop }: {
+  selecting: boolean;
+  selected: Set<string>;
+  onToggleSelect: (id: string) => void;
   cols: BoardColumn[];
   grouped: Record<string, PTask[]>;
   steps: Record<string, PStep[]>;
@@ -403,15 +569,17 @@ function Tablero({ cols, grouped, steps, members, subject, editable, isWide, myI
                       >
                         <Draggable
                           id={t.id}
-                          enabled={editable}
+                          enabled={editable && !selecting}
                           onStart={() => { dragRef.current = t.id; setDragId(t.id); }}
                           onEnd={() => { dragRef.current = null; setDragId(null); setOver(null); }}
                         >
                           <TaskCard
                             task={t} steps={steps[t.id] ?? []} members={members} subject={subject}
                             color={col.color} dim={dragId === t.id} mine={!!myId && t.assignee_id === myId}
-                            showMove={editable && (!isWeb || !isWide || COARSE_POINTER)}
-                            onPress={() => onOpen(t)} onMove={() => onMove(t)}
+                            showMove={editable && !selecting && (!isWeb || !isWide || COARSE_POINTER)}
+                            selecting={selecting} selected={selected.has(t.id)}
+                            onPress={() => (selecting ? onToggleSelect(t.id) : onOpen(t))} onMove={() => onMove(t)}
+                            onLongPress={editable ? () => onToggleSelect(t.id) : undefined}
                           />
                         </Draggable>
                       </DropZone>
@@ -445,21 +613,23 @@ function Tablero({ cols, grouped, steps, members, subject, editable, isWide, myI
 
 // ---------- Tarjeta del tablero ----------
 
-function TaskCard({ task, steps, members, subject, color, dim, mine, showMove, onPress, onMove }: {
+function TaskCard({ task, steps, members, subject, color, dim, mine, showMove, selecting, selected, onPress, onMove, onLongPress }: {
   task: PTask; steps: PStep[]; members: Member[]; subject: Subject | null;
   color: string; dim: boolean; mine: boolean; showMove: boolean;
-  onPress: () => void; onMove: () => void;
+  selecting: boolean; selected: boolean;
+  onPress: () => void; onMove: () => void; onLongPress?: () => void;
 }) {
   const who = members.find((m) => m.user_id === task.assignee_id) ?? null;
   const doneSteps = steps.filter((s) => s.done).length;
-  const due = dueInfo(task.due_date, task.done);
+  const due = dueInfo(task, task.done);
 
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => ({
-      backgroundColor: C.surface, borderRadius: 12, borderWidth: 1, borderColor: mine ? C.brand + '77' : C.line,
+    <Pressable onPress={onPress} onLongPress={onLongPress} delayLongPress={350} style={({ pressed }) => ({
+      backgroundColor: selected ? C.brand + '1a' : C.surface, borderRadius: 12, borderWidth: 1, borderColor: selected ? C.brand : mine ? C.brand + '77' : C.line,
       padding: 11, marginBottom: 8, opacity: dim ? 0.4 : pressed ? 0.8 : 1, borderLeftWidth: 3, borderLeftColor: color, ...shadow,
     })}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+        {selecting && <SelectBox on={selected} />}
         <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '600', flex: 1, lineHeight: 19, textDecorationLine: task.done ? 'line-through' : 'none' }}>
           {task.title}
         </Text>
@@ -506,17 +676,30 @@ function TaskCard({ task, steps, members, subject, color, dim, mine, showMove, o
 }
 
 // Fecha en corto + color según lo apretado que esté. Devuelve null si no hay fecha.
-function dueInfo(due: string | null, done: boolean): { label: string; color: string } | null {
-  if (!due) return null;
-  const d = new Date(due + 'T00:00:00');
-  if (isNaN(d.getTime())) return null;
+// Si la tarea tiene hora (due_at distinta de las 11:59 p. m.), se muestra también.
+function dueInfo(t: Pick<PTask, 'due_date' | 'due_at'>, done: boolean): { label: string; color: string } | null {
+  const at = t.due_at ? new Date(t.due_at) : null;
+  const d = at && !isNaN(at.getTime()) ? new Date(at) : t.due_date ? new Date(t.due_date + 'T00:00:00') : null;
+  if (!d || isNaN(d.getTime())) return null;
+  const hasTime = !!at && !(at.getHours() === 23 && at.getMinutes() === 59);
+  d.setHours(0, 0, 0, 0);
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const days = Math.round((d.getTime() - today.getTime()) / 86400000);
-  const label = days === 0 ? 'Hoy' : days === 1 ? 'Mañana' : days === -1 ? 'Ayer'
+  let label = days === 0 ? 'Hoy' : days === 1 ? 'Mañana' : days === -1 ? 'Ayer'
     : days < 0 ? `Hace ${-days}d`
     : d.toLocaleDateString('es', { day: 'numeric', month: 'short' });
-  const color = done ? C.muted : days < 0 ? C.bad : days <= 2 ? C.warn : C.muted;
+  if (hasTime && at) label += ` ${at.toLocaleTimeString('es', { hour: 'numeric', minute: '2-digit' })}`;
+  const late = at ? at.getTime() < Date.now() : days < 0;
+  const color = done ? C.muted : late ? C.bad : days <= 2 ? C.warn : C.muted;
   return { label, color };
+}
+
+function SelectBox({ on }: { on: boolean }) {
+  return (
+    <View style={{ width: 20, height: 20, borderRadius: 6, borderWidth: 2, borderColor: on ? C.brand : C.muted, backgroundColor: on ? C.brand : 'transparent', alignItems: 'center', justifyContent: 'center', marginTop: 0.5 }}>
+      {on && <Ionicons name="checkmark" size={13} color="#0f1115" />}
+    </View>
+  );
 }
 
 // ---------- Menú "mover a" (móvil) ----------
@@ -554,9 +737,10 @@ function MoveMenu({ task, cols, onClose, onPick }: {
 //  Vista LISTA
 // ============================================================
 
-function Lista({ tasks, cols, steps, members, editable, isWide, onOpen, onAdd, onToggle }: {
+function Lista({ tasks, cols, steps, members, editable, isWide, selecting, selected, onToggleSelect, onOpen, onAdd, onToggle }: {
   tasks: PTask[]; cols: BoardColumn[]; steps: Record<string, PStep[]>; members: Member[];
   editable: boolean; isWide: boolean;
+  selecting: boolean; selected: Set<string>; onToggleSelect: (id: string) => void;
   onOpen: (t: PTask) => void; onAdd: () => void; onToggle: (t: PTask) => void;
 }) {
   const [orden, setOrden] = useState<'fecha' | 'responsable' | 'columna'>('fecha');
@@ -588,7 +772,7 @@ function Lista({ tasks, cols, steps, members, editable, isWide, onOpen, onAdd, o
   }, [tasks, orden, soloMias, myId, members, cols]);
 
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: isWide ? 24 : 14, paddingBottom: 60, maxWidth: 900, width: '100%' }}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: isWide ? 24 : 14, paddingBottom: 120, maxWidth: 900, width: '100%' }}>
       <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
         {(['fecha', 'responsable', 'columna'] as const).map((o) => (
           <Pressable key={o} onPress={() => setOrden(o)}
@@ -614,16 +798,25 @@ function Lista({ tasks, cols, steps, members, editable, isWide, onOpen, onAdd, o
         const col = cols.find((c) => c.key === t.status) ?? cols[0];
         const who = members.find((m) => m.user_id === t.assignee_id) ?? null;
         const st = steps[t.id] ?? [];
-        const due = dueInfo(t.due_date, t.done);
+        const due = dueInfo(t, t.done);
+        const sel = selected.has(t.id);
         return (
-          <Pressable key={t.id} onPress={() => onOpen(t)} style={({ pressed }) => ({
-            flexDirection: 'row', alignItems: 'center', gap: 11, backgroundColor: C.surface,
-            borderWidth: 1, borderColor: C.line, borderRadius: 12, padding: 12, marginBottom: 8, opacity: pressed ? 0.8 : 1,
-          })}>
-            <Pressable onPress={() => editable && onToggle(t)} hitSlop={8} disabled={!editable}
-              style={{ width: 22, height: 22, borderRadius: 7, borderWidth: 2, borderColor: t.done ? C.good : C.line, backgroundColor: t.done ? C.good : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
-              {t.done && <Ionicons name="checkmark" size={13} color="#0f1115" />}
-            </Pressable>
+          <Pressable key={t.id} onPress={() => (selecting ? onToggleSelect(t.id) : onOpen(t))}
+            onLongPress={editable ? () => onToggleSelect(t.id) : undefined} delayLongPress={350}
+            style={({ pressed }) => ({
+              flexDirection: 'row', alignItems: 'center', gap: 11, backgroundColor: sel ? C.brand + '1a' : C.surface,
+              borderWidth: 1, borderColor: sel ? C.brand : C.line, borderRadius: 12, padding: 12, marginBottom: 8, opacity: pressed ? 0.8 : 1,
+            })}>
+            {selecting ? (
+              <Pressable onPress={() => onToggleSelect(t.id)} hitSlop={8} accessibilityLabel={sel ? 'Quitar de la selección' : 'Seleccionar'}>
+                <SelectBox on={sel} />
+              </Pressable>
+            ) : (
+              <Pressable onPress={() => editable && onToggle(t)} hitSlop={8} disabled={!editable}
+                style={{ width: 22, height: 22, borderRadius: 7, borderWidth: 2, borderColor: t.done ? C.good : C.line, backgroundColor: t.done ? C.good : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+                {t.done && <Ionicons name="checkmark" size={13} color="#0f1115" />}
+              </Pressable>
+            )}
 
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text numberOfLines={1} style={{ color: C.text, fontSize: 14, fontWeight: '600', textDecorationLine: t.done ? 'line-through' : 'none' }}>{t.title}</Text>
@@ -941,6 +1134,7 @@ function PTaskModal({ visible, task, projectId, status, cols, members, steps, ed
   const [st, setSt] = useState(status);
   const [assignee, setAssignee] = useState<string | null>(null);
   const [date, setDate] = useState<Date | null>(null);
+  const [time, setTime] = useState('');   // 'HH:MM' o vacío (= 11:59 p. m.)
   const [showPicker, setShowPicker] = useState(false);
   const [busy, setBusy] = useState(false);
   const [nuevoPaso, setNuevoPaso] = useState('');
@@ -958,7 +1152,14 @@ function PTaskModal({ visible, task, projectId, status, cols, members, steps, ed
       setDesc(task?.description ?? '');
       setSt(task?.status ?? status);
       setAssignee(task?.assignee_id ?? null);
-      setDate(task?.due_date ? new Date(task.due_date + 'T00:00:00') : null);
+      const at = task?.due_at ? new Date(task.due_at) : null;
+      if (at && !isNaN(at.getTime())) {
+        setDate(new Date(at.getFullYear(), at.getMonth(), at.getDate()));
+        setTime(at.getHours() === 23 && at.getMinutes() === 59 ? '' : `${pad(at.getHours())}:${pad(at.getMinutes())}`);
+      } else {
+        setDate(task?.due_date ? new Date(task.due_date + 'T00:00:00') : null);
+        setTime('');
+      }
       setNuevoPaso('');
       setShowPicker(false);
     }
@@ -968,16 +1169,18 @@ function PTaskModal({ visible, task, projectId, status, cols, members, steps, ed
     if (!title.trim()) return notify('Ponle título a la tarea');
     setBusy(true);
     const due = date ? `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` : null;
+    const [hh, mm] = /^\d{2}:\d{2}$/.test(time) ? time.split(':').map(Number) : [23, 59];
+    const dueAt = date ? new Date(date.getFullYear(), date.getMonth(), date.getDate(), hh, mm).toISOString() : null;
     try {
       if (task) {
         await updateProjectTask(task.id, {
           title: title.trim(), description: desc.trim() || null, status: st,
-          assignee_id: assignee, due_date: due,
+          assignee_id: assignee, due_date: due, due_at: dueAt,
         });
       } else {
         const creada = await addProjectTask({
           project_id: projectId, title: title.trim(), status: st,
-          description: desc.trim() || null, assignee_id: assignee, due_date: due,
+          description: desc.trim() || null, assignee_id: assignee, due_date: due, due_at: dueAt,
         });
         await logActivity(projectId, 'task_new', `creó “${creada.title}”`, { task_id: creada.id });
       }
@@ -1066,15 +1269,25 @@ function PTaskModal({ visible, task, projectId, status, cols, members, steps, ed
               })}
             </View>
 
-            <Text style={lbl}>Fecha de entrega</Text>
+            <Text style={lbl}>Fecha y hora de entrega</Text>
             {isWeb ? (
-              React.createElement('input', {
-                type: 'date',
-                value: date ? `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` : '',
-                disabled: !editable,
-                onChange: (e: any) => { const v = e.target.value; setDate(v ? new Date(v + 'T00:00:00') : null); },
-                style: { backgroundColor: C.surface2, border: `1px solid ${C.line}`, borderRadius: 11, color: C.text, padding: 12, fontSize: 14, colorScheme: uiScheme(), width: '100%', boxSizing: 'border-box' },
-              })
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {React.createElement('input', {
+                  type: 'date',
+                  value: date ? `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` : '',
+                  disabled: !editable,
+                  onChange: (e: any) => { const v = e.target.value; setDate(v ? new Date(v + 'T00:00:00') : null); },
+                  style: { backgroundColor: C.surface2, border: `1px solid ${C.line}`, borderRadius: 11, color: C.text, padding: 12, fontSize: 14, colorScheme: uiScheme(), flex: 2, minWidth: 0, boxSizing: 'border-box' },
+                })}
+                {React.createElement('input', {
+                  type: 'time',
+                  value: time,
+                  disabled: !editable || !date,
+                  'aria-label': 'Hora de entrega',
+                  onChange: (e: any) => setTime(e.target.value),
+                  style: { backgroundColor: C.surface2, border: `1px solid ${C.line}`, borderRadius: 11, color: C.text, padding: 12, fontSize: 14, colorScheme: uiScheme(), flex: 1, minWidth: 0, boxSizing: 'border-box', opacity: date ? 1 : 0.5 },
+                })}
+              </View>
             ) : (
               <>
                 <Pressable onPress={() => editable && setShowPicker(true)} style={input}>
@@ -1087,7 +1300,7 @@ function PTaskModal({ visible, task, projectId, status, cols, members, steps, ed
               </>
             )}
             {date && editable && (
-              <Pressable onPress={() => setDate(null)} style={{ alignSelf: 'flex-start', marginTop: 6 }}>
+              <Pressable onPress={() => { setDate(null); setTime(''); }} style={{ alignSelf: 'flex-start', marginTop: 6 }}>
                 <Text style={{ color: C.muted, fontSize: 12 }}>Quitar la fecha</Text>
               </Pressable>
             )}

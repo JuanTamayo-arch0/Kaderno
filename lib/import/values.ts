@@ -61,7 +61,7 @@ export function parseStatus(
   }
   return {
     ok: false,
-    error: `Estado "${raw}" no es una columna de este proyecto. Usa ${cols.map((c) => c.label).join(', ')}`,
+    error: `"${raw}" no es una columna de este proyecto (${cols.map((c) => c.label).join(', ')})`,
   };
 }
 

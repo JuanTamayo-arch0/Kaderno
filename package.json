@@ -6,7 +6,8 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "tsx --test tests/lib.test.ts"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -41,6 +42,7 @@
     "@babel/core": "^7.25.2",
     "@types/papaparse": "^5.3.14",
     "@types/react": "~19.2.0",
+    "tsx": "^4.19.2",
     "typescript": "~5.9.2"
   },
   "private": true
