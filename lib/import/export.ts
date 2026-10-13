@@ -2,8 +2,8 @@ import Papa from 'papaparse';
 import { formatForFile, formatForJson } from './dates';
 import { encodeUtf8 } from './encoding';
 import { EXPORT_HEADERS } from './fields';
-import { STATUS_LABEL, checklistToCell } from './values';
-import type { ExistingTask, Member } from './types';
+import { checklistToCell, columnLabel } from './values';
+import type { BoardColumnRef, ExistingTask, Member } from './types';
 
 function memberRef(members: Member[], id: string | null): string {
   if (!id) return '';
@@ -28,7 +28,7 @@ export function unescapeFormula(value: string): string {
  * CSV con ";" y BOM UTF-8, que es lo que Excel en español abre bien con doble clic.
  * Incluye la columna id para poder volver a subirlo y actualizar.
  */
-export function tasksToCsv(tasks: ExistingTask[], members: Member[], opts: { includeId?: boolean } = {}): string {
+export function tasksToCsv(tasks: ExistingTask[], members: Member[], columns: BoardColumnRef[], opts: { includeId?: boolean } = {}): string {
   const includeId = opts.includeId ?? true;
   const cols = EXPORT_HEADERS.filter((c) => includeId || c.field !== 'id');
   const rows = tasks.map((t) =>
@@ -37,7 +37,7 @@ export function tasksToCsv(tasks: ExistingTask[], members: Member[], opts: { inc
         case 'id': return t.id;
         case 'title': return escapeFormula(t.title);
         case 'description': return escapeFormula(t.description ?? '');
-        case 'status': return STATUS_LABEL[t.status];
+        case 'status': return columnLabel(columns, t.status);
         case 'assignee': return memberRef(members, t.assignee_id);
         case 'start': return formatForFile(t.start_at);
         case 'due': return formatForFile(t.due_at);
@@ -49,19 +49,19 @@ export function tasksToCsv(tasks: ExistingTask[], members: Member[], opts: { inc
   return Papa.unparse({ fields: cols.map((c) => c.header), data: rows }, { delimiter: ';', newline: '\r\n', quotes: false });
 }
 
-export function tasksToCsvBytes(tasks: ExistingTask[], members: Member[]): Uint8Array {
-  return encodeUtf8(tasksToCsv(tasks, members), true);
+export function tasksToCsvBytes(tasks: ExistingTask[], members: Member[], columns: BoardColumnRef[]): Uint8Array {
+  return encodeUtf8(tasksToCsv(tasks, members, columns), true);
 }
 
 /** JSON con el mismo formato que acepta el importador. */
-export function tasksToJson(tasks: ExistingTask[], members: Member[], opts: { includeId?: boolean } = {}): string {
+export function tasksToJson(tasks: ExistingTask[], members: Member[], columns: BoardColumnRef[], opts: { includeId?: boolean } = {}): string {
   const includeId = opts.includeId ?? true;
   const out = tasks.map((t) => {
     const o: Record<string, unknown> = {};
     if (includeId) o.id = t.id;
     o.titulo = t.title;
     o.descripcion = t.description ?? '';
-    o.estado = STATUS_LABEL[t.status];
+    o.estado = columnLabel(columns, t.status);
     o.responsable = memberRef(members, t.assignee_id);
     o.inicio = formatForJson(t.start_at);
     o.entrega = formatForJson(t.due_at);

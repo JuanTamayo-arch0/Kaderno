@@ -17,6 +17,7 @@ import type {
   Member,
   NormalizedTask,
   ParsedFile,
+  ProjectContext,
   RowIssue,
 } from './types';
 
@@ -78,7 +79,9 @@ function isBlank(v: unknown): boolean {
  * Una celda vacía significa "sin dato": al crear, el campo queda vacío; al actualizar,
  * el campo no se toca.
  */
-export function normalizeRows(parsed: ParsedFile, mapping: ColumnMapping, members: Member[]): NormalizeResult {
+export function normalizeRows(parsed: ParsedFile, mapping: ColumnMapping, ctx: ProjectContext): NormalizeResult {
+  const { members, columns } = ctx;
+  const firstLabel = columns[0]?.label ?? 'la primera columna';
   const issues: RowIssue[] = [];
   const tasks: NormalizedTask[] = [];
   const colFor = new Map<Field, string>();
@@ -165,12 +168,12 @@ export function normalizeRows(parsed: ParsedFile, mapping: ColumnMapping, member
     // estado
     const stRaw = get(row, 'status');
     if (!isBlank(stRaw)) {
-      const st = parseStatus(stRaw);
+      const st = parseStatus(stRaw, columns);
       if (st.ok && st.value) {
         t.status = st.value;
         present.push('status');
       } else if (!st.ok) {
-        issue('status', 'warning', isUpdate ? `${st.error}. El estado no se cambiará` : `${st.error}. Quedará en Por hacer`);
+        issue('status', 'warning', isUpdate ? `${st.error}. No se moverá` : `${st.error}. Quedará en ${firstLabel}`);
       }
     }
 

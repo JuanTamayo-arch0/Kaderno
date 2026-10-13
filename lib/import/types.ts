@@ -12,8 +12,18 @@ export type Field =
   | 'checklist'
   | 'delete';
 
-/** Estados de la columna kanban, independientes de cómo se guarden en la base de datos. */
-export type ProjectStatus = 'todo' | 'doing' | 'review' | 'done';
+/**
+ * Columna del tablero. En Kaderno las columnas son configurables por proyecto
+ * (projects.board_columns); `status` de una tarea guarda la `key` de su columna.
+ */
+export interface BoardColumnRef {
+  key: string;
+  label: string;
+  done?: boolean;
+}
+
+/** Clave de una columna del tablero del proyecto. */
+export type ProjectStatus = string;
 
 export type MemberRole = 'owner' | 'editor' | 'viewer';
 
@@ -40,10 +50,18 @@ export interface ExistingTask {
   title: string;
   description: string | null;
   status: ProjectStatus;
+  /** true si la tarea está en una columna marcada como final. */
+  done: boolean;
   assignee_id: string | null;
   start_at: string | null; // ISO UTC
   due_at: string | null; // ISO UTC
   checklist: { text: string; done: boolean }[];
+}
+
+/** Lo que el importador necesita saber del proyecto. */
+export interface ProjectContext {
+  members: Member[];
+  columns: BoardColumnRef[];
 }
 
 /** Una fila del archivo ya convertida a valores de Kaderno. */

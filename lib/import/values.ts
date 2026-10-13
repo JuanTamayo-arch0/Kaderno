@@ -1,52 +1,68 @@
 import { normalizeKey } from './fields';
-import type { ChecklistItem, ProjectStatus } from './types';
+import type { BoardColumnRef, ChecklistItem, ProjectStatus } from './types';
 
-// ---------- Estados ----------
+// ---------- Columnas (estado) ----------
 
-/**
- * Valor de `project_tasks.status` en la base de datos para cada columna.
- * AJUSTAR al conectar con el código real de la Entrega B si usa otros valores.
- */
-export const STATUS_DB: Record<ProjectStatus, string> = {
-  todo: 'todo',
-  doing: 'doing',
-  review: 'review',
-  done: 'done',
-};
+/** Columnas por defecto de un proyecto nuevo (iguales a DEFAULT_COLUMNS de lib/projects). */
+export const DEFAULT_BOARD: BoardColumnRef[] = [
+  { key: 'todo', label: 'Por hacer' },
+  { key: 'doing', label: 'En curso' },
+  { key: 'review', label: 'En revisión' },
+  { key: 'done', label: 'Hecho', done: true },
+];
 
-export const STATUS_LABEL: Record<ProjectStatus, string> = {
-  todo: 'Por hacer',
-  doing: 'En curso',
-  review: 'En revisión',
-  done: 'Hecho',
-};
-
-const STATUS_ALIASES: Record<string, ProjectStatus> = {
-  'por hacer': 'todo', 'pendiente': 'todo', 'pendientes': 'todo', 'todo': 'todo', 'to do': 'todo',
-  'backlog': 'todo', 'nuevo': 'todo', 'nueva': 'todo', 'sin empezar': 'todo',
+// Palabras comunes que se entienden aunque el tablero tenga otros nombres.
+const GENERIC: Record<string, 'first' | 'doing' | 'review' | 'done'> = {
+  'por hacer': 'first', 'pendiente': 'first', 'pendientes': 'first', 'todo': 'first', 'to do': 'first',
+  'backlog': 'first', 'nuevo': 'first', 'nueva': 'first', 'sin empezar': 'first',
   'en curso': 'doing', 'en progreso': 'doing', 'haciendo': 'doing', 'doing': 'doing',
   'in progress': 'doing', 'progreso': 'doing', 'trabajando': 'doing',
   'en revision': 'review', 'revision': 'review', 'review': 'review', 'in review': 'review',
   'por revisar': 'review', 'revisar': 'review',
   'hecho': 'done', 'hecha': 'done', 'terminado': 'done', 'terminada': 'done', 'listo': 'done', 'lista': 'done',
   'done': 'done', 'completado': 'done', 'completada': 'done', 'completed': 'done', 'finalizado': 'done',
+  'entregado': 'done', 'entregada': 'done',
 };
 
-export function parseStatus(input: unknown): { ok: true; value: ProjectStatus | null } | { ok: false; error: string } {
-  if (input === null || input === undefined) return { ok: true, value: null };
-  const s = normalizeKey(String(input));
-  if (s === '') return { ok: true, value: null };
-  const v = STATUS_ALIASES[s];
-  if (v) return { ok: true, value: v };
-  // Valor de la base de datos escrito tal cual.
-  const fromDb = (Object.keys(STATUS_DB) as ProjectStatus[]).find((k) => STATUS_DB[k] === String(input).trim());
-  if (fromDb) return { ok: true, value: fromDb };
-  return { ok: false, error: `Estado "${String(input).trim()}" no reconocido. Usa Por hacer, En curso, En revisión o Hecho` };
+export function columnLabel(columns: BoardColumnRef[], key: string | null): string {
+  if (!key) return columns[0]?.label ?? '';
+  return columns.find((c) => c.key === key)?.label ?? columns[0]?.label ?? key;
 }
 
-export function statusFromDb(db: string): ProjectStatus {
-  const k = (Object.keys(STATUS_DB) as ProjectStatus[]).find((s) => STATUS_DB[s] === db);
-  return k ?? 'todo';
+/**
+ * Busca la columna del tablero que corresponde a lo que venga escrito en "estado":
+ * el nombre de una columna del proyecto, su clave interna, o una palabra común
+ * ("Hecho" va a la columna marcada como final, "Por hacer" a la primera).
+ */
+export function parseStatus(
+  input: unknown,
+  columns: BoardColumnRef[],
+): { ok: true; value: ProjectStatus | null } | { ok: false; error: string } {
+  if (input === null || input === undefined) return { ok: true, value: null };
+  const raw = String(input).trim();
+  const s = normalizeKey(raw);
+  if (s === '') return { ok: true, value: null };
+  const cols = columns.length ? columns : DEFAULT_BOARD;
+
+  const byLabel = cols.find((c) => normalizeKey(c.label) === s);
+  if (byLabel) return { ok: true, value: byLabel.key };
+  const byKey = cols.find((c) => c.key === raw || normalizeKey(c.key) === s);
+  if (byKey) return { ok: true, value: byKey.key };
+
+  const g = GENERIC[s];
+  if (g === 'first') return { ok: true, value: cols[0].key };
+  if (g === 'done') {
+    const d = cols.find((c) => c.done);
+    if (d) return { ok: true, value: d.key };
+  }
+  if (g === 'doing' || g === 'review') {
+    const k = cols.find((c) => c.key === g);
+    if (k) return { ok: true, value: k.key };
+  }
+  return {
+    ok: false,
+    error: `Estado "${raw}" no es una columna de este proyecto. Usa ${cols.map((c) => c.label).join(', ')}`,
+  };
 }
 
 // ---------- Sí / No ----------

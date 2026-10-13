@@ -249,5 +249,40 @@ do $$ begin
 end $$;
 \echo '✓ 9. Más de 500, título vacío o fechas invertidas: se rechaza todo el lote, nada queda a medias'
 reset role;
+
+-- ===================================================================
+-- 10. Modelo real de Proyectos: columnas del tablero, "done", bitácora
+-- ===================================================================
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'bbbbbbbb-0000-4000-8000-000000000002', false);
+create temp table r10 as
+select import_project_tasks('11111111-0000-4000-8000-000000000001', '[
+  {"title":"Columna inventada","status":"no-existe"},
+  {"title":"Ya hecha","status":"done","checklist":[{"title":"x","done":true}]}
+]'::jsonb, 'crear') as res;
+do $$ begin
+  assert (select status from project_tasks where title = 'Columna inventada') = 'todo', 'estado desconocido → primera columna';
+  assert (select done from project_tasks where title = 'Ya hecha'), 'columna final → done (trigger de v12)';
+  assert (select done_at is not null from project_tasks where title = 'Ya hecha'), 'done_at';
+  assert (select created_by from project_tasks where title = 'Ya hecha') = 'bbbbbbbb-0000-4000-8000-000000000002', 'created_by';
+  assert (select count(*) from project_task_steps s join project_tasks t on t.id = s.task_id
+           where t.title = 'Ya hecha' and s.project_id = t.project_id) = 1, 'microtareas con project_id';
+  assert exists (select 1 from project_activity where kind = 'import' and summary = 'importó 2 tareas'
+                   and actor_id = 'bbbbbbbb-0000-4000-8000-000000000002'), 'bitácora de la importación';
+end $$;
+create temp table r11 as
+select bulk_update_project_tasks('11111111-0000-4000-8000-000000000001',
+  array(select id from project_tasks where title = 'Ya hecha'), '{"status":"doing"}'::jsonb) as res;
+do $$ begin
+  assert not (select done from project_tasks where title = 'Ya hecha'), 'salir de la columna final quita done';
+end $$;
+select undo_project_batch((select res->>'batch_id' from r11)::uuid);
+do $$ begin
+  assert (select done from project_tasks where title = 'Ya hecha'), 'deshacer devuelve done';
+  assert exists (select 1 from project_activity where kind = 'undo'), 'bitácora del deshacer';
+  assert exists (select 1 from project_activity where summary like 'corrió las fechas de 3 tareas 7%'), 'bitácora de correr fechas';
+end $$;
+reset role;
+\echo '✓ 10. Columnas del tablero: estado desconocido va a la primera, la final marca done, y todo queda en la bitácora'
 \echo ''
 \echo 'TODAS LAS PRUEBAS SQL PASARON'

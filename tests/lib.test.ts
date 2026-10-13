@@ -5,7 +5,7 @@ import {
   formatHuman, parseChecklistCell, parsePastedChecklist, mergeChecklist, computeFileDiff,
   diffSummary, previewShift, buildAiPrompt, tasksToCsv, tasksToJson, encodeUtf8,
   toImportPayload, toFilePayload, importableTasks, findDuplicates, resolveAssignee, ImportError,
-  type Member, type ExistingTask,
+  DEFAULT_BOARD, type Member, type ExistingTask, type ProjectContext,
 } from '../lib/import';
 
 const members: Member[] = [
@@ -14,6 +14,8 @@ const members: Member[] = [
   { user_id: '33333333-3333-4333-8333-333333333333', email: 'juana@upb.edu.co', name: 'Juana Ríos', role: 'editor' },
   { user_id: '44444444-4444-4444-8444-444444444444', email: 'profe@upb.edu.co', name: 'Profe', role: 'viewer' },
 ];
+
+const ctx: ProjectContext = { members, columns: DEFAULT_BOARD };
 
 function cp1252(s: string): Uint8Array {
   return Uint8Array.from([...s].map((c) => c.charCodeAt(0)));
@@ -121,7 +123,7 @@ test('CSV de Excel en español: ; y Windows-1252', () => {
   const map = autoMap(p.headers);
   assert.equal(map['Título'], 'title');
   assert.equal(map['Descripción'], 'description');
-  const r = normalizeRows(p, map, members);
+  const r = normalizeRows(p, map, ctx);
   assert.equal(r.issues.filter((i) => i.level === 'error').length, 0, JSON.stringify(r.issues));
   const [a, b] = r.tasks;
   assert.equal(a.title, 'Marco teórico');
@@ -140,7 +142,7 @@ test('CSV de Google Sheets: comas, UTF-8 con BOM y salto de línea dentro de una
   const p = parseImportFile({ name: 'export.csv', bytes: encodeUtf8(csv) });
   assert.equal(p.delimiter, ',');
   assert.equal(p.encoding, 'utf-8');
-  const r = normalizeRows(p, autoMap(p.headers), members);
+  const r = normalizeRows(p, autoMap(p.headers), ctx);
   assert.equal(r.tasks.length, 1);
   assert.equal(r.tasks[0].title, 'Informe, versión 1');
   assert.equal(r.tasks[0].description, 'Línea 1\nLínea 2');
@@ -155,7 +157,7 @@ test('CSV: errores y avisos por fila', () => {
     'C;;;;31/02/2026\n' +                                // fila 5: fecha que no existe
     'A;;;;\n';                                           // fila 6: repetida con la 3
   const p = parseImportText(csv);
-  const r = normalizeRows(p, autoMap(p.headers), members);
+  const r = normalizeRows(p, autoMap(p.headers), ctx);
   const errs = r.issues.filter((i) => i.level === 'error').map((i) => i.row);
   const warns = r.issues.filter((i) => i.level === 'warning').map((i) => i.row);
   assert.deepEqual(errs.sort(), [2, 4, 5]);
@@ -165,7 +167,7 @@ test('CSV: errores y avisos por fila', () => {
 
 test('CSV: el apóstrofo de protección contra fórmulas se quita al importar', () => {
   const p = parseImportText("titulo;descripcion\n'=Cálculo de pérdidas;'-dato\n");
-  const r = normalizeRows(p, autoMap(p.headers), members);
+  const r = normalizeRows(p, autoMap(p.headers), ctx);
   assert.equal(r.tasks[0].title, '=Cálculo de pérdidas');
   assert.equal(r.tasks[0].description, '-dato');
 });
@@ -185,20 +187,20 @@ test('JSON de una IA envuelto en ```json y con texto alrededor', () => {
   const ai = 'Claro, aquí está:\n```json\n{"tareas": [{"titulo": "Investigar", "responsable": "juana@upb.edu.co", "inicio": "2026-10-12T08:00", "entrega": "2026-10-14T18:00", "checklist": [{"texto": "Fuentes", "hecho": false}, "Resumen"]}]}\n```\nAvísame si quieres cambios.';
   const p = parseImportText(ai);
   assert.equal(p.format, 'json');
-  const r = normalizeRows(p, autoMap(p.headers), members);
+  const r = normalizeRows(p, autoMap(p.headers), ctx);
   assert.equal(r.issues.length, 0, JSON.stringify(r.issues));
   const t = r.tasks[0];
   assert.equal(t.assignee_id, members[2].user_id);
   assert.equal(t.start_at, '2026-10-12T13:00:00.000Z');
   assert.deepEqual(t.checklist, [{ text: 'Fuentes', done: false }, { text: 'Resumen', done: null }]);
-  const payload = toImportPayload(r.tasks);
+  const payload = toImportPayload(r.tasks, 'todo');
   assert.deepEqual(payload[0].checklist, [{ title: 'Fuentes', done: false }, { title: 'Resumen', done: false }]);
   assert.equal(payload[0].status, 'todo');
 });
 
 test('JSON con lista en la raíz y claves en inglés', () => {
   const p = parseImportText('[{"title": "A", "status": "done", "due": "2026-10-20"}]');
-  const r = normalizeRows(p, autoMap(p.headers), members);
+  const r = normalizeRows(p, autoMap(p.headers), ctx);
   assert.equal(r.tasks[0].status, 'done');
 });
 
@@ -206,23 +208,23 @@ test('JSON con lista en la raíz y claves en inglés', () => {
 
 const existing: ExistingTask[] = [
   {
-    id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', title: 'Marco teórico', description: null, status: 'doing',
+    id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', title: 'Marco teórico', description: null, status: 'doing', done: false,
     assignee_id: members[0].user_id, start_at: '2026-10-12T05:00:00.000Z', due_at: '2026-10-16T04:59:00.000Z',
     checklist: [{ text: 'Buscar fuentes', done: true }, { text: 'Resumir', done: false }],
   },
   {
-    id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', title: 'Montaje', description: 'Protoboard', status: 'todo',
+    id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', title: 'Montaje', description: 'Protoboard', status: 'todo', done: false,
     assignee_id: null, start_at: null, due_at: '2026-10-20T23:00:00.000Z', checklist: [],
   },
   {
-    id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', title: '=SUMA(A1)', description: '+peligro', status: 'done',
+    id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', title: '=SUMA(A1)', description: '+peligro', status: 'done', done: true,
     assignee_id: members[1].user_id, start_at: null, due_at: null, checklist: [],
   },
 ];
 
 test('duplicados contra lo que ya existe en el proyecto', () => {
   const p = parseImportText('titulo;entrega\nmarco teorico;15/10/2026\nOtra;15/10/2026\n');
-  const r = normalizeRows(p, autoMap(p.headers), members);
+  const r = normalizeRows(p, autoMap(p.headers), ctx);
   const d = findDuplicates(r.tasks, existing);
   assert.equal(d.get(2), existing[0].id);
   assert.equal(d.has(3), false);
@@ -231,7 +233,7 @@ test('duplicados contra lo que ya existe en el proyecto', () => {
 // ---------- Exportar y volver a subir ----------
 
 test('exportar CSV: ; con BOM aparte, protección de fórmulas y vuelta completa', () => {
-  const csv = tasksToCsv(existing, members);
+  const csv = tasksToCsv(existing, members, DEFAULT_BOARD);
   const lines = csv.split('\r\n');
   assert.equal(lines[0], 'id;titulo;descripcion;estado;responsable;inicio;entrega;checklist');
   assert.ok(csv.includes("'=SUMA(A1)"));
@@ -239,20 +241,20 @@ test('exportar CSV: ; con BOM aparte, protección de fórmulas y vuelta completa
   assert.ok(csv.includes('[x] Buscar fuentes | Resumir'));
   // Volver a subir el mismo archivo no cambia nada.
   const p = parseImportText(csv);
-  const r = normalizeRows(p, autoMap(p.headers), members);
+  const r = normalizeRows(p, autoMap(p.headers), ctx);
   assert.equal(r.mode, 'update');
   assert.equal(r.issues.filter((i) => i.level === 'error').length, 0, JSON.stringify(r.issues));
-  const diff = computeFileDiff(importableTasks(r.tasks, r.issues), existing, members);
+  const diff = computeFileDiff(importableTasks(r.tasks, r.issues), existing, ctx);
   assert.equal(diff.updates.length, 0, JSON.stringify(diff.updates.map((u) => u.changes)));
   assert.equal(diff.unchanged, 3);
   assert.equal(diffSummary(diff), 'No hay cambios');
 });
 
 test('exportar JSON y volver a subir', () => {
-  const json = tasksToJson(existing, members);
+  const json = tasksToJson(existing, members, DEFAULT_BOARD);
   const p = parseImportText(json);
-  const r = normalizeRows(p, autoMap(p.headers), members);
-  const diff = computeFileDiff(importableTasks(r.tasks, r.issues), existing, members);
+  const r = normalizeRows(p, autoMap(p.headers), ctx);
+  const diff = computeFileDiff(importableTasks(r.tasks, r.issues), existing, ctx);
   assert.equal(diff.updates.length, 0, JSON.stringify(diff.updates.map((u) => u.changes)));
 });
 
@@ -264,8 +266,8 @@ test('actualizar por archivo: cambios, nuevas, borradas, ids ajenos y nada se bo
     'dddddddd-dddd-4ddd-8ddd-dddddddddddd;Ajena;;;;;\n';
   // existing[2] no está en el archivo: no se toca.
   const p = parseImportText(csv);
-  const r = normalizeRows(p, autoMap(p.headers), members);
-  const diff = computeFileDiff(importableTasks(r.tasks, r.issues), existing, members);
+  const r = normalizeRows(p, autoMap(p.headers), ctx);
+  const diff = computeFileDiff(importableTasks(r.tasks, r.issues), existing, ctx);
   assert.equal(diff.updates.length, 1);
   const u = diff.updates[0];
   assert.deepEqual(u.changes.map((c) => c.field).sort(), ['assignee', 'checklist', 'status']);
@@ -278,7 +280,7 @@ test('actualizar por archivo: cambios, nuevas, borradas, ids ajenos y nada se bo
   assert.equal(diff.creates.length, 1);
   assert.equal(diff.unknownIds.length, 1);
   assert.equal(diffSummary(diff), '1 cambia, 1 nueva, 1 se borra');
-  const payload = toFilePayload(diff);
+  const payload = toFilePayload(diff, 'todo');
   assert.deepEqual(payload[0].fields?.sort(), ['assignee_id', 'checklist', 'status']);
   assert.equal(payload[0].title, undefined); // el título no cambió, no se envía
   assert.deepEqual(payload[2], { id: existing[1].id, delete: true });
@@ -287,8 +289,8 @@ test('actualizar por archivo: cambios, nuevas, borradas, ids ajenos y nada se bo
 test('actualizar por archivo: inicio después de la entrega combinando con lo existente', () => {
   const csv = `id;inicio\n${existing[0].id};20/10/2026\n`;
   const p = parseImportText(csv);
-  const r = normalizeRows(p, autoMap(p.headers), members);
-  const diff = computeFileDiff(importableTasks(r.tasks, r.issues), existing, members);
+  const r = normalizeRows(p, autoMap(p.headers), ctx);
+  const diff = computeFileDiff(importableTasks(r.tasks, r.issues), existing, ctx);
   assert.equal(diff.updates.length, 0);
   assert.equal(diff.issues[0].level, 'error');
 });
@@ -325,7 +327,7 @@ test('prompt de IA con integrantes (sin viewers), materia y fechas', () => {
   // El formato pedido en el prompt lo entiende el importador.
   const sample = p.split('\n').find((l) => l.startsWith('{"tareas"'))!;
   const parsed = parseImportText(sample.replace(/"AAAA-MM-DDTHH:MM"/g, '"2026-10-12T08:00"').replace('correo de un integrante o vacío', 'ana@upb.edu.co').replace('"titulo": ""', '"titulo": "X"'));
-  const r = normalizeRows(parsed, autoMap(parsed.headers), members);
+  const r = normalizeRows(parsed, autoMap(parsed.headers), ctx);
   assert.equal(r.issues.filter((i) => i.level === 'error').length, 0, JSON.stringify(r.issues));
 });
 
@@ -333,10 +335,33 @@ test('las plantillas se importan sin errores', async () => {
   const { readFileSync } = await import('node:fs');
   for (const name of ['plantilla_tareas.csv', 'plantilla_tareas.json']) {
     const p = parseImportFile({ name, bytes: new Uint8Array(readFileSync(`plantillas/${name}`)) });
-    const r = normalizeRows(p, autoMap(p.headers), members);
+    const r = normalizeRows(p, autoMap(p.headers), ctx);
     assert.equal(r.tasks.length, 4, name);
     assert.equal(r.issues.filter((i) => i.level === 'error').length, 0, name + JSON.stringify(r.issues));
     assert.equal(r.tasks[0].checklist?.length, 3, name);
     assert.equal(r.tasks[3].due_at, '2026-10-30T23:00:00.000Z', name);
   }
+});
+
+test('estado: columnas propias del proyecto (plantilla Laboratorio)', async () => {
+  const { parseStatus } = await import('../lib/import');
+  const lab = [
+    { key: 'prep', label: 'Preparación' }, { key: 'toma', label: 'Toma de datos' },
+    { key: 'analisis', label: 'Análisis' }, { key: 'informe', label: 'Informe' },
+    { key: 'entregado', label: 'Entregado', done: true },
+  ];
+  assert.deepEqual(parseStatus('toma de datos', lab), { ok: true, value: 'toma' });
+  assert.deepEqual(parseStatus('ANALISIS', lab), { ok: true, value: 'analisis' });
+  assert.deepEqual(parseStatus('Hecho', lab), { ok: true, value: 'entregado' });   // palabra común → columna final
+  assert.deepEqual(parseStatus('Por hacer', lab), { ok: true, value: 'prep' });    // → primera columna
+  assert.equal(parseStatus('En curso', lab).ok, false);                            // no hay equivalente
+  const p = parseImportText('titulo;estado\nMedir;Toma de datos\nX;Inventado\n');
+  const r = normalizeRows(p, autoMap(p.headers), { members, columns: lab });
+  assert.equal(r.tasks[0].status, 'toma');
+  assert.equal(r.tasks[1].status, null);
+  assert.ok(r.issues.some((i) => i.row === 3 && i.level === 'warning' && i.message.includes('Preparación')));
+  assert.equal(toImportPayload(r.tasks, 'prep')[1].status, 'prep');
+  const prompt = buildAiPrompt({ projectName: 'Lab', members, now: '2026-10-09T22:00:00.000Z', columns: lab });
+  assert.ok(prompt.includes('"estado": "Preparación"'));
+  assert.ok(prompt.includes('Preparación, Toma de datos, Análisis, Informe, Entregado'));
 });
