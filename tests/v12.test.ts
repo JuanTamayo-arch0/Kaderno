@@ -219,3 +219,36 @@ test('promedios por materia, por créditos y nota necesaria', () => {
   assert.equal(need.remainingWeight, 50);
   assert.ok(Math.abs((need.needed ?? 0) - 2) < 1e-9);
 });
+
+// ---------- Calendario .ics ----------
+import { buildIcs, escapeText, fold, classesFromSchedule } from '../supabase/functions/_shared/ics';
+
+test('ics: entregas con y sin hora, clases semanales y texto escapado', () => {
+  const ics = buildIcs({
+    name: 'Kaderno', now: new Date(Date.UTC(2026, 9, 15, 12)),
+    tasks: [
+      { id: '1', title: 'Parcial, cap. 7; series', due_at: '2026-10-16T15:00:00.000Z', subject: 'Cálculo II' },
+      { id: '2', title: 'Informe', due_date: '2026-10-20', description: 'Línea 1\nLínea 2' },
+      { id: '3', title: 'Hecha', due_date: '2026-10-20', done: true },
+      { id: '4', title: 'Sin fecha' },
+      { id: '5', title: 'Montaje', due_at: '2026-10-18T19:00:00.000Z', kind: 'project', project: 'Proyecto final' },
+    ],
+    classes: classesFromSchedule(
+      [{ id: 'a', day: 0, slot: 0, subject_id: 's' }, { id: 'b', day: 0, slot: 1, subject_id: 's' }, { id: 'c', day: 3, slot: 1, subject_id: 's' }],
+      [{ start: '06:00', end: '08:00' }, { start: '08:00', end: '10:00' }], { s: 'Cálculo II' }),
+  });
+  const lines = ics.split('\r\n');
+  assert.equal(lines[0], 'BEGIN:VCALENDAR');
+  assert.equal((ics.match(/BEGIN:VEVENT/g) ?? []).length, 3 + 2, 'tres entregas y dos clases');
+  assert.ok(ics.includes('SUMMARY:[Cálculo II] Parcial\\, cap. 7\; series'));
+  assert.ok(ics.includes('DTSTART:20261016T143000Z') && ics.includes('DTEND:20261016T150000Z'));
+  assert.ok(ics.includes('DTSTART;VALUE=DATE:20261020') && ics.includes('DTEND;VALUE=DATE:20261021'));
+  assert.ok(ics.includes('DESCRIPTION:Línea 1\\nLínea 2'));
+  assert.ok(ics.includes('SUMMARY:[Proyecto final] Montaje'));
+  assert.ok(ics.includes('DTSTART:20261012T060000') && ics.includes('DTEND:20261012T100000'), 'lunes 6 a 10 unido');
+  assert.ok(ics.includes('DTSTART:20261015T080000') && ics.includes('RRULE:FREQ=WEEKLY;COUNT=20'));
+  assert.ok(!ics.includes('Hecha') && !ics.includes('Sin fecha'));
+  assert.ok(lines.every((l) => new TextEncoder().encode(l).length <= 75), 'líneas de 75 octetos como máximo');
+  assert.equal(escapeText('a\\b'), 'a\\\\b');
+  assert.equal(fold('x'.repeat(80)).split('\r\n ').join(''), 'x'.repeat(80));
+});

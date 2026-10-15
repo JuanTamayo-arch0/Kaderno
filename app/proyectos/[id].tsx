@@ -198,7 +198,7 @@ function ProyectoDetalle() {
     return (
       <View style={{ flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', padding: 30, paddingLeft: isWide ? SIDEBAR_W : 30 }}>
         {isWide && <SideNav active="proyectos" />}
-        <Text style={{ fontSize: 34, marginBottom: 10 }}>🚪</Text>
+        <Ionicons name="lock-closed-outline" size={34} color={C.muted} style={{ marginBottom: 10 }} />
         <Text style={{ color: C.text, fontSize: 16, fontWeight: '700' }}>Este proyecto ya no está disponible</Text>
         <Text style={{ color: C.muted, fontSize: 13, marginTop: 6, textAlign: 'center', maxWidth: 340, lineHeight: 20 }}>
           Puede que lo hayan borrado, o que te hayan sacado del equipo.

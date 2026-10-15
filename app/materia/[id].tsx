@@ -11,7 +11,8 @@ import {
 import { subjectAverage, neededFor } from '../../lib/grades';
 import { compareDue } from '../../lib/time';
 import { exportSubjectPdf } from '../../lib/exportPdf';
-import { confirm, deleteWithUndo, notify, toast, friendlyError } from '../../lib/feedback';
+import { confirm, notify, toast, friendlyError } from '../../lib/feedback';
+import { removeTask } from '../../lib/taskActions';
 import { openTask, onDataChanged } from '../../lib/uiBus';
 import { refreshNavCounts } from '../../lib/navCounts';
 import { Screen, Button, Card, EmptyState, IconButton, Segmented, SectionLabel, Skeleton } from '../../components/ds';
@@ -44,7 +45,7 @@ function MateriaDetalle() {
     try {
       const [subs, t, n, g] = await Promise.all([getSubjects(), getTasks(id), getNotes(id), getGrades(id)]);
       setSubject(subs.find((s) => s.id === id) ?? null);
-      setTasks(t); setNotes(n); setGrades(g);
+      setTasks(t); setNotes(n); setGrades(g); setHidden(new Set());
       getStepsFor(t.filter((x) => x.status !== 'done').map((x) => x.id)).then(setSteps).catch(() => {});
     } catch (e) { notify('No se pudo cargar', friendlyError(e)); setSubject((s) => s ?? null); }
   }, [id]);
@@ -58,12 +59,7 @@ function MateriaDetalle() {
     catch (e) { setTasks((xs) => xs.map((x) => x.id === t.id ? t : x)); toast(friendlyError(e), { tone: 'bad' }); }
   }
   function remove(t: Task) {
-    deleteWithUndo({
-      message: hasV14() ? 'Tarea enviada a la papelera' : 'Tarea borrada',
-      hide: () => setHidden((h) => new Set(h).add(t.id)),
-      restore: () => setHidden((h) => { const n = new Set(h); n.delete(t.id); return n; }),
-      commit: () => deleteTask(t.id),
-    });
+    removeTask(t, () => setHidden((h) => new Set(h).add(t.id)));
   }
   async function newNote() {
     try {

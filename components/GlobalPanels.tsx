@@ -263,10 +263,11 @@ function CommandPalette({ visible }: { visible: boolean }) {
     const h = (e: KeyboardEvent) => {
       if (e.key === 'ArrowDown') { e.preventDefault(); setSel((x) => Math.min(flat.length - 1, x + 1)); }
       if (e.key === 'ArrowUp') { e.preventDefault(); setSel((x) => Math.max(0, x - 1)); }
-      if (e.key === 'Enter') { e.preventDefault(); flat[sel]?.run(); }
+      if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); e.stopPropagation(); flat[sel]?.run(); }
     };
-    window.addEventListener('keydown', h);
-    return () => window.removeEventListener('keydown', h);
+    // En captura: el campo de texto de react-native-web no deja subir el Enter.
+    window.addEventListener('keydown', h, true);
+    return () => window.removeEventListener('keydown', h, true);
   }, [visible, flat, sel]);
   useEffect(() => { setSel(0); }, [q, hits]);
 

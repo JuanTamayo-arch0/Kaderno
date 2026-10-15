@@ -13,6 +13,7 @@ import { REMIND_OPTIONS, RemindChoice, inferChoice, remindAt, remindDays } from 
 import { combine, dueTimeHHMM, isoDate } from '../lib/time';
 import { notify, toast, friendlyError, deleteWithUndo } from '../lib/feedback';
 import { scheduleLocalReminder } from '../lib/notifications';
+import { removeTask } from '../lib/taskActions';
 import { startFocus } from '../lib/focusTimer';
 import type { TaskDraft } from '../lib/uiBus';
 
@@ -113,16 +114,10 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
     } catch (e) { notify('No se pudo crear el tipo', friendlyError(e)); }
   }
 
-  function remove() {
+  async function remove() {
     if (!editTask) return;
     const t = editTask;
-    onClose();
-    deleteWithUndo({
-      message: v14 ? 'Tarea enviada a la papelera' : 'Tarea borrada',
-      hide: () => onDeleted?.(t.id),
-      restore: () => onSaved(),
-      commit: () => deleteTask(t.id),
-    });
+    if (await removeTask(t)) { onDeleted?.(t.id); onClose(); }
   }
 
   const body = (

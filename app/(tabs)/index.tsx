@@ -16,7 +16,8 @@ import {
   startOfDay, fmtDue, dueDay, dayDiff, DAY_SHORT,
 } from '../../lib/time';
 import { buildAgenda, nowAndNext, minToLabel, type AgendaItem } from '../../lib/agenda';
-import { deleteWithUndo, toast, friendlyError } from '../../lib/feedback';
+import { toast, friendlyError } from '../../lib/feedback';
+import { removeTask } from '../../lib/taskActions';
 import { openAdd, openCommand, openInbox, openTask, onDataChanged } from '../../lib/uiBus';
 import { refreshNavCounts, useNavCounts } from '../../lib/navCounts';
 import { useFocusTimer, startFocus, pauseFocus } from '../../lib/focusTimer';
@@ -63,7 +64,7 @@ export default function Hoy() {
   const load = useCallback(async () => {
     try {
       const [s, t, sc, prefs] = await Promise.all([getSubjects(), getTasks(), getSchedule().catch(() => [] as Slot[]), fetchPrefs().catch(() => null)]);
-      setSubjects(s); setTasks(t); setSlots(sc); setError(null);
+      setSubjects(s); setTasks(t); setSlots(sc); setError(null); setHidden(new Set());
       const pending = t.filter((x) => x.status !== 'done').map((x) => x.id);
       getStepsFor(pending).then(setSteps).catch(() => {});
       getFocusByTask(pending).then(setFocusBy).catch(() => {});
@@ -103,12 +104,7 @@ export default function Hoy() {
     }
   }
   function remove(t: Task) {
-    deleteWithUndo({
-      message: hasV14() ? 'Tarea enviada a la papelera' : 'Tarea borrada',
-      hide: () => setHidden((h) => new Set(h).add(t.id)),
-      restore: () => setHidden((h) => { const n = new Set(h); n.delete(t.id); return n; }),
-      commit: async () => { await deleteTask(t.id); refreshNavCounts(true); },
-    });
+    removeTask(t, () => setHidden((h) => new Set(h).add(t.id)));
   }
   async function move(t: Task, iso: string | null, label: string) {
     try { await moveTaskDate(t, iso); toast(`Movida a ${label}`); load(); }
