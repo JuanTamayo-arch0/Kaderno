@@ -1,6 +1,6 @@
 # PLAN v12: revisión de diseño, experiencia de uso y nuevas funciones
 
-Estado: propuesta para aprobar. No se ha cambiado código de la app; este documento, las capturas y los bocetos de `docs/revision-v12/` son lo único nuevo en la rama.
+Estado: aprobado el 15 de octubre de 2026 e implementado en la rama `revision-diseno-v12`. La sección 10 resume qué se hizo y qué queda.
 
 ## 0. Resumen
 
@@ -232,3 +232,65 @@ Cada fase se entrega como una rama y un PR separados, con capturas antes y despu
 | antes-personalizar-escritorio.png | Personalizar sin barra lateral |
 | propuesta-hoy-celular.png | Boceto del nuevo Hoy y de la hoja "Agregar" |
 | propuesta-hoy-escritorio.png | Boceto del nuevo Hoy en computador con la nueva barra lateral |
+
+
+## 10. Estado de la implementación
+
+### Decisiones tomadas
+
+1. Navegación: cinco pestañas (a).
+2. Emojis: íconos en la interfaz y emojis solo en materias, proyectos y tipos de tarea (a).
+3. Resumen de Hoy: promedio y racha pasan a Estudiar y Materias (a).
+4. Notificaciones push: incluidas en v12.
+5. Alcance: aprobado y ampliado.
+6. Temas: ajustados para cumplir contraste.
+
+### Hecho
+
+Fase 1, arreglos visibles: los 14 errores de la sección 2.1 quedaron resueltos. Avisos y confirmaciones propios en web y celular, cerrar sesión, archivar materia, barra lateral en todas las pantallas, volver seguro, control de sesión en todas las pantallas, barra inferior sin recortes, borrar con papelera y "Deshacer", crear tipo sin cerrar el formulario, recordatorios reales, Pomodoro con reloj real, calendario por materia, "Sin notas" y mensajes de error entendibles.
+
+Fase 2, sistema y navegación: componentes comunes en `components/ds.tsx`, colores derivados por tema en `lib/color.ts`, cinco pestañas con botón +, barra lateral nueva, Ajustes, Hoy nuevo y una sola versión adaptable de cada pantalla.
+
+Fase 3, pantallas: Materia y Nota unificadas (la nota se guarda sola), Estudiar, Capturar con varias páginas y arrastrar o pegar, búsqueda con Ctrl K, bienvenida en tres pasos, Repaso con "Mis tarjetas" y Oráculo por alcance.
+
+Fase 4, funciones: además de F1, F2, F3, F4, F7 y F13, se adelantaron F5 (importar del sílabo), F6 (calendario .ics), F9 (repetición espaciada SM-2), F10 (promedio por créditos) y F14 (resumen semanal). También se agregaron:
+- Bandeja de avisos (campana) que funciona aunque no se activen las notificaciones.
+- Aviso cuando te asignan una tarea de proyecto y cuando una tuya vence en 24 horas.
+- Simulador "quiero sacar..." en cada materia.
+- Tiempo estimado por tarea y tiempo real enfocado.
+- Atajos de teclado (Ctrl K, N, /, Espacio y 1 a 4 en Repaso, Esc).
+- Cambiar nombre y contraseña, descargar todos los datos.
+- Vista previa en vivo del tema en Apariencia.
+- Ícono, manifiesto y service worker para instalar la app.
+
+### Archivos nuevos principales
+
+| Archivo | Para qué |
+|---------|----------|
+| `supabase/schema_v14.sql` | Hora, papelera, SM-2, bandeja de avisos, push, calendario y limpieza automática |
+| `supabase/functions/notify` | Llena la bandeja y envía las notificaciones push (cada 10 minutos) |
+| `supabase/functions/ical` | Calendario privado .ics |
+| `components/ds.tsx` | Sistema de diseño (Screen, Button, Field, Card...) |
+| `components/GlobalPanels.tsx` | Hoja Agregar, formulario de tarea, paleta Ctrl K y bandeja |
+| `lib/quickAdd.ts`, `lib/syllabus.ts` | Agregar con texto e importar del sílabo |
+| `lib/focusTimer.ts`, `lib/srs.ts`, `lib/agenda.ts`, `lib/grades.ts` | Pomodoro, repaso, agenda y promedios |
+| `public/sw.js`, `public/manifest.webmanifest` | App instalable y notificaciones |
+
+### Pendiente para una próxima versión
+
+- F8 plan de estudio para exámenes.
+- F11 comentarios y menciones en tareas de proyecto.
+- F12 vista de calendario del proyecto.
+- Notificaciones push en la app nativa (hoy el celular usa avisos locales del sistema; en la web y la app instalada llegan por push).
+- Pasar la pantalla de proyecto (`app/proyectos/[id].tsx`, 1500 líneas) al sistema de diseño en partes más pequeñas.
+
+### Para activarlo
+
+Ver `RUNBOOK.md`, sección "Versión 12": correr `schema_v14.sql`, crear las llaves y secretos de las notificaciones, desplegar `notify` e `ical`, programar el envío con `pg_cron`, agregar la llave pública a `kaderno-config.js` del droplet y ajustar nginx para que `sw.js` no quede en caché.
+
+### Pruebas
+
+- `npm test`: 40 pruebas (incluye contraste de los 10 temas, agregar con texto, sílabo, recordatorios, fechas, agenda, promedios, SM-2 y .ics).
+- `bash tests/run_sql.sh`: pruebas de v13 y diez bloques nuevos para v14 (recordatorios, resúmenes, proyectos, papelera, permisos y calendario).
+- Recorridos en navegador con datos simulados: agregar con texto, completar y deshacer, borrar a la papelera, mover de fecha, paleta, Pomodoro que sigue tras recargar, repaso con teclado, cerrar sesión, y la app funcionando sin `schema_v14.sql`.
+- Capturas finales en `docs/revision-v12/` con el prefijo `despues-`.

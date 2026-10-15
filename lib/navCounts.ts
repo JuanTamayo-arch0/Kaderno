@@ -1,7 +1,7 @@
 // Contadores de la navegación: tareas para hoy, tarjetas por repasar y avisos sin leer.
 import { useEffect, useState } from 'react';
 import { supabase } from './supabase';
-import { countDueFlashcards, hasV14 } from './db';
+import { countDueFlashcards, hasV14, isMissingColumn } from './db';
 import { bucketOf } from './time';
 import { onDataChanged } from './uiBus';
 
@@ -20,9 +20,13 @@ export function refreshNavCounts(force = false): Promise<void> {
     try {
       const { data: s } = await supabase.auth.getSession();
       if (!s.session) return;
-      const tq = supabase.from('assignments').select(hasV14() ? 'due_date, due_at, status, deleted_at' : 'due_date, status').neq('status', 'done');
+      const tq = async () => {
+        const first = await supabase.from('assignments').select(hasV14() ? 'due_date, due_at, status, deleted_at' : 'due_date, status').neq('status', 'done');
+        if (first.error && isMissingColumn(first.error)) return supabase.from('assignments').select('due_date, status').neq('status', 'done');
+        return first;
+      };
       const [t, r, u] = await Promise.all([
-        tq,
+        tq(),
         countDueFlashcards().catch(() => 0),
         supabase.from('notification_queue').select('id', { count: 'exact', head: true }).is('read_at', null),
       ]);

@@ -477,7 +477,11 @@ const sheet = { backgroundColor: C.surface, borderTopLeftRadius: 20, borderTopRi
 const lbl = { color: C.muted, fontSize: 12, marginTop: 16, marginBottom: 6 } as const;
 
 /** Nombre corto para las celdas del celular: "Física Mecánica" -> "Fís. Mec.". */
-export function shortName(name: string): string {
-  if (name.length <= 9) return name;
-  return name.split(/\s+/).map((w) => (/^(I|II|III|IV|V|VI|VII|VIII|IX|X|\d+)$/i.test(w) || w.length <= 4 ? w : w.slice(0, 4) + '.')).join(' ');
+function shortName(name: string): string {
+  if (name.length <= 6) return name;
+  return name.split(/\s+/).map((w, i) => {
+    if (/^(I|II|III|IV|V|VI|VII|VIII|IX|X|\d+)$/i.test(w)) return w;
+    if (i === 0) return w.length > 5 ? w.slice(0, 4) + '.' : w;
+    return w[0].toUpperCase() + '.';
+  }).join(' ');
 }

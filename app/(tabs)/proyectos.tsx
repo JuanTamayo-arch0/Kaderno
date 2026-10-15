@@ -93,7 +93,7 @@ function ProjectCard({ row, subjects, wide, onPress }: { row: Overview; subjects
   );
 }
 
-export function Avatars({ members, size = 26 }: { members: Member[]; size?: number }) {
+function Avatars({ members, size = 26 }: { members: Member[]; size?: number }) {
   const shown = members.slice(0, 4);
   const rest = members.length - shown.length;
   return (

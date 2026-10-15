@@ -297,7 +297,7 @@ export function Screen({
     <View style={{ paddingTop: top, paddingHorizontal: padX, paddingBottom: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, maxWidth: maxWidth && isWide ? maxWidth : undefined, width: '100%', alignSelf: maxWidth && isWide ? 'center' : 'auto' }}>
         {back ? (
-          <IconButton icon="chevron-back" label="Volver" onPress={goBack} color={C.text} size={24} style={{ marginLeft: -12, marginBottom: title ? -4 : 0 }} />
+          <IconButton icon="chevron-back" label="Volver" onPress={goBack} color={C.text} size={24} style={{ marginLeft: -12, alignSelf: 'flex-start', marginTop: title ? (isWide ? -5 : -8) : 0 }} />
         ) : null}
         <View style={{ flex: 1, minWidth: 0 }}>
           {!!eyebrow && <Text style={{ color: C.muted, fontSize: 13, marginBottom: 2 }}>{eyebrow}</Text>}

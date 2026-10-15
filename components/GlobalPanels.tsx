@@ -156,7 +156,7 @@ function AddSheet({ visible, subjects }: { visible: boolean; subjects: Subject[]
         <Ionicons name="add" size={20} color={C.muted} />
         <TextInput value={text} onChangeText={setText} autoFocus placeholder='Ej: "parcial cálculo viernes 10am"' placeholderTextColor={C.muted}
           onSubmitEditing={quickCreate} returnKeyType="done" accessibilityLabel="Escribe una tarea"
-          style={[{ flex: 1, color: C.text, fontSize: 15, paddingVertical: 12, minHeight: 46 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
+          style={[{ flex: 1, minWidth: 0, color: C.text, fontSize: 15, paddingVertical: 12, minHeight: 46 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
         {!!text.trim() && <Button label="Agregar" size="sm" onPress={quickCreate} busy={busy} style={{ marginRight: 6 }} />}
       </View>
       {parsed ? (

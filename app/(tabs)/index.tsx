@@ -336,12 +336,12 @@ export default function Hoy() {
   const left = (
     <>
       {summaryLine}
-      {!isWide && (focusCard ?? nowCard)}
+      {(!isWide || width < 1100) && (focusCard ?? nowCard)}
       {week}
       {filters}
       {list}
       {doneBlock}
-      {!isWide && repasoCard}
+      {(!isWide || width < 1100) && repasoCard}
     </>
   );
 
