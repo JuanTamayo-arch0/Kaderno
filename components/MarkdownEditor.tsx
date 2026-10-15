@@ -81,7 +81,7 @@ export function MarkdownEditor({ value, onChange, minHeight = 220 }: {
 function Seg({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} style={{ paddingVertical: 6, paddingHorizontal: 14, borderRadius: 999, backgroundColor: active ? C.brand : C.surface2, borderWidth: 1, borderColor: active ? C.brand : C.line }}>
-      <Text style={{ color: active ? '#0f1115' : C.muted, fontSize: 13, fontWeight: '700' }}>{label}</Text>
+      <Text style={{ color: active ? C.onBrand : C.muted, fontSize: 13, fontWeight: '700' }}>{label}</Text>
     </Pressable>
   );
 }

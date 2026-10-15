@@ -28,7 +28,7 @@ export function Chip({ label, active, onPress }: { label: string; active: boolea
       backgroundColor: active ? C.brand : C.surface2, borderColor: active ? C.brand : C.line,
       opacity: pressed ? 0.7 : 1,
     })}>
-      <Text style={{ color: active ? '#0b0d11' : C.text, fontSize: 12.5, fontWeight: active ? '700' : '500' }}>{label}</Text>
+      <Text style={{ color: active ? C.onBrand : C.text, fontSize: 12.5, fontWeight: active ? '700' : '500' }}>{label}</Text>
     </Pressable>
   );
 }

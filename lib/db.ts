@@ -1,14 +1,19 @@
 import { supabase } from './supabase';
+import { sm2, localISODate } from './srs';
 
 // ---------- Tipos ----------
 export type Subject = { id: string; name: string; color: string; icon: string; archived: boolean; credits: number | null };
 export type Task = {
   id: string; subject_id: string | null; title: string; description: string | null;
   due_date: string | null; status: 'pending' | 'done'; remind_days: number | null; type: string | null;
+  // schema_v14 (pueden faltar si la migración no se ha corrido)
+  due_at?: string | null; remind_at?: string | null; estimate_min?: number | null;
+  completed_at?: string | null; deleted_at?: string | null; created_at?: string;
 };
 export type Note = {
   id: string; subject_id: string | null; title: string | null; content: string | null;
   image_path: string | null; ocr_status: string; created_at: string; summary: string | null;
+  deleted_at?: string | null;
 };
 export type Slot = { id: string; day: number; slot: number; subject_id: string };
 // Microtarea (checklist dentro de una tarea)
@@ -19,11 +24,37 @@ export type Grade = {
   id: string; subject_id: string; name: string; weight: number;
   score: number | null; max_score: number;
 };
-export type FocusSession = { id: string; subject_id: string | null; minutes: number; created_at: string };
+export type FocusSession = { id: string; subject_id: string | null; minutes: number; created_at: string; assignment_id?: string | null };
 export type Flashcard = {
   id: string; note_id: string | null; subject_id: string | null;
   front: string; back: string; box: number; due_date: string;
+  ease?: number; interval_days?: number; reps?: number; lapses?: number; last_reviewed_at?: string | null;
 };
+
+// ---------- Compatibilidad con schema_v14 ----------
+// Si la base todavía no tiene las columnas nuevas, la app sigue funcionando
+// como antes (sin hora, sin papelera...) en lugar de romperse.
+const V14_COLS = ['due_at', 'remind_at', 'estimate_min', 'deleted_at', 'completed_at', 'assignment_id',
+  'archived_at', 'ease', 'interval_days', 'reps', 'lapses', 'last_reviewed_at', 'reminded_at'];
+let V14 = true;
+export function hasV14(): boolean { return V14; }
+export function isMissingColumn(err: any): boolean {
+  if (!err) return false;
+  const m = String(err.message ?? '');
+  return err.code === '42703' || err.code === 'PGRST204' || /column .* does not exist|Could not find the '.*' column/i.test(m);
+}
+function stripV14<T extends Record<string, any>>(o: T): T {
+  const c: Record<string, any> = { ...o };
+  V14_COLS.forEach((k) => delete c[k]);
+  return c as T;
+}
+/** Ejecuta con las columnas nuevas y, si faltan, repite sin ellas. */
+async function v14<R extends { error: any }>(run: (on: boolean) => PromiseLike<R>): Promise<R> {
+  if (!V14) return run(false);
+  const r = await run(true);
+  if (r.error && isMissingColumn(r.error)) { V14 = false; return run(false); }
+  return r;
+}
 
 async function uid(): Promise<string> {
   const { data } = await supabase.auth.getUser();
@@ -46,25 +77,44 @@ export async function updateSubject(id: string, patch: { name?: string; color?: 
   const { error } = await supabase.from('subjects').update(patch).eq('id', id);
   if (error) throw error;
 }
+// Archivar: la materia desaparece de las listas pero conserva sus tareas y
+// notas; se puede restaurar desde la Papelera.
 export async function deleteSubject(id: string): Promise<void> {
-  const { error } = await supabase.from('subjects').update({ archived: true }).eq('id', id);
+  const { error } = await v14((on) => supabase.from('subjects').update(on ? { archived: true, archived_at: new Date().toISOString() } : { archived: true }).eq('id', id));
   if (error) throw error;
+}
+export const archiveSubject = deleteSubject;
+export async function restoreSubject(id: string): Promise<void> {
+  const { error } = await v14((on) => supabase.from('subjects').update(on ? { archived: false, archived_at: null } : { archived: false }).eq('id', id));
+  if (error) throw error;
+}
+export async function getArchivedSubjects(): Promise<(Subject & { archived_at?: string | null })[]> {
+  const { data, error } = await supabase.from('subjects').select('*').eq('archived', true).order('created_at');
+  if (error) throw error;
+  return data as Subject[];
 }
 
 // ---------- Tareas ----------
 export async function getTasks(subjectId?: string): Promise<Task[]> {
-  let q = supabase.from('assignments').select('*');
-  if (subjectId) q = q.eq('subject_id', subjectId);
-  const { data, error } = await q.order('due_date', { ascending: true, nullsFirst: false });
+  const { data, error } = await v14((on) => {
+    let q = supabase.from('assignments').select('*');
+    if (on) q = q.is('deleted_at', null);
+    if (subjectId) q = q.eq('subject_id', subjectId);
+    return q.order('due_date', { ascending: true, nullsFirst: false });
+  });
   if (error) throw error;
   return data as Task[];
 }
-export async function addTask(t: {
-  title: string; subject_id: string | null; due_date: string | null; remind_days: number | null; description?: string; type?: string;
-}): Promise<string> {
-  const { data, error } = await supabase.from('assignments')
-    .insert({ user_id: await uid(), status: 'pending', ...t })
-    .select('id').single();
+export type TaskInput = {
+  title: string; subject_id: string | null; due_date: string | null; remind_days: number | null;
+  description?: string | null; type?: string;
+  due_at?: string | null; remind_at?: string | null; estimate_min?: number | null;
+};
+export async function addTask(t: TaskInput): Promise<string> {
+  const u = await uid();
+  const { data, error } = await v14((on) => supabase.from('assignments')
+    .insert({ user_id: u, status: 'pending', ...(on ? t : stripV14(t)) })
+    .select('id').single());
   if (error) throw error;
   return (data as { id: string }).id;
 }
@@ -72,16 +122,35 @@ export async function toggleTask(id: string, done: boolean): Promise<void> {
   const { error } = await supabase.from('assignments').update({ status: done ? 'done' : 'pending' }).eq('id', id);
   if (error) throw error;
 }
+/** A la papelera (se puede restaurar 30 días). Sin schema_v14 se borra de verdad. */
 export async function deleteTask(id: string): Promise<void> {
+  const { error } = await v14((on) => on
+    ? supabase.from('assignments').update({ deleted_at: new Date().toISOString() }).eq('id', id)
+    : supabase.from('assignments').delete().eq('id', id));
+  if (error) throw error;
+}
+export async function restoreTask(id: string): Promise<void> {
+  const { error } = await supabase.from('assignments').update({ deleted_at: null }).eq('id', id);
+  if (error) throw error;
+}
+export async function purgeTask(id: string): Promise<void> {
   const { error } = await supabase.from('assignments').delete().eq('id', id);
   if (error) throw error;
 }
-export async function updateTask(id: string, patch: {
-  title?: string; subject_id?: string | null; due_date?: string | null; remind_days?: number | null;
-  type?: string; description?: string | null;
-}): Promise<void> {
-  const { error } = await supabase.from('assignments').update(patch).eq('id', id);
+export async function updateTask(id: string, patch: Partial<TaskInput>): Promise<void> {
+  const { error } = await v14((on) => supabase.from('assignments').update(on ? patch : stripV14(patch)).eq('id', id));
   if (error) throw error;
+}
+/** Mueve varias tareas de fecha conservando la hora. */
+export async function moveTaskDate(t: Task, isoDate: string | null): Promise<void> {
+  const patch: Partial<TaskInput> = { due_date: isoDate };
+  if (t.due_at && isoDate) {
+    const d = new Date(t.due_at);
+    const [y, m, dd] = isoDate.split('-').map(Number);
+    d.setFullYear(y, m - 1, dd);
+    patch.due_at = d.toISOString();
+  } else if (!isoDate) patch.due_at = null;
+  await updateTask(t.id, patch);
 }
 
 // ---------- Microtareas ----------
@@ -158,9 +227,12 @@ export async function retypeTasks(from: string, to = 'tarea'): Promise<void> {
 
 // ---------- Notas ----------
 export async function getNotes(subjectId?: string): Promise<Note[]> {
-  let q = supabase.from('notes').select('*');
-  if (subjectId) q = q.eq('subject_id', subjectId);
-  const { data, error } = await q.order('created_at', { ascending: false });
+  const { data, error } = await v14((on) => {
+    let q = supabase.from('notes').select('*');
+    if (on) q = q.is('deleted_at', null);
+    if (subjectId) q = q.eq('subject_id', subjectId);
+    return q.order('created_at', { ascending: false });
+  });
   if (error) throw error;
   return data as Note[];
 }
@@ -181,8 +253,32 @@ export async function updateNote(id: string, patch: { title?: string; content?: 
   if (error) throw error;
 }
 export async function deleteNote(id: string): Promise<void> {
+  const { error } = await v14((on) => on
+    ? supabase.from('notes').update({ deleted_at: new Date().toISOString() }).eq('id', id)
+    : supabase.from('notes').delete().eq('id', id));
+  if (error) throw error;
+}
+export async function restoreNote(id: string): Promise<void> {
+  const { error } = await supabase.from('notes').update({ deleted_at: null }).eq('id', id);
+  if (error) throw error;
+}
+export async function purgeNote(id: string): Promise<void> {
   const { error } = await supabase.from('notes').delete().eq('id', id);
   if (error) throw error;
+}
+
+// ---------- Papelera ----------
+export async function getTrash(): Promise<{ tasks: Task[]; notes: Note[]; subjects: (Subject & { archived_at?: string | null })[] }> {
+  if (!V14) return { tasks: [], notes: [], subjects: await getArchivedSubjects() };
+  const [t, n, s] = await Promise.all([
+    supabase.from('assignments').select('*').not('deleted_at', 'is', null).order('deleted_at', { ascending: false }),
+    supabase.from('notes').select('*').not('deleted_at', 'is', null).order('deleted_at', { ascending: false }),
+    getArchivedSubjects(),
+  ]);
+  if (t.error && isMissingColumn(t.error)) { V14 = false; return { tasks: [], notes: [], subjects: s }; }
+  if (t.error) throw t.error;
+  if (n.error) throw n.error;
+  return { tasks: (t.data as Task[]) ?? [], notes: (n.data as Note[]) ?? [], subjects: s };
 }
 
 // ---------- Horario ----------
@@ -334,9 +430,20 @@ export function gradeSummary(grades: Grade[], passMark: number) {
 }
 
 // ---------- Pomodoro ----------
-export async function addFocusSession(minutes: number, subjectId: string | null): Promise<void> {
-  const { error } = await supabase.from('focus_sessions').insert({ user_id: await uid(), minutes, subject_id: subjectId });
+export async function addFocusSession(minutes: number, subjectId: string | null, assignmentId: string | null = null): Promise<void> {
+  const u = await uid();
+  const row: Record<string, any> = { user_id: u, minutes, subject_id: subjectId, assignment_id: assignmentId };
+  const { error } = await v14((on) => supabase.from('focus_sessions').insert(on ? row : stripV14(row)));
   if (error) throw error;
+}
+/** Minutos de enfoque acumulados por tarea. */
+export async function getFocusByTask(ids: string[]): Promise<Record<string, number>> {
+  if (!ids.length || !V14) return {};
+  const { data, error } = await supabase.from('focus_sessions').select('assignment_id, minutes').in('assignment_id', ids);
+  if (error) { if (isMissingColumn(error)) V14 = false; return {}; }
+  const out: Record<string, number> = {};
+  ((data as { assignment_id: string; minutes: number }[]) ?? []).forEach((r) => { out[r.assignment_id] = (out[r.assignment_id] ?? 0) + r.minutes; });
+  return out;
 }
 export async function getFocusStats(): Promise<{ todayMin: number; weekMin: number; bySubject: { subject_id: string | null; minutes: number }[] }> {
   const since = new Date(); since.setDate(since.getDate() - 7);
@@ -394,25 +501,38 @@ export async function addFlashcards(cards: { front: string; back: string }[], no
   if (error) throw error;
 }
 export async function getDueFlashcards(): Promise<Flashcard[]> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localISODate(new Date());
   const { data, error } = await supabase.from('flashcards').select('*').lte('due_date', today).order('due_date');
   if (error) throw error;
   return data as Flashcard[];
 }
 export async function countDueFlashcards(): Promise<number> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localISODate(new Date());
   const { count, error } = await supabase.from('flashcards').select('*', { count: 'exact', head: true }).lte('due_date', today);
   if (error) throw error;
   return count ?? 0;
 }
-// Actualiza la tarjeta según el sistema Leitner: si acierta sube de caja (repasa más tarde),
-// si falla vuelve a la caja 1 (repasa mañana).
-export async function reviewFlashcard(id: string, remembered: boolean, currentBox: number): Promise<void> {
-  const box = remembered ? Math.min(5, currentBox + 1) : 1;
-  const intervals = [1, 2, 4, 7, 15]; // días según la caja
-  const next = new Date(); next.setDate(next.getDate() + intervals[box - 1]);
-  const { error } = await supabase.from('flashcards').update({ box, due_date: next.toISOString().slice(0, 10) }).eq('id', id);
+/**
+ * Repasa una tarjeta con SM-2 (lib/srs.ts). `grade`: 0 otra vez, 1 difícil,
+ * 2 bien, 3 fácil. Sin schema_v14 se usa el sistema de cajas anterior.
+ */
+export async function reviewFlashcard(card: Flashcard, grade: 0 | 1 | 2 | 3): Promise<void> {
+  const next = sm2(card, grade, new Date());
+  const { error } = await v14((on) => supabase.from('flashcards').update(on ? next : { box: next.box, due_date: next.due_date }).eq('id', card.id));
   if (error) throw error;
+}
+export async function updateFlashcard(id: string, patch: { front?: string; back?: string; subject_id?: string | null }): Promise<void> {
+  const { error } = await supabase.from('flashcards').update(patch).eq('id', id);
+  if (error) throw error;
+}
+export async function deleteFlashcard(id: string): Promise<void> {
+  const { error } = await supabase.from('flashcards').delete().eq('id', id);
+  if (error) throw error;
+}
+export async function getAllFlashcards(): Promise<Flashcard[]> {
+  const { data, error } = await supabase.from('flashcards').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  return data as Flashcard[];
 }
 
 // ---------- IA (usa la Edge Function "ai") ----------
@@ -428,25 +548,29 @@ export async function aiFlashcards(content: string): Promise<{ front: string; ba
 }
 
 // ---------- Búsqueda global ----------
-export async function search(q: string): Promise<{ notes: Note[]; tasks: Task[]; subjects: Subject[]; flashcards: Flashcard[] }> {
-  const term = `%${q}%`;
-  const [byTitle, byContent, byTask, subs, cFront, cBack] = await Promise.all([
+export type ProjectTaskHit = { id: string; title: string; project_id: string; due_at: string | null; due_date: string | null; done: boolean };
+export async function search(q: string): Promise<{ notes: Note[]; tasks: Task[]; subjects: Subject[]; flashcards: Flashcard[]; projectTasks: ProjectTaskHit[] }> {
+  const term = `%${q.replace(/[%_]/g, '')}%`;
+  const [byTitle, byContent, byTask, subs, cFront, cBack, pTasks] = await Promise.all([
     supabase.from('notes').select('*').ilike('title', term).limit(20),
     supabase.from('notes').select('*').ilike('content', term).limit(20),
     supabase.from('assignments').select('*').ilike('title', term).limit(20),
     supabase.from('subjects').select('*').eq('archived', false).ilike('name', term).limit(20),
     supabase.from('flashcards').select('*').ilike('front', term).limit(20),
     supabase.from('flashcards').select('*').ilike('back', term).limit(20),
+    supabase.from('project_tasks').select('id, title, project_id, due_at, due_date, done').ilike('title', term).limit(20),
   ]);
+  const live = <T extends { deleted_at?: string | null }>(xs: T[]) => xs.filter((x) => !x.deleted_at);
   const nMap = new Map<string, Note>();
-  [...((byTitle.data as Note[]) ?? []), ...((byContent.data as Note[]) ?? [])].forEach((n) => nMap.set(n.id, n));
+  live([...((byTitle.data as Note[]) ?? []), ...((byContent.data as Note[]) ?? [])]).forEach((n) => nMap.set(n.id, n));
   const cMap = new Map<string, Flashcard>();
   [...((cFront.data as Flashcard[]) ?? []), ...((cBack.data as Flashcard[]) ?? [])].forEach((c) => cMap.set(c.id, c));
   return {
     notes: Array.from(nMap.values()),
-    tasks: (byTask.data as Task[]) ?? [],
+    tasks: live((byTask.data as Task[]) ?? []),
     subjects: (subs.data as Subject[]) ?? [],
     flashcards: Array.from(cMap.values()),
+    projectTasks: pTasks.error ? [] : ((pTasks.data as ProjectTaskHit[]) ?? []),
   };
 }
 
@@ -545,4 +669,53 @@ export async function cleanOldWallpapers(keepUrl: string | null): Promise<void> 
       .filter((p) => !keepUrl || !keepUrl.includes(p));
     if (stale.length) await supabase.storage.from('wallpapers').remove(stale);
   } catch { /* no es crítico */ }
+}
+
+
+// ---------- Avisos (bandeja de la campana) ----------
+export type AppNotification = {
+  id: number; kind: string; title: string; body: string | null; url: string | null;
+  created_at: string; read_at: string | null;
+};
+export async function getNotifications(limit = 40): Promise<AppNotification[]> {
+  const { data, error } = await supabase.from('notification_queue')
+    .select('id, kind, title, body, url, created_at, read_at')
+    .order('created_at', { ascending: false }).limit(limit);
+  if (error) { if (/does not exist|schema cache|PGRST20/.test(String(error.message))) return []; throw error; }
+  return data as AppNotification[];
+}
+export async function markNotificationsRead(ids?: number[]): Promise<void> {
+  let q = supabase.from('notification_queue').update({ read_at: new Date().toISOString() }).is('read_at', null);
+  if (ids?.length) q = q.in('id', ids);
+  const { error } = await q;
+  if (error && !/does not exist|schema cache/.test(String(error.message))) throw error;
+}
+
+// ---------- Notificaciones push ----------
+export async function savePushSubscription(sub: { endpoint: string; p256dh: string; auth: string; user_agent?: string }): Promise<void> {
+  const { error } = await supabase.from('push_subscriptions')
+    .upsert({ user_id: await uid(), ...sub }, { onConflict: 'endpoint' });
+  if (error) throw error;
+}
+export async function deletePushSubscription(endpoint: string): Promise<void> {
+  const { error } = await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint);
+  if (error) throw error;
+}
+
+// ---------- Calendario (.ics) ----------
+export async function getCalendarToken(regen = false): Promise<string> {
+  const { data, error } = await supabase.rpc('my_calendar_token', { p_regen: regen });
+  if (error) throw error;
+  return String(data);
+}
+
+// ---------- Exportar todos mis datos (Ajustes) ----------
+export async function exportMyData(): Promise<Record<string, unknown>> {
+  const tables = ['subjects', 'assignments', 'assignment_steps', 'notes', 'grades', 'focus_sessions', 'flashcards', 'schedule', 'task_types', 'user_prefs'];
+  const out: Record<string, unknown> = { exportado: new Date().toISOString(), app: 'Kaderno', version: 12 };
+  for (const t of tables) {
+    const { data, error } = await supabase.from(t).select('*');
+    out[t] = error ? { error: error.message } : data;
+  }
+  return out;
 }

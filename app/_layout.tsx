@@ -16,6 +16,22 @@ import { fetchPrefs, savePrefs } from '../lib/db';
 import { loadTaskTypes } from '../lib/taskTypes';
 import { SCHEDULE, applyRemoteSchedule, loadScheduleNative } from '../lib/schedule';
 import { AppBackground } from '../components/AppBackground';
+import { FeedbackHost } from '../components/FeedbackHost';
+import { GlobalPanels } from '../components/GlobalPanels';
+import { toast } from '../lib/feedback';
+import { beep, loadFocus, setFocusCompleteHandler } from '../lib/focusTimer';
+import { registerServiceWorker } from '../lib/push';
+
+// Al terminar un pomodoro o un descanso: sonido, aviso del navegador y mensaje.
+setFocusCompleteHandler((mode, s) => {
+  if (s.sound) beep();
+  const title = mode === 'work' ? 'Pomodoro terminado' : 'Fin del descanso';
+  const body = mode === 'work' ? `Buen trabajo. Descanso de ${s.cycle === 0 ? s.longBreakMin : s.breakMin} min.` : 'Cuando quieras, empieza el siguiente pomodoro.';
+  toast(`${title}. ${body}`, { tone: 'good', duration: 8000 });
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted' && document.hidden) {
+    try { new Notification(title, { body, icon: '/icon-192.png' }); } catch { /* noop */ }
+  }
+});
 
 // Habilita animaciones de layout suaves en Android.
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -50,6 +66,8 @@ function Shell() {
   const [rev, setRev] = useState(0);
 
   useEffect(() => {
+    loadFocus();
+    registerServiceWorker();
     injectWebFonts();
     if (Platform.OS === 'web') applyWebChrome();
     else {
@@ -111,6 +129,8 @@ function Shell() {
         <AppBackground />
         <ThemeProvider value={navTheme}>
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }} />
+          {session ? <GlobalPanels /> : null}
+          <FeedbackHost />
         </ThemeProvider>
       </View>
     </>

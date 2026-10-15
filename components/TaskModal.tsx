@@ -1,182 +1,258 @@
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'expo-router';
-import { Alert, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { C, R, uiScheme } from '../lib/theme';
+import { C, R } from '../lib/theme';
 import { useResponsive } from '../lib/responsive';
 import { SubjectPicker } from './SubjectPicker';
 import { SubtaskList, isTempStep } from './SubtaskList';
-import { Chip, sheet, input, lbl, btnPrimary } from './ui';
-import { taskTypeList, loadTaskTypes } from '../lib/taskTypes';
-import { Step, Subject, Task, addStep, addTask, getSteps, updateTask } from '../lib/db';
-import { ensureNotifPermission, scheduleReminder } from '../lib/notifications';
+import { DateField, TimeField, DateShortcuts } from './DateTime';
+import { Button, Field, IconButton } from './ds';
+import { taskTypeList, loadTaskTypes, slugify } from '../lib/taskTypes';
+import { Step, Subject, Task, addStep, addTask, getSteps, updateTask, upsertTaskType, deleteTask, restoreTask, hasV14 } from '../lib/db';
+import { REMIND_OPTIONS, RemindChoice, inferChoice, remindAt, remindDays } from '../lib/reminders';
+import { combine, dueTimeHHMM, isoDate } from '../lib/time';
+import { notify, toast, friendlyError, deleteWithUndo } from '../lib/feedback';
+import { scheduleLocalReminder } from '../lib/notifications';
+import { removeTask } from '../lib/taskActions';
+import { startFocus } from '../lib/focusTimer';
+import type { TaskDraft } from '../lib/uiBus';
 
 // ============================================================
-//  Modal de crear / editar tarea.
-//  Novedades: descripción, microtareas y tipos de tarea propios.
-//  Al crear una tarea las microtareas viven en memoria (ids 'tmp-*') y se
-//  insertan justo después de guardar la tarea, cuando ya existe su id.
+//  Crear / editar tarea personal.
+//  Novedades v12: hora opcional, aviso exacto (1 hora antes, la noche
+//  anterior...), tiempo estimado, crear un tipo nuevo sin salir del
+//  formulario, borrar con "Deshacer" y empezar a enfocarse en la tarea.
 // ============================================================
 
-export function TaskModal({ visible, subjects, editTask, initialSubjectId, onClose, onSaved }: {
-  visible: boolean; subjects: Subject[]; editTask: Task | null; initialSubjectId?: string | null;
-  onClose: () => void; onSaved: () => void;
+const TYPE_COLORS = ['#6c8cff', '#37c98b', '#f5b64c', '#f56c6c', '#8b6cff', '#22c1c3', '#ff8fab'];
+const ESTIMATES = [15, 30, 60, 90, 120, 180];
+
+export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId, onClose, onSaved, onDeleted }: {
+  visible: boolean; subjects: Subject[]; editTask: Task | null; draft?: TaskDraft | null; initialSubjectId?: string | null;
+  onClose: () => void; onSaved: (id?: string) => void; onDeleted?: (id: string) => void;
 }) {
-  const router = useRouter();
   const { isWide } = useResponsive();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [subjectId, setSubjectId] = useState<string | null>(null);
   const [type, setType] = useState<string>('tarea');
-  const [date, setDate] = useState(new Date());
-  const [remind, setRemind] = useState(2);
-  const [showPicker, setShowPicker] = useState(false);
+  const [date, setDate] = useState<string | null>(null);
+  const [time, setTime] = useState<string | null>(null);
+  const [remind, setRemind] = useState<RemindChoice>('evening');
+  const [estimate, setEstimate] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [steps, setSteps] = useState<Step[]>([]);
   const [typesRev, setTypesRev] = useState(0);
+  const [newType, setNewType] = useState<{ label: string; icon: string } | null>(null);
+  const [titleError, setTitleError] = useState<string | null>(null);
+  const [more, setMore] = useState(false);
 
   useEffect(() => {
     if (!visible) return;
-    setTitle(editTask?.title ?? '');
-    setDescription(editTask?.description ?? '');
-    setSubjectId(editTask?.subject_id ?? initialSubjectId ?? null);
-    setType(editTask?.type ?? 'tarea');
-    setDate(editTask?.due_date ? new Date(editTask.due_date + 'T00:00:00') : new Date());
-    setRemind(editTask?.remind_days ?? 2);
+    const t = editTask;
+    const d = t?.due_at ? isoDate(new Date(t.due_at)) : t?.due_date ?? draft?.dueDate ?? (t ? null : isoDate(new Date()));
+    const tm = t ? dueTimeHHMM(t) : draft?.dueTime ?? null;
+    setTitle(t?.title ?? draft?.title ?? '');
+    setDescription(t?.description ?? '');
+    setSubjectId(t ? t.subject_id : draft?.subjectId ?? initialSubjectId ?? null);
+    setType(t?.type ?? draft?.typeKey ?? 'tarea');
+    setDate(d);
+    setTime(tm);
+    setRemind(t ? inferChoice(t.remind_at, t.remind_days, d, tm) : (tm ? '1h' : 'evening'));
+    setEstimate(t?.estimate_min ?? null);
     setSteps([]);
-    // Los tipos pueden haber cambiado en /tipos mientras la app estaba abierta.
+    setNewType(null);
+    setTitleError(null);
+    setMore(!!(t?.description || t?.estimate_min));
     loadTaskTypes().then(() => setTypesRev((n) => n + 1)).catch(() => {});
-    if (editTask) getSteps(editTask.id).then(setSteps).catch(() => {});
-  }, [visible, editTask, initialSubjectId]);
+    if (t) getSteps(t.id).then(setSteps).catch(() => {});
+  }, [visible, editTask, draft, initialSubjectId]);
 
-  const types = React.useMemo(() => taskTypeList(), [typesRev, visible]);
+  const types = useMemo(() => taskTypeList(), [typesRev, visible]);
   const doneSteps = steps.filter((s) => s.done).length;
+  const v14 = hasV14();
 
   async function save() {
-    if (!title.trim()) { Alert.alert('Ponle un título'); return; }
+    if (!title.trim()) { setTitleError('Escribe un título.'); return; }
     setBusy(true);
     try {
-      const iso = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-      const desc = description.trim() ? description.trim() : null;
+      const at = remindAt(remind, date, time);
+      const payload = {
+        title: title.trim(), subject_id: subjectId, type,
+        description: description.trim() ? description.trim() : null,
+        due_date: date, due_at: date && time ? combine(date, time) : null,
+        remind_days: remindDays(remind), remind_at: at ? at.toISOString() : null,
+        estimate_min: estimate,
+      };
+      let id = editTask?.id;
       if (editTask) {
-        await updateTask(editTask.id, { title: title.trim(), subject_id: subjectId, due_date: iso, remind_days: remind, type, description: desc });
+        await updateTask(editTask.id, payload);
       } else {
-        const newId = await addTask({ title: title.trim(), subject_id: subjectId, due_date: iso, remind_days: remind, type, description: desc ?? undefined });
-        // Las microtareas escritas antes de existir la tarea se insertan ahora.
+        id = await addTask(payload);
         const pend = steps.filter(isTempStep);
         for (let i = 0; i < pend.length; i++) {
-          try { await addStep(newId, pend[i].title, i); } catch { /* si una falla, la tarea ya quedó creada */ }
+          try { await addStep(id, pend[i].title, i); } catch { /* la tarea ya quedó creada */ }
         }
-        if (remind > 0 && await ensureNotifPermission()) await scheduleReminder(title.trim(), iso, remind);
       }
-      onSaved();
-    } catch (e: any) { Alert.alert('Error', e?.message ?? 'No se pudo guardar'); }
+      if (at) scheduleLocalReminder(title.trim(), at).catch(() => {});
+      toast(editTask ? 'Cambios guardados' : 'Tarea creada', { tone: 'good' });
+      onSaved(id);
+    } catch (e) { notify('No se pudo guardar', friendlyError(e)); }
     finally { setBusy(false); }
   }
 
-  function goTypes() { onClose(); router.push('/tipos'); }
+  async function createType() {
+    if (!newType?.label.trim()) return;
+    const label = newType.label.trim();
+    const key = slugify(label) || `tipo-${Date.now()}`;
+    try {
+      await upsertTaskType({ key, label, icon: newType.icon.trim() || '📌', color: TYPE_COLORS[types.length % TYPE_COLORS.length], position: types.length });
+      await loadTaskTypes();
+      setTypesRev((n) => n + 1);
+      setType(key);
+      setNewType(null);
+    } catch (e) { notify('No se pudo crear el tipo', friendlyError(e)); }
+  }
+
+  async function remove() {
+    if (!editTask) return;
+    const t = editTask;
+    if (await removeTask(t)) { onDeleted?.(t.id); onClose(); }
+  }
 
   const body = (
-    <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-      <Text style={{ color: C.text, fontSize: 18, fontWeight: '700', marginBottom: 12 }}>{editTask ? 'Editar tarea' : 'Nueva tarea'}</Text>
+    <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 8 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+        <Text style={{ color: C.text, fontSize: 18, fontWeight: '700', flex: 1 }} accessibilityRole="header">{editTask ? 'Editar tarea' : 'Nueva tarea'}</Text>
+        {editTask && <IconButton icon="timer-outline" label="Enfocarme en esta tarea" onPress={() => { startFocus({ taskId: editTask.id, taskTitle: editTask.title, subjectId: editTask.subject_id }); onClose(); toast('Enfoque iniciado: ' + editTask.title); }} />}
+        {editTask && <IconButton icon="trash-outline" label="Borrar tarea" onPress={remove} />}
+        <IconButton icon="close" label="Cerrar" onPress={onClose} />
+      </View>
 
-      <TextInput value={title} onChangeText={setTitle} placeholder="Ej: Taller de cálculo, ej. 1–10"
-        placeholderTextColor={C.muted} style={input} />
+      <Field value={title} onChangeText={(v) => { setTitle(v); if (titleError) setTitleError(null); }} placeholder="Ej: Taller de cálculo, ejercicios 1 a 10"
+        autoFocus={!editTask && Platform.OS === 'web'} error={titleError} onSubmitEditing={save} returnKeyType="done" label="Título" />
 
-      <Text style={lbl}>Descripción <Text style={{ color: C.muted, fontSize: 11 }}>(opcional)</Text></Text>
-      <TextInput
-        value={description} onChangeText={setDescription} multiline
-        placeholder="Detalles, requisitos, página del libro…"
-        placeholderTextColor={C.muted}
-        style={[input, { minHeight: 72, textAlignVertical: 'top' }]}
-      />
-
-      <Text style={lbl}>Tipo</Text>
+      <Text style={lbl()}>Tipo</Text>
       <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
         {types.map((m) => {
           const active = type === m.key;
           return (
-            <Pressable key={m.key} onPress={() => setType(m.key)}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, backgroundColor: active ? m.color + '22' : C.surface2, borderColor: active ? m.color : C.line }}>
+            <Pressable key={m.key} onPress={() => setType(m.key)} accessibilityRole="radio" accessibilityState={{ checked: active }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36, paddingVertical: 7, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, backgroundColor: active ? m.color + '22' : C.surface2, borderColor: active ? m.color : C.line }}>
               <Text style={{ fontSize: 13 }}>{m.icon}</Text>
-              <Text style={{ color: active ? m.color : C.text, fontSize: 13, fontWeight: active ? '700' : '500' }}>{m.label}</Text>
+              <Text style={{ color: active ? C.text : C.text, fontSize: 13, fontWeight: active ? '700' : '500' }}>{m.label}</Text>
             </Pressable>
           );
         })}
-        <Pressable onPress={goTypes}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, borderStyle: 'dashed', borderColor: C.line, backgroundColor: 'transparent' }}>
-          <Ionicons name="add" size={14} color={C.muted} />
-          <Text style={{ color: C.muted, fontSize: 13, fontWeight: '600' }}>Nuevo tipo</Text>
-        </Pressable>
+        {!newType && (
+          <Pressable onPress={() => setNewType({ label: '', icon: '📌' })} accessibilityRole="button"
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 36, paddingVertical: 7, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, borderStyle: 'dashed', borderColor: C.line }}>
+            <Ionicons name="add" size={14} color={C.muted} />
+            <Text style={{ color: C.muted, fontSize: 13, fontWeight: '600' }}>Nuevo tipo</Text>
+          </Pressable>
+        )}
       </View>
+      {newType && (
+        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 10 }}>
+          <TextInput value={newType.icon} onChangeText={(v) => setNewType({ ...newType, icon: v.slice(-2) })} accessibilityLabel="Ícono del tipo"
+            style={{ width: 48, textAlign: 'center', backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 10, color: C.text, padding: 10, fontSize: 16 }} />
+          <TextInput value={newType.label} onChangeText={(v) => setNewType({ ...newType, label: v })} placeholder="Ej: Laboratorio" placeholderTextColor={C.muted} autoFocus
+            onSubmitEditing={createType} accessibilityLabel="Nombre del tipo"
+            style={{ flex: 1, backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 10, color: C.text, padding: 10, fontSize: 14 }} />
+          <Button label="Crear" size="sm" onPress={createType} />
+          <IconButton icon="close" label="Cancelar tipo nuevo" onPress={() => setNewType(null)} />
+        </View>
+      )}
 
-      <Text style={lbl}>Materia</Text>
+      <Text style={lbl()}>Materia</Text>
       <SubjectPicker subjects={subjects} value={subjectId} onChange={setSubjectId} />
 
-      <Text style={lbl}>Fecha de entrega</Text>
-      {Platform.OS === 'web' ? (
-        React.createElement('input', {
-          type: 'date',
-          value: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
-          onChange: (e: any) => { const v = e.target.value; if (v) setDate(new Date(v + 'T00:00:00')); },
-          style: { backgroundColor: C.surface2, border: `1px solid ${C.line}`, borderRadius: 11, color: C.text, padding: 12, fontSize: 14, colorScheme: uiScheme(), width: '100%', marginBottom: 4, boxSizing: 'border-box' },
-        })
+      <View style={{ flexDirection: 'row', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
+        <DateField label="Entrega" value={date} onChange={(v) => { setDate(v); if (!v) setTime(null); }} />
+        {v14 && <TimeField label="Hora (opcional)" value={time} onChange={(v) => { setTime(v); if (v && remind === 'evening') setRemind('1h'); if (!v && REMIND_OPTIONS.find((o) => o.key === remind)?.needsTime) setRemind('evening'); }} disabled={!date} />}
+      </View>
+      <DateShortcuts value={date} onChange={setDate} />
+
+      {date && (
+        <>
+          <Text style={lbl()}>Avisarme</Text>
+          <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+            {REMIND_OPTIONS.filter((o) => !o.needsTime || time).filter((o) => v14 || ['none', '1d', '2d'].includes(o.key)).map((o) => {
+              const on = remind === o.key;
+              return (
+                <Pressable key={o.key} onPress={() => setRemind(o.key)} accessibilityRole="radio" accessibilityState={{ checked: on }}
+                  style={{ minHeight: 34, justifyContent: 'center', paddingHorizontal: 11, borderRadius: 99, borderWidth: 1, borderColor: on ? C.brand : C.line, backgroundColor: on ? C.brand : 'transparent' }}>
+                  <Text style={{ color: on ? C.onBrand : C.text, fontSize: 12.5, fontWeight: on ? '700' : '500' }}>{o.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </>
+      )}
+
+      {!more ? (
+        <Pressable onPress={() => setMore(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 16, alignSelf: 'flex-start', paddingVertical: 6 }} accessibilityRole="button">
+          <Ionicons name="add-circle-outline" size={17} color={C.brand} />
+          <Text style={{ color: C.brand, fontWeight: '700', fontSize: 13.5 }}>Descripción y tiempo estimado</Text>
+        </Pressable>
       ) : (
         <>
-          <Pressable onPress={() => setShowPicker(true)} style={input}>
-            <Text style={{ color: C.text }}>{date.toLocaleDateString('es')}</Text>
-          </Pressable>
-          {showPicker && (
-            <DateTimePicker value={date} mode="date"
-              onChange={(_, d) => { setShowPicker(false); if (d) setDate(d); }} />
+          <Field label="Descripción" value={description} onChangeText={setDescription} multiline placeholder="Detalles, requisitos, página del libro…"
+            inputStyle={{ minHeight: 72, textAlignVertical: 'top' }} style={{ marginTop: 14 }} />
+          {v14 && (
+            <>
+              <Text style={[lbl(), { marginTop: 2 }]}>Tiempo estimado</Text>
+              <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+                {[null, ...ESTIMATES].map((m) => {
+                  const on = estimate === m;
+                  const label = m == null ? 'Sin estimar' : m < 60 ? `${m} min` : `${m / 60} h`;
+                  return (
+                    <Pressable key={String(m)} onPress={() => setEstimate(m)} accessibilityRole="radio" accessibilityState={{ checked: on }}
+                      style={{ minHeight: 34, justifyContent: 'center', paddingHorizontal: 11, borderRadius: 99, borderWidth: 1, borderColor: on ? C.brand : C.line, backgroundColor: on ? C.brand : 'transparent' }}>
+                      <Text style={{ color: on ? C.onBrand : C.text, fontSize: 12.5, fontWeight: on ? '700' : '500' }}>{label}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </>
           )}
         </>
       )}
 
-      <Text style={lbl}>Recordatorio</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {[0, 1, 2, 3].map((n) => (
-          <Chip key={n} label={n === 0 ? 'Sin aviso' : `${n}d antes`} active={remind === n} onPress={() => setRemind(n)} />
-        ))}
-      </ScrollView>
-
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, marginBottom: 6 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 18, marginBottom: 6 }}>
         <Ionicons name="list-outline" size={15} color={C.muted} />
-        <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700', flex: 1 }}>Microtareas</Text>
-        {steps.length > 0 && <Text style={{ color: C.muted, fontSize: 12 }}>{doneSteps}/{steps.length}</Text>}
+        <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700', flex: 1 }}>Pasos</Text>
+        {steps.length > 0 && <Text style={{ color: C.muted, fontSize: 12 }}>{doneSteps} de {steps.length}</Text>}
       </View>
       <View style={{ backgroundColor: C.surface2 + '80', borderRadius: 12, borderWidth: 1, borderColor: C.line, padding: 10 }}>
         <SubtaskList assignmentId={editTask?.id ?? null} steps={steps} onChange={setSteps} />
-        {steps.length === 0 && (
-          <Text style={{ color: C.muted, fontSize: 11.5, marginTop: 8 }}>
-            Parte la tarea en pasos y verás el avance en porcentaje.
-          </Text>
-        )}
+        {steps.length === 0 && <Text style={{ color: C.muted, fontSize: 12, marginTop: 8 }}>Divide la tarea en pasos y verás el avance.</Text>}
       </View>
-
-      <Pressable onPress={save} disabled={busy} style={[btnPrimary, busy && { opacity: 0.7 }]}>
-        <Text style={{ color: '#fff', fontWeight: '700' }}>{busy ? '…' : editTask ? 'Guardar cambios' : 'Crear tarea'}</Text>
-      </Pressable>
-      <Pressable onPress={onClose} style={{ alignItems: 'center', marginTop: 12 }}>
-        <Text style={{ color: C.muted }}>Cancelar</Text>
-      </Pressable>
     </ScrollView>
+  );
+
+  const footer = (
+    <View style={{ flexDirection: 'row', gap: 10, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.line, marginTop: 8 }}>
+      <Button label="Cancelar" kind="secondary" onPress={onClose} style={{ flex: 1 }} />
+      <Button label={editTask ? 'Guardar' : 'Crear tarea'} onPress={save} busy={busy} style={{ flex: 2 }} />
+    </View>
   );
 
   return (
     <Modal visible={visible} transparent animationType={isWide ? 'fade' : 'slide'} onRequestClose={onClose}>
-      {isWide ? (
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-          <View style={{ width: '100%', maxWidth: 560, maxHeight: '86%', backgroundColor: C.surface, borderRadius: R.xl, borderWidth: 1, borderColor: C.line, padding: 22 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: isWide ? 'center' : 'stretch', justifyContent: isWide ? 'center' : 'flex-end', padding: isWide ? 24 : 0 }}>
+          <Pressable onPress={() => {}} accessibilityViewIsModal
+            style={isWide
+              ? { width: '100%', maxWidth: 580, maxHeight: '90%', backgroundColor: C.surface, borderRadius: R.xl, borderWidth: 1, borderColor: C.line, padding: 22 }
+              : { backgroundColor: C.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18, paddingBottom: 24, maxHeight: '94%', borderTopWidth: 1, borderColor: C.line }}>
             {body}
-          </View>
-        </View>
-      ) : (
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
-          <View style={[sheet, { maxHeight: '92%' }]}>{body}</View>
-        </View>
-      )}
+            {footer}
+          </Pressable>
+        </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
+
+function lbl() { return { color: C.muted, fontSize: 12.5, fontWeight: '600' as const, marginTop: 14, marginBottom: 8 }; }

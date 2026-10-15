@@ -9,3 +9,10 @@ for f in tests/sql/00_supabase_stub.sql supabase/schema_v12.sql tests/sql/02_see
 done
 $PSQL -d k -c "grant select on all tables in schema public to authenticated;"
 $PSQL -d k -f tests/sql/03_pruebas.sql 2>&1 | grep -Ev "^ set_config|^-+$|^ [a-f0-9-]{36}$|^\([0-9]+ rows?\)$|^$|^ expect_error|^ undo_project_batch|^ \{|^ *$"
+
+# ---------- schema_v14 (versión 12 de la app) ----------
+psql -h $P -p 54329 -U postgres -qX -c "drop database if exists k14" && psql -h $P -p 54329 -U postgres -qX -c "create database k14" || exit 1
+for f in tests/sql/00_supabase_stub.sql supabase/schema.sql supabase/schema_v2.sql supabase/schema_v9.sql supabase/schema_v12.sql supabase/schema_v13.sql supabase/schema_v14.sql supabase/schema_v14.sql; do
+  echo "== k14 $f"; $PSQL -d k14 -f $f 2>&1 | grep -v "NOTICE" | grep -v "^$" | head -20
+done
+$PSQL -d k14 -f tests/sql/14_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line" | grep -v "^ *$"

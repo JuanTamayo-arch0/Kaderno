@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { confirm, notify, friendlyError, toast } from '../lib/feedback';
 import { useRouter } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
@@ -49,21 +50,21 @@ export function SubjectFiles({ subjectId }: { subjectId: string }) {
       }
       await uploadSubjectFile(subjectId, { name: a.name ?? 'archivo', mime: a.mimeType ?? null, size: a.size ?? null, body });
       await load();
-    } catch (e: any) { Alert.alert('Error al subir', e.message); }
+    } catch (e: any) { notify('No se pudo subir', friendlyError(e)); }
     finally { setBusy(false); }
   }
 
   async function open(f: SubjectFile) {
     const url = await signedUrl(f.path);
-    if (!url) return Alert.alert('No se pudo abrir el archivo');
+    if (!url) { notify('No se pudo abrir el archivo', 'Inténtalo de nuevo en un momento.'); return; }
     router.push({ pathname: '/visor', params: { url, name: f.name, mime: f.mime ?? '' } });
   }
 
   function confirmDelete(f: SubjectFile) {
-    Alert.alert('Eliminar archivo', `¿Borrar "${f.name}"?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: async () => { try { await deleteSubjectFile(f.id, f.path); load(); } catch (e: any) { Alert.alert('Error', e.message); } } },
-    ]);
+    confirm('¿Eliminar archivo?', `"${f.name}" se borrará para siempre.`, 'Eliminar').then(async (ok) => {
+      if (!ok) return;
+      try { await deleteSubjectFile(f.id, f.path); toast('Archivo eliminado'); load(); } catch (e: any) { notify('No se pudo eliminar', friendlyError(e)); }
+    });
   }
 
   return (

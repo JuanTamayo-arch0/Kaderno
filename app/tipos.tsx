@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { RequireAuth } from '../components/RequireAuth';
+import { Screen, Button } from '../components/ds';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -126,21 +127,8 @@ function Tipos() {
   const customCount = types.filter((t) => !t.builtin).length;
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
-      {/* Alineada con la columna de contenido (máx. 760) para que en escritorio
-          el título quede sobre las tarjetas y no en la esquina. */}
-      <View style={{ paddingTop: 54, paddingHorizontal: 16, paddingBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 10, maxWidth: 792, width: '100%', alignSelf: 'center' }}>
-        <Pressable onPress={goBack} hitSlop={10} accessibilityRole="button" accessibilityLabel="Volver">
-          <Ionicons name="chevron-back" size={26} color={C.text} />
-        </Pressable>
-        <Text style={{ color: C.text, fontSize: 22, fontWeight: '800', flex: 1 }}>Tipos de tarea</Text>
-        <Pressable onPress={openNew} hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-          <Ionicons name="add-circle" size={20} color={C.brand} />
-          <Text style={{ color: C.brand, fontSize: 13.5, fontWeight: '700' }}>Nuevo</Text>
-        </Pressable>
-      </View>
-
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 60, maxWidth: 760, width: '100%', alignSelf: 'center' }}>
+    <Screen title="Tipos de tarea" back="/ajustes" nav="tipos" maxWidth={760}
+      right={<Button label="Nuevo tipo" icon="add" size="sm" onPress={openNew} />}>
         <Text style={{ color: C.muted, fontSize: 13, marginBottom: 14, lineHeight: 19 }}>
           Además de los cuatro de siempre puedes crear los tuyos: laboratorio, exposición, lectura…
           Los cuatro originales no se borran, pero puedes cambiarles nombre, ícono y color.
@@ -192,15 +180,13 @@ function Tipos() {
             <Text style={{ color: C.muted, fontSize: 12, marginTop: 3, textAlign: 'center' }}>Laboratorio, exposición, lectura, entrega parcial…</Text>
           </Pressable>
         )}
-      </ScrollView>
-
       <TypeEditor
         draft={draft} busy={busy} isWide={isWide}
         onChange={(patch) => setDraft((d) => (d ? { ...d, ...patch } : d))}
         onClose={() => setDraft(null)}
         onSave={save}
       />
-    </View>
+    </Screen>
   );
 }
 
@@ -262,7 +248,7 @@ function TypeEditor({ draft, busy, isWide, onChange, onClose, onSave }: {
       </View>
 
       <Pressable onPress={onSave} disabled={busy} style={[btnPrimary, busy && { opacity: 0.7 }]}>
-        <Text style={{ color: '#fff', fontWeight: '700' }}>{busy ? '…' : d.key ? 'Guardar cambios' : 'Crear tipo'}</Text>
+        <Text style={{ color: C.onBrand, fontWeight: '700' }}>{busy ? '…' : d.key ? 'Guardar cambios' : 'Crear tipo'}</Text>
       </Pressable>
       <Pressable onPress={onClose} style={{ alignItems: 'center', marginTop: 12 }}>
         <Text style={{ color: C.muted }}>Cancelar</Text>

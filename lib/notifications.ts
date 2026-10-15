@@ -30,7 +30,19 @@ export async function scheduleReminder(title: string, dueDate: string, daysBefor
   target.setDate(target.getDate() - daysBefore);
   if (target.getTime() <= Date.now()) return; // ya pasó, no programar
   await Notifications.scheduleNotificationAsync({
-    content: { title: '📌 Entrega próxima', body: title },
+    content: { title: 'Entrega próxima', body: title },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: target },
+  });
+}
+
+// Aviso local en el celular para el momento exacto del recordatorio. En la web
+// los avisos llegan por notificación push desde el servidor (función notify).
+export async function scheduleLocalReminder(title: string, at: Date): Promise<void> {
+  if (Platform.OS === 'web') return;
+  if (at.getTime() <= Date.now()) return;
+  if (!(await ensureNotifPermission())) return;
+  await Notifications.scheduleNotificationAsync({
+    content: { title: 'Entrega próxima', body: title },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at },
   });
 }

@@ -4,8 +4,9 @@ import { ActivityIndicator, Platform, Pressable, ScrollView, Text, View, Image }
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { Screen, Button } from '../components/ds';
 import {
-  C, R, THEMES, DARK_THEMES, LIGHT_THEMES, BACKGROUNDS, FONTS, SIZES,
+  C, R, THEMES, derive, inkOn, fontFamilyOf, DARK_THEMES, LIGHT_THEMES, BACKGROUNDS, FONTS, SIZES,
   PSettings, PERSONALIZE, DEFAULTS, savePersonalize,
 } from '../lib/theme';
 import { fetchPrefs, savePrefs, uploadWallpaperFromUri, cleanOldWallpapers } from '../lib/db';
@@ -106,19 +107,19 @@ function Personalizar() {
     }
   }
 
-  return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
-      {/* La cabecera y la barra de abajo se alinean con la columna de contenido
-          (máx. 900) para que en escritorio no queden pegadas a los bordes. */}
-      <View style={{ paddingTop: 54, paddingHorizontal: 16, paddingBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 10, maxWidth: 932, width: '100%', alignSelf: 'center' }}>
-        <Pressable onPress={goBack} hitSlop={10}><Ionicons name="chevron-back" size={26} color={C.text} /></Pressable>
-        <Text style={{ color: C.text, fontSize: 22, fontWeight: '800', flex: 1 }}>Personalizar</Text>
-        <Pressable onPress={() => { pickSeq.current++; setUploading(false); setS({ ...DEFAULTS, bgCustom: null }); setHoyProy(true); }} hitSlop={8}>
-          <Text style={{ color: C.muted, fontSize: 13 }}>Restablecer</Text>
-        </Pressable>
+  const footer = (
+    <View style={{ backgroundColor: C.surface, borderTopWidth: 1, borderTopColor: C.line, alignItems: 'center' }}>
+      <View style={{ padding: 14, maxWidth: 932, width: '100%' }}>
+        <Button label={uploading ? 'Subiendo fondo…' : 'Guardar y aplicar'} onPress={apply} busy={saving} disabled={uploading} size="lg" full />
+        {Platform.OS === 'web' && <Text style={{ color: C.muted, fontSize: 12, textAlign: 'center', marginTop: 6 }}>La app se recarga con la nueva apariencia.</Text>}
       </View>
+    </View>
+  );
 
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120, maxWidth: 900, width: '100%', alignSelf: 'center' }}>
+  return (
+    <Screen title="Apariencia" subtitle="Tema, fondo, letra y tamaño" back="/ajustes" nav="personalizar" maxWidth={900} footer={footer}
+      right={<Button label="Restablecer" kind="ghost" size="sm" onPress={() => { pickSeq.current++; setUploading(false); setS({ ...DEFAULTS, bgCustom: null }); }} />}>
+        <ThemePreview s={s} />
         {/* ---------------- TEMA ---------------- */}
         <Section title="Tema" subtitle="Colores de la app" />
         <Text style={groupLbl}>Oscuros</Text>
@@ -175,43 +176,13 @@ function Personalizar() {
             return (
               <Pressable key={sz.id} onPress={() => set({ sizeId: sz.id })}
                 style={{ flex: 1, paddingVertical: 12, borderRadius: 12, alignItems: 'center', backgroundColor: active ? C.brand : C.surface, borderWidth: 1, borderColor: active ? C.brand : C.line }}>
-                <Text style={{ color: active ? '#fff' : C.text, fontSize: 13, fontWeight: '700' }}>{sz.name}</Text>
+                <Text style={{ color: active ? C.onBrand : C.text, fontSize: 13, fontWeight: '700' }}>{sz.name}</Text>
               </Pressable>
             );
           })}
         </View>
 
-        {/* ---------------- QUÉ SE VE EN "HOY" ---------------- */}
-        <Section title="Pantalla de Hoy" subtitle="Qué aparece junto a tus tareas" />
-        <Pressable onPress={() => setHoyProy((v) => !v)} accessibilityRole="switch" accessibilityState={{ checked: hoyProy }}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: 12, backgroundColor: C.surface, borderWidth: 1, borderColor: C.line }}>
-          <Ionicons name="people-outline" size={20} color={hoyProy ? C.brand : C.muted} />
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '700' }}>Mostrar tareas de proyectos</Text>
-            <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2, lineHeight: 17 }}>
-              Las tarjetas de equipo asignadas a ti aparecen en los mismos grupos de urgencia que tus tareas personales.
-            </Text>
-          </View>
-          <View style={{ width: 46, height: 27, borderRadius: 14, padding: 3, backgroundColor: hoyProy ? C.brand : C.line, justifyContent: 'center' }}>
-            <View style={{ width: 21, height: 21, borderRadius: 11, backgroundColor: '#fff', alignSelf: hoyProy ? 'flex-end' : 'flex-start' }} />
-          </View>
-        </Pressable>
-        <Text style={{ color: C.muted, fontSize: 12, marginTop: 8 }}>Esta preferencia se guarda en tu cuenta y viaja contigo a otros dispositivos.</Text>
-      </ScrollView>
-
-      {/* Barra de acción */}
-      <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: C.surface, borderTopWidth: 1, borderTopColor: C.line, alignItems: 'center' }}>
-        <View style={{ padding: 16, maxWidth: 932, width: '100%' }}>
-        <Pressable onPress={apply} disabled={saving || uploading}
-          style={{ backgroundColor: C.brand, borderRadius: 12, padding: 15, alignItems: 'center', opacity: saving || uploading ? 0.6 : 1 }}>
-          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>
-            {uploading ? 'Subiendo fondo…' : saving ? 'Aplicando…' : 'Guardar y aplicar'}
-          </Text>
-        </Pressable>
-        {Platform.OS === 'web' && <Text style={{ color: C.muted, fontSize: 12, textAlign: 'center', marginTop: 8 }}>Se aplicará y volverás al inicio.</Text>}
-        </View>
-      </View>
-    </View>
+    </Screen>
   );
 }
 
@@ -244,7 +215,7 @@ function ThemeCard({ id, active, onPress }: { id: string; active: boolean; onPre
           </View>
         </View>
       </View>
-      {active && <View style={{ position: 'absolute', top: 4, right: 4, backgroundColor: p.brand, borderRadius: 10, width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="checkmark" size={13} color="#fff" /></View>}
+      {active && <View style={{ position: 'absolute', top: 4, right: 4, backgroundColor: p.brand, borderRadius: 10, width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="checkmark" size={13} color={inkOn(p.brand)} /></View>}
     </Pressable>
   );
 }
@@ -272,7 +243,7 @@ function BgSwatch({ label, css, solid, imageUri, active, onPress, plain, busy }:
       <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)', paddingVertical: 3 }}>
         <Text style={{ color: '#fff', fontSize: 10.5, textAlign: 'center' }}>{label}</Text>
       </View>
-      {active && !busy && <View style={{ position: 'absolute', top: 4, right: 4, backgroundColor: C.brand, borderRadius: 10, width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="checkmark" size={13} color="#fff" /></View>}
+      {active && !busy && <View style={{ position: 'absolute', top: 4, right: 4, backgroundColor: C.brand, borderRadius: 10, width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="checkmark" size={13} color={C.onBrand} /></View>}
     </Pressable>
   );
 }
@@ -287,5 +258,34 @@ export default function PersonalizarProtegida() {
     <RequireAuth>
       <Personalizar />
     </RequireAuth>
+  );
+}
+
+// Vista previa en vivo con los colores elegidos, antes de aplicar.
+function ThemePreview({ s }: { s: PSettings }) {
+  const theme = THEMES[s.themeId] ?? THEMES.medianoche;
+  const p = derive(theme.palette);
+  const ff = fontFamilyOf(s.fontId);
+  const t = (extra: any) => ({ ...(ff ? { fontFamily: ff } : {}), ...extra });
+  return (
+    <View style={{ borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: C.line, marginBottom: 6 }} accessibilityLabel={`Vista previa del tema ${theme.name}`}>
+      <View style={{ backgroundColor: p.bg, padding: 16, gap: 10 }}>
+        <Text style={t({ color: p.muted, fontSize: 12 })}>Vista previa · {theme.name}</Text>
+        <Text style={t({ color: p.text, fontSize: 22, fontWeight: '800' })}>Hoy</Text>
+        {[{ title: 'Informe de laboratorio', meta: 'Física · Hoy, 11:59 pm', tone: p.warnText }, { title: 'Parcial 2: series', meta: 'Cálculo II · vie 16, 8:00 am', tone: p.muted }].map((x) => (
+          <View key={x.title} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: p.surface, borderColor: p.line, borderWidth: 1, borderRadius: 12, padding: 12 }}>
+            <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: p.muted }} />
+            <View style={{ flex: 1 }}>
+              <Text style={t({ color: p.text, fontSize: 14.5, fontWeight: '600' })}>{x.title}</Text>
+              <Text style={t({ color: x.tone, fontSize: 12.5, marginTop: 2 })}>{x.meta}</Text>
+            </View>
+          </View>
+        ))}
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <View style={{ backgroundColor: p.brand, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16 }}><Text style={t({ color: p.onBrand, fontWeight: '700' })}>Nueva tarea</Text></View>
+          <View style={{ backgroundColor: p.surface2, borderColor: p.line, borderWidth: 1, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16 }}><Text style={t({ color: p.text, fontWeight: '700' })}>Cancelar</Text></View>
+        </View>
+      </View>
+    </View>
   );
 }

@@ -566,3 +566,102 @@ Las tareas de proyecto ahora guardan la hora (`due_at`). En el computador, la ve
 
 - `npm test`: lectura de archivos, fechas, columnas, checklist, exportar y volver a subir, correr fechas y el prompt.
 - `bash tests/run_sql.sh`: corre `schema_v13.sql` sobre el `schema_v12.sql` real en un Postgres local, con cuatro usuarios (dueña, editor, viewer y alguien externo), y prueba permisos, deshacer y bitácora.
+
+## Versión 12: nuevo diseño, avisos, calendario y más
+
+### 1. Migración de la base de datos
+
+Corre `supabase/schema_v14.sql` en Supabase, SQL Editor. Necesita los anteriores (incluido `schema_v13.sql`) y se puede correr dos veces.
+
+Mientras no la corras, la app funciona como antes: sin hora en las tareas personales, sin papelera (borrar elimina de verdad), sin avisos y con el repaso de cajas. Ajustes y la Papelera lo indican.
+
+### 2. Notificaciones push (opcional, pero recomendado)
+
+1. Genera las llaves en tu computador (una sola vez):
+
+   ```bash
+   npx web-push generate-vapid-keys
+   ```
+
+2. En Supabase, Edge Functions, Secrets, crea:
+   - `VAPID_PUBLIC_KEY`: la llave pública.
+   - `VAPID_PRIVATE_KEY`: la llave privada (nunca en el repositorio ni en el droplet).
+   - `VAPID_SUBJECT`: `mailto:tu-correo@ejemplo.com`.
+   - `NOTIFY_CRON_SECRET`: un texto largo al azar (por ejemplo `openssl rand -hex 32`).
+
+3. Despliega las funciones:
+
+   ```bash
+   npx supabase functions deploy notify --no-verify-jwt
+   npx supabase functions deploy ical --no-verify-jwt
+   ```
+
+4. Programa el envío cada 10 minutos. En Supabase, Database, Extensions, activa `pg_cron` y `pg_net`, y corre en el SQL Editor (cambia `TU-PROYECTO` y el secreto):
+
+   ```sql
+   select cron.schedule('kaderno-notify', '*/10 * * * *', $$
+     select net.http_post(
+       url := 'https://TU-PROYECTO.supabase.co/functions/v1/notify',
+       headers := jsonb_build_object('x-cron-secret', 'EL-MISMO-NOTIFY_CRON_SECRET')
+     );
+   $$);
+   ```
+
+5. En el droplet, agrega la llave **pública** a la configuración (la privada no va ahí):
+
+   ```bash
+   sudo nano /var/www/kaderno-app/shared/kaderno-config.js
+   ```
+
+   ```js
+   window.KADERNO_CONFIG = {
+     SUPABASE_URL: '...',
+     SUPABASE_ANON_KEY: '...',
+     VAPID_PUBLIC_KEY: 'la-llave-publica',
+   };
+   ```
+
+Cada persona activa las notificaciones en **Ajustes, Avisos**. En iPhone primero hay que instalar Kaderno en la pantalla de inicio (Safari, Compartir, Agregar a inicio). Sin el paso 2 a 4 los avisos igual aparecen en la campana de la app, pero no llegan al celular.
+
+Qué se avisa:
+- El recordatorio que se elige en cada tarea (a la hora, 1 o 3 horas antes, la noche anterior, 1 o 2 días antes, 1 semana antes).
+- Un resumen cada mañana (7 am por defecto, se cambia en Ajustes) cuando hay entregas o tareas vencidas.
+- Un resumen el domingo a las 7 pm.
+- Cuando te asignan una tarea en un proyecto y cuando una tarea de proyecto tuya vence en 24 horas.
+
+### 3. Nginx: que el service worker no quede en caché
+
+Para que las versiones nuevas lleguen sin tener que borrar la caché del navegador, agrega en el bloque `server` de Kaderno (junto a lo de `kaderno-config.js`):
+
+```nginx
+location = /sw.js              { add_header Cache-Control "no-cache"; }
+location = /manifest.webmanifest { add_header Cache-Control "no-cache"; }
+location = /index.html         { add_header Cache-Control "no-cache"; }
+location = /kaderno-config.js  { add_header Cache-Control "no-cache"; }
+```
+
+Luego `sudo nginx -t && sudo systemctl reload nginx`.
+
+### 4. Qué cambió en la app
+
+- **Navegación**: en el celular, cinco botones abajo (Hoy, Materias, +, Estudiar, Proyectos). Horario está dentro de Materias; Enfoque, Repaso, Oráculo y Capturar dentro de Estudiar. En el computador, barra lateral con todo y la persona abajo (Ajustes).
+- **Botón +**: agrega una tarea escribiendo ("parcial cálculo viernes 10am"), o abre una tarea completa, digitalizar, nota en blanco, importar del sílabo, proyecto o enfoque. Atajo: tecla `N`.
+- **Ctrl K** (o `/`): busca en todo y salta a cualquier pantalla.
+- **Hoy**: resumen del día, clase de ahora y siguiente, semana como filtro, tareas por cuándo vencen (las de proyectos incluidas), agenda del día, repaso y enfoque. Mantener presionada una tarea o tocar `···`: mover a hoy, mañana o la próxima semana, enfocarse o borrar.
+- **Tareas**: hora opcional, aviso exacto, tiempo estimado, pasos, y crear un tipo nuevo sin salir del formulario. Borrar manda a la papelera con **Deshacer**.
+- **Importar del sílabo** (botón + o Ajustes): pega el cronograma, una tabla de Excel o un CSV; si el sílabo está desordenado, copia el prompt para IA. Se revisa y se confirma; se puede deshacer todo.
+- **Enfoque**: el reloj ya no se atrasa en segundo plano, sigue corriendo al cambiar de pantalla, suena al terminar, tiene descanso largo y se puede ligar a una tarea (el tiempo se suma a la tarea).
+- **Repaso**: repetición espaciada con cuatro respuestas (Otra vez, Difícil, Bien, Fácil), atajos de teclado y "Mis tarjetas" para crear y corregir tarjetas a mano.
+- **Materias**: tarjetas con pendientes, próxima entrega y promedio ("Sin notas" si no hay). La materia tiene simulador ("quiero sacar 4.0") y se puede archivar.
+- **Estudiar**: promedio del semestre ponderado por créditos.
+- **Notas**: se guardan solas mientras escribes; se pueden mover de materia.
+- **Capturar**: varias páginas por nota; en el computador, arrastrar o pegar (Ctrl V) una imagen.
+- **Ajustes**: nombre, contraseña, avisos, calendario (.ics), instalar la app, descargar tus datos, papelera y **cerrar sesión**.
+- **Calendario**: Ajustes, Calendario, "Obtener mi enlace". Se pega en Google Calendar (Otros calendarios, Desde URL) o en el iPhone.
+- **App instalable**: ícono propio, pantalla completa y carga sin conexión de la carcasa.
+- **Accesibilidad**: todos los temas cumplen contraste 4.5 (prueba automática), botones de 44 px, anillo de foco al usar teclado.
+
+### 5. Pruebas
+
+- `npm test`: además de lo de v11, contraste de los 10 temas, agregar con texto, sílabo, recordatorios, fechas, agenda, promedios, SM-2 y el calendario .ics.
+- `bash tests/run_sql.sh`: ahora también corre `schema_v14.sql` y prueba recordatorios, resúmenes, avisos de proyecto, papelera, permisos de la bandeja y el enlace de calendario.

@@ -11,4 +11,6 @@
 window.KADERNO_CONFIG = {
   SUPABASE_URL: '',
   SUPABASE_ANON_KEY: '',
+  // Llave pública para las notificaciones push (ver RUNBOOK.md, sección v12).
+  VAPID_PUBLIC_KEY: '',
 };

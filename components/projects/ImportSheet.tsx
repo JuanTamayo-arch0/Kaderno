@@ -311,8 +311,8 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
                 </Text>
                 <Pressable onPress={importar} disabled={busy || total === 0}
                   style={{ backgroundColor: total === 0 ? C.surface2 : C.brand, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  {busy ? <ActivityIndicator color="#0f1115" /> : <Ionicons name="cloud-upload-outline" size={17} color={total === 0 ? C.muted : '#0f1115'} />}
-                  <Text style={{ color: total === 0 ? C.muted : '#0f1115', fontWeight: '700' }}>{accion}</Text>
+                  {busy ? <ActivityIndicator color={C.onBrand} /> : <Ionicons name="cloud-upload-outline" size={17} color={total === 0 ? C.muted : C.onBrand} />}
+                  <Text style={{ color: total === 0 ? C.muted : C.onBrand, fontWeight: '700' }}>{accion}</Text>
                 </Pressable>
               </View>
             </>
@@ -406,7 +406,7 @@ function Inicio({ project, members, subjectName, ctxColumns, paste, setPaste, bu
         {paste.trim().length > 0 && (
           <Pressable onPress={onPasteSubmit} disabled={busy}
             style={{ alignSelf: 'flex-end', marginTop: 8, backgroundColor: C.brand, borderRadius: 10, paddingVertical: 9, paddingHorizontal: 14 }}>
-            <Text style={{ color: '#0f1115', fontWeight: '700', fontSize: 13 }}>Revisar texto pegado</Text>
+            <Text style={{ color: C.onBrand, fontWeight: '700', fontSize: 13 }}>Revisar texto pegado</Text>
           </Pressable>
         )}
       </View>
@@ -429,7 +429,7 @@ function Inicio({ project, members, subjectName, ctxColumns, paste, setPaste, bu
           <Pressable onPress={copiar}
             style={{ backgroundColor: copiado ? C.good : C.brand, borderRadius: 12, height: 44, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Ionicons name={copiado ? 'checkmark' : isWeb ? 'copy-outline' : 'share-outline'} size={17} color="#0f1115" />
-            <Text style={{ color: '#0f1115', fontWeight: '700' }}>{copiado ? 'Prompt copiado' : isWeb ? 'Copiar prompt para IA' : 'Compartir prompt para IA'}</Text>
+            <Text style={{ color: C.onBrand, fontWeight: '700' }}>{copiado ? 'Prompt copiado' : isWeb ? 'Copiar prompt para IA' : 'Compartir prompt para IA'}</Text>
           </Pressable>
         </View>
 

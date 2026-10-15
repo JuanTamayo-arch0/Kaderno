@@ -1,18 +1,18 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { C, R, uiScheme } from '../../lib/theme';
+import { C, R, uiScheme, inkOn } from '../../lib/theme';
 import { useResponsive, SIDEBAR_W } from '../../lib/responsive';
 import { confirm, notify } from '../../lib/confirm';
 import { Subject, Slot, getSubjects, getSchedule, setSlot, clearSlot, remapSlots } from '../../lib/db';
 import {
-  DAY_NAMES, DEFAULT_SCHEDULE, SCHEDULE, ScheduleCfg, TimeBlock,
+  DAY_NAMES, DAY_NAMES_LONG, DEFAULT_SCHEDULE, SCHEDULE, ScheduleCfg, TimeBlock,
   blockLabel, blockLabelLong, clampHHMM, currentBlocks, currentDays, generateBlocks,
   loadScheduleNative, newBlockId, overlappingIds, planRemap, saveSchedule, sortBlocks, toMinutes,
 } from '../../lib/schedule';
 import { SubjectIcon } from '../../components/SubjectIcon';
-import { Header } from '../../components/ui';
+import { Screen, Card, Dot, EmptyState, Segmented } from '../../components/ds';
 
 // ============================================================
 //  Horario.
@@ -25,6 +25,7 @@ import { Header } from '../../components/ui';
 
 export default function Horario() {
   const { isWide } = useResponsive();
+  const router = useRouter();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [edit, setEdit] = useState<{ day: number; slot: number } | null>(null);
@@ -139,8 +140,8 @@ export default function Horario() {
           <Text style={{ color: C.text }}>{s.name}</Text>
         </Pressable>
       ))}
-      <Pressable onPress={remove} style={{ alignItems: 'center', padding: 12, marginTop: 4 }}>
-        <Text style={{ color: C.bad }}>Quitar clase</Text>
+      <Pressable onPress={remove} style={{ alignItems: 'center', padding: 12, marginTop: 4 }} accessibilityRole="button">
+        <Text style={{ color: C.badText, fontWeight: '700' }}>Quitar clase</Text>
       </Pressable>
       <Pressable onPress={() => setEdit(null)} style={{ alignItems: 'center', marginTop: 4 }}>
         <Text style={{ color: C.muted }}>Cerrar</Text>
@@ -156,141 +157,106 @@ export default function Horario() {
     />
   );
 
-  // ===================== ESCRITORIO =====================
-  if (isWide) {
-    const gd = new Date().getDay();
-    const todayIdx = (gd + 6) % 7;                       // 0 = lunes
-    const inWeek = todayIdx < days.length;
-    const todayLabel = DAY_NAMES[todayIdx];
-    const todayClasses = inWeek
-      ? blocks.map((b, si) => ({ label: blockLabelLong(b, fmt24), cell: at(todayIdx, si) })).filter((x) => x.cell)
-      : [];
-
-    return (
-      <View style={{ flex: 1, backgroundColor: C.bg, paddingLeft: SIDEBAR_W }}>
-        <ScrollView contentContainerStyle={{ paddingVertical: 36, paddingHorizontal: 44, paddingBottom: 60 }}>
-          <View style={{ maxWidth: 1560, width: '100%' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 16 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: C.text, fontSize: 26, fontWeight: '800' }}>Horario</Text>
-                <Text style={{ color: C.muted, fontSize: 14, marginTop: 4 }}>Tu semana de clases</Text>
-              </View>
-              {cfgButton}
-            </View>
-            <View style={{ height: 20 }} />
-
-            {orphanNotice}
-
-            <View style={{ flexDirection: 'row', gap: 22, alignItems: 'flex-start' }}>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <View style={{ flexDirection: 'row', gap: 2 }}>
-                  <View style={{ width: 74 }} />
-                  {days.map((d, di) => (
-                    <Text key={d + di} style={{ flex: 1, textAlign: 'center', fontSize: 13, fontWeight: '700', color: di === todayIdx ? C.brand : C.muted, paddingBottom: 8 }}>{d}</Text>
-                  ))}
-                </View>
-                {blocks.map((b, si) => (
-                  <View key={b.id} style={{ flexDirection: 'row', gap: 2, marginTop: 6 }}>
-                    <Text style={{ width: 74, fontSize: 11.5, color: C.muted, paddingTop: 18, paddingRight: 6 }}>{blockLabel(b, fmt24)}</Text>
-                    {days.map((_, di) => {
-                      const cell = at(di, si); const s = cell ? subjOf(cell.subject_id) : null;
-                      return (
-                        <Pressable key={di} onPress={() => setEdit({ day: di, slot: si })}
-                          style={{ flex: 1, minHeight: 52, borderRadius: 10, alignItems: 'center', justifyContent: 'center', padding: 6, borderWidth: 1, borderStyle: s ? 'solid' : 'dashed', borderColor: s ? s.color + '55' : C.line, backgroundColor: s ? s.color + '2a' : C.surface }}>
-                          <Text style={{ color: s ? s.color : C.line, fontSize: 13, fontWeight: '700', textAlign: 'center' }}>{s ? s.name : '+'}</Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                ))}
-              </View>
-
-              <View style={{ width: 320, backgroundColor: C.surface, borderColor: C.line, borderWidth: 1, borderRadius: 14, padding: 18 }}>
-                <Text style={{ color: C.text, fontSize: 14, fontWeight: '700', marginBottom: 12 }}>Hoy · {todayLabel}</Text>
-                {!inWeek ? <Text style={{ color: C.muted, fontSize: 13 }}>Hoy no es día de clases en tu horario.</Text>
-                  : todayClasses.length === 0 ? <Text style={{ color: C.muted, fontSize: 13 }}>Sin clases hoy.</Text> : (
-                    <View style={{ gap: 8 }}>
-                      {todayClasses.map((x, i) => {
-                        const s = subjOf(x.cell!.subject_id);
-                        return (
-                          <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: s?.color ?? C.muted }} />
-                            <View style={{ flex: 1 }}>
-                              <Text style={{ color: C.text, fontSize: 13, fontWeight: '600' }}>{s?.name ?? '—'}</Text>
-                              <Text style={{ color: C.muted, fontSize: 12 }}>{x.label}</Text>
-                            </View>
-                          </View>
-                        );
-                      })}
-                    </View>
-                  )}
-              </View>
-            </View>
-          </View>
-        </ScrollView>
-
-        <Modal visible={!!edit} transparent animationType="fade" onRequestClose={() => setEdit(null)}>
-          <Pressable onPress={() => setEdit(null)} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-            <Pressable onPress={() => {}} style={{ backgroundColor: C.surface, borderRadius: 20, padding: 18, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 420 }}>
-              {picker}
-            </Pressable>
-          </Pressable>
-        </Modal>
-        {configModal}
-      </View>
-    );
-  }
-
-  // ===================== MÓVIL =====================
+  const gd = new Date().getDay();
+  const todayIdx = (gd + 6) % 7;                       // 0 = lunes
+  const inWeek = todayIdx < days.length;
+  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  const nowBlock = inWeek ? blocks.findIndex((b) => toMinutes(b.start) <= nowMin && toMinutes(b.end) > nowMin) : -1;
+  const todayClasses = inWeek
+    ? blocks.map((b, si) => ({ label: blockLabelLong(b, fmt24), cell: at(todayIdx, si), si })).filter((x) => x.cell)
+    : [];
   const tight = days.length > 5;
-  return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <Header title="Horario" subtitle="Tu semana de clases" />
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-          <Text style={{ color: C.muted, fontSize: 12.5, flex: 1 }}>Toca una celda para asignar o quitar una clase.</Text>
-          {cfgButton}
+
+  const grid = (
+    <View style={{ flex: 1, minWidth: 0 }}>
+      <View style={{ flexDirection: 'row', gap: 4 }}>
+        <View style={{ width: isWide ? 78 : tight ? 50 : 56 }} />
+        {days.map((d, di) => (
+          <Text key={d + di} style={{ flex: 1, textAlign: 'center', fontSize: isWide ? 13 : 12, fontWeight: '700', color: di === todayIdx ? C.brand : C.muted, paddingBottom: 6 }}>{d}</Text>
+        ))}
+      </View>
+      {blocks.map((b, si) => (
+        <View key={b.id} style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
+          <Text style={{ width: isWide ? 78 : tight ? 50 : 56, fontSize: isWide ? 12 : 10.5, color: si === nowBlock ? C.brand : C.muted, fontWeight: si === nowBlock ? '800' : '400', paddingTop: isWide ? 16 : 12, paddingRight: 6, textAlign: isWide ? 'left' : 'right' }} numberOfLines={2}>{blockLabel(b, fmt24)}</Text>
+          {days.map((_, di) => {
+            const cell = at(di, si); const sub = cell ? subjOf(cell.subject_id) : null;
+            const live = di === todayIdx && si === nowBlock;
+            return (
+              <Pressable key={di} onPress={() => setEdit({ day: di, slot: si })}
+                accessibilityRole="button" accessibilityLabel={`${DAY_NAMES[di]} ${blockLabelLong(b, fmt24)}: ${sub ? sub.name : 'libre'}`}
+                style={({ hovered }: any) => ({
+                  flex: 1, minHeight: isWide ? 52 : 46, borderRadius: 9, alignItems: 'center', justifyContent: 'center', padding: 4,
+                  borderWidth: live ? 2 : 1, borderStyle: sub ? 'solid' : 'dashed',
+                  borderColor: live ? C.brand : sub ? sub.color : C.line,
+                  backgroundColor: sub ? sub.color : hovered ? C.surface2 : 'transparent',
+                })}>
+                {sub ? (
+                  <Text style={{ color: inkOn(sub.color), fontSize: isWide ? 13 : tight ? 9.5 : 10.5, fontWeight: '700', textAlign: 'center' }} numberOfLines={2}>{isWide ? sub.name : shortName(sub.name)}</Text>
+                ) : <Ionicons name="add" size={14} color={C.line} />}
+              </Pressable>
+            );
+          })}
         </View>
+      ))}
+    </View>
+  );
 
-        {orphanNotice}
-
-        <View style={{ flexDirection: 'row' }}>
-          <View style={{ width: tight ? 52 : 58 }} />
-          {days.map((d, di) => (
-            <Text key={d + di} style={{ flex: 1, textAlign: 'center', color: C.muted, fontWeight: '600', fontSize: tight ? 11 : 12 }}>{d}</Text>
-          ))}
-        </View>
-
-        {blocks.map((b, si) => (
-          <View key={b.id} style={{ flexDirection: 'row', marginTop: 4 }}>
-            <Text style={{ width: tight ? 52 : 58, textAlign: 'right', paddingRight: 6, color: C.muted, fontSize: 10.5, paddingTop: 14 }} numberOfLines={2}>{blockLabel(b, fmt24)}</Text>
-            {days.map((_, di) => {
-              const cell = at(di, si);
-              const s = cell ? subjOf(cell.subject_id) : null;
+  const today = (
+    <Card style={{ width: isWide ? 300 : '100%' }}>
+      <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '700', marginBottom: 10 }}>Hoy · {DAY_NAMES_LONG[todayIdx]}</Text>
+      {!inWeek ? <Text style={{ color: C.muted, fontSize: 13 }}>Hoy no hay clases en tu horario.</Text>
+        : todayClasses.length === 0 ? <Text style={{ color: C.muted, fontSize: 13 }}>Sin clases hoy.</Text> : (
+          <View style={{ gap: 10 }}>
+            {todayClasses.map((x, i) => {
+              const sub = subjOf(x.cell!.subject_id);
+              const live = x.si === nowBlock;
               return (
-                <Pressable key={di} onPress={() => setEdit({ day: di, slot: si })}
-                  style={{
-                    flex: 1, minHeight: 46, margin: 2, borderRadius: 8, alignItems: 'center', justifyContent: 'center',
-                    borderWidth: 1, borderStyle: s ? 'solid' : 'dashed',
-                    borderColor: s ? s.color : C.line, backgroundColor: s ? s.color : 'transparent',
-                  }}>
-                  <Text style={{ color: s ? '#0b0d11' : C.muted, fontSize: tight ? 9 : 10, fontWeight: '600', textAlign: 'center' }} numberOfLines={2}>
-                    {s ? s.name : '+'}
-                  </Text>
-                </Pressable>
+                <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Dot color={sub?.color ?? C.muted} size={10} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '600' }}>{sub?.name ?? 'Materia'}</Text>
+                    <Text style={{ color: live ? C.brand : C.muted, fontSize: 12, fontWeight: live ? '700' : '400' }}>{live ? 'Ahora · ' : ''}{x.label}</Text>
+                  </View>
+                </View>
               );
             })}
           </View>
-        ))}
-      </ScrollView>
+        )}
+    </Card>
+  );
 
-      <Modal visible={!!edit} transparent animationType="slide" onRequestClose={() => setEdit(null)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
-          <View style={sheet}>{picker}</View>
+  return (
+    <Screen title="Horario" subtitle="Tu semana de clases" maxWidth={1300}
+      right={isWide ? cfgButton : undefined}
+      header={!isWide ? <Segmented value="horario" onChange={(k) => { if (k === 'materias') router.navigate('/materias'); }}
+        items={[{ key: 'materias', label: 'Materias', icon: 'book-outline' }, { key: 'horario', label: 'Horario', icon: 'grid-outline' }]} /> : undefined}>
+      {!isWide && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 12 }}>
+          <Text style={{ color: C.muted, fontSize: 12.5, flex: 1 }}>Toca una celda para poner o quitar una clase.</Text>
+          {cfgButton}
         </View>
+      )}
+      {orphanNotice}
+      {subjects.length === 0 ? (
+        <EmptyState icon="book-outline" title="Primero crea tus materias" text="El horario se arma con tus materias." action={{ label: 'Ir a Materias', onPress: () => router.navigate('/materias') }} />
+      ) : (
+        <View style={{ flexDirection: isWide ? 'row' : 'column', gap: 20, alignItems: 'flex-start' }}>
+          {grid}
+          {today}
+        </View>
+      )}
+
+      <Modal visible={!!edit} transparent animationType={isWide ? 'fade' : 'slide'} onRequestClose={() => setEdit(null)}>
+        <Pressable onPress={() => setEdit(null)} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: isWide ? 'center' : 'flex-end', alignItems: isWide ? 'center' : 'stretch', padding: isWide ? 24 : 0 }}>
+          <Pressable onPress={() => {}} style={isWide
+            ? { backgroundColor: C.surface, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 420, maxHeight: '85%' }
+            : { backgroundColor: C.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18, paddingBottom: 30, borderTopWidth: 1, borderColor: C.line, maxHeight: '85%' }}>
+            <ScrollView>{picker}</ScrollView>
+          </Pressable>
+        </Pressable>
       </Modal>
       {configModal}
-    </View>
+    </Screen>
   );
 }
 
@@ -368,7 +334,7 @@ function ScheduleConfig({ visible, isWide, onClose, onApply }: {
           return (
             <Pressable key={n} onPress={() => setDayCount(n)}
               style={{ flex: 1, paddingVertical: 10, borderRadius: 11, alignItems: 'center', borderWidth: 1, backgroundColor: active ? C.brand : C.surface2, borderColor: active ? C.brand : C.line }}>
-              <Text style={{ color: active ? '#fff' : C.text, fontSize: 13, fontWeight: '700' }}>
+              <Text style={{ color: active ? C.onBrand : C.text, fontSize: 13, fontWeight: '700' }}>
                 {n === 5 ? 'Lun–Vie' : n === 6 ? 'Lun–Sáb' : 'Toda'}
               </Text>
             </Pressable>
@@ -384,7 +350,7 @@ function ScheduleConfig({ visible, isWide, onClose, onApply }: {
           return (
             <Pressable key={String(v)} onPress={() => setFmt24(v)}
               style={{ flex: 1, paddingVertical: 10, borderRadius: 11, alignItems: 'center', borderWidth: 1, backgroundColor: active ? C.brand : C.surface2, borderColor: active ? C.brand : C.line }}>
-              <Text style={{ color: active ? '#fff' : C.text, fontSize: 13, fontWeight: '700' }}>{v ? '24 h · 14:00' : '12 h · 2 pm'}</Text>
+              <Text style={{ color: active ? C.onBrand : C.text, fontSize: 13, fontWeight: '700' }}>{v ? '24 h · 14:00' : '12 h · 2 pm'}</Text>
             </Pressable>
           );
         })}
@@ -456,7 +422,7 @@ function ScheduleConfig({ visible, isWide, onClose, onApply }: {
 
       <Pressable onPress={apply} disabled={busy}
         style={{ backgroundColor: C.brand, borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 16, opacity: busy ? 0.7 : 1 }}>
-        <Text style={{ color: '#fff', fontWeight: '700' }}>{busy ? '…' : 'Guardar horario'}</Text>
+        <Text style={{ color: C.onBrand, fontWeight: '700' }}>{busy ? '…' : 'Guardar horario'}</Text>
       </Pressable>
       <Pressable onPress={onClose} style={{ alignItems: 'center', marginTop: 12 }}>
         <Text style={{ color: C.muted }}>Cancelar</Text>
@@ -509,3 +475,13 @@ function TimeField({ value, onChange }: { value: string; onChange: (v: string) =
 
 const sheet = { backgroundColor: C.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18, paddingBottom: 30, borderTopColor: C.line, borderTopWidth: 1 } as const;
 const lbl = { color: C.muted, fontSize: 12, marginTop: 16, marginBottom: 6 } as const;
+
+/** Nombre corto para las celdas del celular: "Física Mecánica" -> "Fís. Mec.". */
+function shortName(name: string): string {
+  if (name.length <= 6) return name;
+  return name.split(/\s+/).map((w, i) => {
+    if (/^(I|II|III|IV|V|VI|VII|VIII|IX|X|\d+)$/i.test(w)) return w;
+    if (i === 0) return w.length > 5 ? w.slice(0, 4) + '.' : w;
+    return w[0].toUpperCase() + '.';
+  }).join(' ');
+}
