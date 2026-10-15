@@ -3,6 +3,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Linking, Platform, Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { C } from '../lib/theme';
+import { Screen, IconButton } from '../components/ds';
+import { RequireAuth } from '../components/RequireAuth';
 
 // react-native-webview NO funciona en web; solo lo cargamos en móvil.
 let WebView: any = null;
@@ -10,7 +12,7 @@ if (Platform.OS !== 'web') {
   try { WebView = require('react-native-webview').WebView; } catch { /* noop */ }
 }
 
-export default function Visor() {
+function Visor() {
   const { url, name } = useLocalSearchParams<{ url: string; name?: string; mime?: string }>();
   const router = useRouter();
   const clean = String(url ?? '');
@@ -19,15 +21,8 @@ export default function Visor() {
   const src = Platform.OS === 'android' ? `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(clean)}` : clean;
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <View style={{ paddingTop: 54, paddingHorizontal: 14, paddingBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: 1, borderBottomColor: C.line }}>
-        <Pressable onPress={() => router.back()} hitSlop={10} accessibilityLabel="Volver"><Ionicons name="chevron-back" size={26} color={C.text} /></Pressable>
-        <Text numberOfLines={1} style={{ color: C.text, fontSize: 16, fontWeight: '700', flex: 1 }}>{name || 'Documento'}</Text>
-        <Pressable onPress={() => Linking.openURL(clean)} hitSlop={10} accessibilityLabel="Abrir en el navegador">
-          <Ionicons name="open-outline" size={22} color={C.muted} />
-        </Pressable>
-      </View>
-
+    <Screen title={name || 'Documento'} back="/materias" nav="materias" scroll={false} padded={false}
+      right={<IconButton icon="open-outline" label="Abrir en una pestaña nueva" onPress={() => Linking.openURL(clean)} />}>
       <View style={{ flex: 1 }}>
         {!clean ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: C.muted }}>No se pudo cargar el documento.</Text></View>
@@ -45,7 +40,7 @@ export default function Visor() {
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
             <Text style={{ color: C.muted, textAlign: 'center', marginBottom: 16 }}>No se pudo mostrar el visor aquí.</Text>
             <Pressable onPress={() => Linking.openURL(clean)} style={{ backgroundColor: C.brand, borderRadius: 10, paddingVertical: 12, paddingHorizontal: 18 }}>
-              <Text style={{ color: '#0f1115', fontWeight: '700' }}>Abrir / descargar</Text>
+              <Text style={{ color: C.onBrand, fontWeight: '700' }}>Abrir / descargar</Text>
             </Pressable>
           </View>
         )}
@@ -57,6 +52,10 @@ export default function Visor() {
           <Text style={{ color: C.text, fontSize: 13, fontWeight: '600' }}>Abrir / descargar</Text>
         </Pressable>
       )}
-    </View>
+    </Screen>
   );
+}
+
+export default function VisorProtegido() {
+  return <RequireAuth><Visor /></RequireAuth>;
 }

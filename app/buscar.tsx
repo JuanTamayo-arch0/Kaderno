@@ -1,97 +1,62 @@
 import { useEffect, useState } from 'react';
-import { RequireAuth } from '../components/RequireAuth';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Platform, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { C, R } from '../lib/theme';
-import { useResponsive, SIDEBAR_W } from '../lib/responsive';
-import { Note, Task, Subject, Flashcard, search } from '../lib/db';
-import { SubjectIcon } from '../components/SubjectIcon';
+import { C } from '../lib/theme';
+import { RequireAuth } from '../components/RequireAuth';
+import { search, type Note, type Task, type Subject, type Flashcard, type ProjectTaskHit } from '../lib/db';
+import { fmtDue } from '../lib/time';
+import { openTask } from '../lib/uiBus';
+import { Screen, Card, ListRow, SectionLabel, EmptyState, Dot } from '../components/ds';
 
+// Búsqueda en pantalla completa (la paleta Ctrl K usa la misma búsqueda).
 function Buscar() {
   const router = useRouter();
-  const { isWide } = useResponsive();
   const [q, setQ] = useState('');
-  const [res, setRes] = useState<{ notes: Note[]; tasks: Task[]; subjects: Subject[]; flashcards: Flashcard[] }>({ notes: [], tasks: [], subjects: [], flashcards: [] });
+  const [res, setRes] = useState<{ notes: Note[]; tasks: Task[]; subjects: Subject[]; flashcards: Flashcard[]; projectTasks: ProjectTaskHit[] } | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!q.trim()) { setRes({ notes: [], tasks: [], subjects: [], flashcards: [] }); return; }
+    if (!q.trim()) { setRes(null); return; }
     const id = setTimeout(async () => {
       setBusy(true);
-      try { setRes(await search(q.trim())); } catch { /* noop */ } finally { setBusy(false); }
-    }, 300);
+      try { setRes(await search(q.trim())); } catch { setRes(null); } finally { setBusy(false); }
+    }, 250);
     return () => clearTimeout(id);
   }, [q]);
 
-  function go(path: string) { router.push(path); }
-  const total = res.notes.length + res.tasks.length + res.subjects.length + res.flashcards.length;
+  const total = res ? res.notes.length + res.tasks.length + res.subjects.length + res.flashcards.length + res.projectTasks.length : 0;
+  const section = (title: string, n: number, children: React.ReactNode) => n ? (
+    <View><SectionLabel text={title} count={n} /><Card padded={false}>{children}</Card></View>
+  ) : null;
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg, paddingLeft: isWide ? SIDEBAR_W : 0 }}>
-      <View style={{ paddingTop: 54, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <Pressable onPress={() => router.back()} hitSlop={10} accessibilityLabel="Volver"><Ionicons name="chevron-back" size={26} color={C.text} /></Pressable>
-        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.surface2, borderRadius: R.md, borderWidth: 1, borderColor: C.line, paddingHorizontal: 12 }}>
+    <Screen title="Buscar" back="/" nav="buscar" maxWidth={820}
+      header={
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.surface2, borderRadius: 12, borderWidth: 1, borderColor: C.line, paddingHorizontal: 12, marginBottom: 6 }}>
           <Ionicons name="search" size={18} color={C.muted} />
-          <TextInput value={q} onChangeText={setQ} autoFocus placeholder="Buscar notas, tareas, materias, flashcards…"
-            placeholderTextColor={C.muted} style={{ flex: 1, color: C.text, paddingVertical: 12, fontSize: 15 }} />
+          <TextInput value={q} onChangeText={setQ} autoFocus placeholder="Notas, tareas, materias, proyectos, flashcards…" placeholderTextColor={C.muted} accessibilityLabel="Buscar"
+            style={[{ flex: 1, color: C.text, paddingVertical: 12, fontSize: 15, minHeight: 46 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
+          {busy && <ActivityIndicator size="small" color={C.brand} />}
         </View>
-      </View>
-
-      <ScrollView contentContainerStyle={{ padding: 16, maxWidth: 900, width: '100%', alignSelf: 'center' }} keyboardShouldPersistTaps="handled">
-        {busy && <Text style={{ color: C.muted }}>Buscando…</Text>}
-        {q.trim() !== '' && !busy && total === 0 && <Text style={{ color: C.muted, textAlign: 'center', marginTop: 30 }}>Sin resultados para “{q}”.</Text>}
-
-        {res.subjects.length > 0 && <Text style={sec}>Materias</Text>}
-        {res.subjects.map((s) => (
-          <Pressable key={s.id} onPress={() => go(`/materia/${s.id}`)} style={item}>
-            <View style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: s.color + '22', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}><SubjectIcon icon={s.icon} box={30} emoji={15} /></View>
-            <Text style={{ color: C.text, flex: 1, fontWeight: '600' }} numberOfLines={1}>{s.name}</Text>
-          </Pressable>
-        ))}
-
-        {res.notes.length > 0 && <Text style={sec}>Notas</Text>}
-        {res.notes.map((n) => (
-          <Pressable key={n.id} onPress={() => go(`/nota/${n.id}`)} style={item}>
-            <Ionicons name="document-text-outline" size={18} color={C.brand} />
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: C.text, fontWeight: '600' }} numberOfLines={1}>{n.title || 'Nota'}</Text>
-              <Text style={{ color: C.muted, fontSize: 12 }} numberOfLines={1}>{n.content}</Text>
-            </View>
-          </Pressable>
-        ))}
-
-        {res.tasks.length > 0 && <Text style={sec}>Tareas</Text>}
-        {res.tasks.map((t) => (
-          <View key={t.id} style={item}>
-            <Ionicons name="checkbox-outline" size={18} color={C.good} />
-            <Text style={{ color: C.text, flex: 1 }} numberOfLines={1}>{t.title}</Text>
-          </View>
-        ))}
-
-        {res.flashcards.length > 0 && <Text style={sec}>Flashcards</Text>}
-        {res.flashcards.map((c) => (
-          <Pressable key={c.id} onPress={() => go('/repaso')} style={item}>
-            <Ionicons name="albums-outline" size={18} color={C.brand2} />
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: C.text, fontWeight: '600' }} numberOfLines={1}>{c.front}</Text>
-              <Text style={{ color: C.muted, fontSize: 12 }} numberOfLines={1}>{c.back}</Text>
-            </View>
-          </Pressable>
-        ))}
-      </ScrollView>
-    </View>
+      }>
+      {!q.trim() ? (
+        <EmptyState icon="search-outline" title="Busca en todo Kaderno" text={Platform.OS === 'web' ? 'Desde cualquier pantalla también puedes usar Ctrl K.' : undefined} compact />
+      ) : res && total === 0 && !busy ? (
+        <EmptyState icon="search-outline" title={`Sin resultados para “${q.trim()}”`} text="Prueba con otra palabra o revisa la ortografía." compact />
+      ) : res ? (
+        <>
+          {section('Materias', res.subjects.length, res.subjects.map((s) => <ListRow key={s.id} title={s.name} left={<Dot color={s.color} size={10} />} onPress={() => router.push(`/materia/${s.id}`)} />))}
+          {section('Tareas', res.tasks.length, res.tasks.map((t) => <ListRow key={t.id} title={t.title} subtitle={[t.status === 'done' ? 'Hecha' : '', fmtDue(t)].filter(Boolean).join(' · ') || undefined} left={<Ionicons name={t.status === 'done' ? 'checkmark-circle' : 'ellipse-outline'} size={18} color={C.muted} />} onPress={() => openTask(t)} />))}
+          {section('Tareas de proyectos', res.projectTasks.length, res.projectTasks.map((t) => <ListRow key={t.id} title={t.title} subtitle={fmtDue(t) || undefined} left={<Ionicons name="people-outline" size={18} color={C.muted} />} onPress={() => router.push(`/proyectos/${t.project_id}`)} />))}
+          {section('Notas', res.notes.length, res.notes.map((n) => <ListRow key={n.id} title={n.title || 'Nota'} subtitle={(n.content ?? '').replace(/[#>*_`]/g, '').slice(0, 90)} left={<Ionicons name="document-text-outline" size={18} color={C.muted} />} onPress={() => router.push(`/nota/${n.id}`)} />))}
+          {section('Flashcards', res.flashcards.length, res.flashcards.map((c) => <ListRow key={c.id} title={c.front} subtitle={c.back} left={<Ionicons name="albums-outline" size={18} color={C.muted} />} onPress={() => router.push('/repaso')} />))}
+        </>
+      ) : <Text style={{ color: C.muted }}>Buscando…</Text>}
+    </Screen>
   );
 }
 
-const sec = { color: C.muted, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.8, fontWeight: '700', marginTop: 16, marginBottom: 8 } as const;
-const item = { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.surface, borderColor: C.line, borderWidth: 1, borderRadius: R.md, padding: 12, marginBottom: 8 } as const;
-
-// Esta pantalla no es una pestaña, así que el candado de sesión va aquí.
 export default function BuscarProtegida() {
-  return (
-    <RequireAuth>
-      <Buscar />
-    </RequireAuth>
-  );
+  return <RequireAuth><Buscar /></RequireAuth>;
 }

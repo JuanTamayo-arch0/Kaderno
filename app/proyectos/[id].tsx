@@ -204,7 +204,7 @@ function ProyectoDetalle() {
           Puede que lo hayan borrado, o que te hayan sacado del equipo.
         </Text>
         <Pressable onPress={() => router.push('/proyectos')} style={{ marginTop: 18, backgroundColor: C.brand, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 20 }}>
-          <Text style={{ color: '#0f1115', fontWeight: '700' }}>Volver a proyectos</Text>
+          <Text style={{ color: C.onBrand, fontWeight: '700' }}>Volver a proyectos</Text>
         </Pressable>
       </View>
     );
@@ -261,8 +261,8 @@ function ProyectoDetalle() {
             return (
               <Pressable key={v.key} onPress={() => setView(v.key)}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 14, borderRadius: R.pill, borderWidth: 1, backgroundColor: on ? C.brand : C.surface2, borderColor: on ? C.brand : C.line }}>
-                <Ionicons name={v.icon as any} size={14} color={on ? '#0b0d11' : C.muted} />
-                <Text style={{ color: on ? '#0b0d11' : C.text, fontSize: 13, fontWeight: on ? '700' : '500' }}>{v.label}</Text>
+                <Ionicons name={v.icon as any} size={14} color={on ? C.onBrand : C.muted} />
+                <Text style={{ color: on ? C.onBrand : C.text, fontSize: 13, fontWeight: on ? '700' : '500' }}>{v.label}</Text>
               </Pressable>
             );
           })}
@@ -844,7 +844,7 @@ function Lista({ tasks, cols, steps, members, editable, isWide, selecting, selec
         <Pressable onPress={onAdd}
           style={{ flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: C.brand, borderRadius: 12, padding: 13, marginTop: 12, alignSelf: isWide ? 'flex-start' : 'stretch', paddingHorizontal: 20 }}>
           <Ionicons name="add" size={18} color="#0f1115" />
-          <Text style={{ color: '#0f1115', fontWeight: '700' }}>Nueva tarea</Text>
+          <Text style={{ color: C.onBrand, fontWeight: '700' }}>Nueva tarea</Text>
         </Pressable>
       )}
     </ScrollView>
@@ -918,7 +918,7 @@ function Equipo({ project, members, tasks, activity, myId, role, isWide, onChang
           <Pressable onPress={copyCode}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.brand, borderRadius: 11, paddingVertical: 12, paddingHorizontal: 16 }}>
             <Ionicons name="copy-outline" size={15} color="#0f1115" />
-            <Text style={{ color: '#0f1115', fontWeight: '700', fontSize: 13 }}>Copiar</Text>
+            <Text style={{ color: C.onBrand, fontWeight: '700', fontSize: 13 }}>Copiar</Text>
           </Pressable>
           {isOwner && (
             <Pressable onPress={regen} disabled={busy}
@@ -1358,7 +1358,7 @@ function PTaskModal({ visible, task, projectId, status, cols, members, steps, ed
 
             {editable && (
               <Pressable onPress={guardar} disabled={busy} style={btnPrimary}>
-                <Text style={{ color: '#fff', fontWeight: '700' }}>{busy ? '…' : task ? 'Guardar' : 'Crear tarea'}</Text>
+                <Text style={{ color: C.onBrand, fontWeight: '700' }}>{busy ? '…' : task ? 'Guardar' : 'Crear tarea'}</Text>
               </Pressable>
             )}
             {editable && task && (
@@ -1485,7 +1485,7 @@ function ColumnsModal({ visible, cols, counts, onClose, onSave }: {
             </View>
 
             <Pressable onPress={guardar} style={btnPrimary}>
-              <Text style={{ color: '#fff', fontWeight: '700' }}>Guardar columnas</Text>
+              <Text style={{ color: C.onBrand, fontWeight: '700' }}>Guardar columnas</Text>
             </Pressable>
             <Pressable onPress={onClose} style={{ alignItems: 'center', marginTop: 12 }}>
               <Text style={{ color: C.muted }}>Cancelar</Text>

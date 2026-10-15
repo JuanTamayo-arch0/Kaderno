@@ -205,7 +205,7 @@ function DueForm({ n, busy, onClose, onApply }: { n: number; busy: boolean; onCl
       )}
       <Pressable onPress={() => iso && onApply(iso)} disabled={!iso || busy}
         style={{ backgroundColor: iso ? C.brand : C.surface2, borderRadius: 12, padding: 13, alignItems: 'center', marginTop: 16 }}>
-        {busy ? <ActivityIndicator color="#0f1115" /> : <Text style={{ color: iso ? '#0f1115' : C.muted, fontWeight: '700' }}>Poner esta entrega</Text>}
+        {busy ? <ActivityIndicator color={C.onBrand} /> : <Text style={{ color: iso ? C.onBrand : C.muted, fontWeight: '700' }}>Poner esta entrega</Text>}
       </Pressable>
       <Pressable onPress={() => onApply(null)} disabled={busy} style={{ alignItems: 'center', marginTop: 12 }}>
         <Text style={{ color: C.muted, fontSize: 13 }}>Quitarles la fecha</Text>
@@ -266,7 +266,7 @@ function ShiftForm({ tasks, busy, onClose, onApply }: {
       <Pressable onPress={() => onApply(days, target)} disabled={busy || days === 0 || prev.invalidCount > 0 || prev.items.length === 0}
         style={{ backgroundColor: days !== 0 && prev.invalidCount === 0 && prev.items.length > 0 ? C.brand : C.surface2, borderRadius: 12, padding: 13, alignItems: 'center', marginTop: 16 }}>
         {busy ? <ActivityIndicator color="#0f1115" /> : (
-          <Text style={{ color: days !== 0 && prev.invalidCount === 0 && prev.items.length > 0 ? '#0f1115' : C.muted, fontWeight: '700' }}>
+          <Text style={{ color: days !== 0 && prev.invalidCount === 0 && prev.items.length > 0 ? C.onBrand : C.muted, fontWeight: '700' }}>
             Correr {prev.items.length} {prev.items.length === 1 ? 'tarea' : 'tareas'}
           </Text>
         )}

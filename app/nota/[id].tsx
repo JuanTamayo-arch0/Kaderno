@@ -1,197 +1,160 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import {
-  ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, Text, TextInput, View,
-} from 'react-native';
+import { ActivityIndicator, Image, Modal, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { C, R, S, shadow } from '../../lib/theme';
+import { C } from '../../lib/theme';
+import { RequireAuth } from '../../components/RequireAuth';
 import { MarkdownEditor } from '../../components/MarkdownEditor';
 import { NoteAttachments } from '../../components/NoteAttachments';
-import { SubjectIcon } from '../../components/SubjectIcon';
+import { SubjectPicker } from '../../components/SubjectPicker';
+import { Screen, Button, Card, EmptyState, IconButton, SectionLabel } from '../../components/ds';
 import {
-  Note, Subject, getNote, getSubjects, updateNote, deleteNote, signedUrl,
-  aiSummary, aiFlashcards, addFlashcards, indexNote,
+  Note, Subject, getNote, getSubjects, updateNote, deleteNote, restoreNote, signedUrl,
+  aiSummary, aiFlashcards, addFlashcards, indexNote, hasV14,
 } from '../../lib/db';
+import { supabase } from '../../lib/supabase';
+import { notify, toast, friendlyError } from '../../lib/feedback';
+import { refreshNavCounts } from '../../lib/navCounts';
 
-export default function NotaDetalle() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+// ============================================================
+//  Nota: se guarda sola mientras escribes, con ancho de lectura cómodo,
+//  materia editable, adjuntos y acciones de IA (resumen, flashcards,
+//  Oráculo). Borrar la manda a la papelera con "Deshacer".
+// ============================================================
+
+function NotaDetalle() {
+  const { id } = useLocalSearchParams<{ id: string; edit?: string }>();
   const router = useRouter();
-  const [note, setNote] = useState<Note | null>(null);
-  const [subject, setSubject] = useState<Subject | null>(null);
+  const [note, setNote] = useState<Note | null | undefined>(undefined);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [photo, setPhoto] = useState<string | null>(null);
   const [zoom, setZoom] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [summary, setSummary] = useState<string | null>(null);
   const [genSum, setGenSum] = useState(false);
   const [genCards, setGenCards] = useState(false);
+  const saved = useRef({ title: '', content: '' });
 
   const load = useCallback(async () => {
     try {
       const [n, subs] = await Promise.all([getNote(id), getSubjects()]);
-      if (!n) return;
+      setSubjects(subs);
+      if (!n || n.deleted_at) { setNote(null); return; }
       setNote(n); setTitle(n.title ?? ''); setContent(n.content ?? ''); setSummary(n.summary ?? null);
-      setSubject(subs.find((s) => s.id === n.subject_id) ?? null);
+      saved.current = { title: n.title ?? '', content: n.content ?? '' };
       if (n.image_path) signedUrl(n.image_path).then(setPhoto).catch(() => {});
-    } catch (e: any) { Alert.alert('Error', e.message); }
-    finally { setLoading(false); }
+    } catch { setNote(null); }
   }, [id]);
+  useFocusEffect(useCallback(() => { if (note === undefined) load(); }, [load, note]));
 
-  async function makeSummary() {
-    if (!content.trim()) return Alert.alert('La nota está vacía');
-    setGenSum(true);
+  // Guardado automático 1,2 s después de dejar de escribir.
+  useEffect(() => {
+    if (!note) return;
+    if (title === saved.current.title && content === saved.current.content) return;
+    setStatus('saving');
+    const h = setTimeout(async () => {
+      try {
+        await updateNote(id, { title: title.trim() || 'Nota sin título', content });
+        saved.current = { title, content };
+        setStatus('saved');
+        indexNote(id, content, note.subject_id ?? null);
+      } catch { setStatus('error'); }
+    }, 1200);
+    return () => clearTimeout(h);
+  }, [title, content, note, id]);
+
+  async function changeSubject(sid: string | null) {
+    if (!note) return;
     try {
-      const s = await aiSummary(content);
-      setSummary(s);
-      await updateNote(id, { summary: s });
-    } catch (e: any) { Alert.alert('No se pudo generar', e.message + '\n(¿Desplegaste la función "ai"?)'); }
-    finally { setGenSum(false); }
+      const { error } = await supabase.from('notes').update({ subject_id: sid }).eq('id', id);
+      if (error) throw error;
+      setNote({ ...note, subject_id: sid });
+      toast('Nota movida');
+    } catch (e) { notify('No se pudo mover', friendlyError(e)); }
+  }
+  async function makeSummary() {
+    if (!content.trim()) { notify('La nota está vacía', 'Escribe o digitaliza algo antes de resumir.'); return; }
+    setGenSum(true);
+    try { const s = await aiSummary(content); setSummary(s); await updateNote(id, { summary: s }); }
+    catch (e) { notify('No se pudo resumir', friendlyError(e)); } finally { setGenSum(false); }
   }
   async function makeFlashcards() {
-    if (!content.trim()) return Alert.alert('La nota está vacía');
+    if (!content.trim()) { notify('La nota está vacía', 'Escribe o digitaliza algo antes de crear tarjetas.'); return; }
     setGenCards(true);
     try {
       const cards = await aiFlashcards(content);
-      if (!cards.length) throw new Error('No se generaron tarjetas');
+      if (!cards.length) throw new Error('La IA no devolvió tarjetas. Intenta con una nota más larga.');
       await addFlashcards(cards, id, note?.subject_id ?? null);
-      Alert.alert('¡Listo!', `${cards.length} flashcards creadas. Repásalas desde la pestaña Hoy.`);
-    } catch (e: any) { Alert.alert('No se pudo generar', e.message + '\n(¿Desplegaste la función "ai"?)'); }
-    finally { setGenCards(false); }
+      refreshNavCounts(true);
+      toast(`${cards.length} flashcards creadas`, { tone: 'good', actionLabel: 'Repasar', onAction: () => router.push('/repaso') });
+    } catch (e) { notify('No se pudieron crear', friendlyError(e)); } finally { setGenCards(false); }
   }
-  useFocusEffect(useCallback(() => { load(); }, [load]));
-
-  const dirty = note ? (title !== (note.title ?? '') || content !== (note.content ?? '')) : false;
-
-  async function save() {
-    setSaving(true);
+  async function remove() {
     try {
-      await updateNote(id, { title: title.trim(), content });
-      setNote({ ...(note as Note), title: title.trim(), content });
-      indexNote(id, content, note?.subject_id ?? null); // best-effort para el Oráculo
-      Alert.alert('Guardado', 'Cambios guardados ✓');
-    } catch (e: any) { Alert.alert('Error', e.message); }
-    finally { setSaving(false); }
+      await deleteNote(id);
+      const back = note?.subject_id ? `/materia/${note.subject_id}` : '/materias';
+      router.replace(back as any);
+      toast(hasV14() ? 'Nota enviada a la papelera' : 'Nota borrada', hasV14() ? { actionLabel: 'Deshacer', onAction: () => { restoreNote(id).then(() => router.push(`/nota/${id}`)).catch(() => {}); } } : {});
+    } catch (e) { notify('No se pudo borrar', friendlyError(e)); }
   }
 
-  function confirmDelete() {
-    Alert.alert('Eliminar nota', '¿Seguro que quieres borrar esta nota? No se puede deshacer.', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: async () => {
-        try { await deleteNote(id); router.back(); }
-        catch (e: any) { Alert.alert('Error', e.message); }
-      } },
-    ]);
-  }
+  const back = note?.subject_id ? `/materia/${note.subject_id}` : '/materias';
+  if (note === undefined) return <Screen back="/materias" nav="materias"><ActivityIndicator color={C.brand} style={{ marginTop: 40 }} /></Screen>;
+  if (note === null) return (
+    <Screen back="/materias" nav="materias" title="Nota">
+      <EmptyState icon="document-outline" title="No encontramos esta nota" text="Puede que esté en la papelera." action={{ label: 'Ir a la Papelera', onPress: () => router.replace('/papelera') }} />
+    </Screen>
+  );
 
-  if (loading) {
-    return <View style={{ flex: 1, backgroundColor: C.bg, justifyContent: 'center' }}><ActivityIndicator color={C.brand} /></View>;
-  }
+  const words = content.trim().split(/\s+/).filter(Boolean).length;
+  const statusText = status === 'saving' ? 'Guardando…' : status === 'saved' ? 'Guardado' : status === 'error' ? 'No se pudo guardar. Revisa tu conexión.' : `${words} palabras`;
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
-      {/* Barra superior */}
-      <View style={{ paddingTop: 54, paddingHorizontal: S.md, paddingBottom: S.sm, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Pressable onPress={() => router.back()} hitSlop={10} style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Ionicons name="chevron-back" size={26} color={C.text} />
-        </Pressable>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-          {photo && (
-            <Pressable onPress={() => setZoom(true)} hitSlop={10} accessibilityLabel="Ver foto original" style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-              <Ionicons name="image-outline" size={18} color={C.muted} />
-              <Text style={{ color: C.muted, fontSize: 12.5 }}>Original</Text>
-            </Pressable>
-          )}
-          <Pressable onPress={confirmDelete} hitSlop={10} accessibilityLabel="Eliminar nota">
-            <Ionicons name="trash-outline" size={22} color={C.muted} />
-          </Pressable>
-        </View>
+    <Screen back={back} nav="materias" maxWidth={760}
+      right={<>
+        {photo && <IconButton icon="image-outline" label="Ver foto original" onPress={() => setZoom(true)} />}
+        <IconButton icon="trash-outline" label="Borrar nota" onPress={remove} />
+      </>}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
+        <View style={{ width: 220 }}><SubjectPicker subjects={subjects} value={note.subject_id} onChange={changeSubject} placeholder="Sin materia" /></View>
+        <Text style={{ color: C.muted, fontSize: 12.5 }}>{new Date(note.created_at).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })}</Text>
+        <View style={{ flex: 1 }} />
+        <Text style={{ color: status === 'error' ? C.badText : C.muted, fontSize: 12.5 }} accessibilityLiveRegion="polite">{statusText}</Text>
+      </View>
+      <TextInput value={title} onChangeText={setTitle} placeholder="Título de la nota" placeholderTextColor={C.muted} multiline accessibilityLabel="Título"
+        style={[{ color: C.text, fontSize: 26, fontWeight: '800', paddingVertical: 8 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
+      <View style={{ marginTop: 4 }}>
+        <MarkdownEditor value={content} onChange={setContent} minHeight={360} />
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: S.lg, paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
-        {/* Metadatos */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm, marginBottom: S.sm, flexWrap: 'wrap' }}>
-          {subject && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 5, paddingHorizontal: 11, borderRadius: R.pill, backgroundColor: subject.color + '22', borderWidth: 1, borderColor: subject.color + '55' }}>
-              <SubjectIcon icon={subject.icon} box={16} emoji={13} />
-              <Text style={{ color: subject.color, fontSize: 12.5, fontWeight: '600' }}>{subject.name}</Text>
-            </View>
-          )}
-          {note?.created_at && (
-            <Text style={{ color: C.muted, fontSize: 12 }}>
-              {new Date(note.created_at).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' })}
-            </Text>
-          )}
-        </View>
+      <NoteAttachments noteId={id} />
 
-        {/* Título editable */}
-        <TextInput
-          value={title} onChangeText={setTitle} placeholder="Título de la nota"
-          placeholderTextColor={C.muted}
-          style={{ color: C.text, fontSize: 22, fontWeight: '800', paddingVertical: S.sm }}
-          multiline
-        />
-
-        {/* Contenido editable (Markdown con vista renderizada) */}
-        <View style={{ marginTop: S.sm }}>
-          <MarkdownEditor value={content} onChange={setContent} minHeight={420} />
-        </View>
-        <Text style={{ color: C.muted, fontSize: 11.5, marginTop: S.sm, marginLeft: 4 }}>
-          {content.trim().split(/\s+/).filter(Boolean).length} palabras · Markdown
-        </Text>
-
-        {/* Diagramas y adjuntos */}
-        <NoteAttachments noteId={id} />
-
-        {/* Estudiar con IA */}
-        <Text style={{ color: C.muted, fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.8, fontWeight: '600', marginTop: 24, marginBottom: 8 }}>Estudiar con IA</Text>
-
-        {summary && (
-          <View style={{ backgroundColor: C.brand + '14', borderColor: C.brand + '44', borderWidth: 1, borderRadius: R.lg, padding: S.md, marginBottom: S.md }}>
-            <Text style={{ color: C.brand, fontWeight: '700', fontSize: 12.5, marginBottom: 6 }}>✨ Resumen</Text>
-            <Text style={{ color: C.text, fontSize: 14, lineHeight: 21 }}>{summary}</Text>
-          </View>
-        )}
-
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <Pressable onPress={makeSummary} disabled={genSum}
-            style={({ pressed }) => ({ flex: 1, backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: R.md, padding: 13, alignItems: 'center', opacity: pressed ? 0.8 : 1 })}>
-            <Text style={{ color: C.text, fontSize: 13, fontWeight: '600' }}>{genSum ? 'Resumiendo…' : summary ? '↻ Rehacer resumen' : '✨ Resumir'}</Text>
-          </Pressable>
-          <Pressable onPress={makeFlashcards} disabled={genCards}
-            style={({ pressed }) => ({ flex: 1, backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: R.md, padding: 13, alignItems: 'center', opacity: pressed ? 0.8 : 1 })}>
-            <Text style={{ color: C.text, fontSize: 13, fontWeight: '600' }}>{genCards ? 'Creando…' : '🃏 Flashcards'}</Text>
-          </Pressable>
-        </View>
-
-        <Pressable onPress={() => router.push({ pathname: '/oraculo', params: { mode: 'note', noteId: id, subjectId: note?.subject_id ?? '', noteTitle: title || 'Nota' } })}
-          style={({ pressed }) => ({ flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: C.brand2 + '22', borderColor: C.brand2 + '55', borderWidth: 1, borderRadius: R.md, padding: 13, marginTop: 10, opacity: pressed ? 0.85 : 1 })}>
-          <Text style={{ fontSize: 16 }}>🔮</Text>
-          <Text style={{ color: C.brand2, fontSize: 14, fontWeight: '700' }}>Preguntar al Oráculo sobre esta nota</Text>
-        </Pressable>
-      </ScrollView>
-
-      {/* Botón guardar flotante (solo si hay cambios) */}
-      {dirty && (
-        <View style={{ position: 'absolute', left: S.lg, right: S.lg, bottom: 28 }}>
-          <Pressable onPress={save} disabled={saving}
-            style={({ pressed }) => ({
-              backgroundColor: C.brand, borderRadius: R.md, padding: 15, alignItems: 'center',
-              opacity: pressed ? 0.85 : 1, ...shadow,
-            })}>
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>{saving ? 'Guardando…' : 'Guardar cambios'}</Text>
-          </Pressable>
-        </View>
+      <SectionLabel text="Estudiar con IA" style={{ marginTop: 26 }} />
+      {summary && (
+        <Card style={{ marginBottom: 12, backgroundColor: C.brand + '12', borderColor: C.brand + '44' }}>
+          <Text style={{ color: C.brand, fontWeight: '700', fontSize: 13, marginBottom: 6 }}>Resumen</Text>
+          <Text style={{ color: C.text, fontSize: 14.5, lineHeight: 22 }}>{summary}</Text>
+        </Card>
       )}
+      <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
+        <Button label={summary ? 'Rehacer resumen' : 'Resumir'} icon="reader-outline" kind="secondary" busy={genSum} onPress={makeSummary} style={{ flexGrow: 1 }} />
+        <Button label="Crear flashcards" icon="albums-outline" kind="secondary" busy={genCards} onPress={makeFlashcards} style={{ flexGrow: 1 }} />
+        <Button label="Preguntar al Oráculo" icon="sparkles-outline" kind="secondary" style={{ flexGrow: 1 }}
+          onPress={() => router.push({ pathname: '/oraculo', params: { mode: 'note', noteId: id, subjectId: note.subject_id ?? '', noteTitle: title || 'Nota' } } as any)} />
+      </View>
 
-      {/* Visor de foto a pantalla completa */}
       <Modal visible={zoom} transparent onRequestClose={() => setZoom(false)}>
-        <Pressable onPress={() => setZoom(false)} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', alignItems: 'center' }}>
-          {photo && <Image source={{ uri: photo }} style={{ width: '100%', height: '80%' }} resizeMode="contain" />}
-          <Text style={{ color: C.muted, marginTop: 16, fontSize: 13 }}>Toca para cerrar</Text>
+        <Pressable onPress={() => setZoom(false)} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', alignItems: 'center' }} accessibilityLabel="Cerrar foto">
+          {photo && <Image source={{ uri: photo }} style={{ width: '94%', height: '84%' }} resizeMode="contain" />}
+          <Text style={{ color: '#ccc', marginTop: 16, fontSize: 13 }}>Toca para cerrar</Text>
         </Pressable>
       </Modal>
-    </View>
+    </Screen>
   );
+}
+
+export default function NotaProtegida() {
+  return <RequireAuth><NotaDetalle /></RequireAuth>;
 }

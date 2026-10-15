@@ -1,83 +1,212 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { C } from '../lib/theme';
 import { SIDEBAR_W } from '../lib/responsive';
+import { useAuth } from '../lib/auth';
+import { useNavCounts } from '../lib/navCounts';
+import { useFocusTimer } from '../lib/focusTimer';
+import { openAdd, openCommand, openInbox } from '../lib/uiBus';
 
 // ============================================================
-//  Barra lateral de escritorio, compartida.
+//  Navegación de computador (barra lateral) y de celular (barra inferior).
 //
-//  Antes vivía dentro de app/(tabs)/_layout.tsx y sólo se veía en las pestañas.
-//  El problema: Proyectos, Buscar, Tipos y Personalizar NO son pestañas (viven
-//  fuera del grupo (tabs)), así que al entrar a una de ellas la barra
-//  desaparecía y en escritorio uno quedaba sin manera de volver.
+//  Computador: Hoy, Materias, Horario y Proyectos arriba; la sección
+//  "Estudiar" (Enfoque, Repaso, Oráculo, Capturar); abajo la persona con
+//  Ajustes. Las pantallas que no son pestañas montan esta misma barra
+//  con <Screen nav="..."> (components/ds.tsx).
 //
-//  Ahora el dibujo está aquí y lo usan los dos:
-//   · el layout de pestañas le pasa `onNavigate` para no perder el estado del
-//     navegador (navigation.navigate en vez de router.push);
-//   · las pantallas sueltas la montan tal cual, diciendo cuál va resaltada.
+//  Celular: cinco botones (Hoy, Materias, +, Estudiar, Proyectos). Las
+//  pantallas que viven "dentro" de otra (Horario dentro de Materias,
+//  Enfoque / Repaso / Oráculo / Capturar dentro de Estudiar) encienden
+//  el botón de su sección.
 // ============================================================
 
 export type NavKey =
-  | 'index' | 'materias' | 'capturar' | 'oraculo' | 'horario' | 'enfoque'
-  | 'proyectos' | 'buscar' | 'tipos' | 'personalizar';
+  | 'index' | 'materias' | 'horario' | 'proyectos' | 'estudiar'
+  | 'enfoque' | 'repaso' | 'oraculo' | 'capturar'
+  | 'buscar' | 'ajustes' | 'tipos' | 'personalizar' | 'papelera';
 
-type Item = { key: NavKey; label: string; icon: any; href: string };
+type Item = { key: NavKey; label: string; icon: any; iconOn: any; href: string };
 
-// Arriba: lo que no es pestaña. Abajo: las pestañas, en su orden.
-export const TOP_ITEMS: Item[] = [
-  { key: 'proyectos', label: 'Proyectos', icon: 'people-outline', href: '/proyectos' },
-  { key: 'tipos', label: 'Tipos de tarea', icon: 'pricetags-outline', href: '/tipos' },
-  { key: 'personalizar', label: 'Personalizar', icon: 'color-palette-outline', href: '/personalizar' },
+export const MAIN_ITEMS: Item[] = [
+  { key: 'index', label: 'Hoy', icon: 'today-outline', iconOn: 'today', href: '/' },
+  { key: 'materias', label: 'Materias', icon: 'book-outline', iconOn: 'book', href: '/materias' },
+  { key: 'horario', label: 'Horario', icon: 'grid-outline', iconOn: 'grid', href: '/horario' },
+  { key: 'proyectos', label: 'Proyectos', icon: 'people-outline', iconOn: 'people', href: '/proyectos' },
 ];
-
-export const TAB_ITEMS: Item[] = [
-  { key: 'index', label: 'Hoy', icon: 'calendar', href: '/' },
-  { key: 'materias', label: 'Materias', icon: 'book', href: '/materias' },
-  { key: 'capturar', label: 'Capturar', icon: 'camera', href: '/capturar' },
-  { key: 'oraculo', label: 'Oráculo', icon: 'sparkles', href: '/oraculo' },
-  { key: 'horario', label: 'Horario', icon: 'grid', href: '/horario' },
-  { key: 'enfoque', label: 'Enfoque', icon: 'timer', href: '/enfoque' },
+export const STUDY_ITEMS: Item[] = [
+  { key: 'enfoque', label: 'Enfoque', icon: 'timer-outline', iconOn: 'timer', href: '/enfoque' },
+  { key: 'repaso', label: 'Repaso', icon: 'albums-outline', iconOn: 'albums', href: '/repaso' },
+  { key: 'oraculo', label: 'Oráculo', icon: 'sparkles-outline', iconOn: 'sparkles', href: '/oraculo' },
+  { key: 'capturar', label: 'Capturar', icon: 'camera-outline', iconOn: 'camera', href: '/capturar' },
 ];
+/** Rutas que son pestañas (se navega con el navegador de pestañas para no perder su estado). */
+export const TAB_KEYS: NavKey[] = ['index', 'materias', 'horario', 'proyectos', 'estudiar', 'enfoque', 'oraculo', 'capturar'];
+
+function displayName(session: any): { name: string; initials: string; email: string } {
+  const email = session?.user?.email ?? '';
+  const name = (session?.user?.user_metadata?.full_name as string | undefined)?.trim() || email.split('@')[0] || 'Tú';
+  const parts = name.split(/[\s._-]+/).filter(Boolean);
+  const initials = (parts.length >= 2 ? parts[0][0] + parts[1][0] : name.slice(0, 2)).toUpperCase();
+  return { name, initials, email };
+}
+
+export function Avatar({ initials, size = 30 }: { initials: string; size?: number }) {
+  return (
+    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: C.brand, alignItems: 'center', justifyContent: 'center' }}>
+      <Text style={{ color: C.onBrand, fontWeight: '800', fontSize: size * 0.38 }}>{initials}</Text>
+    </View>
+  );
+}
 
 export function SideNav({ active, onNavigate }: { active: NavKey | null; onNavigate?: (key: NavKey) => void }) {
   const router = useRouter();
-  // Si el layout de pestañas no nos dio su navegador, navegamos por ruta.
-  const go = (it: Item) => {
-    if (onNavigate && TAB_ITEMS.some((t) => t.key === it.key)) onNavigate(it.key);
+  const { session } = useAuth();
+  const counts = useNavCounts();
+  const focus = useFocusTimer();
+  const me = displayName(session);
+
+  const go = (it: { key: NavKey; href: string }) => {
+    if (onNavigate && TAB_KEYS.includes(it.key)) onNavigate(it.key);
     else router.push(it.href as any);
   };
 
-  const row = (it: Item, big: boolean) => {
-    const on = active === it.key;
+  const row = (it: Item, extra?: React.ReactNode) => {
+    const on = active === it.key || (it.key === 'materias' && active === 'materias');
     return (
       <Pressable key={it.key} onPress={() => go(it)}
-        accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={it.label}
-        style={({ pressed }) => ({
-          flexDirection: 'row', alignItems: 'center', gap: 12,
-          paddingVertical: big ? 12 : 11, paddingHorizontal: 12, borderRadius: 12, marginBottom: 4,
-          backgroundColor: on ? C.brand + '22' : (pressed ? C.surface2 : 'transparent'),
-        })}>
-        <Ionicons name={it.icon} size={big ? 20 : 18} color={on ? C.brand : C.muted} />
-        <Text style={{ color: on ? C.brand : C.muted, fontWeight: on ? '700' : '600', fontSize: big ? 14.5 : 14 }}>{it.label}</Text>
+        accessibilityRole="link" accessibilityState={{ selected: on }} accessibilityLabel={it.label}
+        style={({ pressed, hovered, focused }: any) => [{
+          flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 40,
+          paddingVertical: 9, paddingHorizontal: 10, borderRadius: 10, marginBottom: 2,
+          backgroundColor: on ? C.brand + '22' : (pressed || hovered ? C.surface2 : 'transparent'),
+        }, focused ? { outlineColor: C.focus, outlineWidth: 2, outlineStyle: 'solid' } as any : null]}>
+        <Ionicons name={on ? it.iconOn : it.icon} size={19} color={on ? C.brand : C.muted} />
+        <Text style={{ color: on ? C.brand : C.text, fontWeight: on ? '700' : '600', fontSize: 14, flex: 1 }}>{it.label}</Text>
+        {extra}
       </Pressable>
     );
   };
+  const badge = (n: number, tone?: string) => n > 0 ? (
+    <View style={{ minWidth: 22, paddingHorizontal: 6, height: 20, borderRadius: 10, backgroundColor: tone ?? C.surface2, alignItems: 'center', justifyContent: 'center' }}>
+      <Text style={{ color: tone ? C.onBrand : C.text, fontSize: 11.5, fontWeight: '800' }}>{n > 99 ? '99+' : n}</Text>
+    </View>
+  ) : null;
+  const timer = focus.state.running || focus.remaining < focus.total
+    ? <Text style={{ color: focus.state.mode === 'work' ? C.brand : C.goodText, fontSize: 12, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{focus.label}</Text>
+    : null;
 
   return (
-    <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: SIDEBAR_W, backgroundColor: C.surface, borderRightWidth: 1, borderRightColor: C.line, paddingTop: 44, paddingHorizontal: 12 }}>
-      <Text style={{ color: C.text, fontSize: 22, fontWeight: '800', paddingHorizontal: 12, marginBottom: 20 }}>Kaderno</Text>
+    <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: SIDEBAR_W, backgroundColor: C.surface, borderRightWidth: 1, borderRightColor: C.line, zIndex: 10 }}>
+      <ScrollView contentContainerStyle={{ paddingTop: 22, paddingHorizontal: 12, paddingBottom: 12, flexGrow: 1 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 8, marginBottom: 16 }}>
+          <KadernoMark size={28} />
+          <Text style={{ color: C.text, fontSize: 20, fontWeight: '800', flex: 1 }}>Kaderno</Text>
+          <Pressable onPress={openInbox} accessibilityRole="button" accessibilityLabel={counts.unread ? `Avisos, ${counts.unread} sin leer` : 'Avisos'}
+            style={({ hovered }: any) => ({ width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: hovered ? C.surface2 : 'transparent' })}>
+            <Ionicons name={counts.unread ? 'notifications' : 'notifications-outline'} size={19} color={counts.unread ? C.brand : C.muted} />
+            {counts.unread > 0 && <View style={{ position: 'absolute', top: 7, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: C.bad }} />}
+          </Pressable>
+        </View>
 
-      <Pressable onPress={() => router.push('/buscar')} accessibilityRole="button" accessibilityLabel="Buscar"
-        style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, paddingHorizontal: 12, borderRadius: 12, marginBottom: 6, backgroundColor: pressed ? C.surface2 : C.surface, borderWidth: 1, borderColor: C.line })}>
-        <Ionicons name="search" size={18} color={C.muted} />
-        <Text style={{ color: C.muted, fontWeight: '600', fontSize: 14 }}>Buscar…</Text>
+        <Pressable onPress={openCommand} accessibilityRole="search" accessibilityLabel="Buscar o ir a… (Ctrl K)"
+          style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, paddingHorizontal: 10, borderRadius: 10, borderWidth: 1, borderColor: C.line, backgroundColor: hovered ? C.surface2 : C.bg, marginBottom: 8 })}>
+          <Ionicons name="search" size={17} color={C.muted} />
+          <Text style={{ color: C.muted, fontSize: 13.5, flex: 1 }}>Buscar…</Text>
+          {Platform.OS === 'web' && <Kbd text="Ctrl K" />}
+        </Pressable>
+        <Pressable onPress={openAdd} accessibilityRole="button" accessibilityLabel="Agregar"
+          style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 40, borderRadius: 10, backgroundColor: C.brand, opacity: pressed ? 0.85 : 1, marginBottom: 14 })}>
+          <Ionicons name="add" size={19} color={C.onBrand} />
+          <Text style={{ color: C.onBrand, fontWeight: '800', fontSize: 14 }}>Agregar</Text>
+        </Pressable>
+
+        {row(MAIN_ITEMS[0], badge(counts.today))}
+        {row(MAIN_ITEMS[1])}
+        {row(MAIN_ITEMS[2])}
+        {row(MAIN_ITEMS[3])}
+
+        <Pressable onPress={() => go({ key: 'estudiar', href: '/estudiar' })} accessibilityRole="link" accessibilityLabel="Estudiar">
+          <Text style={{ color: active === 'estudiar' ? C.brand : C.muted, fontSize: 11.5, fontWeight: '800', letterSpacing: 0.7, textTransform: 'uppercase', paddingHorizontal: 10, paddingTop: 16, paddingBottom: 6 }}>Estudiar</Text>
+        </Pressable>
+        {row(STUDY_ITEMS[0], timer)}
+        {row(STUDY_ITEMS[1], badge(counts.repaso))}
+        {row(STUDY_ITEMS[2])}
+        {row(STUDY_ITEMS[3])}
+
+        <View style={{ flex: 1, minHeight: 16 }} />
+        <Pressable onPress={() => router.push('/ajustes')} accessibilityRole="link" accessibilityLabel="Ajustes y cuenta"
+          style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, borderRadius: 12, borderTopWidth: 1, borderTopColor: C.line, backgroundColor: active === 'ajustes' ? C.brand + '22' : hovered ? C.surface2 : 'transparent' })}>
+          <Avatar initials={me.initials} />
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700' }} numberOfLines={1}>{me.name}</Text>
+            <Text style={{ color: C.muted, fontSize: 12 }} numberOfLines={1}>Ajustes y cuenta</Text>
+          </View>
+          <Ionicons name="settings-outline" size={18} color={C.muted} />
+        </Pressable>
+      </ScrollView>
+    </View>
+  );
+}
+
+export function Kbd({ text }: { text: string }) {
+  return (
+    <View style={{ borderWidth: 1, borderColor: C.line, borderRadius: 5, paddingHorizontal: 5, paddingVertical: 1 }}>
+      <Text style={{ color: C.muted, fontSize: 10.5, fontWeight: '700' }}>{text}</Text>
+    </View>
+  );
+}
+
+/** Marca de Kaderno: un cuaderno con una línea. */
+export function KadernoMark({ size = 28 }: { size?: number }) {
+  return (
+    <View style={{ width: size, height: size, borderRadius: size * 0.28, backgroundColor: C.brand, alignItems: 'center', justifyContent: 'center' }}>
+      <Ionicons name="book" size={size * 0.56} color={C.onBrand} />
+    </View>
+  );
+}
+
+// ---------- Barra inferior (celular) ----------
+const SECTION_OF: Partial<Record<NavKey, NavKey>> = {
+  horario: 'materias', enfoque: 'estudiar', repaso: 'estudiar', oraculo: 'estudiar', capturar: 'estudiar',
+};
+
+export function BottomBar({ active, onNavigate, bottomInset }: { active: NavKey; onNavigate: (k: NavKey) => void; bottomInset: number }) {
+  const counts = useNavCounts();
+  const focus = useFocusTimer();
+  const section = SECTION_OF[active] ?? active;
+  const tab = (key: NavKey, label: string, icon: any, iconOn: any, badgeN = 0, extra?: string) => {
+    const on = section === key;
+    return (
+      <Pressable key={key} onPress={() => onNavigate(key)} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={label}
+        style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 8, paddingBottom: 6, minHeight: 52 }}>
+        <View>
+          <Ionicons name={on ? iconOn : icon} size={23} color={on ? C.brand : C.muted} />
+          {badgeN > 0 && (
+            <View style={{ position: 'absolute', top: -4, right: -10, minWidth: 17, height: 17, borderRadius: 9, backgroundColor: C.bad, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
+              <Text style={{ color: C.onBad, fontSize: 10, fontWeight: '800' }}>{badgeN > 99 ? '99+' : badgeN}</Text>
+            </View>
+          )}
+        </View>
+        <Text style={{ color: on ? C.brand : C.muted, fontSize: 11, fontWeight: on ? '700' : '500', marginTop: 3, fontVariant: ['tabular-nums'] }} numberOfLines={1}>{extra ?? label}</Text>
       </Pressable>
-
-      {TOP_ITEMS.map((it) => row(it, false))}
-      <View style={{ height: 6 }} />
-      {TAB_ITEMS.map((it) => row(it, true))}
+    );
+  };
+  const timerLabel = focus.state.running ? focus.label : undefined;
+  return (
+    <View style={{ flexDirection: 'row', backgroundColor: C.surface, borderTopWidth: 1, borderTopColor: C.line, paddingBottom: Math.max(bottomInset, 6) }}>
+      {tab('index', 'Hoy', 'today-outline', 'today', counts.today)}
+      {tab('materias', 'Materias', 'book-outline', 'book')}
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <Pressable onPress={openAdd} accessibilityRole="button" accessibilityLabel="Agregar"
+          style={({ pressed }) => ({ width: 50, height: 44, borderRadius: 15, backgroundColor: C.brand, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.85 : 1 })}>
+          <Ionicons name="add" size={28} color={C.onBrand} />
+        </Pressable>
+      </View>
+      {tab('estudiar', 'Estudiar', 'school-outline', 'school', counts.repaso, timerLabel)}
+      {tab('proyectos', 'Proyectos', 'people-outline', 'people')}
     </View>
   );
 }

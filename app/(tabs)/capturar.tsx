@@ -1,190 +1,203 @@
-import { useCallback, useState } from 'react';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { ActivityIndicator, Image, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { C } from '../../lib/theme';
-import { useResponsive, SIDEBAR_W } from '../../lib/responsive';
-import { Subject, Note, getSubjects, getNotes, uploadPhoto, runOCR, addNote, indexNote } from '../../lib/db';
-import { Header, Chip } from '../../components/ui';
+import { useResponsive } from '../../lib/responsive';
+import { Subject, Note, getSubjects, getNotes, uploadPhoto, runOCR, addNote, addNoteImage, indexNote } from '../../lib/db';
+import { notify, toast, friendlyError } from '../../lib/feedback';
+import { Screen, Button, Card, Field, IconButton, SectionLabel, EmptyState } from '../../components/ds';
 import { SubjectPicker } from '../../components/SubjectPicker';
 import { SubjectIcon } from '../../components/SubjectIcon';
 
+// ============================================================
+//  Capturar: de foto a nota editable.
+//  - Varias páginas en una sola nota (cada una pasa por el OCR).
+//  - En computador: arrastrar y soltar o pegar (Ctrl V) una imagen.
+//  - Si el OCR no responde, se puede escribir el texto a mano.
+// ============================================================
+
+type Page = { uri: string; base64: string; status: 'ocr' | 'ok' | 'fail'; text: string };
+
+/** En web: reduce la imagen (máx. 2000 px) y la pasa a JPEG en base64. */
+async function fileToBase64(file: File): Promise<{ uri: string; base64: string }> {
+  const dataUrl: string = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = rej; r.readAsDataURL(file); });
+  const img: HTMLImageElement = await new Promise((res, rej) => { const i = new (window as any).Image(); i.onload = () => res(i); i.onerror = rej; i.src = dataUrl; });
+  const scale = Math.min(1, 2000 / Math.max(img.width, img.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(img.width * scale); canvas.height = Math.round(img.height * scale);
+  canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+  const out = canvas.toDataURL('image/jpeg', 0.75);
+  return { uri: out, base64: out.split(',')[1] };
+}
+
 export default function Capturar() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ subjectId?: string }>();
   const { isWide } = useResponsive();
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [image, setImage] = useState<{ uri: string; base64: string } | null>(null);
-  const [ocrText, setOcrText] = useState('');
+  const [pages, setPages] = useState<Page[]>([]);
   const [title, setTitle] = useState('');
-  const [subjectId, setSubjectId] = useState<string | null>(null);
-  const [status, setStatus] = useState<'idle' | 'ocr' | 'ready'>('idle');
+  const [subjectId, setSubjectId] = useState<string | null>(params.subjectId ?? null);
   const [busy, setBusy] = useState(false);
   const [recent, setRecent] = useState<Note[]>([]);
+  const [dragging, setDragging] = useState(false);
+  const dropRef = useRef<View>(null);
 
   useFocusEffect(useCallback(() => {
-    getSubjects().then((s) => { setSubjects(s); if (s[0] && !subjectId) setSubjectId(s[0].id); }).catch(() => {});
-    getNotes().then(setRecent).catch(() => {});
-  }, [subjectId]));
+    getSubjects().then((s) => { setSubjects(s); setSubjectId((cur) => cur ?? params.subjectId ?? s[0]?.id ?? null); }).catch(() => {});
+    getNotes().then((n) => setRecent(n.slice(0, 12))).catch(() => {});
+  }, [params.subjectId]));
+
+  const addPage = useCallback(async (img: { uri: string; base64: string }) => {
+    setPages((ps) => [...ps, { ...img, status: 'ocr', text: '' }]);
+    try {
+      const text = await runOCR(img.base64);
+      setPages((ps) => ps.map((p) => p.uri === img.uri ? { ...p, status: 'ok', text } : p));
+    } catch {
+      setPages((ps) => ps.map((p) => p.uri === img.uri ? { ...p, status: 'fail' } : p));
+    }
+  }, []);
 
   async function pick(fromCamera: boolean) {
-    const perm = fromCamera
-      ? await ImagePicker.requestCameraPermissionsAsync()
-      : await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return Alert.alert('Permiso necesario', 'Autoriza el acceso para continuar.');
-
+    const perm = fromCamera ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) { notify('Permiso necesario', 'Autoriza el acceso a la cámara o a las fotos para continuar.'); return; }
     const res = fromCamera
       ? await ImagePicker.launchCameraAsync({ base64: true, quality: 0.6 })
-      : await ImagePicker.launchImageLibraryAsync({ base64: true, quality: 0.6 });
-    if (res.canceled || !res.assets[0].base64) return;
-
-    const a = res.assets[0];
-    setImage({ uri: a.uri, base64: a.base64! });
-    setStatus('ocr'); setOcrText('');
-    try {
-      const text = await runOCR(a.base64!);
-      setOcrText(text);
-      setStatus('ready');
-    } catch (e: any) {
-      setStatus('ready');
-      Alert.alert('OCR no disponible', 'Puedes escribir el texto manualmente. (Configura la función OCR para automatizarlo.)');
-    }
+      : await ImagePicker.launchImageLibraryAsync({ base64: true, quality: 0.6, allowsMultipleSelection: true, selectionLimit: 10 });
+    if (res.canceled) return;
+    for (const a of res.assets) if (a.base64) addPage({ uri: a.uri, base64: a.base64 });
   }
 
+  // Arrastrar y soltar, y pegar, en el navegador.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    const takeFiles = (files: FileList | null | undefined) => {
+      Array.from(files ?? []).filter((f) => f.type.startsWith('image/')).slice(0, 10)
+        .forEach((f) => fileToBase64(f).then(addPage).catch(() => notify('No se pudo leer la imagen')));
+    };
+    const onPaste = (e: ClipboardEvent) => { if (e.clipboardData?.files?.length) { e.preventDefault(); takeFiles(e.clipboardData.files); } };
+    const el = dropRef.current as unknown as HTMLElement | null;
+    const over = (e: DragEvent) => { e.preventDefault(); setDragging(true); };
+    const leave = () => setDragging(false);
+    const drop = (e: DragEvent) => { e.preventDefault(); setDragging(false); takeFiles(e.dataTransfer?.files); };
+    window.addEventListener('paste', onPaste);
+    el?.addEventListener?.('dragover', over); el?.addEventListener?.('dragleave', leave); el?.addEventListener?.('drop', drop);
+    return () => {
+      window.removeEventListener('paste', onPaste);
+      el?.removeEventListener?.('dragover', over); el?.removeEventListener?.('dragleave', leave); el?.removeEventListener?.('drop', drop);
+    };
+  }, [addPage]);
+
+  const text = pages.map((p) => p.text).filter(Boolean).join('\n\n---\n\n');
+  const [manual, setManual] = useState<string | null>(null);
+  const finalText = manual ?? text;
+  const working = pages.some((p) => p.status === 'ocr');
+
   async function save() {
-    if (!image) return;
-    if (!ocrText.trim()) return Alert.alert('No hay texto para guardar');
+    if (!pages.length) return;
+    if (!finalText.trim()) { notify('No hay texto para guardar', 'Escribe el contenido a mano o espera a que termine de leer la foto.'); return; }
     setBusy(true);
     try {
-      const path = await uploadPhoto(image.base64);
-      const newId = await addNote({ subject_id: subjectId, title: title.trim() || 'Nota sin título', content: ocrText.trim(), image_path: path });
-      indexNote(newId, ocrText.trim(), subjectId); // best-effort para el Oráculo
-      setImage(null); setOcrText(''); setTitle(''); setStatus('idle');
-      Alert.alert('Guardado', 'Tu nota quedó digitalizada ✓');
-      router.push('/(tabs)/materias');
-    } catch (e: any) { Alert.alert('Error', e.message); }
+      const path = await uploadPhoto(pages[0].base64);
+      const id = await addNote({ subject_id: subjectId, title: title.trim() || 'Nota sin título', content: finalText.trim(), image_path: path });
+      for (const p of pages.slice(1)) { try { await addNoteImage(id, p.base64); } catch { /* la nota ya quedó */ } }
+      indexNote(id, finalText.trim(), subjectId);
+      setPages([]); setTitle(''); setManual(null);
+      toast('Nota digitalizada', { tone: 'good', actionLabel: 'Abrir', onAction: () => router.push(`/nota/${id}`) });
+      getNotes().then((n) => setRecent(n.slice(0, 12))).catch(() => {});
+    } catch (e) { notify('No se pudo guardar', friendlyError(e)); }
     finally { setBusy(false); }
   }
 
   const subjOf = (id: string | null) => subjects.find((s) => s.id === id);
 
-  const ocrArea = status !== 'idle' && (
-    <View style={cardBox}>
-      {image && <Image source={{ uri: image.uri }} style={{ width: '100%', height: 220, borderRadius: 12 }} resizeMode="cover" />}
-      {status === 'ocr' && <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 12 }}><ActivityIndicator color={C.warn} /><Text style={{ color: C.warn }}>Digitalizando…</Text></View>}
-      {status === 'ready' && (
-        <>
-          <Text style={lbl}>Texto extraído (editable)</Text>
-          <TextInput value={ocrText} onChangeText={setOcrText} multiline placeholder="El texto reconocido aparece aquí…" placeholderTextColor={C.muted} style={[input, { minHeight: 140, textAlignVertical: 'top' }]} />
-          <Text style={lbl}>Materia</Text>
-          <SubjectPicker subjects={subjects} value={subjectId} onChange={setSubjectId} allowNone={false} />
-          <Text style={lbl}>Título de la nota</Text>
-          <TextInput value={title} onChangeText={setTitle} placeholder="Ej: Leyes de Newton" placeholderTextColor={C.muted} style={input} />
-          <Pressable onPress={save} disabled={busy} style={[btn, { marginTop: 16 }]}><Text style={{ color: '#fff', fontWeight: '700' }}>{busy ? 'Guardando…' : 'Guardar nota'}</Text></Pressable>
-        </>
-      )}
-    </View>
-  );
-
-  // ===================== ESCRITORIO =====================
-  if (isWide) {
-    return (
-      <View style={{ flex: 1, backgroundColor: C.bg, paddingLeft: SIDEBAR_W }}>
-        <ScrollView contentContainerStyle={{ paddingVertical: 36, paddingHorizontal: 44, paddingBottom: 60 }}>
-          <View style={{ maxWidth: 1200, width: '100%' }}>
-            <Text style={{ color: C.text, fontSize: 26, fontWeight: '800' }}>Capturar</Text>
-            <Text style={{ color: C.muted, fontSize: 14, marginTop: 4, marginBottom: 20 }}>Digitaliza tu cuaderno</Text>
-
-            <View style={{ backgroundColor: C.surface, borderColor: C.line, borderWidth: 1, borderRadius: 16, padding: 32, marginBottom: 24 }}>
-              <Text style={{ color: C.text, fontSize: 16, fontWeight: '700', marginBottom: 6 }}>📸 Digitalizar apunte</Text>
-              <Text style={{ color: C.muted, fontSize: 14, marginBottom: 20 }}>Toma o sube una foto de tu cuaderno. Se extrae el texto y se guarda editable, conservando la imagen original.</Text>
-              <View style={{ flexDirection: 'row', gap: 12 }}>
-                <Pressable onPress={() => pick(true)} style={{ flex: 1, backgroundColor: C.brand, borderRadius: 10, padding: 14, alignItems: 'center' }}><Text style={{ color: '#0f1115', fontWeight: '700' }}>Tomar foto</Text></Pressable>
-                <Pressable onPress={() => pick(false)} style={{ flex: 1, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.line, borderRadius: 10, padding: 14, alignItems: 'center' }}><Text style={{ color: C.text, fontWeight: '700' }}>Galería</Text></Pressable>
-              </View>
-            </View>
-
-            {ocrArea}
-
-            <Text style={{ color: C.muted, fontSize: 14, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6, marginTop: 12, marginBottom: 12 }}>Capturas recientes</Text>
-            {recent.length === 0 ? (
-              <Text style={{ color: C.muted, fontSize: 13 }}>Todavía no has digitalizado apuntes.</Text>
+  return (
+    <Screen title="Capturar" subtitle="De la foto de tu cuaderno a una nota editable" maxWidth={1000} back={isWide ? undefined : '/estudiar'}>
+      <View ref={dropRef}>
+        <Card style={{ borderStyle: dragging ? 'dashed' : 'solid', borderColor: dragging ? C.brand : C.line, borderWidth: dragging ? 2 : 1, alignItems: 'center', paddingVertical: 28 }}>
+          <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: C.brand + '1f', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+            <Ionicons name={dragging ? 'download-outline' : 'camera-outline'} size={28} color={C.brand} />
+          </View>
+          <Text style={{ color: C.text, fontSize: 16, fontWeight: '700', textAlign: 'center' }}>{dragging ? 'Suelta la imagen aquí' : isWide ? 'Arrastra fotos aquí o pégalas con Ctrl V' : 'Fotografía una o varias páginas'}</Text>
+          <Text style={{ color: C.muted, fontSize: 13.5, textAlign: 'center', marginTop: 6, maxWidth: 460 }}>Se extrae el texto y queda editable. La foto original se guarda con la nota.</Text>
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
+            {isWide ? (
+              <>
+                <Button label="Elegir imágenes" icon="images-outline" onPress={() => pick(false)} />
+                <Button label="Usar cámara" icon="camera-outline" kind="secondary" onPress={() => pick(true)} />
+              </>
             ) : (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
-                {recent.slice(0, 10).map((n) => {
-                  const su = subjOf(n.subject_id);
-                  return (
-                    <Pressable key={n.id} onPress={() => router.push(`/nota/${n.id}`)} style={{ width: 220, backgroundColor: C.surface, borderColor: C.line, borderWidth: 1, borderRadius: 14, overflow: 'hidden' }}>
-                      <View style={{ height: 120, backgroundColor: (su?.color ?? C.brand) + '22', alignItems: 'center', justifyContent: 'center' }}><SubjectIcon icon={su?.icon ?? '📝'} box={64} emoji={30} /></View>
-                      <View style={{ padding: 12 }}>
-                        <Text numberOfLines={1} style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{n.title || 'Nota'}</Text>
-                        <Text numberOfLines={1} style={{ color: C.muted, fontSize: 12, marginTop: 3 }}>{su?.name ?? 'Sin materia'} · {new Date(n.created_at).toLocaleDateString('es', { day: 'numeric', month: 'short' })}</Text>
-                      </View>
-                    </Pressable>
-                  );
-                })}
-              </View>
+              <>
+                <Button label="Tomar foto" icon="camera-outline" onPress={() => pick(true)} />
+                <Button label="Galería" icon="images-outline" kind="secondary" onPress={() => pick(false)} />
+              </>
             )}
           </View>
-        </ScrollView>
+        </Card>
       </View>
-    );
-  }
 
-  // ===================== MÓVIL =====================
-  return (
-    <View style={{ flex: 1, backgroundColor: C.bg, paddingLeft: isWide ? SIDEBAR_W : 0 }}>
-      <Header title="Capturar" subtitle="Digitaliza tu cuaderno" />
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-        <View style={cardBox}>
-          <Text style={{ color: C.text, fontWeight: '700', fontSize: 15, marginBottom: 6 }}>📸 Digitalizar apunte</Text>
-          <Text style={{ color: C.muted, fontSize: 13, marginBottom: 12 }}>
-            Toma o sube una foto de tu cuaderno. Se extrae el texto y se guarda editable, conservando la imagen original.
-          </Text>
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <Pressable onPress={() => pick(true)} style={[btn, { flex: 1 }]}>
-              <Text style={{ color: '#fff', fontWeight: '600' }}>Tomar foto</Text>
+      {pages.length > 0 && (
+        <Card style={{ marginTop: 14 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+            {pages.map((p, i) => (
+              <View key={p.uri} style={{ width: 120 }}>
+                <Image source={{ uri: p.uri }} style={{ width: 120, height: 150, borderRadius: 10, backgroundColor: C.surface2 }} resizeMode="cover" accessibilityLabel={`Página ${i + 1}`} />
+                <View style={{ position: 'absolute', top: 4, right: 4 }}>
+                  <IconButton icon="close-circle" label={`Quitar página ${i + 1}`} color="#fff" size={22} onPress={() => setPages((ps) => ps.filter((x) => x.uri !== p.uri))} />
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 }}>
+                  {p.status === 'ocr' ? <ActivityIndicator size="small" color={C.brand} /> : <Ionicons name={p.status === 'ok' ? 'checkmark-circle' : 'alert-circle'} size={15} color={p.status === 'ok' ? C.goodText : C.warnText} />}
+                  <Text style={{ color: C.muted, fontSize: 12 }}>{p.status === 'ocr' ? 'Leyendo…' : p.status === 'ok' ? `Página ${i + 1}` : 'Sin texto'}</Text>
+                </View>
+              </View>
+            ))}
+            <Pressable onPress={() => pick(!isWide)} accessibilityRole="button" accessibilityLabel="Agregar otra página"
+              style={{ width: 120, height: 150, borderRadius: 10, borderWidth: 1, borderStyle: 'dashed', borderColor: C.line, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="add" size={26} color={C.muted} />
+              <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 4 }}>Otra página</Text>
             </Pressable>
-            <Pressable onPress={() => pick(false)} style={[btnGhost, { flex: 1 }]}>
-              <Text style={{ color: C.text }}>Galería</Text>
-            </Pressable>
-          </View>
+          </ScrollView>
 
-          {image && <Image source={{ uri: image.uri }} style={{ width: '100%', height: 200, borderRadius: 12, marginTop: 12 }} resizeMode="cover" />}
-
-          {status === 'ocr' && (
-            <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 12 }}>
-              <ActivityIndicator color={C.warn} />
-              <Text style={{ color: C.warn }}>Digitalizando…</Text>
+          {pages.some((p) => p.status === 'fail') && (
+            <Text style={{ color: C.warnText, fontSize: 13, marginTop: 12 }}>No se pudo leer el texto de alguna página. Puedes escribirlo abajo.</Text>
+          )}
+          <Field label={working ? 'Texto extraído (leyendo…)' : 'Texto extraído, puedes corregirlo'} value={finalText} onChangeText={setManual} multiline
+            placeholder="El texto reconocido aparece aquí…" inputStyle={{ minHeight: 160, textAlignVertical: 'top' }} style={{ marginTop: 14 }} />
+          <View style={{ flexDirection: isWide ? 'row' : 'column', gap: 10 }}>
+            <Field label="Título" value={title} onChangeText={setTitle} placeholder="Ej: Leyes de Newton" style={{ flex: 1 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600', marginBottom: 6 }}>Materia</Text>
+              <SubjectPicker subjects={subjects} value={subjectId} onChange={setSubjectId} />
             </View>
-          )}
+          </View>
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+            <Button label="Descartar" kind="secondary" onPress={() => { setPages([]); setManual(null); setTitle(''); }} style={{ flex: 1 }} />
+            <Button label="Guardar nota" icon="save-outline" onPress={save} busy={busy} disabled={working} style={{ flex: 2 }} />
+          </View>
+        </Card>
+      )}
 
-          {status === 'ready' && (
-            <>
-              <Text style={lbl}>Texto extraído (editable)</Text>
-              <TextInput value={ocrText} onChangeText={setOcrText} multiline
-                placeholder="El texto reconocido aparece aquí…" placeholderTextColor={C.muted}
-                style={[input, { minHeight: 120, textAlignVertical: 'top' }]} />
-
-              <Text style={lbl}>Materia</Text>
-              <SubjectPicker subjects={subjects} value={subjectId} onChange={setSubjectId} allowNone={false} />
-
-              <Text style={lbl}>Título de la nota</Text>
-              <TextInput value={title} onChangeText={setTitle} placeholder="Ej: Leyes de Newton"
-                placeholderTextColor={C.muted} style={input} />
-
-              <Pressable onPress={save} disabled={busy} style={[btn, { marginTop: 16 }]}>
-                <Text style={{ color: '#fff', fontWeight: '700' }}>{busy ? 'Guardando…' : 'Guardar nota'}</Text>
-              </Pressable>
-            </>
-          )}
+      <SectionLabel text="Notas recientes" style={{ marginTop: 22 }} />
+      {recent.length === 0 ? <EmptyState compact icon="document-text-outline" title="Todavía no tienes notas" /> : (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+          {recent.map((n) => {
+            const su = subjOf(n.subject_id);
+            return (
+              <Card key={n.id} padded={false} onPress={() => router.push(`/nota/${n.id}`)} accessibilityLabel={`Abrir nota ${n.title ?? ''}`} style={{ width: isWide ? 220 : '47%', overflow: 'hidden' }}>
+                <View style={{ height: 70, backgroundColor: (su?.color ?? C.brand) + '22', alignItems: 'center', justifyContent: 'center' }}>
+                  {su ? <SubjectIcon icon={su.icon} box={40} emoji={24} /> : <Ionicons name="document-text-outline" size={24} color={C.muted} />}
+                </View>
+                <View style={{ padding: 12 }}>
+                  <Text numberOfLines={1} style={{ color: C.text, fontSize: 13.5, fontWeight: '700' }}>{n.title || 'Nota'}</Text>
+                  <Text numberOfLines={1} style={{ color: C.muted, fontSize: 12, marginTop: 3 }}>{su?.name ?? 'Sin materia'} · {new Date(n.created_at).toLocaleDateString('es', { day: 'numeric', month: 'short' })}</Text>
+                </View>
+              </Card>
+            );
+          })}
         </View>
-      </ScrollView>
-    </View>
+      )}
+    </Screen>
   );
 }
-
-const cardBox = { backgroundColor: C.surface, borderColor: C.line, borderWidth: 1, borderRadius: 16, padding: 14 } as const;
-const btn = { backgroundColor: C.brand, borderRadius: 12, padding: 13, alignItems: 'center' } as const;
-const btnGhost = { backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 12, padding: 13, alignItems: 'center' } as const;
-const input = { backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 11, color: C.text, padding: 12, fontSize: 14 } as const;
-const lbl = { color: C.muted, fontSize: 12, marginTop: 14, marginBottom: 6 } as const;

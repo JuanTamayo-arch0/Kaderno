@@ -7,7 +7,7 @@ import { Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase, SUPABASE_READY } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
-import { C, currentTheme, shadow } from '../lib/theme';
+import { C, currentTheme, shadow, inkOn } from '../lib/theme';
 
 type Mode = 'in' | 'up';
 
@@ -298,7 +298,7 @@ export default function Login() {
           return (
             <Pressable key={m} onPress={() => switchMode(m)} accessibilityRole="tab" accessibilityState={{ selected: on }}
               style={{ flex: 1, paddingVertical: 11, borderRadius: 11, alignItems: 'center', backgroundColor: on ? col : 'transparent' }}>
-              <Text style={{ color: on ? '#fff' : C.muted, fontWeight: '800', fontSize: 14 }}>
+              <Text style={{ color: on ? inkOn(accent) : C.muted, fontWeight: '800', fontSize: 14 }}>
                 {m === 'in' ? 'Entrar' : 'Crear cuenta'}
               </Text>
             </Pressable>
@@ -375,7 +375,7 @@ export default function Login() {
               flexDirection: 'row', justifyContent: 'center', gap: 8,
             })}>
             {busy ? <ActivityIndicator color="#fff" size="small" /> : <Ionicons name={copy.icon} size={18} color="#fff" />}
-            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15.5 }}>{busy ? 'Un momento…' : copy.cta}</Text>
+            <Text style={{ color: inkOn(accent), fontWeight: '800', fontSize: 15.5 }}>{busy ? 'Un momento…' : copy.cta}</Text>
           </Pressable>
 
           {mode === 'up' && (

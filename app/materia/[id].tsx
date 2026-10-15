@@ -1,286 +1,245 @@
-import { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { C, S, R, shadow, fmtDate, dueTone } from '../../lib/theme';
+import { C } from '../../lib/theme';
 import { useResponsive } from '../../lib/responsive';
+import { RequireAuth } from '../../components/RequireAuth';
 import {
-  Subject, Task, Note, Grade,
-  getSubjects, getTasks, getNotes, toggleTask, deleteTask,
-  getGrades, addGrade, deleteGrade, gradeSummary,
+  Subject, Task, Note, Grade, Step, getSubjects, getTasks, getNotes, toggleTask, deleteTask, getGrades, deleteGrade, addNote, getStepsFor, hasV14,
 } from '../../lib/db';
+import { subjectAverage, neededFor } from '../../lib/grades';
+import { compareDue } from '../../lib/time';
 import { exportSubjectPdf } from '../../lib/exportPdf';
-import { SubjectFiles } from '../../components/SubjectFiles';
+import { confirm, deleteWithUndo, notify, toast, friendlyError } from '../../lib/feedback';
+import { openTask, onDataChanged } from '../../lib/uiBus';
+import { refreshNavCounts } from '../../lib/navCounts';
+import { Screen, Button, Card, EmptyState, IconButton, Segmented, SectionLabel, Skeleton } from '../../components/ds';
+import { TaskRow } from '../../components/TaskRow';
 import { MiniCalendar } from '../../components/MiniCalendar';
+import { SubjectFiles } from '../../components/SubjectFiles';
 import { SubjectIcon, iconChar } from '../../components/SubjectIcon';
-import { TaskModal } from '../../components/TaskModal';
-import { SubjectModal } from '../(tabs)/materias';
-import { taskTypeMeta } from '../../lib/taskTypes';
+import { SubjectModal, GradeModal } from '../../components/SubjectModal';
+import { ActionMenu } from '../../components/ActionMenu';
 
-type Tab = 'tareas' | 'notas' | 'notas_cal' | 'files';
+type Tab = 'tareas' | 'notas' | 'cal' | 'files';
 
-export default function MateriaDetalle() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+function MateriaDetalle() {
+  const { id, tab: tabParam } = useLocalSearchParams<{ id: string; tab?: string }>();
   const router = useRouter();
   const { isWide } = useResponsive();
-  const [subject, setSubject] = useState<Subject | null>(null);
-  const [editModal, setEditModal] = useState(false);
+  const [subject, setSubject] = useState<Subject | null | undefined>(undefined);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [allTasks, setAllTasks] = useState<Task[]>([]);
+  const [steps, setSteps] = useState<Record<string, Step[]>>({});
   const [notes, setNotes] = useState<Note[]>([]);
   const [grades, setGrades] = useState<Grade[]>([]);
-  const [tab, setTab] = useState<Tab>('tareas');
+  const [tab, setTab] = useState<Tab>((['tareas', 'notas', 'cal', 'files'].includes(tabParam ?? '') ? tabParam : 'tareas') as Tab);
+  const [editModal, setEditModal] = useState(false);
   const [gradeModal, setGradeModal] = useState(false);
-  const [taskModal, setTaskModal] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [allSubjects, setAllSubjects] = useState<Subject[]>([]);
+  const [menu, setMenu] = useState(false);
+  const [showDone, setShowDone] = useState(false);
+  const [hidden, setHidden] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     try {
-      const [subs, t, at, n, g] = await Promise.all([getSubjects(), getTasks(id), getTasks(), getNotes(id), getGrades(id)]);
-      setSubject(subs.find((s) => s.id === id) ?? null); setAllSubjects(subs);
-      setTasks(t); setAllTasks(at); setNotes(n); setGrades(g);
-    } catch (e: any) { Alert.alert('Error', e.message); }
+      const [subs, t, n, g] = await Promise.all([getSubjects(), getTasks(id), getNotes(id), getGrades(id)]);
+      setSubject(subs.find((s) => s.id === id) ?? null);
+      setTasks(t); setNotes(n); setGrades(g);
+      getStepsFor(t.filter((x) => x.status !== 'done').map((x) => x.id)).then(setSteps).catch(() => {});
+    } catch (e) { notify('No se pudo cargar', friendlyError(e)); setSubject((s) => s ?? null); }
   }, [id]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
+  useEffect(() => onDataChanged(load), [load]);
 
-  const ordered = [...tasks].sort((a, b) =>
-    Number(a.status === 'done') - Number(b.status === 'done') || (a.due_date ?? '9999').localeCompare(b.due_date ?? '9999'));
-
-  async function doExport() {
-    try { await exportSubjectPdf(subject?.name ?? 'Materia', iconChar(subject?.icon, '📘'), notes); }
-    catch (e: any) { Alert.alert('Error al exportar', e.message); }
+  async function toggle(t: Task) {
+    const done = t.status !== 'done';
+    setTasks((xs) => xs.map((x) => x.id === t.id ? { ...x, status: done ? 'done' : 'pending' } : x));
+    try { await toggleTask(t.id, done); refreshNavCounts(true); if (done) toast(`Hecha: ${t.title}`, { tone: 'good', actionLabel: 'Deshacer', onAction: () => toggle({ ...t, status: 'done' }) }); }
+    catch (e) { setTasks((xs) => xs.map((x) => x.id === t.id ? t : x)); toast(friendlyError(e), { tone: 'bad' }); }
+  }
+  function remove(t: Task) {
+    deleteWithUndo({
+      message: hasV14() ? 'Tarea enviada a la papelera' : 'Tarea borrada',
+      hide: () => setHidden((h) => new Set(h).add(t.id)),
+      restore: () => setHidden((h) => { const n = new Set(h); n.delete(t.id); return n; }),
+      commit: () => deleteTask(t.id),
+    });
+  }
+  async function newNote() {
+    try {
+      const nid = await addNote({ subject_id: id, title: 'Nota sin título', content: '', image_path: null });
+      router.push({ pathname: '/nota/[id]', params: { id: nid, edit: '1' } } as any);
+    } catch (e) { notify('No se pudo crear la nota', friendlyError(e)); }
+  }
+  async function removeGrade(g: Grade) {
+    if (!(await confirm(`¿Borrar ${g.name}?`, undefined, 'Borrar'))) return;
+    try { await deleteGrade(g.id); load(); } catch (e) { notify('No se pudo borrar', friendlyError(e)); }
   }
 
+  if (subject === undefined) return <Screen back="/materias" nav="materias" title="Materia"><Skeleton height={120} /><Skeleton /><Skeleton /></Screen>;
+  if (subject === null) return (
+    <Screen back="/materias" nav="materias" title="Materia">
+      <EmptyState icon="help-circle-outline" title="No encontramos esta materia" text="Puede que esté archivada. Búscala en la Papelera."
+        action={{ label: 'Ir a Materias', onPress: () => router.replace('/materias') }} />
+    </Screen>
+  );
+
+  const live = tasks.filter((t) => !hidden.has(t.id));
+  const pending = live.filter((t) => t.status !== 'done').sort(compareDue);
+  const done = live.filter((t) => t.status === 'done');
+  const scale = grades[0]?.max_score ?? 5;
+  const { avg, doneWeight } = subjectAverage(grades, scale);
+  const passMark = scale === 100 ? 60 : scale * 0.6;
+
+  const head = (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+      <IconButton icon="add" label="Nueva tarea" onPress={() => openTask(null, { subjectId: id })} color={C.text} />
+      <IconButton icon="ellipsis-horizontal" label="Más opciones" onPress={() => setMenu(true)} color={C.text} />
+    </View>
+  );
+
+  const tabs = (
+    <Segmented value={tab} onChange={setTab} items={[
+      { key: 'tareas', label: 'Tareas', count: pending.length },
+      { key: 'notas', label: 'Notas', count: notes.length },
+      { key: 'cal', label: 'Calificaciones' },
+      { key: 'files', label: 'Archivos' },
+    ]} />
+  );
+
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <View style={{ paddingTop: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <Pressable onPress={() => router.back()} hitSlop={10}><Ionicons name="chevron-back" size={26} color={C.text} /></Pressable>
-        {subject && <SubjectIcon icon={subject.icon} box={28} emoji={22} />}
-        <Text style={{ color: C.text, fontSize: 22, fontWeight: '800', flex: 1 }} numberOfLines={1}>
-          {subject ? subject.name : 'Materia'}
-        </Text>
-        <Pressable onPress={() => subject && setEditModal(true)} hitSlop={10} disabled={!subject} style={{ marginRight: 16 }}><Ionicons name="create-outline" size={22} color={C.muted} /></Pressable>
-        <Pressable onPress={doExport} hitSlop={10}><Ionicons name="share-outline" size={22} color={C.muted} /></Pressable>
-      </View>
-
-      {/* Pestañas */}
-      <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginTop: 14 }}>
-        <Seg label="Tareas" active={tab === 'tareas'} onPress={() => setTab('tareas')} />
-        <Seg label="Notas" active={tab === 'notas'} onPress={() => setTab('notas')} />
-        <Seg label="Calif." active={tab === 'notas_cal'} onPress={() => setTab('notas_cal')} />
-        <Seg label="Archivos" active={tab === 'files'} onPress={() => setTab('files')} />
-      </View>
-
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 60 }}>
-        {tab === 'tareas' && (() => {
-          const taskBtn = (
-            <Pressable onPress={() => { setEditingTask(null); setTaskModal(true); }}
-              style={{ flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: C.brand, borderRadius: 12, padding: 12, marginBottom: 12 }}>
-              <Ionicons name="add" size={18} color="#0f1115" />
-              <Text style={{ color: '#0f1115', fontWeight: '700' }}>Nueva tarea o examen</Text>
-            </Pressable>
-          );
-          const taskList = (
-            <>
-              {ordered.length === 0 && <Text style={{ color: C.muted, paddingVertical: 8 }}>Sin tareas en esta materia.</Text>}
-              {ordered.map((t) => {
-                const done = t.status === 'done';
-                const tm = taskTypeMeta(t.type);
-                return (
-                  <View key={t.id} style={[card, { borderLeftWidth: 4, borderLeftColor: done ? C.line : tm.color }]}>
-                    <Pressable onPress={async () => { await toggleTask(t.id, !done); load(); }}
-                      style={[check, done && { backgroundColor: C.good, borderColor: C.good }]}>
-                      {done && <Ionicons name="checkmark" size={15} color="#0b0d11" />}
-                    </Pressable>
-                    <Pressable style={{ flex: 1 }} onPress={() => { setEditingTask(t); setTaskModal(true); }}>
-                      <Text style={{ color: done ? C.muted : C.text, fontWeight: '600', textDecorationLine: done ? 'line-through' : 'none' }}>{t.title}</Text>
-                      <View style={{ flexDirection: 'row', gap: 8, marginTop: 3, alignItems: 'center' }}>
-                        {t.type && t.type !== 'tarea' && <Text style={{ color: tm.color, fontSize: 12, fontWeight: '700' }}>{tm.icon} {tm.label}</Text>}
-                        <Text style={{ color: dueTone(t.due_date ?? '', done), fontSize: 12 }}>{fmtDate(t.due_date ?? '')}</Text>
-                      </View>
-                    </Pressable>
-                    <Pressable onPress={async () => { await deleteTask(t.id); load(); }} hitSlop={10}>
-                      <Ionicons name="trash-outline" size={18} color={C.muted} />
-                    </Pressable>
-                  </View>
-                );
-              })}
-            </>
-          );
-          if (isWide) return (
-            <View style={{ flexDirection: 'row', gap: 16, alignItems: 'flex-start' }}>
-              <View style={{ width: 316 }}><MiniCalendar tasks={allTasks} subjects={allSubjects} embedded /></View>
-              <View style={{ flex: 1, minWidth: 0 }}>{taskBtn}{taskList}</View>
-            </View>
-          );
-          return (
-            <>
-              <MiniCalendar tasks={allTasks} subjects={allSubjects} />
-              {taskBtn}
-              {taskList}
-            </>
-          );
-        })()}
-
-        {tab === 'notas' && (
-          <>
-            {notes.length === 0 && <Text style={{ color: C.muted, paddingVertical: 8 }}>Aún no hay notas. Ve a "Capturar".</Text>}
-            {notes.map((n) => (
-              <Pressable key={n.id} onPress={() => router.push(`/nota/${n.id}`)}
-                style={({ pressed }) => [noteCard, { opacity: pressed ? 0.7 : 1 }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                  <Text style={{ color: C.text, fontWeight: '600', flex: 1 }}>📝 {n.title}</Text>
-                  <Ionicons name="chevron-forward" size={16} color={C.muted} />
-                </View>
-                <Text style={{ color: C.muted, fontSize: 13 }} numberOfLines={3}>{n.content}</Text>
-                <Text style={{ color: C.brand, fontSize: 12, marginTop: 8 }}>Ver nota completa →</Text>
-              </Pressable>
+    <Screen back="/materias" nav="materias" title={subject.name} subtitle={subject.credits ? `${subject.credits} créditos` : undefined} right={head} header={tabs} maxWidth={1100}>
+      <View style={{ height: 16 }} />
+      {tab === 'tareas' && (
+        <View style={{ flexDirection: isWide ? 'row' : 'column', gap: 18, alignItems: 'flex-start' }}>
+          <View style={{ flex: 1, minWidth: 0, width: isWide ? undefined : '100%' }}>
+            <Button label="Nueva tarea o examen" icon="add" onPress={() => openTask(null, { subjectId: id })} style={{ marginBottom: 12, alignSelf: isWide ? 'flex-start' : 'stretch' }} />
+            {pending.length === 0 ? (
+              <EmptyState compact icon="checkmark-done-outline" title="Nada pendiente en esta materia" />
+            ) : pending.map((t) => (
+              <TaskRow key={t.id} task={t} showSubject={false} steps={steps[t.id]} onToggle={toggle} onOpen={(x) => openTask(x)}
+                onStepsChange={(tid, next) => setSteps((s) => ({ ...s, [tid]: next }))}
+                actions={[
+                  { label: 'Abrir y editar', icon: 'create-outline', onPress: () => openTask(t) },
+                  { label: 'Marcar hecha', icon: 'checkmark-circle-outline', onPress: () => toggle(t) },
+                  { label: 'Borrar', icon: 'trash-outline', danger: true, onPress: () => remove(t) },
+                ]} />
             ))}
-          </>
-        )}
+            {done.length > 0 && (
+              <>
+                <Pressable onPress={() => setShowDone((v) => !v)} accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 12 }}>
+                  <Ionicons name={showDone ? 'chevron-down' : 'chevron-forward'} size={16} color={C.muted} />
+                  <Text style={{ color: C.muted, fontWeight: '600' }}>{done.length} {done.length === 1 ? 'completada' : 'completadas'}</Text>
+                </Pressable>
+                {showDone && done.map((t) => <TaskRow key={t.id} task={t} showSubject={false} onToggle={toggle} onOpen={(x) => openTask(x)} compact />)}
+              </>
+            )}
+          </View>
+          <View style={{ width: isWide ? 316 : '100%' }}>
+            <MiniCalendar tasks={live} subjects={[subject]} embedded={isWide} onTaskPress={(t) => openTask(t)} />
+          </View>
+        </View>
+      )}
 
-        {tab === 'notas_cal' && (
-          <GradesTab grades={grades} onAdd={() => setGradeModal(true)}
-            onDelete={async (gid) => { await deleteGrade(gid); load(); }} />
-        )}
+      {tab === 'notas' && (
+        <View>
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+            <Button label="Nueva nota" icon="document-text-outline" onPress={newNote} />
+            <Button label="Digitalizar apunte" icon="camera-outline" kind="secondary" onPress={() => router.push({ pathname: '/capturar', params: { subjectId: id } } as any)} />
+          </View>
+          {notes.length === 0 ? (
+            <EmptyState compact icon="document-text-outline" title="Aún no hay notas" text="Escribe una nota o digitaliza una página de tu cuaderno." />
+          ) : (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+              {notes.map((n) => (
+                <Card key={n.id} onPress={() => router.push(`/nota/${n.id}`)} accessibilityLabel={`Abrir nota ${n.title ?? ''}`} style={{ width: isWide ? '48.5%' : '100%' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Ionicons name={n.image_path ? 'image-outline' : 'document-text-outline'} size={17} color={C.muted} />
+                    <Text style={{ color: C.text, fontSize: 15, fontWeight: '700', flex: 1 }} numberOfLines={1}>{n.title || 'Nota'}</Text>
+                    <Text style={{ color: C.muted, fontSize: 12 }}>{new Date(n.created_at).toLocaleDateString('es', { day: 'numeric', month: 'short' })}</Text>
+                  </View>
+                  {!!n.content && <Text numberOfLines={2} style={{ color: C.muted, fontSize: 13, marginTop: 8, lineHeight: 18 }}>{n.content.replace(/[#>*_`]/g, '').trim()}</Text>}
+                </Card>
+              ))}
+            </View>
+          )}
+        </View>
+      )}
 
-        {tab === 'files' && <SubjectFiles subjectId={id} />}
-      </ScrollView>
+      {tab === 'cal' && (
+        <View style={{ maxWidth: 760 }}>
+          <Card style={{ marginBottom: 14 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 12 }}>
+              <View>
+                <Text style={{ color: C.muted, fontSize: 12.5 }}>Promedio actual</Text>
+                <Text style={{ color: C.text, fontSize: 32, fontWeight: '800' }}>{avg == null ? 'Sin notas' : avg.toFixed(2)}{avg != null && <Text style={{ color: C.muted, fontSize: 15, fontWeight: '600' }}> / {scale}</Text>}</Text>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={{ color: C.muted, fontSize: 12.5 }}>Calificado</Text>
+                <Text style={{ color: C.text, fontSize: 18, fontWeight: '700' }}>{doneWeight}%</Text>
+              </View>
+            </View>
+            <View style={{ height: 8, backgroundColor: C.surface2, borderRadius: 8 }}>
+              <View style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${Math.min(100, ((avg ?? 0) / scale) * 100)}%`, backgroundColor: subject.color, borderRadius: 8 }} />
+              <View style={{ position: 'absolute', left: `${(passMark / scale) * 100}%`, top: -3, width: 2, height: 14, backgroundColor: C.muted }} />
+            </View>
+            <Simulator grades={grades} scale={scale} passMark={passMark} />
+          </Card>
+          <SectionLabel text="Evaluaciones" count={grades.length} right={<Button label="Agregar" icon="add" size="sm" kind="secondary" onPress={() => setGradeModal(true)} />} />
+          {grades.length === 0 && <EmptyState compact icon="ribbon-outline" title="Sin evaluaciones" text="Agrega los parciales, talleres y quices con su peso. Puedes dejar la nota vacía hasta que te la den." />}
+          {grades.map((g) => (
+            <Card key={g.id} style={{ marginBottom: 8, paddingVertical: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '700' }}>{g.name}</Text>
+                  <Text style={{ color: C.muted, fontSize: 12.5 }}>Peso {g.weight}%</Text>
+                </View>
+                <Text style={{ color: g.score == null ? C.muted : C.text, fontSize: 16, fontWeight: '700' }}>{g.score == null ? 'Pendiente' : g.score}<Text style={{ color: C.muted, fontWeight: '500', fontSize: 13 }}>{g.score == null ? '' : ` / ${g.max_score}`}</Text></Text>
+                <IconButton icon="trash-outline" label={`Borrar ${g.name}`} onPress={() => removeGrade(g)} />
+              </View>
+              <View style={{ height: 5, backgroundColor: C.surface2, borderRadius: 6, marginTop: 6 }}>
+                <View style={{ height: '100%', width: `${g.score == null ? 0 : Math.min(100, (g.score / g.max_score) * 100)}%`, backgroundColor: subject.color, borderRadius: 6 }} />
+              </View>
+            </Card>
+          ))}
+        </View>
+      )}
 
-      <GradeModal visible={gradeModal} subjectId={id}
-        onClose={() => setGradeModal(false)} onSaved={() => { setGradeModal(false); load(); }} />
-      <TaskModal visible={taskModal} subjects={allSubjects} editTask={editingTask} initialSubjectId={id}
-        onClose={() => setTaskModal(false)} onSaved={() => { setTaskModal(false); load(); }} />
-      <SubjectModal visible={editModal} editSubject={subject}
-        onClose={() => setEditModal(false)} onSaved={() => { setEditModal(false); load(); }} />
+      {tab === 'files' && <SubjectFiles subjectId={subject.id} />}
+
+      <SubjectModal visible={editModal} editSubject={subject} onClose={() => setEditModal(false)} onSaved={() => { setEditModal(false); load(); }}
+        onArchived={() => { setEditModal(false); router.replace('/materias'); }} />
+      <GradeModal visible={gradeModal} subjectId={subject.id} defaultScale={scale} onClose={() => setGradeModal(false)} onSaved={() => { setGradeModal(false); load(); }} />
+      <ActionMenu visible={menu} title={subject.name} onClose={() => setMenu(false)} actions={[
+        { label: 'Editar materia', icon: 'create-outline', onPress: () => setEditModal(true) },
+        { label: 'Exportar notas en PDF', icon: 'share-outline', onPress: () => exportSubjectPdf(subject.name, iconChar(subject.icon, '📘'), notes).catch((e) => notify('No se pudo exportar', friendlyError(e))) },
+        { label: 'Preguntar al Oráculo sobre esta materia', icon: 'sparkles-outline', onPress: () => router.push({ pathname: '/oraculo', params: { mode: 'subject', subjectId: subject.id } } as any) },
+        { label: 'Archivar materia', icon: 'archive-outline', danger: true, onPress: () => setEditModal(true) },
+      ]} />
+    </Screen>
+  );
+}
+
+function Simulator({ grades, scale, passMark }: { grades: Grade[]; scale: number; passMark: number }) {
+  const [target, setTarget] = useState(passMark.toFixed(1));
+  const t = parseFloat(target.replace(',', '.'));
+  const { needed, remainingWeight } = neededFor(grades, isNaN(t) ? passMark : t, scale);
+  let msg = 'Ya están todas las notas.';
+  if (remainingWeight > 0 && needed != null) {
+    if (needed <= 0) msg = `Ya aseguraste el ${isNaN(t) ? passMark : t}. Bien hecho.`;
+    else if (needed > scale) msg = `Con el ${remainingWeight}% que falta no alcanza para ${t}. El máximo posible es menor.`;
+    else msg = `Necesitas ${needed.toFixed(2)} en promedio en el ${remainingWeight}% que falta.`;
+  }
+  return (
+    <View style={{ marginTop: 14, flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+      <Text style={{ color: C.muted, fontSize: 13.5 }}>Quiero sacar</Text>
+      <TextInput value={target} onChangeText={setTarget} keyboardType="decimal-pad" accessibilityLabel="Nota final deseada"
+        style={{ width: 64, textAlign: 'center', backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 8, color: C.text, padding: 8, fontSize: 15, fontWeight: '700' }} />
+      <Text style={{ color: C.text, fontSize: 13.5, flex: 1, minWidth: 200 }}>{msg}</Text>
     </View>
   );
 }
 
-function GradesTab({ grades, onAdd, onDelete }: { grades: Grade[]; onAdd: () => void; onDelete: (id: string) => void }) {
-  const scale = grades[0]?.max_score ?? 5;
-  const passMark = scale === 100 ? 60 : scale * 0.6;
-  const sum = gradeSummary(grades, passMark);
-
-  return (
-    <>
-      <View style={[noteCard, { ...shadow }]}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <View>
-            <Text style={{ color: C.muted, fontSize: 12 }}>Promedio actual</Text>
-            <Text style={{ color: C.text, fontSize: 34, fontWeight: '800' }}>
-              {sum.current.toFixed(1)}<Text style={{ color: C.muted, fontSize: 16 }}> / {scale}</Text>
-            </Text>
-          </View>
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={{ color: C.muted, fontSize: 12 }}>Calificado</Text>
-            <Text style={{ color: C.text, fontSize: 18, fontWeight: '700' }}>{sum.doneWeight}%</Text>
-          </View>
-        </View>
-        {sum.remainingWeight > 0 && sum.needed != null && (
-          <View style={{ marginTop: 12, backgroundColor: C.surface2, borderRadius: R.md, padding: 12 }}>
-            {sum.needed <= 0 ? (
-              <Text style={{ color: C.good, fontSize: 13 }}>✓ Ya aseguraste el aprobado ({passMark.toFixed(1)}). ¡Bien ahí!</Text>
-            ) : sum.needed > scale ? (
-              <Text style={{ color: C.bad, fontSize: 13 }}>Con lo que falta ({sum.remainingWeight}%) no alcanza para {passMark.toFixed(1)}. Habla con tu profe 😅</Text>
-            ) : (
-              <Text style={{ color: C.text, fontSize: 13 }}>
-                Para aprobar ({passMark.toFixed(1)}) necesitas <Text style={{ color: C.warn, fontWeight: '700' }}>{sum.needed.toFixed(1)}</Text> en el {sum.remainingWeight}% restante.
-              </Text>
-            )}
-          </View>
-        )}
-      </View>
-
-      {grades.map((g) => (
-        <View key={g.id} style={card}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: C.text, fontWeight: '600' }}>{g.name}</Text>
-            <Text style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>Peso {g.weight}%</Text>
-          </View>
-          <Text style={{ color: g.score == null ? C.muted : C.text, fontWeight: '700', fontSize: 16 }}>
-            {g.score == null ? '—' : `${g.score}`}<Text style={{ color: C.muted, fontSize: 12 }}>/{g.max_score}</Text>
-          </Text>
-          <Pressable onPress={() => onDelete(g.id)} hitSlop={10} style={{ marginLeft: 12 }}>
-            <Ionicons name="trash-outline" size={18} color={C.muted} />
-          </Pressable>
-        </View>
-      ))}
-
-      <Pressable onPress={onAdd} style={{ backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: R.md, padding: 13, alignItems: 'center', marginTop: 8 }}>
-        <Text style={{ color: C.text }}>＋ Agregar evaluación</Text>
-      </Pressable>
-    </>
-  );
+export default function MateriaProtegida() {
+  return <RequireAuth><MateriaDetalle /></RequireAuth>;
 }
-
-function GradeModal({ visible, subjectId, onClose, onSaved }: {
-  visible: boolean; subjectId: string; onClose: () => void; onSaved: () => void;
-}) {
-  const [name, setName] = useState('');
-  const [weight, setWeight] = useState('');
-  const [score, setScore] = useState('');
-  const [maxScore, setMaxScore] = useState('5');
-  const [busy, setBusy] = useState(false);
-
-  async function save() {
-    if (!name.trim() || !weight) return Alert.alert('Falta nombre o peso');
-    setBusy(true);
-    try {
-      await addGrade({
-        subject_id: subjectId, name: name.trim(), weight: parseFloat(weight),
-        score: score ? parseFloat(score) : null, max_score: parseFloat(maxScore || '5'),
-      });
-      setName(''); setWeight(''); setScore(''); setMaxScore('5');
-      onSaved();
-    } catch (e: any) { Alert.alert('Error', e.message); }
-    finally { setBusy(false); }
-  }
-
-  return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
-        <View style={sheet}>
-          <Text style={{ color: C.text, fontSize: 18, fontWeight: '700', marginBottom: 12 }}>Nueva evaluación</Text>
-          <TextInput value={name} onChangeText={setName} placeholder="Ej: Parcial 1" placeholderTextColor={C.muted} style={input} />
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
-            <View style={{ flex: 1 }}>
-              <Text style={lbl}>Peso (%)</Text>
-              <TextInput value={weight} onChangeText={setWeight} keyboardType="decimal-pad" placeholder="30" placeholderTextColor={C.muted} style={input} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={lbl}>Nota (opcional)</Text>
-              <TextInput value={score} onChangeText={setScore} keyboardType="decimal-pad" placeholder="4.2" placeholderTextColor={C.muted} style={input} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={lbl}>Sobre</Text>
-              <TextInput value={maxScore} onChangeText={setMaxScore} keyboardType="decimal-pad" placeholder="5" placeholderTextColor={C.muted} style={input} />
-            </View>
-          </View>
-          <Pressable onPress={save} disabled={busy} style={{ backgroundColor: C.brand, borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 18 }}>
-            <Text style={{ color: '#fff', fontWeight: '700' }}>{busy ? '...' : 'Guardar'}</Text>
-          </Pressable>
-          <Pressable onPress={onClose} style={{ alignItems: 'center', marginTop: 12 }}>
-            <Text style={{ color: C.muted }}>Cancelar</Text>
-          </Pressable>
-        </View>
-      </View>
-    </Modal>
-  );
-}
-
-function Seg({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  return (
-    <Pressable onPress={onPress} style={{ flex: 1, paddingVertical: 9, borderRadius: R.md, alignItems: 'center', backgroundColor: active ? C.brand : C.surface2, borderWidth: 1, borderColor: active ? C.brand : C.line }}>
-      <Text style={{ color: active ? '#0b0d11' : C.muted, fontSize: 12.5, fontWeight: active ? '700' : '500' }}>{label}</Text>
-    </Pressable>
-  );
-}
-
-const card = { flexDirection: 'row', gap: 12, alignItems: 'center', backgroundColor: C.surface, borderColor: C.line, borderWidth: 1, borderRadius: R.lg, padding: 14, marginBottom: 8, ...shadow } as const;
-const noteCard = { backgroundColor: C.surface, borderColor: C.line, borderWidth: 1, borderRadius: R.lg, padding: 14, marginBottom: 8 } as const;
-const check = { width: 22, height: 22, borderRadius: 7, borderWidth: 2, borderColor: C.muted, alignItems: 'center', justifyContent: 'center' } as const;
-const sheet = { backgroundColor: C.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18, paddingBottom: 30, borderTopColor: C.line, borderTopWidth: 1 } as const;
-const input = { backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 11, color: C.text, padding: 12, fontSize: 14 } as const;
-const lbl = { color: C.muted, fontSize: 12, marginBottom: 6 } as const;

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, Text, View } from 'react-native';
+import { confirm, notify, friendlyError, toast } from '../lib/feedback';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { C, R } from '../lib/theme';
@@ -27,21 +28,21 @@ export function NoteAttachments({ noteId }: { noteId: string }) {
 
   async function attach(fromCamera: boolean) {
     const perm = fromCamera ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return Alert.alert('Permiso necesario', 'Autoriza el acceso para adjuntar.');
+    if (!perm.granted) { notify('Permiso necesario', 'Autoriza el acceso a la cámara o a las fotos para adjuntar.'); return; }
     const res = fromCamera
       ? await ImagePicker.launchCameraAsync({ allowsEditing: true, base64: true, quality: 0.7 })
       : await ImagePicker.launchImageLibraryAsync({ allowsEditing: true, base64: true, quality: 0.7 });
     if (res.canceled || !res.assets[0].base64) return;
     setBusy(true);
     try { await addNoteImage(noteId, res.assets[0].base64!); await load(); }
-    catch (e: any) { Alert.alert('Error', e.message); } finally { setBusy(false); }
+    catch (e: any) { notify('No se pudo adjuntar', friendlyError(e)); } finally { setBusy(false); }
   }
 
   function confirmRemove(i: NoteImage) {
-    Alert.alert('Quitar adjunto', '¿Eliminar esta imagen?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: async () => { try { await deleteNoteImage(i.id, i.path); load(); } catch (e: any) { Alert.alert('Error', e.message); } } },
-    ]);
+    confirm('¿Quitar este adjunto?', 'La imagen se borrará de la nota.', 'Eliminar').then(async (ok) => {
+      if (!ok) return;
+      try { await deleteNoteImage(i.id, i.path); toast('Adjunto eliminado'); load(); } catch (e: any) { notify('No se pudo eliminar', friendlyError(e)); }
+    });
   }
 
   return (
