@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<style>
+:root{--bg:#0f1115;--surface:#181b22;--surface2:#20242e;--line:#2a2f3a;--text:#e8eaf0;--muted:#9aa3b2;--brand:#6c8cff;--onbrand:#0f1115;--good:#37c98b;--warn:#f5b64c;--bad:#f56c6c;
+--calc:#6c8cff;--fis:#37c98b;--cir:#f5b64c;--ing:#ff8fab}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#e9ebef;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--text);-webkit-font-smoothing:antialiased}
+svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.muted{color:var(--muted)}
+.row{display:flex;align-items:center}
+.gap6{gap:6px}.gap8{gap:8px}.gap10{gap:10px}.gap12{gap:12px}
+/* ---------- piezas ---------- */
+.sec{font-size:12px;font-weight:650;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin:18px 0 8px;display:flex;align-items:center;gap:8px}
+.sec .n{background:var(--surface2);border-radius:99px;padding:1px 7px;font-size:11px;letter-spacing:0}
+.sec.bad{color:var(--bad)}
+.task{display:flex;gap:12px;align-items:flex-start;padding:12px 12px 12px 10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;margin-bottom:8px}
+.chk{width:44px;height:44px;margin:-10px -6px -10px -10px;display:flex;align-items:center;justify-content:center;flex:none}
+.chk i{width:22px;height:22px;border-radius:7px;border:2px solid var(--muted);display:block}
+.task .t{font-size:15px;font-weight:600;line-height:20px}
+.meta{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:4px;font-size:12.5px;color:var(--muted);align-items:center}
+.dot{width:8px;height:8px;border-radius:4px;display:inline-block;margin-right:5px}
+.tag{font-size:11.5px;font-weight:650;padding:2px 8px;border-radius:99px}
+.bar{height:4px;border-radius:4px;background:var(--surface2);width:54px;display:inline-block;vertical-align:middle;margin-right:5px;overflow:hidden}
+.bar b{display:block;height:100%;background:var(--brand)}
+.av{width:20px;height:20px;border-radius:10px;font-size:9px;font-weight:800;color:#0f1115;display:inline-flex;align-items:center;justify-content:center}
+.now{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;gap:12px}
+.now .strip{width:4px;border-radius:4px;background:var(--cir)}
+.btn{display:inline-flex;align-items:center;gap:6px;border-radius:10px;font-weight:650;font-size:13.5px;padding:9px 14px;border:1px solid transparent}
+.btn.primary{background:var(--brand);color:var(--onbrand)}
+.btn.ghost{background:var(--surface2);border-color:var(--line);color:var(--text)}
+.done-row{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border:1px dashed var(--line);border-radius:12px;color:var(--muted);font-size:13.5px;margin-top:6px}
+.week{display:flex;gap:6px}
+.day{flex:1;text-align:center;border-radius:10px;padding:6px 0;font-size:11px;color:var(--muted)}
+.day b{display:block;font-size:15px;color:var(--text);margin-top:1px}
+.day.on{background:var(--brand);color:var(--onbrand)}.day.on b{color:var(--onbrand)}
+.day .p{width:5px;height:5px;border-radius:3px;background:var(--brand);margin:3px auto 0}
+.day.on .p{background:var(--onbrand)}
+.label{position:absolute;font:600 13px system-ui;color:#3a3f4b}
+/* ---------- celular ---------- */
+.phone{width:390px;height:844px;background:var(--bg);border-radius:36px;overflow:hidden;position:relative;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.phone .scroll{position:absolute;inset:0 0 72px 0;overflow:hidden;padding:20px 16px 0}
+.tabbar{position:absolute;left:0;right:0;bottom:0;height:72px;background:var(--surface);border-top:1px solid var(--line);display:flex;align-items:flex-start;padding-top:8px}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--muted)}
+.tab.on{color:var(--brand)}
+.tab svg{width:22px;height:22px}
+.plus{width:48px;height:48px;border-radius:16px;background:var(--brand);color:var(--onbrand);display:flex;align-items:center;justify-content:center;margin-top:-4px}
+.plus svg{width:24px;height:24px;stroke-width:2.2}
+/* ---------- escritorio ---------- */
+.desk{width:1440px;height:900px;background:var(--bg);display:flex;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.25);border-radius:12px}
+.side{width:232px;background:var(--surface);border-right:1px solid var(--line);padding:22px 12px;display:flex;flex-direction:column}
+.logo{font-size:20px;font-weight:800;padding:0 10px;margin-bottom:18px;display:flex;align-items:center;gap:10px}
+.logo i{width:28px;height:28px;border-radius:8px;background:var(--brand);display:inline-block}
+.search{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:9px 10px;color:var(--muted);font-size:13.5px;margin-bottom:14px}
+.search kbd{margin-left:auto;font:600 11px system-ui;border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+.nav{display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:10px;color:var(--muted);font-weight:600;font-size:14px;margin-bottom:2px}
+.nav.on{background:rgba(108,140,255,.14);color:var(--brand)}
+.nav .badge{margin-left:auto;font-size:11px;background:var(--surface2);color:var(--text);border-radius:99px;padding:1px 7px}
+.navsec{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);padding:14px 10px 6px}
+.me{margin-top:auto;display:flex;align-items:center;gap:10px;padding:10px;border-top:1px solid var(--line)}
+.main{flex:1;padding:30px 40px;display:flex;flex-direction:column;min-width:0}
+.quick{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:11px 14px;color:var(--muted);font-size:14px}
+.quick kbd{margin-left:auto;font:600 11px system-ui;border:1px solid var(--line);border-radius:5px;padding:1px 6px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+.tl{display:flex;gap:10px;font-size:13px;padding:7px 0}
+.tl .h{width:66px;white-space:nowrap;color:var(--muted);flex:none;font-variant-numeric:tabular-nums}
+.tl .b{flex:1;border-left:3px solid;padding-left:9px}
+</style></head>
+<body>
+<div id="cel" style="display:flex;gap:40px;padding:40px;align-items:flex-start;width:max-content">
+ <!-- ===================== CELULAR ===================== -->
+ <div class="phone">
+  <div class="scroll">
+   <div class="row" style="justify-content:space-between">
+    <div>
+     <div class="muted" style="font-size:13px">Jueves 15 de octubre</div>
+     <div style="font-size:28px;font-weight:800;margin-top:2px">Hoy</div>
+    </div>
+    <div class="row gap12">
+     <span class="muted"><svg viewBox="0 0 24 24" style="width:22px;height:22px"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
+     <span class="av" style="width:32px;height:32px;border-radius:16px;font-size:12px;background:#9fb3ff">JJ</span>
+    </div>
+   </div>
+   <div class="muted" style="font-size:13.5px;margin-top:6px"><b style="color:var(--text)">2 para hoy</b> · <span style="color:var(--bad)">1 vencida</span> · Parcial de Cálculo en 2 días</div>
+
+   <div class="now" style="margin-top:14px">
+    <div class="strip"></div>
+    <div style="flex:1">
+     <div class="muted" style="font-size:12px;font-weight:650;text-transform:uppercase;letter-spacing:.5px">Ahora · 8 a 10 am</div>
+     <div style="font-size:16px;font-weight:700;margin-top:2px">Circuitos II</div>
+     <div class="muted" style="font-size:12.5px;margin-top:2px">Después: Física Mecánica, 12 pm</div>
+    </div>
+    <span class="btn ghost" style="align-self:center;padding:8px 10px"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg>Enfocar</span>
+   </div>
+
+   <div class="week" style="margin-top:14px">
+    <div class="day on">Jue<b>15</b><div class="p"></div></div><div class="day">Vie<b>16</b></div><div class="day">Sáb<b>17</b><div class="p"></div></div><div class="day">Dom<b>18</b></div><div class="day">Lun<b>19</b><div class="p"></div></div><div class="day">Mar<b>20</b></div><div class="day">Mié<b>21</b><div class="p"></div></div>
+   </div>
+
+   <div class="sec bad">Vencidas <span class="n">1</span></div>
+   <div class="task"><span class="chk"><i></i></span><div style="flex:1"><div class="t">Taller de integrales por partes</div>
+    <div class="meta"><span><span class="dot" style="background:var(--calc)"></span>Cálculo II</span><span style="color:var(--bad)">Ayer</span></div></div></div>
+
+   <div class="sec">Hoy <span class="n">2</span></div>
+   <div class="task"><span class="chk"><i></i></span><div style="flex:1"><div class="t">Informe de laboratorio: péndulo</div>
+    <div class="meta"><span><span class="dot" style="background:var(--fis)"></span>Física Mecánica</span><span>11:59 pm</span><span><span class="bar"><b style="width:66%"></b></span>2/3</span></div></div></div>
+   <div class="task"><span class="chk"><i></i></span><div style="flex:1"><div class="t">Quiz de vocabulario unidad 5</div>
+    <div class="meta"><span><span class="dot" style="background:var(--ing)"></span>Inglés IV</span><span class="tag" style="background:rgba(245,182,76,.16);color:var(--warn)">Quiz</span><span>10:00 am</span></div></div></div>
+
+   <div class="sec">Mañana <span class="n">1</span></div>
+   <div class="task"><span class="chk"><i></i></span><div style="flex:1"><div class="t">Marco teórico</div>
+    <div class="meta"><span class="tag" style="background:rgba(245,182,76,.16);color:var(--warn)">Proyecto final</span><span class="av" style="background:#ff8f8f">AG</span><span>Ana Gómez</span></div></div></div>
+
+   <div class="done-row"><span>3 completadas</span><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+  </div>
+  <div class="tabbar">
+   <div class="tab on"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Hoy</div>
+   <div class="tab"><svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/></svg>Materias</div>
+   <div class="tab"><div class="plus"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div></div>
+   <div class="tab"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg>Estudiar</div>
+   <div class="tab"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/></svg>Proyectos</div>
+  </div>
+ </div>
+
+ <!-- Hoja del botón + -->
+ <div class="phone">
+  <div class="scroll" style="opacity:.35">
+   <div class="muted" style="font-size:13px">Jueves 15 de octubre</div>
+   <div style="font-size:28px;font-weight:800;margin-top:2px">Hoy</div>
+   <div class="now" style="margin-top:14px;height:84px"></div>
+   <div class="task" style="height:64px;margin-top:40px"></div><div class="task" style="height:64px"></div><div class="task" style="height:64px"></div>
+  </div>
+  <div style="position:absolute;inset:0;background:rgba(0,0,0,.5)"></div>
+  <div style="position:absolute;left:0;right:0;bottom:0;background:var(--surface);border-radius:20px 20px 0 0;border-top:1px solid var(--line);padding:10px 16px 26px">
+   <div style="width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 14px"></div>
+   <div style="font-size:17px;font-weight:700;margin-bottom:10px">Agregar</div>
+   <div class="quick" style="background:var(--surface2);color:var(--text)"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>parcial cálculo viernes 10am</div>
+   <div class="muted" style="font-size:12.5px;margin:8px 2px 14px">Se entiende como: <b style="color:var(--text)">Examen</b> · Cálculo II · vie 16 oct, 10:00 am</div>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div class="card row gap10" style="padding:14px"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="m9 12 2 2 4-4"/></svg>Tarea o examen</div>
+    <div class="card row gap10" style="padding:14px"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Digitalizar apunte</div>
+    <div class="card row gap10" style="padding:14px"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/></svg>Nota en blanco</div>
+    <div class="card row gap10" style="padding:14px"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Importar del sílabo</div>
+   </div>
+  </div>
+ </div>
+</div>
+
+<!-- ===================== ESCRITORIO ===================== -->
+<div id="pc" style="padding:40px;width:max-content">
+ <div class="desk">
+  <div class="side">
+   <div class="logo"><i></i>Kaderno</div>
+   <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Buscar<kbd>Ctrl K</kbd></div>
+   <div class="nav on"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Hoy<span class="badge">3</span></div>
+   <div class="nav"><svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/></svg>Materias</div>
+   <div class="nav"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Horario</div>
+   <div class="nav"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/></svg>Proyectos</div>
+   <div class="navsec">Estudiar</div>
+   <div class="nav"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg>Enfoque</div>
+   <div class="nav"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="14" height="14" rx="2"/><path d="M7 2h12a2 2 0 0 1 2 2v12"/></svg>Repaso<span class="badge">3</span></div>
+   <div class="nav"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.6L18 9l-4.2 1.4L12 15l-1.8-4.6L6 9l4.2-1.4zM19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg>Oráculo</div>
+   <div class="nav"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Capturar</div>
+   <div class="me"><span class="av" style="width:30px;height:30px;border-radius:15px;font-size:11px;background:#9fb3ff">JJ</span><div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:650">Juan José</div><div class="muted" style="font-size:12px">Ajustes y cuenta</div></div><svg viewBox="0 0 24 24" class="muted"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/></svg></div>
+  </div>
+  <div class="main">
+   <div class="row" style="justify-content:space-between;align-items:flex-end">
+    <div><div class="muted" style="font-size:13.5px">Jueves 15 de octubre</div><div style="font-size:28px;font-weight:800;margin-top:2px">Hoy</div>
+     <div class="muted" style="font-size:14px;margin-top:4px"><b style="color:var(--text)">2 para hoy</b> · <span style="color:var(--bad)">1 vencida</span> · Parcial de Cálculo en 2 días</div></div>
+    <span class="btn primary"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva tarea</span>
+   </div>
+   <div class="quick" style="margin-top:18px"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Escribe y presiona Enter: "informe física martes 6pm"<kbd>N</kbd></div>
+   <div style="display:flex;gap:28px;margin-top:6px;min-height:0;flex:1">
+    <div style="flex:1;min-width:0;max-width:760px">
+     <div class="row" style="justify-content:space-between"><div class="sec bad">Vencidas <span class="n">1</span></div></div>
+     <div class="task"><span class="chk"><i></i></span><div style="flex:1"><div class="t">Taller de integrales por partes</div><div class="meta"><span><span class="dot" style="background:var(--calc)"></span>Cálculo II</span><span style="color:var(--bad)">Ayer, 11:59 pm</span></div></div><span class="muted" style="font-size:18px">⋯</span></div>
+     <div class="sec">Hoy <span class="n">2</span></div>
+     <div class="task"><span class="chk"><i></i></span><div style="flex:1"><div class="t">Informe de laboratorio: péndulo</div><div class="meta"><span><span class="dot" style="background:var(--fis)"></span>Física Mecánica</span><span>11:59 pm</span><span><span class="bar"><b style="width:66%"></b></span>2 de 3 pasos</span></div></div><span class="muted" style="font-size:18px">⋯</span></div>
+     <div class="task"><span class="chk"><i></i></span><div style="flex:1"><div class="t">Quiz de vocabulario unidad 5</div><div class="meta"><span><span class="dot" style="background:var(--ing)"></span>Inglés IV</span><span class="tag" style="background:rgba(245,182,76,.16);color:var(--warn)">Quiz</span><span>10:00 am</span></div></div><span class="muted" style="font-size:18px">⋯</span></div>
+     <div class="sec">Mañana <span class="n">1</span></div>
+     <div class="task"><span class="chk"><i></i></span><div style="flex:1"><div class="t">Marco teórico</div><div class="meta"><span class="tag" style="background:rgba(245,182,76,.16);color:var(--warn)">Proyecto final</span><span class="av" style="background:#ff8f8f">AG</span><span>Ana Gómez</span><span>vie 16, 11:59 pm</span></div></div><span class="muted" style="font-size:18px">⋯</span></div>
+     <div class="sec">Esta semana <span class="n">2</span></div>
+     <div class="task"><span class="chk"><i></i></span><div style="flex:1"><div class="t">Parcial 2: series y sucesiones</div><div class="meta"><span><span class="dot" style="background:var(--calc)"></span>Cálculo II</span><span class="tag" style="background:rgba(245,108,108,.16);color:var(--bad)">Examen</span><span>sáb 17, 8:00 am</span><span>Plan: 3 sesiones de estudio</span></div></div><span class="muted" style="font-size:18px">⋯</span></div>
+     <div class="done-row"><span>3 completadas esta semana</span><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+    </div>
+    <div style="width:340px;flex:none;display:flex;flex-direction:column;gap:14px;padding-top:18px">
+     <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:6px"><b style="font-size:14px">Agenda de hoy</b><span class="muted" style="font-size:12px">Clases y entregas</span></div>
+      <div class="tl"><span class="h">8:00 am</span><span class="b" style="border-color:var(--cir)"><b>Circuitos II</b><br><span class="muted">Clase hasta 10:00 am · ahora</span></span></div>
+      <div class="tl"><span class="h">10:00 am</span><span class="b" style="border-color:var(--ing)">Quiz de vocabulario</span></div>
+      <div class="tl"><span class="h">12:00 pm</span><span class="b" style="border-color:var(--fis)"><b>Física Mecánica</b><br><span class="muted">Clase hasta 2:00 pm</span></span></div>
+      <div class="tl"><span class="h">4:00 pm</span><span class="b" style="border-color:var(--brand)">Estudio: series (50 min)</span></div>
+      <div class="tl"><span class="h">11:59 pm</span><span class="b" style="border-color:var(--fis)">Entrega: informe péndulo</span></div>
+     </div>
+     <div class="card row" style="justify-content:space-between">
+      <div><b style="font-size:14px">Repaso pendiente</b><div class="muted" style="font-size:12.5px;margin-top:2px">3 tarjetas, unos 2 minutos</div></div>
+      <span class="btn primary">Repasar</span>
+     </div>
+     <div class="card">
+      <b style="font-size:14px">Enfoque</b>
+      <div class="row" style="justify-content:space-between;margin-top:8px"><div><span style="font-size:24px;font-weight:800">1 h 15 min</span><div class="muted" style="font-size:12.5px">hoy · racha de 6 días</div></div><span class="btn ghost">Empezar</span></div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </div>
+</div>
+</body></html>
