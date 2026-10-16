@@ -10,7 +10,7 @@ import {
 } from '../../lib/projectsBulk';
 import {
   FIELD_ALIASES, FIELD_LABELS, ImportError, TEMPLATE_CSV, TEMPLATE_JSON,
-  autoMap, buildAiPrompt, columnLabel, computeFileDiff, diffSummary, encodeUtf8, findDuplicates,
+  autoMap, buildAiPrompt, columnLabel, computeFileDiff, diffSummary, encodeUtf8, matchRows,
   formatHuman, hasTitleColumn, importableTasks, issuesForRow, parseDateTime, parseImportFile,
   parseImportText, summarizeIssues, toFilePayload, toImportPayload, unmappedHeaders, normalizeRows,
   type ColumnMapping, type DuplicatePolicy, type ExistingTask, type Field, type NormalizedTask,
@@ -24,6 +24,9 @@ import {
 //  Paso 2: revisar fila por fila. Nada se guarda hasta tocar "Importar".
 //  Si el archivo trae ids (viene de "Exportar"), en vez de crear tareas se
 //  muestra qué cambia en cada una y se aplica como actualización en masa.
+//  Las filas SIN id también se reconocen si ya están en el tablero (por su
+//  código "H-009" o por el título) y se actualizan en vez de duplicarse.
+//  Opcional: "Reemplazar el tablero" borra lo que no viene en el archivo.
 // ============================================================
 
 const isWeb = Platform.OS === 'web';
@@ -51,7 +54,8 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
   const [paste, setPaste] = useState('');
   const [existing, setExisting] = useState<ExistingTask[]>([]);
   const [skip, setSkip] = useState<Set<number>>(new Set());
-  const [dupPolicy, setDupPolicy] = useState<DuplicatePolicy>('omitir');
+  const [dupPolicy, setDupPolicy] = useState<DuplicatePolicy>('actualizar');
+  const [replaceBoard, setReplaceBoard] = useState(false);
   const [editRow, setEditRow] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -62,7 +66,7 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
     setWasOpen(visible);
     if (visible) {
       setStep('inicio'); setParsed(null); setMapping({}); setFileName(''); setPaste('');
-      setSkip(new Set()); setDupPolicy('omitir'); setEditRow(null); setBusy(false);
+      setSkip(new Set()); setDupPolicy('actualizar'); setReplaceBoard(false); setEditRow(null); setBusy(false);
     }
   }
 
@@ -77,9 +81,13 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
   }, [parsed, mapping, ctx, skip]);
 
   const importable = useMemo(() => (result ? importableTasks(result.tasks, result.issues) : []), [result]);
-  const isUpdate = result?.mode === 'update';
-  const diff = useMemo(() => (isUpdate ? computeFileDiff(importable, existing, ctx) : null), [isUpdate, importable, existing, ctx]);
-  const dups = useMemo(() => (result && !isUpdate ? findDuplicates(importable, existing) : new Map<number, string>()), [result, isUpdate, importable, existing]);
+  // Filas sin id que ya están en el tablero (por código o título).
+  const dups = useMemo(() => (result ? matchRows(importable, existing) : new Map<number, { id: string; by: 'id' | 'codigo' | 'titulo' }>()), [result, importable, existing]);
+  const isUpdate = result?.mode === 'update' || replaceBoard || (dups.size > 0 && dupPolicy !== 'crear');
+  const diff = useMemo(() => (isUpdate
+    ? computeFileDiff(importable, existing, ctx, { matches: dupPolicy === 'crear' ? undefined : dups, skipMatched: dupPolicy === 'omitir', replaceBoard })
+    : null), [isUpdate, importable, existing, ctx, dups, dupPolicy, replaceBoard]);
+  const hiddenRow = (t: NormalizedTask) => isUpdate && (!!t.id || (dups.has(t.row) && dupPolicy !== 'crear'));
   const summary = result ? summarizeIssues(result.tasks, result.issues) : null;
 
   // ---------- Paso 1: cargar ----------
@@ -164,7 +172,8 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
       } else {
         const payload = toImportPayload(importable, firstCol);
         if (!payload.length) { setBusy(false); return notify('No hay tareas para importar'); }
-        const r = await importProjectTasks(project.id, payload, dups.size ? dupPolicy : 'crear');
+        // Aquí solo se llega sin coincidencias (o con "crearlas igual").
+        const r = await importProjectTasks(project.id, payload, 'crear');
         const parts = [`${r.created} ${r.created === 1 ? 'tarea importada' : 'tareas importadas'}`];
         if (r.updated) parts.push(`${r.updated} actualizadas`);
         if (r.skipped) parts.push(`${r.skipped} repetidas omitidas`);
@@ -240,14 +249,14 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
                 )}
 
                 {/* duplicados */}
-                {!isUpdate && dups.size > 0 && (
+                {dups.size > 0 && (
                   <View style={{ borderWidth: 1, borderColor: C.warn + '66', backgroundColor: C.warn + '12', borderRadius: 12, padding: 12, marginBottom: 12 }}>
                     <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>
                       {dups.size} {dups.size === 1 ? 'tarea ya existe' : 'tareas ya existen'} en el proyecto
                     </Text>
-                    <Text style={{ color: C.muted, fontSize: 12, marginTop: 3, marginBottom: 9 }}>Mismo título y misma entrega. ¿Qué hago con ellas?</Text>
+                    <Text style={{ color: C.muted, fontSize: 12, marginTop: 3, marginBottom: 9 }}>Las reconocí por el código del título (como H-009) o por el mismo título. ¿Qué hago con ellas?</Text>
                     <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-                      {([['omitir', 'Omitirlas'], ['actualizar', 'Actualizarlas'], ['crear', 'Crearlas igual']] as const).map(([k, l]) => (
+                      {([['actualizar', 'Actualizarlas (recomendado)'], ['omitir', 'Dejarlas como están'], ['crear', 'Crearlas otra vez']] as const).map(([k, l]) => (
                         <Pressable key={k} onPress={() => setDupPolicy(k)}
                           style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: R.pill, borderWidth: 1, borderColor: dupPolicy === k ? C.brand : C.line, backgroundColor: dupPolicy === k ? C.brand + '22' : 'transparent' }}>
                           <Text style={{ color: dupPolicy === k ? C.brand : C.text, fontSize: 12.5, fontWeight: dupPolicy === k ? '700' : '500' }}>{l}</Text>
@@ -257,14 +266,33 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
                   </View>
                 )}
 
+                {/* reemplazar el tablero */}
+                {existing.length > 0 && (
+                  <Pressable onPress={() => setReplaceBoard((v) => !v)} accessibilityRole="checkbox" accessibilityState={{ checked: replaceBoard }}
+                    style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderWidth: 1, borderColor: replaceBoard ? C.bad + '88' : C.line, backgroundColor: replaceBoard ? C.bad + '10' : 'transparent', borderRadius: 12, padding: 12, marginBottom: 12 }}>
+                    <Ionicons name={replaceBoard ? 'checkbox' : 'square-outline'} size={19} color={replaceBoard ? C.bad : C.muted} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>Reemplazar el tablero con este archivo</Text>
+                      <Text style={{ color: C.muted, fontSize: 12, marginTop: 2, lineHeight: 17 }}>
+                        Las tareas que están en el tablero y no vienen en el archivo se borran. Útil cuando el archivo es el plan completo. Se puede deshacer.
+                      </Text>
+                    </View>
+                  </Pressable>
+                )}
+
                 {/* actualización por archivo */}
                 {isUpdate && diff && (
                   <View style={{ marginBottom: 6 }}>
-                    {diff.deletes.length > 0 && <Note color={C.bad} text={`Se van a borrar ${diff.deletes.length}: ${diff.deletes.map((d) => `«${d.existing.title}»`).join(', ')}. Tenían «sí» en la columna eliminar.`} />}
+                    {diff.deletes.some((d) => d.task) && <Note color={C.bad} text={`Se van a borrar ${diff.deletes.filter((d) => d.task).length} con «sí» en la columna eliminar: ${diff.deletes.filter((d) => d.task).map((d) => `«${d.existing.title}»`).join(', ')}.`} />}
+                    {diff.deletes.some((d) => !d.task) && <Note color={C.bad} text={`Se van a borrar ${diff.deletes.filter((d) => !d.task).length} ${diff.deletes.filter((d) => !d.task).length === 1 ? 'tarea que no está' : 'tareas que no están'} en el archivo: ${diff.deletes.filter((d) => !d.task).slice(0, 12).map((d) => `«${d.existing.title}»`).join(', ')}${diff.deletes.filter((d) => !d.task).length > 12 ? '…' : ''}`} />}
+                    {diff.skippedMatches > 0 && <Text style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>{diff.skippedMatches} ya {diff.skippedMatches === 1 ? 'estaba' : 'estaban'} en el tablero y se {diff.skippedMatches === 1 ? 'deja' : 'dejan'} como {diff.skippedMatches === 1 ? 'está' : 'están'}.</Text>}
                     {diff.unknownIds.length > 0 && <Note color={C.warn} text={`${diff.unknownIds.length} ${diff.unknownIds.length === 1 ? 'fila tiene' : 'filas tienen'} un id que no está en este proyecto y se ignoran.`} />}
                     {diff.updates.map((u) => (
                       <View key={u.existing.id} style={rowBox}>
-                        <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700' }} numberOfLines={1}>{u.existing.title}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700', flex: 1 }} numberOfLines={1}>{u.existing.title}</Text>
+                          {u.by !== 'id' && <Text style={{ color: C.muted, fontSize: 11 }}>{u.by === 'codigo' ? 'por código' : 'por título'}</Text>}
+                        </View>
                         {u.changes.map((c) => (
                           <Text key={c.field} style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>
                             <Text style={{ color: C.text, fontWeight: '600' }}>{c.label}: </Text>
@@ -281,14 +309,14 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
                       </Text>
                     )}
                     {diff.creates.length > 0 && (
-                      <Text style={{ color: C.text, fontSize: 12.5, fontWeight: '700', marginTop: 6, marginBottom: 8 }}>Nuevas (filas sin id)</Text>
+                      <Text style={{ color: C.text, fontSize: 12.5, fontWeight: '700', marginTop: 6, marginBottom: 8 }}>Nuevas ({diff.creates.length})</Text>
                     )}
                   </View>
                 )}
 
                 {/* filas */}
                 {result.tasks
-                  .filter((t) => !isUpdate || !t.id)
+                  .filter((t) => !hiddenRow(t))
                   .map((t) => (
                     <TaskRow
                       key={t.row} task={t} issues={issuesForRow(result.issues, t.row)}
@@ -307,7 +335,7 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
               {/* pie */}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderTopWidth: 1, borderTopColor: C.line }}>
                 <Text style={{ color: C.muted, fontSize: 12, flex: 1 }}>
-                  {isUpdate ? 'Solo cambia lo que viene en el archivo. Nada se borra por faltar.' : 'Se puede deshacer al terminar.'}
+                  {replaceBoard ? 'Lo que no está en el archivo se borra. Se puede deshacer al terminar.' : isUpdate ? 'Solo cambia lo que viene en el archivo. Nada se borra por faltar. Se puede deshacer.' : 'Se puede deshacer al terminar.'}
                 </Text>
                 <Pressable onPress={importar} disabled={busy || total === 0}
                   style={{ backgroundColor: total === 0 ? C.surface2 : C.brand, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 8 }}>

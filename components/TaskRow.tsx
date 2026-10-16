@@ -8,6 +8,7 @@ import { fmtDue, isOverdue, bucketOf } from '../lib/time';
 import { Badge, Dot } from './ds';
 import { SubtaskList } from './SubtaskList';
 import { ActionMenu, type MenuAction } from './ActionMenu';
+import { play } from '../lib/sound';
 
 // ============================================================
 //  Fila de tarea compacta (Hoy, Materia, Papelera...).
@@ -38,7 +39,7 @@ export function TaskRow({
   return (
     <View style={{ backgroundColor: C.surface, borderColor: C.line, borderWidth: 1, borderRadius: 12, marginBottom: 8, opacity: done ? 0.75 : 1 }}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-        <Pressable onPress={() => onToggle(task)} accessibilityRole="checkbox" accessibilityState={{ checked: done }}
+        <Pressable onPress={() => { play(done ? 'uncheck' : 'complete'); onToggle(task); }} accessibilityRole="checkbox" accessibilityState={{ checked: done }}
           accessibilityLabel={done ? `Marcar "${task.title}" como pendiente` : `Completar "${task.title}"`}
           style={{ width: 48, minHeight: compact ? 46 : 54, alignItems: 'center', justifyContent: 'center' }}>
           <View key={done ? 'hecha' : 'pendiente'} dataSet={done ? { anim: 'pop' } : undefined} style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: done ? C.good : (tm.key !== 'tarea' ? tm.color : C.muted), backgroundColor: done ? C.good : 'transparent', alignItems: 'center', justifyContent: 'center' }}>

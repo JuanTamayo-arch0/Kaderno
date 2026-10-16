@@ -1,7 +1,8 @@
 import { Platform, Share } from 'react-native';
-import * as DocumentPicker from 'expo-document-picker';
-import * as Sharing from 'expo-sharing';
-import { File, Paths } from 'expo-file-system';
+// Los módulos nativos se cargan solo en el celular (import dinámico): en web
+// no hacen falta y así no se descargan al abrir la app.
+const nativeFs = () => import('expo-file-system');
+const nativePicker = () => import('expo-document-picker');
 
 // ============================================================
 //  Leer y guardar archivos de texto en web y en el celular.
@@ -27,6 +28,8 @@ export async function pickTextFile(): Promise<PickedFile | null> {
       input.click();
     });
   }
+  const DocumentPicker = await nativePicker();
+  const { File } = await nativeFs();
   const res = await DocumentPicker.getDocumentAsync({
     type: ['text/*', 'application/json', 'text/csv', 'text/comma-separated-values', '*/*'],
     copyToCacheDirectory: true,
@@ -54,6 +57,8 @@ export async function pickAnyFile(): Promise<PickedAny | null> {
       input.click();
     });
   }
+  const DocumentPicker = await nativePicker();
+  const { File } = await nativeFs();
   const res = await DocumentPicker.getDocumentAsync({ type: '*/*', copyToCacheDirectory: true, multiple: false });
   if (res.canceled || !res.assets?.length) return null;
   const a = res.assets[0];
@@ -86,6 +91,8 @@ export async function saveFile(name: string, content: string | Uint8Array, mime:
     setTimeout(() => URL.revokeObjectURL(url), 2000);
     return;
   }
+  const { File, Paths } = await nativeFs();
+  const Sharing = await import('expo-sharing');
   const file = new File(Paths.cache, name);
   try { file.delete(); } catch { /* no existía */ }
   file.create();

@@ -51,6 +51,7 @@ export function buildAiPrompt(ctx: PromptContext): string {
     '- Entre 2 y 6 ítems de checklist por tarea.',
     `- "estado" debe ser una de estas columnas: ${colNames}. Casi todo empieza en "${firstCol}".`,
     '- Deja tiempo al final para revisar y unir el trabajo.',
+    '- Si te paso tareas que ya existen (con "id"), devuélvelas con el MISMO "id" para que se actualicen en vez de duplicarse. Si no tienen id, conserva exactamente su título o su código inicial (por ejemplo "H-009").',
     '',
     'Enunciado del proyecto:',
     '[pega aquí el enunciado]',

@@ -63,7 +63,7 @@ export function toImportPayload(tasks: NormalizedTask[], defaultStatus: ProjectS
 export function toUpdatePayload(u: TaskUpdate): RpcTask {
   const t = u.task;
   const fields = u.changes.map((c) => FIELD_TO_COLUMN[c.field]).filter((x): x is string => !!x);
-  const out: RpcTask = { id: t.id!, fields };
+  const out: RpcTask = { id: u.existing.id, fields };
   if (fields.includes('title')) out.title = t.title!;
   if (fields.includes('description')) out.description = t.description;
   if (fields.includes('status')) out.status = t.status!;
@@ -78,12 +78,12 @@ export function toUpdatePayload(u: TaskUpdate): RpcTask {
 export function toFilePayload(diff: {
   creates: NormalizedTask[];
   updates: TaskUpdate[];
-  deletes: { task: NormalizedTask }[];
+  deletes: { existing: { id: string } }[];
 }, defaultStatus: ProjectStatus): RpcTask[] {
   return [
     ...diff.updates.map(toUpdatePayload),
     ...diff.creates.map((t) => toCreatePayload(t, defaultStatus)),
-    ...diff.deletes.map((d) => ({ id: d.task.id!, delete: true })),
+    ...diff.deletes.map((d) => ({ id: d.existing.id, delete: true })),
   ];
 }
 

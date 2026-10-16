@@ -4,6 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../lib/theme';
 import { Step, addStep, deleteStep, renameStep, reorderSteps, toggleStep } from '../lib/db';
 import { ProgressBar } from './ProgressBar';
+import { play } from '../lib/sound';
 
 // ============================================================
 //  Microtareas (checklist dentro de una tarea)
@@ -49,6 +50,7 @@ export function SubtaskList({
   }
 
   async function onToggle(s: Step) {
+    play(s.done ? 'uncheck' : 'step');
     const next = steps.map((x) => (x.id === s.id ? { ...x, done: !x.done } : x));
     await guard(next, () => toggleStep(s.id, !s.done));
   }
@@ -107,6 +109,8 @@ export function SubtaskList({
       {sorted.map((s, i) => (
         <View key={s.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: compact ? 3 : 5 }}>
           <Pressable
+            key={s.done ? 'si' : 'no'}
+            dataSet={s.done ? { anim: 'pop' } : undefined}
             onPress={() => onToggle(s)}
             hitSlop={8}
             accessibilityRole="checkbox"

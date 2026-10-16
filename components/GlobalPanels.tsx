@@ -24,6 +24,7 @@ import { TaskModal } from './TaskModal';
 import { Button, Dot, EmptyState, IconButton } from './ds';
 import { Kbd } from './SideNav';
 import { SubjectIcon } from './SubjectIcon';
+import { play } from '../lib/sound';
 
 // ============================================================
 //  Paneles globales: hoja "Agregar", formulario de tarea, paleta de
@@ -122,6 +123,7 @@ function AddSheet({ visible, subjects }: { visible: boolean; subjects: Subject[]
       closeAdd();
       dataChanged(); refreshNavCounts(true);
       const when = fmtDue(row);
+      play('add');
       toast(`Agregada: ${parsed.title}${when ? ' · ' + when : ''}`, {
         actionLabel: 'Editar',
         onAction: () => openTask({ id, status: 'pending', description: null, ...row } as Task),

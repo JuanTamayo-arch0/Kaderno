@@ -6,6 +6,7 @@ export * from './encoding';
 export * from './parse';
 export * from './normalize';
 export * from './diff';
+export * from './match';
 export * from './shift';
 export * from './prompt';
 export * from './export';

@@ -56,6 +56,8 @@ export interface ExistingTask {
   start_at: string | null; // ISO UTC
   due_at: string | null; // ISO UTC
   checklist: { text: string; done: boolean }[];
+  /** Orden en el tablero (para desempatar: la que estaba primero). */
+  position?: number;
 }
 
 /** Lo que el importador necesita saber del proyecto. */

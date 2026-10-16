@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Platform, Pressable, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import Svg, { Circle } from 'react-native-svg';
+import { ProgressRing } from '../../components/Ring';
 import { C } from '../../lib/theme';
 import { useResponsive } from '../../lib/responsive';
 import { Subject, Grade, getSubjects, getAllGrades, countDueFlashcards, getFocusDetail, getFocusStats } from '../../lib/db';
@@ -49,10 +49,7 @@ export default function Estudiar() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
             <Pressable onPress={() => router.push('/enfoque')} accessibilityRole="button" accessibilityLabel="Abrir enfoque">
               <View style={{ width: 100, height: 100, alignItems: 'center', justifyContent: 'center' }}>
-                <Svg width={100} height={100} style={{ position: 'absolute', transform: [{ rotate: '-90deg' }] }}>
-                  <Circle cx={50} cy={50} r={R} stroke={C.surface2} strokeWidth={8} fill="none" />
-                  <Circle cx={50} cy={50} r={R} stroke={focus.state.mode === 'work' ? C.brand : C.good} strokeWidth={8} fill="none" strokeLinecap="round" strokeDasharray={CIRC} strokeDashoffset={CIRC * (1 - focus.frac)} />
-                </Svg>
+                <ProgressRing size={100} stroke={8} inset={6} frac={focus.frac} color={focus.state.mode === 'work' ? C.brand : C.good} track={C.surface2} />
                 <Text style={{ color: C.text, fontSize: 20, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{focus.label}</Text>
               </View>
             </Pressable>

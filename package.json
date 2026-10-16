@@ -7,7 +7,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "test": "tsx --test tests/lib.test.ts tests/v12.test.ts tests/v13.test.ts"
+    "test": "tsx --test tests/lib.test.ts tests/v12.test.ts tests/v13.test.ts tests/v14.test.ts"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",

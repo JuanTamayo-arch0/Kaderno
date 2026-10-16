@@ -14,9 +14,11 @@ import { toast } from '../../lib/feedback';
 import { SideNav } from '../../components/SideNav';
 import { useAuth } from '../../lib/auth';
 import { ImportSheet } from '../../components/projects/ImportSheet';
+import { BoardCleanup } from '../../components/projects/BoardCleanup';
 import { ProjectFiles } from '../../components/projects/ProjectFiles';
 import { DragCard, DragGhost, useBoardDrag } from '../../components/projects/BoardDrag';
 import { readSnap, writeSnap } from '../../lib/snapshot';
+import { play } from '../../lib/sound';
 import { BulkAction, BulkBar, BulkDialog, ExportSheet, confirmBulkDelete } from '../../components/projects/BulkTools';
 import { undoProjectBatch } from '../../lib/projectsBulk';
 import { Subject, getSubjects } from '../../lib/db';
@@ -58,6 +60,8 @@ const COARSE_POINTER = (() => {
   } catch { return false; }
 })();
 
+const NO_STEPS: PStep[] = [];
+
 type ProjSnap = { project: Project; members: Member[]; tasks: PTask[]; steps: Record<string, PStep[]>; subjects: Subject[] };
 
 const VIEWS = [
@@ -97,6 +101,7 @@ function ProyectoDetalle() {
   // Importar / exportar / edición en masa
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [cleanupOpen, setCleanupOpen] = useState(false);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkAction, setBulkAction] = useState<BulkAction | null>(null);
@@ -214,7 +219,9 @@ function ProyectoDetalle() {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
     // Optimista: la tarjeta se pinta ya en su nueva columna y luego se confirma.
-    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: colKey } : t)));
+    const toDone = !!cols.find((c) => c.key === colKey)?.done && !cols.find((c) => c.key === task.status)?.done;
+    play(toDone ? 'complete' : 'drop');
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: colKey, done: toDone ? true : t.done } : t)));
     try {
       await moveTask(taskId, colKey, colTasks, idx);
       const label = cols.find((c) => c.key === colKey)?.label ?? colKey;
@@ -275,6 +282,9 @@ function ProyectoDetalle() {
               {editable && project && (
                 <HeaderBtn icon="cloud-upload-outline" label="Importar" wide onPress={() => setImportOpen(true)} />
               )}
+              {editable && project && isTaskView && (
+                <HeaderBtn icon="sparkles-outline" label="Ordenar" wide onPress={() => setCleanupOpen(true)} />
+              )}
               {project && (
                 <HeaderBtn icon="download-outline" label="Exportar" wide onPress={() => setExportOpen(true)} />
               )}
@@ -331,6 +341,7 @@ function ProyectoDetalle() {
             const openCol = cols.find((c) => !c.done)?.key ?? cols[0]?.key;
             const target = t.done ? openCol : doneCol;
             if (!target) return notify('Falta una columna final', 'Marca una columna como “termina aquí” para poder tachar tareas.');
+            play(t.done ? 'uncheck' : 'complete');
             setTasks((prev) => prev.map((x) => (x.id === t.id ? { ...x, status: target, done: !t.done } : x)));
             try {
               await updateProjectTask(t.id, { status: target });
@@ -363,6 +374,11 @@ function ProyectoDetalle() {
         onClose={() => { setEditingTask(null); setNewIn(null); }}
         onSaved={() => { setEditingTask(null); setNewIn(null); load(); }}
         onStepsChanged={load}
+        onStepPatch={(stepId, done) => setSteps((prev) => {
+          const out: Record<string, PStep[]> = {};
+          for (const k of Object.keys(prev)) out[k] = prev[k].map((st) => (st.id === stepId ? { ...st, done } : st));
+          return out;
+        })}
       />
 
       <ColumnsModal
@@ -393,6 +409,7 @@ function ProyectoDetalle() {
         items={[
           ...(editable && isTaskView && !selecting ? [{ icon: 'checkbox-outline', label: 'Seleccionar varias', hint: 'Cambiar columna, responsable o fechas a la vez', onPress: () => setSelecting(true) }] : []),
           ...(editable ? [{ icon: 'cloud-upload-outline', label: 'Importar tareas', hint: 'Desde un CSV, un JSON o una IA', onPress: () => setImportOpen(true) }] : []),
+          ...(editable ? [{ icon: 'sparkles-outline', label: 'Ordenar el tablero', hint: 'Quitar repetidas o vaciarlo', onPress: () => setCleanupOpen(true) }] : []),
           { icon: 'download-outline', label: 'Exportar tareas', hint: 'Para editarlas en Excel y volver a subirlas', onPress: () => setExportOpen(true) },
           ...(editable && view === 'tablero' ? [{ icon: 'options-outline', label: 'Columnas del tablero', onPress: () => setColsModal(true) }] : []),
           { icon: hiddenInHoy ? 'eye-outline' : 'eye-off-outline', label: hiddenInHoy ? 'Mostrar mis tareas de este proyecto en Hoy' : 'Ocultar mis tareas de este proyecto de Hoy', onPress: toggleHoy },
@@ -416,6 +433,8 @@ function ProyectoDetalle() {
       {project && (
         <ExportSheet visible={exportOpen} project={project} members={members} onClose={() => setExportOpen(false)} />
       )}
+      <BoardCleanup visible={cleanupOpen} projectId={projectId} cols={cols} onClose={() => setCleanupOpen(false)}
+        onDone={async ({ batchId, text }) => { setCleanupOpen(false); await load(); if (batchId) showUndo(batchId, text); }} />
 
       <BulkDialog
         action={bulkAction}
@@ -560,7 +579,7 @@ function Tablero({ cols, grouped, steps, members, subject, editable, isWide, myI
                     <DragCard binding={dnd.bind(t.id, col.key, list[i + 1]?.id ?? null)} hidden={drag?.id === t.id} landed={dnd.landed === t.id}>
                       <View dataSet={{ anim: 'enter', i: String(Math.min(i, 8)) }}>
                         <TaskCard
-                          task={t} steps={steps[t.id] ?? []} members={members} subject={subject}
+                          task={t} steps={steps[t.id] ?? NO_STEPS} members={members} subject={subject}
                           color={col.color} dim={false} mine={!!myId && t.assignee_id === myId}
                           showMove={editable && !selecting && (!isWeb || !isWide || COARSE_POINTER)}
                           selecting={selecting} selected={selected.has(t.id)}
@@ -609,7 +628,15 @@ function Tablero({ cols, grouped, steps, members, subject, editable, isWide, myI
 
 // ---------- Tarjeta del tablero ----------
 
-function TaskCard({ task, steps, members, subject, color, dim, mine, showMove, selecting, selected, onPress, onMove, onLongPress }: {
+// La tarjeta solo se vuelve a pintar si cambia lo que muestra. Con tableros de
+// cientos de tarjetas, arrastrar una (que actualiza el destino varias veces)
+// ya no repinta todas las demás.
+const TaskCard = React.memo(TaskCardView, (a, b) =>
+  a.task === b.task && a.steps === b.steps && a.members === b.members && a.subject === b.subject && a.color === b.color
+  && a.dim === b.dim && a.mine === b.mine && a.showMove === b.showMove && a.selecting === b.selecting && a.selected === b.selected
+  && !!a.onLongPress === !!b.onLongPress);
+
+function TaskCardView({ task, steps, members, subject, color, dim, mine, showMove, selecting, selected, onPress, onMove, onLongPress }: {
   task: PTask; steps: PStep[]; members: Member[]; subject: Subject | null;
   color: string; dim: boolean; mine: boolean; showMove: boolean;
   selecting: boolean; selected: boolean;
@@ -1120,10 +1147,11 @@ function hace(iso: string): string {
 //  Ventana de una tarea de proyecto
 // ============================================================
 
-function PTaskModal({ visible, task, projectId, status, cols, members, steps, editable, onClose, onSaved, onStepsChanged }: {
+function PTaskModal({ visible, task, projectId, status, cols, members, steps, editable, onClose, onSaved, onStepsChanged, onStepPatch }: {
   visible: boolean; task: PTask | null; projectId: string; status: string;
   cols: BoardColumn[]; members: Member[]; steps: PStep[]; editable: boolean;
   onClose: () => void; onSaved: () => void; onStepsChanged: () => void;
+  onStepPatch?: (stepId: string, done: boolean) => void;
 }) {
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
@@ -1323,9 +1351,14 @@ function PTaskModal({ visible, task, projectId, status, cols, members, steps, ed
                   <View key={s.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 6 }}>
                     <Pressable disabled={!editable} hitSlop={8}
                       onPress={async () => {
-                        try { await toggleProjectStep(s.id, !s.done); onStepsChanged(); }
-                        catch (e: any) { notify('No se pudo marcar', e.message); }
+                        // Optimista: se marca ya, con sonido; el servidor confirma por detrás.
+                        const next = !s.done;
+                        play(next ? 'step' : 'uncheck');
+                        onStepPatch?.(s.id, next);
+                        try { await toggleProjectStep(s.id, next); onStepsChanged(); }
+                        catch (e: any) { onStepPatch?.(s.id, !next); notify('No se pudo marcar', e.message); }
                       }}
+                      key={s.done ? 'si' : 'no'} dataSet={s.done ? { anim: 'pop' } : undefined}
                       style={{ width: 19, height: 19, borderRadius: 6, borderWidth: 2, borderColor: s.done ? C.good : C.line, backgroundColor: s.done ? C.good : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
                       {s.done && <Ionicons name="checkmark" size={11} color="#0f1115" />}
                     </Pressable>

@@ -9,6 +9,7 @@ import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 import { fetchPrefs, savePrefs, exportMyData, hasV14 } from '../lib/db';
 import { CalendarCard } from '../components/CalendarCard';
+import { soundEnabled, setSoundEnabled } from '../lib/sound';
 import { updateMyProfile } from '../lib/projects';
 import { getPushStatus, enablePush, disablePush, testLocalNotification, isStandalone, type PushStatus } from '../lib/push';
 import { canPromptInstall, onInstallChange, promptInstall, isIOSWeb } from '../lib/pwa';
@@ -34,6 +35,7 @@ function Ajustes() {
   const [name, setName] = useState<string>((session?.user?.user_metadata?.full_name as string) ?? '');
   const [nameDirty, setNameDirty] = useState(false);
   const [hoyProy, setHoyProy] = useState(true);
+  const [sound, setSound] = useState(soundEnabled());
   const [hiddenN, setHiddenN] = useState(0);
   const [notif, setNotif] = useState<Notif>(DEFAULT_NOTIF);
   const [push, setPush] = useState<PushStatus>('unsupported');
@@ -129,6 +131,9 @@ function Ajustes() {
         <ListRow title="Tema, fondo y letra" subtitle="10 temas, claros y oscuros" left={<Ionicons name="color-palette-outline" size={20} color={C.muted} />} onPress={() => router.push('/personalizar')} />
         <Divider />
         <ListRow title="Tipos de tarea" subtitle="Laboratorio, exposición, lectura…" left={<Ionicons name="pricetags-outline" size={20} color={C.muted} />} onPress={() => router.push('/tipos')} />
+        <Divider />
+        <Toggle label="Sonidos" hint="Al completar tareas y pasos, mover tarjetas y borrar. Solo en este dispositivo." value={sound}
+          onChange={(v) => { setSound(v); setSoundEnabled(v); }} />
         <Divider />
         <Toggle label="Tareas de proyectos en Hoy" hint="También se cambia en Hoy con Todo, Materias o Proyectos." value={hoyProy}
           onChange={(v) => { setHoyProy(v); saveHoyVista(v ? 'todo' : 'materias').catch(() => {}); }} />

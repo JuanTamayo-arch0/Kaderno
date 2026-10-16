@@ -2,6 +2,7 @@ import { formatHuman, sameInstant } from './dates';
 import { FIELD_LABELS } from './fields';
 import { columnLabel, mergeChecklist } from './values';
 import type { ExistingTask, Field, Member, NormalizedTask, ProjectContext, RowIssue } from './types';
+import type { MatchKind } from './match';
 
 export interface FieldChange {
   field: Field;
@@ -13,6 +14,8 @@ export interface FieldChange {
 export interface TaskUpdate {
   task: NormalizedTask;
   existing: ExistingTask;
+  /** Cómo se reconoció la tarea: por id, por código ("H-009") o por título. */
+  by: MatchKind;
   changes: FieldChange[];
   /** Checklist final ya unido con el existente, si cambia. */
   checklist: { text: string; done: boolean }[] | null;
@@ -21,8 +24,11 @@ export interface TaskUpdate {
 export interface FileDiff {
   creates: NormalizedTask[];
   updates: TaskUpdate[];
-  deletes: { task: NormalizedTask; existing: ExistingTask }[];
+  /** task es null cuando se borra por "reemplazar el tablero" (no está en el archivo). */
+  deletes: { task: NormalizedTask | null; existing: ExistingTask }[];
   unchanged: number;
+  /** Filas sin id reconocidas y dejadas como estaban (opción "omitir"). */
+  skippedMatches: number;
   /** Filas con id que no pertenece a este proyecto (o la tarea ya se borró). */
   unknownIds: NormalizedTask[];
   /** Errores que solo aparecen al combinar con lo existente (inicio después de entrega). */
@@ -55,18 +61,37 @@ function short(s: string | null, n = 60): string {
  * venía con valor en el archivo y es distinto del actual. Nada se borra porque falte:
  * borrar exige la columna eliminar.
  */
-export function computeFileDiff(tasks: NormalizedTask[], existing: ExistingTask[], ctx: ProjectContext): FileDiff {
+export type DiffOptions = {
+  /** Filas sin id reconocidas (matchRows): fila -> tarea existente. */
+  matches?: Map<number, { id: string; by: MatchKind }>;
+  /** true: las reconocidas no se tocan (ni se duplican). */
+  skipMatched?: boolean;
+  /** true: lo que está en el tablero y no en el archivo se borra (reemplazar el tablero). */
+  replaceBoard?: boolean;
+};
+
+export function computeFileDiff(tasks: NormalizedTask[], existing: ExistingTask[], ctx: ProjectContext, opts: DiffOptions = {}): FileDiff {
   const { members, columns } = ctx;
   const byId = new Map(existing.map((e) => [e.id.toLowerCase(), e]));
-  const diff: FileDiff = { creates: [], updates: [], deletes: [], unchanged: 0, unknownIds: [], issues: [] };
+  const diff: FileDiff = { creates: [], updates: [], deletes: [], unchanged: 0, skippedMatches: 0, unknownIds: [], issues: [] };
+  const touched = new Set<string>();
 
   for (const t of tasks) {
     if (t.skip) continue;
+    let by: MatchKind = 'id';
+    let e: ExistingTask | undefined;
     if (!t.id) {
-      diff.creates.push(t);
-      continue;
+      const m = opts.matches?.get(t.row);
+      if (!m) { diff.creates.push(t); continue; }
+      e = byId.get(m.id.toLowerCase());
+      if (!e) { diff.creates.push(t); continue; }
+      by = m.by;
+      touched.add(e.id.toLowerCase());
+      if (opts.skipMatched) { diff.skippedMatches++; continue; }
+    } else {
+      e = byId.get(t.id);
+      if (e) touched.add(e.id.toLowerCase());
     }
-    const e = byId.get(t.id);
     if (!e) {
       diff.unknownIds.push(t);
       diff.issues.push({ row: t.row, field: 'id', level: 'warning', message: 'Esta tarea no existe en el proyecto (quizá se borró). La fila se ignorará' });
@@ -105,8 +130,12 @@ export function computeFileDiff(tasks: NormalizedTask[], existing: ExistingTask[
       continue;
     }
 
-    if (changes.length) diff.updates.push({ task: t, existing: e, changes, checklist });
+    if (changes.length) diff.updates.push({ task: t, existing: e, by, changes, checklist });
     else diff.unchanged++;
+  }
+
+  if (opts.replaceBoard) {
+    for (const e of existing) if (!touched.has(e.id.toLowerCase())) diff.deletes.push({ task: null, existing: e });
   }
   return diff;
 }
