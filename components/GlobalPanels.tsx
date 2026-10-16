@@ -153,7 +153,10 @@ function AddSheet({ visible, subjects }: { visible: boolean; subjects: Subject[]
 
   return (
     <Panel visible={visible} onClose={closeAdd}>
-      <Text style={{ color: C.text, fontSize: 17, fontWeight: '700', marginBottom: 10 }} accessibilityRole="header">Agregar</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, marginTop: -6, marginRight: -8 }}>
+        <Text style={{ color: C.text, fontSize: 17, fontWeight: '700', flex: 1 }} accessibilityRole="header">Agregar</Text>
+        <IconButton icon="close" label="Cerrar" onPress={closeAdd} />
+      </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.surface2, borderWidth: 1, borderColor: text ? C.brand : C.line, borderRadius: 12, paddingLeft: 12, paddingRight: 4, overflow: 'hidden' }}>
         <Ionicons name="add" size={20} color={C.muted} />
         <TextInput value={text} onChangeText={setText} autoFocus placeholder='Ej: "parcial cálculo viernes 10am"' placeholderTextColor={C.muted}
@@ -263,8 +266,8 @@ function CommandPalette({ visible }: { visible: boolean }) {
   useEffect(() => {
     if (!visible || Platform.OS !== 'web' || typeof window === 'undefined') return;
     const h = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowDown') { e.preventDefault(); setSel((x) => Math.min(flat.length - 1, x + 1)); }
-      if (e.key === 'ArrowUp') { e.preventDefault(); setSel((x) => Math.max(0, x - 1)); }
+      if (e.key === 'ArrowDown') { e.preventDefault(); keyNav.current = true; setSel((x) => Math.min(flat.length - 1, x + 1)); }
+      if (e.key === 'ArrowUp') { e.preventDefault(); keyNav.current = true; setSel((x) => Math.max(0, x - 1)); }
       if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); e.stopPropagation(); flat[sel]?.run(); }
     };
     // En captura: el campo de texto de react-native-web no deja subir el Enter.
@@ -272,6 +275,20 @@ function CommandPalette({ visible }: { visible: boolean }) {
     return () => window.removeEventListener('keydown', h, true);
   }, [visible, flat, sel]);
   useEffect(() => { setSel(0); }, [q, hits]);
+  // Con las flechas, la lista se desplaza sola para que el elegido siempre se vea.
+  const listRef = useRef<any>(null);
+  const keyNav = useRef(false);
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !keyNav.current) return;
+    const root: HTMLElement | null = listRef.current?.getScrollableNode?.() ?? null;
+    const el = root?.querySelector('[data-cmdsel="1"]') as HTMLElement | null;
+    el?.scrollIntoView({ block: 'nearest' });
+    // El ratón vuelve a mandar en cuanto se mueve de verdad (no por el desplazamiento).
+    // (Los eventos que genera el navegador al desplazar traen movimiento 0 y se ignoran.)
+    const off = (e: MouseEvent) => { if (e.movementX || e.movementY) { keyNav.current = false; window.removeEventListener('mousemove', off); } };
+    window.addEventListener('mousemove', off);
+    return () => window.removeEventListener('mousemove', off);
+  }, [sel]);
 
   let idx = -1;
   return (
@@ -283,8 +300,9 @@ function CommandPalette({ visible }: { visible: boolean }) {
           style={[{ flex: 1, color: C.text, fontSize: 15, paddingVertical: 12, minHeight: 46 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
         {busy && <ActivityIndicator size="small" color={C.brand} />}
         {Platform.OS === 'web' && <Kbd text="Esc" />}
+        <IconButton icon="close" label="Cerrar búsqueda" onPress={closeCommand} size={18} style={{ marginRight: -8 }} />
       </View>
-      <ScrollView style={{ marginTop: 10 }} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={listRef} style={{ marginTop: 10 }} keyboardShouldPersistTaps="handled">
         {q.trim() && hits && !items.some((s) => s.section !== 'Acciones') && !busy && (
           <Text style={{ color: C.muted, textAlign: 'center', paddingVertical: 16 }}>Sin resultados para “{q.trim()}”.</Text>
         )}
@@ -294,7 +312,8 @@ function CommandPalette({ visible }: { visible: boolean }) {
             {s.cmds.map((c) => {
               idx += 1; const on = idx === sel; const myIdx = idx;
               return (
-                <Pressable key={c.id} onPress={c.run} onHoverIn={() => setSel(myIdx)} accessibilityRole="button" accessibilityLabel={c.label}
+                <Pressable key={c.id} onPress={c.run} onHoverIn={() => { if (!keyNav.current) setSel(myIdx); }} accessibilityRole="button" accessibilityLabel={c.label}
+                  dataSet={on ? { cmdsel: '1' } : undefined}
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, paddingHorizontal: 10, borderRadius: 10, minHeight: 44, backgroundColor: on ? C.brand + '22' : 'transparent' }}>
                   {c.color ? <Dot color={c.color} size={10} /> : <Ionicons name={c.icon} size={18} color={on ? C.brand : C.muted} />}
                   <Text style={{ color: C.text, fontSize: 14.5, flex: 1 }} numberOfLines={1}>{c.label}</Text>

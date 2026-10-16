@@ -74,6 +74,8 @@ export default function Hoy() {
 
   const load = useCallback(async () => {
     try {
+      // Las tareas de proyectos salen en la misma tanda que lo demás (antes esperaban a que terminara).
+      const ptP = getMyProjectTasks().catch(() => null);
       const [s, t, sc, prefs] = await Promise.all([getSubjects(), getTasks(), getSchedule().catch(() => [] as Slot[]), fetchPrefs().catch(() => null)]);
       setSubjects(s); setTasks(t); setSlots(sc); setError(null); setHidden(new Set());
       const pending = t.filter((x) => x.status !== 'done').map((x) => x.id);
@@ -84,7 +86,7 @@ export default function Hoy() {
       setHiddenH({ tasks: Array.isArray(ho.tasks) ? ho.tasks : [], projects: Array.isArray(ho.projects) ? ho.projects : [] });
       setVista(vistaFromPrefs(prefs));
       // Se traen siempre, aunque la vista sea "Materias", para cambiar de vista al instante.
-      getMyProjectTasks().then((pt) => { setPtasks(pt); pruneHiddenTasks(pt.map((x) => x.id)).catch(() => {}); }).catch(() => setPtasks([]));
+      ptP.then((pt) => { if (!pt) return; setPtasks(pt); pruneHiddenTasks(pt.map((x) => x.id)).catch(() => {}); });
       countDueFlashcards().then(setRepaso).catch(() => {});
       getFocusDetail().then((d) => setFocusToday({ todayMin: d.todayMin, streak: d.streak })).catch(() => {});
       refreshNavCounts();  // sin forzar: la barra ya los pidió al abrir; tras cambios se fuerzan solos

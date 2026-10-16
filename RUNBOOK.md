@@ -791,3 +791,25 @@ Para limpiar el tablero actual: Ordenar, Quitar repetidas. Desde ahí, importar 
   - Los anillos de progreso usan el SVG del navegador en vez de react-native-svg.
   - Se quitó el cliente de tiempo real de Supabase, que la app no usa (`metro.config.js`, `lib/stubs/realtime.js`).
 - Tablero: una tarjeta solo se vuelve a pintar si cambió; arrastrar en tableros grandes ya no repinta todo.
+
+## Versión 16: detalles de uso y otra pasada de velocidad
+
+No hay migración ni funciones nuevas. Se publica al fusionar en `main`.
+
+### Qué cambió
+
+- **Buscar (Ctrl K):** al recorrer con las flechas, la lista se desplaza sola para que el elegido siempre se vea. Tiene botón para cerrar.
+- **Agregar:** botón para cerrar arriba a la derecha.
+- **Nueva tarea:** la fecha y la hora ya usan la misma letra que el resto (antes salían en Times).
+- **Materia:** la imagen o el ícono de la materia aparece junto al nombre.
+- **Calificaciones:** se pueden editar (tocar la evaluación o el lápiz): nombre, peso, nota y escala.
+- **Proyectos:** un solo botón **Opciones** con un menú agrupado (Tareas: importar y exportar; Tablero: ordenar y columnas; Para mí). El antiguo "Ocultar de Hoy" se quitó de la cabecera: ahora está en Opciones, dice exactamente qué hace ("No mostrar mis tareas en Hoy") y solo aparece si tienes tareas asignadas en ese proyecto. En el celular, el mismo menú sale desde abajo.
+
+### Velocidad
+
+- Materias, Proyectos y cada materia también se pintan al instante con lo de la visita anterior (como Hoy y el tablero).
+- Menos esperas en cadena: un proyecto pide todo a la vez (antes primero el proyecto y luego lo demás), la lista de proyectos ahorra una ida y vuelta, y Hoy trae las tareas de proyectos en la misma tanda que las tuyas.
+- La lista de materias ya no descarga el texto de todas las notas (solo las cuenta).
+- Las fotos de materias se guardan a 160 x 160 (unos 8 KB en vez de cientos). Las que ya estaban grandes se achican solas una vez al abrir la app.
+- Google Fonts solo se pide si elegiste una fuente distinta de "Sistema".
+- El service worker responde al instante con `kaderno-config.js` guardado y lo actualiza por detrás. Si editas ese archivo en el servidor, el cambio se ve en la segunda apertura. Si la red tarda más de 1,5 s en entregar la página, se muestra la guardada.

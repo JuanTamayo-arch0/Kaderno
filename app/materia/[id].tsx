@@ -22,6 +22,8 @@ import { SubjectFiles } from '../../components/SubjectFiles';
 import { SubjectIcon, iconChar } from '../../components/SubjectIcon';
 import { SubjectModal, GradeModal } from '../../components/SubjectModal';
 import { ActionMenu } from '../../components/ActionMenu';
+import { useAuth } from '../../lib/auth';
+import { snapshotFor } from '../../lib/snapshot';
 
 type Tab = 'tareas' | 'notas' | 'cal' | 'files';
 
@@ -29,14 +31,17 @@ function MateriaDetalle() {
   const { id, tab: tabParam } = useLocalSearchParams<{ id: string; tab?: string }>();
   const router = useRouter();
   const { isWide } = useResponsive();
-  const [subject, setSubject] = useState<Subject | null | undefined>(undefined);
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const { session } = useAuth();
+  const [snap] = useState(() => snapshotFor<{ s: Subject; t: Task[]; n: Note[]; g: Grade[] }>(session && id ? `materia:${session.user.id}:${id}` : null));
+  const [subject, setSubject] = useState<Subject | null | undefined>(snap.initial?.s ?? undefined);
+  const [tasks, setTasks] = useState<Task[]>(snap.initial?.t ?? []);
   const [steps, setSteps] = useState<Record<string, Step[]>>({});
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [grades, setGrades] = useState<Grade[]>([]);
+  const [notes, setNotes] = useState<Note[]>(snap.initial?.n ?? []);
+  const [grades, setGrades] = useState<Grade[]>(snap.initial?.g ?? []);
   const [tab, setTab] = useState<Tab>((['tareas', 'notas', 'cal', 'files'].includes(tabParam ?? '') ? tabParam : 'tareas') as Tab);
   const [editModal, setEditModal] = useState(false);
   const [gradeModal, setGradeModal] = useState(false);
+  const [editGrade, setEditGrade] = useState<Grade | null>(null);
   const [menu, setMenu] = useState(false);
   const [showDone, setShowDone] = useState(false);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
@@ -44,8 +49,10 @@ function MateriaDetalle() {
   const load = useCallback(async () => {
     try {
       const [subs, t, n, g] = await Promise.all([getSubjects(), getTasks(id), getNotes(id), getGrades(id)]);
-      setSubject(subs.find((s) => s.id === id) ?? null);
+      const sub = subs.find((s) => s.id === id) ?? null;
+      setSubject(sub);
       setTasks(t); setNotes(n); setGrades(g); setHidden(new Set());
+      if (sub) snap.save({ s: sub, t, n: n.slice(0, 60), g });
       getStepsFor(t.filter((x) => x.status !== 'done').map((x) => x.id)).then(setSteps).catch(() => {});
     } catch (e) { notify('No se pudo cargar', friendlyError(e)); setSubject((s) => s ?? null); }
   }, [id]);
@@ -104,7 +111,12 @@ function MateriaDetalle() {
   );
 
   return (
-    <Screen back="/materias" nav="materias" title={subject.name} subtitle={subject.credits ? `${subject.credits} créditos` : undefined} right={head} header={tabs} maxWidth={1100}>
+    <Screen back="/materias" nav="materias" title={subject.name} subtitle={subject.credits ? `${subject.credits} créditos` : undefined} right={head} header={tabs} maxWidth={1100}
+      leading={
+        <View style={{ width: isWide ? 52 : 44, height: isWide ? 52 : 44, borderRadius: 14, backgroundColor: subject.color + '26', borderWidth: 1, borderColor: subject.color + '55', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+          <SubjectIcon icon={subject.icon} box={isWide ? 52 : 44} emoji={isWide ? 26 : 22} />
+        </View>
+      }>
       <View style={{ height: 16 }} />
       {tab === 'tareas' && (
         <View style={{ flexDirection: isWide ? 'row' : 'column', gap: 18, alignItems: 'flex-start' }}>
@@ -181,16 +193,17 @@ function MateriaDetalle() {
             </View>
             <Simulator grades={grades} scale={scale} passMark={passMark} />
           </Card>
-          <SectionLabel text="Evaluaciones" count={grades.length} right={<Button label="Agregar" icon="add" size="sm" kind="secondary" onPress={() => setGradeModal(true)} />} />
+          <SectionLabel text="Evaluaciones" count={grades.length} right={<Button label="Agregar" icon="add" size="sm" kind="secondary" onPress={() => { setEditGrade(null); setGradeModal(true); }} />} />
           {grades.length === 0 && <EmptyState compact icon="ribbon-outline" title="Sin evaluaciones" text="Agrega los parciales, talleres y quices con su peso. Puedes dejar la nota vacía hasta que te la den." />}
           {grades.map((g) => (
-            <Card key={g.id} style={{ marginBottom: 8, paddingVertical: 12 }}>
+            <Card key={g.id} style={{ marginBottom: 8, paddingVertical: 12 }} onPress={() => { setEditGrade(g); setGradeModal(true); }} accessibilityLabel={`Editar ${g.name}`}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '700' }}>{g.name}</Text>
                   <Text style={{ color: C.muted, fontSize: 12.5 }}>Peso {g.weight}%</Text>
                 </View>
                 <Text style={{ color: g.score == null ? C.muted : C.text, fontSize: 16, fontWeight: '700' }}>{g.score == null ? 'Pendiente' : g.score}<Text style={{ color: C.muted, fontWeight: '500', fontSize: 13 }}>{g.score == null ? '' : ` / ${g.max_score}`}</Text></Text>
+                <IconButton icon="create-outline" label={`Editar ${g.name}`} onPress={() => { setEditGrade(g); setGradeModal(true); }} />
                 <IconButton icon="trash-outline" label={`Borrar ${g.name}`} onPress={() => removeGrade(g)} />
               </View>
               <View style={{ height: 5, backgroundColor: C.surface2, borderRadius: 6, marginTop: 6 }}>
@@ -205,7 +218,7 @@ function MateriaDetalle() {
 
       <SubjectModal visible={editModal} editSubject={subject} onClose={() => setEditModal(false)} onSaved={() => { setEditModal(false); load(); }}
         onArchived={() => { setEditModal(false); router.replace('/materias'); }} />
-      <GradeModal visible={gradeModal} subjectId={subject.id} defaultScale={scale} onClose={() => setGradeModal(false)} onSaved={() => { setGradeModal(false); load(); }} />
+      <GradeModal visible={gradeModal} subjectId={subject.id} defaultScale={scale} editGrade={editGrade} onClose={() => { setGradeModal(false); setEditGrade(null); }} onSaved={() => { setGradeModal(false); setEditGrade(null); load(); }} />
       <ActionMenu visible={menu} title={subject.name} onClose={() => setMenu(false)} actions={[
         { label: 'Editar materia', icon: 'create-outline', onPress: () => setEditModal(true) },
         { label: 'Exportar notas en PDF', icon: 'share-outline', onPress: () => exportSubjectPdf(subject.name, iconChar(subject.icon, '📘'), notes).catch((e) => notify('No se pudo exportar', friendlyError(e))) },

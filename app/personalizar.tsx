@@ -6,7 +6,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Screen, Button } from '../components/ds';
 import {
   C, R, THEMES, derive, inkOn, fontFamilyOf, DARK_THEMES, LIGHT_THEMES, BACKGROUNDS, FONTS, SIZES,
-  PSettings, PERSONALIZE, DEFAULTS, savePersonalize,
+  PSettings, PERSONALIZE, DEFAULTS, savePersonalize, loadWebFont,
 } from '../lib/theme';
 import { fetchPrefs, savePrefs, uploadWallpaperFromUri, cleanOldWallpapers } from '../lib/db';
 import { notify } from '../lib/confirm';
@@ -23,6 +23,8 @@ function Personalizar() {
   // también en el teléfono para pintar la app antes de tener red): vive solo en
   // la nube, dentro del mismo jsonb, y por eso se lee aparte.
   const [hoyProy, setHoyProy] = useState(true);
+  // Vista previa de todas las fuentes: se cargan solo al entrar aquí.
+  useEffect(() => { loadWebFont('all'); }, []);
   useEffect(() => {
     fetchPrefs().then((p) => { if (p && p.hoyProyectos === false) setHoyProy(false); }).catch(() => { });
   }, []);

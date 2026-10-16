@@ -233,6 +233,16 @@ export async function retypeTasks(from: string, to = 'tarea'): Promise<void> {
 }
 
 // ---------- Notas ----------
+/** Solo id y materia de cada nota (para contar), sin el texto: mucho más liviano. */
+export async function getNoteRefs(): Promise<{ id: string; subject_id: string | null }[]> {
+  const { data, error } = await v14((on) => {
+    let q = supabase.from('notes').select(on ? 'id, subject_id, deleted_at' : 'id, subject_id');
+    if (on) q = q.is('deleted_at', null);
+    return q;
+  });
+  if (error) throw error;
+  return (data as any[]) ?? [];
+}
 export async function getNotes(subjectId?: string): Promise<Note[]> {
   const { data, error } = await v14((on) => {
     let q = supabase.from('notes').select('*');
@@ -412,6 +422,10 @@ export async function addGrade(g: {
   subject_id: string; name: string; weight: number; score: number | null; max_score: number;
 }): Promise<void> {
   const { error } = await supabase.from('grades').insert({ user_id: await uid(), ...g });
+  if (error) throw error;
+}
+export async function updateGrade(id: string, patch: { name?: string; weight?: number; score?: number | null; max_score?: number }): Promise<void> {
+  const { error } = await supabase.from('grades').update(patch).eq('id', id);
   if (error) throw error;
 }
 export async function deleteGrade(id: string): Promise<void> {
