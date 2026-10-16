@@ -47,6 +47,28 @@ export const FONTS: FontOpt[] = [
 ];
 export function fontFamilyOf(id: string): string | undefined { return FONTS.find((f) => f.id === id)?.family; }
 // URL de Google Fonts para inyectar en web.
+const FONT_QUERY: Record<string, string> = {
+  Inter: 'Inter:wght@400;500;600;700;800', Nunito: 'Nunito:wght@400;600;700;800',
+  Poppins: 'Poppins:wght@400;500;600;700;800', 'Space Grotesk': 'Space+Grotesk:wght@400;500;600;700',
+  Lora: 'Lora:wght@400;500;600;700',
+};
+/**
+ * Carga de Google Fonts SOLO la fuente elegida (o todas, para la vista previa
+ * de Personalizar). Con "Sistema" no se pide nada: antes se descargaba siempre
+ * la hoja de las cinco familias al abrir la app.
+ */
+export function loadWebFont(which: string | 'all' | undefined): void {
+  if (Platform.OS !== 'web' || typeof document === 'undefined' || !which) return;
+  const fams = which === 'all' ? Object.keys(FONT_QUERY) : [which].filter((f) => FONT_QUERY[f]);
+  fams.forEach((f) => {
+    const id = 'kd-font-' + f.replace(/\s+/g, '-');
+    if (document.getElementById(id)) return;
+    const link = document.createElement('link');
+    link.id = id; link.rel = 'stylesheet';
+    link.href = `https://fonts.googleapis.com/css2?family=${FONT_QUERY[f]}&display=swap`;
+    document.head.appendChild(link);
+  });
+}
 export const GOOGLE_FONTS_HREF =
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@400;600;700;800&family=Poppins:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Lora:wght@400;500;600;700&display=swap';
 
@@ -94,7 +116,7 @@ function applyWebFont(family: string | undefined): void {
   const styleEl = document.createElement('style');
   styleEl.id = ID;
   styleEl.textContent = `
-    #root div[dir="auto"], #root span, #root p, #root input, #root textarea, #root button, body div[dir="auto"] {
+    #root div[dir="auto"], #root span, #root p, body input, body textarea, body select, body button, body div[dir="auto"] {
       font-family: ${stack};
     }
   `;
@@ -108,6 +130,7 @@ export function applyAll(s: PSettings): void {
   if (hasWallpaper(s)) pal.bg = hexToRgba(theme.palette.bg, theme.scheme === 'light' ? 0.82 : 0.76);
   Object.assign(C, pal);
   applyWebFont(fontFamilyOf(s.fontId));
+  loadWebFont(fontFamilyOf(s.fontId));
   PERSONALIZE = s;
 }
 

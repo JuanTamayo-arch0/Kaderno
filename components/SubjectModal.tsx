@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C, SUBJECT_COLORS, SUBJECT_ICONS } from '../lib/theme';
-import { Subject, addSubject, updateSubject, archiveSubject, restoreSubject, addGrade } from '../lib/db';
+import { Subject, Grade, addSubject, updateSubject, archiveSubject, restoreSubject, addGrade, updateGrade } from '../lib/db';
 import { confirm, notify, toast, friendlyError } from '../lib/feedback';
 import { Button, Field, IconButton } from './ds';
 import { SubjectIcon, isPhotoIcon } from './SubjectIcon';
+import { shrinkToSquare } from '../lib/imageResize';
 
 // Se carga al usarlo: así expo-image-picker no se descarga al abrir la app.
 const loadPicker = () => import('expo-image-picker');
@@ -41,7 +42,7 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
       if (res.canceled || !res.assets?.length) return;
       const a = res.assets[0];
       const uri = a.uri?.startsWith('data:') ? a.uri : (a.base64 ? `data:${a.mimeType ?? 'image/jpeg'};base64,${a.base64}` : a.uri);
-      if (uri) setIcon(uri);
+      if (uri) setIcon(await shrinkToSquare(uri).catch(() => uri));
     } catch (e) { notify('No se pudo cargar la imagen', friendlyError(e)); }
   }
   async function save() {
@@ -122,14 +123,19 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
   );
 }
 
-export function GradeModal({ visible, subjectId, defaultScale = 5, onClose, onSaved }: { visible: boolean; subjectId: string; defaultScale?: number; onClose: () => void; onSaved: () => void }) {
+export function GradeModal({ visible, subjectId, defaultScale = 5, editGrade, onClose, onSaved }: { visible: boolean; subjectId: string; defaultScale?: number; editGrade?: Grade | null; onClose: () => void; onSaved: () => void }) {
   const [name, setName] = useState('');
   const [weight, setWeight] = useState('');
   const [score, setScore] = useState('');
   const [maxScore, setMaxScore] = useState(String(defaultScale));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  useEffect(() => { if (visible) { setName(''); setWeight(''); setScore(''); setMaxScore(String(defaultScale)); setErr(null); } }, [visible, defaultScale]);
+  useEffect(() => {
+    if (!visible) return;
+    const g = editGrade;
+    setName(g?.name ?? ''); setWeight(g ? String(g.weight) : ''); setScore(g?.score != null ? String(g.score) : '');
+    setMaxScore(String(g?.max_score ?? defaultScale)); setErr(null);
+  }, [visible, defaultScale, editGrade]);
   const num = (v: string) => parseFloat(v.replace(',', '.'));
   async function save() {
     if (!name.trim()) { setErr('Escribe el nombre de la evaluación.'); return; }
@@ -137,15 +143,19 @@ export function GradeModal({ visible, subjectId, defaultScale = 5, onClose, onSa
     if (!(w > 0 && w <= 100)) { setErr('El peso va de 1 a 100 %.'); return; }
     if (sc != null && (isNaN(sc) || sc < 0 || sc > mx)) { setErr(`La nota va de 0 a ${mx}.`); return; }
     setBusy(true);
-    try { await addGrade({ subject_id: subjectId, name: name.trim(), weight: w, score: sc, max_score: mx }); toast('Evaluación agregada', { tone: 'good' }); onSaved(); }
+    try {
+      if (editGrade) { await updateGrade(editGrade.id, { name: name.trim(), weight: w, score: sc, max_score: mx }); toast('Evaluación actualizada', { tone: 'good' }); }
+      else { await addGrade({ subject_id: subjectId, name: name.trim(), weight: w, score: sc, max_score: mx }); toast('Evaluación agregada', { tone: 'good' }); }
+      onSaved();
+    }
     catch (e) { setErr(friendlyError(e)); } finally { setBusy(false); }
   }
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
         <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} style={{ backgroundColor: C.surface, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 460 }}>
-          <Text style={{ color: C.text, fontSize: 18, fontWeight: '700', marginBottom: 12 }}>Nueva evaluación</Text>
-          <Field label="Nombre" value={name} onChangeText={setName} placeholder="Ej: Parcial 1" autoFocus />
+          <Text style={{ color: C.text, fontSize: 18, fontWeight: '700', marginBottom: 12 }}>{editGrade ? 'Editar evaluación' : 'Nueva evaluación'}</Text>
+          <Field label="Nombre" value={name} onChangeText={setName} placeholder="Ej: Parcial 1" autoFocus={!editGrade} />
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <Field label="Peso (%)" value={weight} onChangeText={setWeight} keyboardType="decimal-pad" placeholder="30" style={{ flex: 1 }} />
             <Field label="Nota" value={score} onChangeText={setScore} keyboardType="decimal-pad" placeholder="Pendiente" style={{ flex: 1 }} />

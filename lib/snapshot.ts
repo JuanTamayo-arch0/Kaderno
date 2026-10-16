@@ -54,3 +54,8 @@ export function clearSnaps(): void {
     keys.forEach((k) => window.localStorage.removeItem(k));
   } catch { /* */ }
 }
+
+/** Atajo para pantallas: lo guardado la vez anterior (o null) y una función para guardar lo nuevo. */
+export function snapshotFor<T>(key: string | null | undefined): { initial: T | null; save: (v: T) => void } {
+  return { initial: readSnap<T>(key), save: (v: T) => writeSnap(key, v) };
+}

@@ -50,6 +50,10 @@
     </script>
     <style id="expo-reset">
       html, body { height: 100%; }
+      /* Fuente base del sistema (la misma que usa react-native-web en los textos).
+         Sin esto, los campos de fecha y hora del navegador salían en Times. */
+      html, body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+      input, select, textarea, button { font-family: inherit; }
       body { overflow: hidden; }
       #root { display: flex; height: 100%; flex: 1; }
       /* El anillo de foco solo aparece al usar el teclado. */

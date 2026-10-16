@@ -281,9 +281,11 @@ export function useGoBack(fallback: string = '/') {
  */
 export function Screen({
   title, subtitle, back, nav, right, children, scroll = true, maxWidth, padded = true,
-  contentStyle, header, footer, eyebrow,
+  contentStyle, header, footer, eyebrow, leading,
 }: {
   title?: string; subtitle?: string; eyebrow?: string;
+  /** Algo a la izquierda del título (por ejemplo la imagen de una materia). */
+  leading?: React.ReactNode;
   back?: boolean | string; nav?: NavKey | null; right?: React.ReactNode; children: React.ReactNode;
   scroll?: boolean; maxWidth?: number; padded?: boolean; contentStyle?: StyleProp<ViewStyle>;
   header?: React.ReactNode; footer?: React.ReactNode;
@@ -300,6 +302,7 @@ export function Screen({
         {back ? (
           <IconButton icon="chevron-back" label="Volver" onPress={goBack} color={C.text} size={24} style={{ marginLeft: -12, alignSelf: 'flex-start', marginTop: title ? (isWide ? -5 : -8) : 0 }} />
         ) : null}
+        {leading ? <View style={{ alignSelf: 'center', marginRight: 4 }}>{leading}</View> : null}
         <View style={{ flex: 1, minWidth: 0 }}>
           {!!eyebrow && <Text style={{ color: C.muted, fontSize: 13, marginBottom: 2 }}>{eyebrow}</Text>}
           {!!title && <Text style={back && !isWide ? T.title : T.display} numberOfLines={1} accessibilityRole="header">{title}</Text>}

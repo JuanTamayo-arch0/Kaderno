@@ -613,6 +613,11 @@ export async function getMyProjectTasks(): Promise<MyProjectTask[]> {
 }
 async function getMyProjectTasksNow(): Promise<MyProjectTask[]> {
   const me = await uid();
+  // Una sola ida y vuelta: el proyecto viene incrustado (FK estándar project_tasks.project_id).
+  const embedded = await supabase.from('project_tasks').select('*, project:projects(id, name, color, icon)')
+    .eq('assignee_id', me).eq('done', false);
+  if (!embedded.error) return ((embedded.data as any[]) ?? []).map((t) => ({ ...t, project: t.project ?? null }));
+  // Respaldo (si el incrustado falla por algún cambio en la base): dos consultas.
   const { data, error } = await supabase.from('project_tasks').select('*')
     .eq('assignee_id', me).eq('done', false);
   if (error) throw error;
@@ -642,19 +647,20 @@ export type Overview = {
 // Todo lo que la lista necesita en TRES consultas, no en tres por tarjeta.
 export async function getProjectsOverview(): Promise<Overview[]> {
   const me = await uid();
-  const projects = await getProjects();
-  if (!projects.length) return [];
-  const ids = projects.map((p) => p.id);
-
-  const [tasksRes, membersRes] = await Promise.all([
-    supabase.from('project_tasks').select('id, project_id, done, assignee_id').in('project_id', ids),
-    supabase.from('project_members').select('*').in('project_id', ids).order('created_at'),
+  // Proyectos, tareas e integrantes a la vez: RLS ya limita a los proyectos donde
+  // estoy, así que no hace falta esperar la lista de ids (una ida y vuelta menos).
+  const [projects, tasksRes, membersRes] = await Promise.all([
+    getProjects(),
+    supabase.from('project_tasks').select('id, project_id, done, assignee_id'),
+    supabase.from('project_members').select('*').order('created_at'),
   ]);
+  if (!projects.length) return [];
   if (tasksRes.error) throw tasksRes.error;
   if (membersRes.error) throw membersRes.error;
+  const ids = new Set(projects.map((p) => p.id));
 
-  const tasks = (tasksRes.data as any[]) ?? [];
-  const members = (membersRes.data as Member[]) ?? [];
+  const tasks = ((tasksRes.data as any[]) ?? []).filter((t) => ids.has(t.project_id));
+  const members = ((membersRes.data as Member[]) ?? []).filter((m) => ids.has(m.project_id));
   const profs = await profilesByIds(members.map((m) => m.user_id));
 
   return projects.map((project) => {

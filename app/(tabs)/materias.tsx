@@ -3,7 +3,9 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Text, View } from 'react-native';
 import { C } from '../../lib/theme';
 import { useResponsive } from '../../lib/responsive';
-import { Subject, Task, Note, Grade, getSubjects, getTasks, getNotes, getAllGrades } from '../../lib/db';
+import { Subject, Task, Grade, getSubjects, getTasks, getNoteRefs, getAllGrades } from '../../lib/db';
+import { snapshotFor } from '../../lib/snapshot';
+import { useAuth } from '../../lib/auth';
 import { subjectAverage } from '../../lib/grades';
 import { compareDue, fmtDue, bucketOf } from '../../lib/time';
 import { friendlyError } from '../../lib/feedback';
@@ -21,17 +23,21 @@ import { SubjectModal } from '../../components/SubjectModal';
 export default function Materias() {
   const router = useRouter();
   const { isWide, width } = useResponsive();
-  const [subjects, setSubjects] = useState<Subject[] | null>(null);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [grades, setGrades] = useState<Grade[]>([]);
+  const { session } = useAuth();
+  // Foto de la última visita para pintar al instante.
+  const [snap] = useState(() => snapshotFor<{ s: Subject[]; t: Task[]; n: { id: string; subject_id: string | null }[]; g: Grade[] }>(session ? `materias:${session.user.id}` : null));
+  const [subjects, setSubjects] = useState<Subject[] | null>(snap.initial?.s ?? null);
+  const [tasks, setTasks] = useState<Task[]>(snap.initial?.t ?? []);
+  const [notes, setNotes] = useState<{ id: string; subject_id: string | null }[]>(snap.initial?.n ?? []);
+  const [grades, setGrades] = useState<Grade[]>(snap.initial?.g ?? []);
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const [s, t, n, g] = await Promise.all([getSubjects(), getTasks(), getNotes(), getAllGrades()]);
+      const [s, t, n, g] = await Promise.all([getSubjects(), getTasks(), getNoteRefs(), getAllGrades()]);
       setSubjects(s); setTasks(t); setNotes(n); setGrades(g); setError(null);
+      snap.save({ s, t, n, g });
     } catch (e) { setError(friendlyError(e)); setSubjects((x) => x ?? []); }
   }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));

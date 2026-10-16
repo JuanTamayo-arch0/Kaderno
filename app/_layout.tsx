@@ -9,10 +9,20 @@ import { enableScreens } from 'react-native-screens';
 enableScreens(true);
 import { AuthProvider, useAuth } from '../lib/auth';
 import {
-  GOOGLE_FONTS_HREF, PERSONALIZE, DEFAULTS, currentTheme,
+  PERSONALIZE, DEFAULTS, currentTheme,
   loadPersonalizeNative, savePersonalize, scaleOf,
 } from '../lib/theme';
-import { fetchPrefs, savePrefs } from '../lib/db';
+import { fetchPrefs, savePrefs, getSubjects, updateSubject } from '../lib/db';
+import { shrinkToSquare, BIG_ICON_CHARS } from '../lib/imageResize';
+
+async function compactSubjectIcons() {
+  const subs = await getSubjects();
+  for (const s of subs) {
+    if (!s.icon || !s.icon.startsWith('data:image') || s.icon.length < BIG_ICON_CHARS) continue;
+    const small = await shrinkToSquare(s.icon);
+    if (small.length < s.icon.length) await updateSubject(s.id, { icon: small });
+  }
+}
 import { loadTaskTypes, taskTypeList } from '../lib/taskTypes';
 import { SCHEDULE, applyRemoteSchedule, loadScheduleNative } from '../lib/schedule';
 import { AppBackground } from '../components/AppBackground';
@@ -46,15 +56,6 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 // Inyecta las fuentes de Google (solo web) una sola vez.
-function injectWebFonts() {
-  if (Platform.OS !== 'web' || typeof document === 'undefined') return;
-  if (document.getElementById('kaderno-fonts')) return;
-  const link = document.createElement('link');
-  link.id = 'kaderno-fonts';
-  link.rel = 'stylesheet';
-  link.href = GOOGLE_FONTS_HREF;
-  document.head.appendChild(link);
-}
 
 function applyWebChrome() {
   if (Platform.OS !== 'web' || typeof document === 'undefined') return;
@@ -75,7 +76,6 @@ function Shell() {
   useEffect(() => {
     loadFocus();
     registerServiceWorker();
-    injectWebFonts();
     if (Platform.OS === 'web') applyWebChrome();
     else {
       // En móvil no hay lectura síncrona: se traen las copias locales y se
@@ -97,6 +97,8 @@ function Shell() {
     // durante el render, así que hay que repintar cuando lleguen.
     // Solo se remonta si cambiaron: remontar recarga TODAS las pantallas (antes
     // pasaba siempre al abrir la app y cada pantalla pedía sus datos dos veces).
+    // Fotos de materias guardadas grandes (versiones anteriores): se achican una vez.
+    if (Platform.OS === 'web') setTimeout(() => { compactSubjectIcons().catch(() => {}); }, 3000);
     const typesBefore = JSON.stringify(taskTypeList());
     loadTaskTypes().then(() => { if (!cancel && JSON.stringify(taskTypeList()) !== typesBefore) setRev((n) => n + 1); }).catch(() => { });
 

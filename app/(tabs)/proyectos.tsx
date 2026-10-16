@@ -10,6 +10,8 @@ import { Screen, Button, Card, EmptyState, Field, IconButton, Skeleton, ErrorSta
 import { Subject, getSubjects } from '../../lib/db';
 import { Overview, Member, TEMPLATES, getProjectsOverview, createProject, joinProject, peekProject, initialsOf, colorOf } from '../../lib/projects';
 import { onDataChanged } from '../../lib/uiBus';
+import { useAuth } from '../../lib/auth';
+import { snapshotFor } from '../../lib/snapshot';
 
 const PROJECT_ICONS = ['📦', '👥', '🧪', '🎤', '🔎', '📊', '🎬', '🏗️', '🎨', '💡', '📚', '⚙️'];
 
@@ -17,9 +19,11 @@ export default function Proyectos() {
   const router = useRouter();
   const { isWide } = useResponsive();
   const params = useLocalSearchParams<{ nuevo?: string }>();
-  const [rows, setRows] = useState<Overview[]>([]);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { session } = useAuth();
+  const [snap] = useState(() => snapshotFor<{ o: Overview[]; s: Subject[] }>(session ? `proyectos:${session.user.id}` : null));
+  const [rows, setRows] = useState<Overview[]>(snap.initial?.o ?? []);
+  const [subjects, setSubjects] = useState<Subject[]>(snap.initial?.s ?? []);
+  const [loading, setLoading] = useState(!snap.initial);
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState(false);
   const [join, setJoin] = useState(false);
@@ -28,6 +32,7 @@ export default function Proyectos() {
     try {
       const [o, s] = await Promise.all([getProjectsOverview(), getSubjects()]);
       setRows(o); setSubjects(s); setError(null);
+      snap.save({ o, s });
     } catch (e) { setError(friendlyError(e)); }
     finally { setLoading(false); }
   }, []);

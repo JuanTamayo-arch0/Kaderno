@@ -46,14 +46,27 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
-  // La configuración siempre fresca (si no hay red, la última guardada).
-  if (url.pathname === '/kaderno-config.js' || url.pathname === '/sw.js') {
-    e.respondWith(fetch(req).then((r) => { const copy = r.clone(); caches.open(VERSION).then((c) => c.put(req, copy)); return r; }).catch(() => caches.match(req)));
+  // Configuración: se responde al instante con la guardada y se actualiza por
+  // detrás (el cambio se ve en la siguiente apertura). Antes cada apertura
+  // esperaba una ida y vuelta al servidor antes de poder arrancar.
+  if (url.pathname === '/kaderno-config.js') {
+    const fresh = fetch(req).then((r) => { if (r.ok) { const copy = r.clone(); caches.open(VERSION).then((c) => c.put('/kaderno-config.js', copy)); } return r; });
+    e.respondWith(caches.match('/kaderno-config.js').then((hit) => hit || fresh).catch(() => fresh));
+    e.waitUntil(fresh.catch(() => {}));
     return;
   }
-  // Páginas: primero la red; sin conexión, la carcasa guardada.
+  if (url.pathname === '/sw.js') return;
+  // Páginas: primero la red, pero si tarda más de 1,5 s (señal mala) se muestra
+  // la guardada; sin conexión, también la guardada.
   if (req.mode === 'navigate') {
-    e.respondWith(fetch(req).then((r) => { const copy = r.clone(); caches.open(VERSION).then((c) => c.put('/', copy)); return r; }).catch(() => caches.match('/')));
+    const net = fetch(req).then((r) => { if (r.ok) { const copy = r.clone(); caches.open(VERSION).then((c) => c.put('/', copy)); } return r; });
+    e.respondWith(new Promise((resolve) => {
+      let done = false;
+      const t = setTimeout(() => { caches.match('/').then((hit) => { if (hit && !done) { done = true; resolve(hit); } }); }, 1500);
+      net.then((r) => { if (!done) { done = true; clearTimeout(t); resolve(r); } })
+        .catch(() => caches.match('/').then((hit) => { if (!done) { done = true; clearTimeout(t); resolve(hit || Response.error()); } }));
+    }));
+    e.waitUntil(net.catch(() => {}));
     return;
   }
   if (url.pathname === '/precache.json') return;

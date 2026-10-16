@@ -106,7 +106,8 @@ function ProyectoDetalle() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkAction, setBulkAction] = useState<BulkAction | null>(null);
   const [undo, setUndo] = useState<{ batchId: string; text: string } | null>(null);
-  const [moreOpen, setMoreOpen] = useState(false);   // menú de acciones en el celular
+  const [moreOpen, setMoreOpen] = useState(false);   // menú de opciones del proyecto
+  const [menuAnchor, setMenuAnchor] = useState<{ x: number; y: number } | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Si ya hay una carga en curso, la segunda llamada espera esa misma en vez de
@@ -121,15 +122,16 @@ function ProyectoDetalle() {
   }, [projectId]);
   async function loadNow() {
     try {
-      const p = await getProject(projectId);
-      if (!p) { setGone(true); return; }
-      const [ms, ts, st, ac, sj] = await Promise.all([
+      // Todo a la vez (antes primero el proyecto y después lo demás).
+      const [p, ms, ts, st, ac, sj] = await Promise.all([
+        getProject(projectId),
         getMembers(projectId),
         getProjectTasks(projectId),
         getProjectSteps(projectId),
         getActivity(projectId, 30),
         getSubjects(),
       ]);
+      if (!p) { setGone(true); return; }
       setProject(p); setMembers(ms); setTasks(ts); setSteps(st); setActivity(ac); setSubjects(sj);
       writeSnap(snapKey, { project: p, members: ms, tasks: ts, steps: st, subjects: sj } satisfies ProjSnap);
     } catch (e: any) {
@@ -165,6 +167,7 @@ function ProyectoDetalle() {
   }, [tasks, cols]);
 
   const doneCount = tasks.filter((t) => t.done).length;
+  const myTasksHere = myId ? tasks.filter((t) => t.assignee_id === myId && !t.done).length : 0;
 
   // Ocultar o mostrar las tareas de este proyecto en "Hoy" (solo para mí).
   const [hiddenInHoy, setHiddenInHoy] = useState(false);
@@ -274,29 +277,11 @@ function ProyectoDetalle() {
               {role === 'viewer' ? ' · solo lectura' : ''}
             </Text>
           </View>
-          {isWide ? (
-            <>
-              {editable && isTaskView && !selecting && (
-                <HeaderBtn icon="checkbox-outline" label="Seleccionar" wide onPress={() => setSelecting(true)} />
-              )}
-              {editable && project && (
-                <HeaderBtn icon="cloud-upload-outline" label="Importar" wide onPress={() => setImportOpen(true)} />
-              )}
-              {editable && project && isTaskView && (
-                <HeaderBtn icon="sparkles-outline" label="Ordenar" wide onPress={() => setCleanupOpen(true)} />
-              )}
-              {project && (
-                <HeaderBtn icon="download-outline" label="Exportar" wide onPress={() => setExportOpen(true)} />
-              )}
-              {project && (
-                <HeaderBtn icon={hiddenInHoy ? 'eye-outline' : 'eye-off-outline'} label={hiddenInHoy ? 'Mostrar en Hoy' : 'Ocultar de Hoy'} wide onPress={toggleHoy} />
-              )}
-              {editable && view === 'tablero' && (
-                <HeaderBtn icon="options-outline" label="Columnas" wide onPress={() => setColsModal(true)} />
-              )}
-            </>
-          ) : project ? (
-            <HeaderBtn icon="ellipsis-horizontal" label="Más opciones" wide={false} onPress={() => setMoreOpen(true)} />
+          {isWide && editable && isTaskView && !selecting && (
+            <HeaderBtn icon="checkbox-outline" label="Seleccionar" wide onPress={() => setSelecting(true)} />
+          )}
+          {project ? (
+            <OptionsButton wide={isWide} open={moreOpen} onPress={(r) => { setMenuAnchor(r); setMoreOpen(true); }} />
           ) : null}
         </View>
 
@@ -405,14 +390,33 @@ function ProyectoDetalle() {
 
       <MoreMenu
         visible={moreOpen}
+        anchor={isWide ? menuAnchor : null}
         onClose={() => setMoreOpen(false)}
-        items={[
-          ...(editable && isTaskView && !selecting ? [{ icon: 'checkbox-outline', label: 'Seleccionar varias', hint: 'Cambiar columna, responsable o fechas a la vez', onPress: () => setSelecting(true) }] : []),
-          ...(editable ? [{ icon: 'cloud-upload-outline', label: 'Importar tareas', hint: 'Desde un CSV, un JSON o una IA', onPress: () => setImportOpen(true) }] : []),
-          ...(editable ? [{ icon: 'sparkles-outline', label: 'Ordenar el tablero', hint: 'Quitar repetidas o vaciarlo', onPress: () => setCleanupOpen(true) }] : []),
-          { icon: 'download-outline', label: 'Exportar tareas', hint: 'Para editarlas en Excel y volver a subirlas', onPress: () => setExportOpen(true) },
-          ...(editable && view === 'tablero' ? [{ icon: 'options-outline', label: 'Columnas del tablero', onPress: () => setColsModal(true) }] : []),
-          { icon: hiddenInHoy ? 'eye-outline' : 'eye-off-outline', label: hiddenInHoy ? 'Mostrar mis tareas de este proyecto en Hoy' : 'Ocultar mis tareas de este proyecto de Hoy', onPress: toggleHoy },
+        groups={[
+          {
+            title: 'Tareas',
+            items: [
+              ...(editable && isTaskView && !selecting && !isWide ? [{ icon: 'checkbox-outline', label: 'Seleccionar varias', hint: 'Cambiar columna, responsable o fechas a la vez', onPress: () => setSelecting(true) }] : []),
+              ...(editable ? [{ icon: 'cloud-upload-outline', label: 'Importar tareas', hint: 'Desde un CSV, un JSON o una IA', onPress: () => setImportOpen(true) }] : []),
+              { icon: 'download-outline', label: 'Exportar tareas', hint: 'Para editarlas en Excel o pasarlas a una IA', onPress: () => setExportOpen(true) },
+            ],
+          },
+          {
+            title: 'Tablero',
+            items: [
+              ...(editable ? [{ icon: 'sparkles-outline', label: 'Ordenar el tablero', hint: 'Quitar repetidas o vaciarlo', onPress: () => setCleanupOpen(true) }] : []),
+              ...(editable ? [{ icon: 'options-outline', label: 'Columnas del tablero', hint: 'Nombres, colores y cuál cuenta como terminada', onPress: () => { setView('tablero'); setColsModal(true); } }] : []),
+            ],
+          },
+          ...(myTasksHere > 0 || hiddenInHoy ? [{
+            title: 'Para mí',
+            items: [{
+              icon: hiddenInHoy ? 'eye-outline' : 'eye-off-outline',
+              label: hiddenInHoy ? 'Volver a mostrar mis tareas en Hoy' : 'No mostrar mis tareas en Hoy',
+              hint: hiddenInHoy ? 'Ahora están ocultas en tu pantalla Hoy' : `Tienes ${myTasksHere} ${myTasksHere === 1 ? 'tarea asignada' : 'tareas asignadas'} aquí. Solo cambia tu vista.`,
+              onPress: toggleHoy,
+            }],
+          }] : []),
         ]}
       />
 
@@ -480,30 +484,75 @@ function ProyectoDetalle() {
   );
 }
 
-function MoreMenu({ visible, items, onClose }: {
-  visible: boolean; onClose: () => void;
-  items: { icon: string; label: string; hint?: string; onPress: () => void }[];
+type MenuItem = { icon: string; label: string; hint?: string; onPress: () => void };
+
+// Menú de opciones del proyecto, agrupado. En computador se abre como lista
+// desplegable bajo el botón "Opciones"; en el celular, como hoja desde abajo.
+function MoreMenu({ visible, groups, anchor, onClose }: {
+  visible: boolean; onClose: () => void; anchor: { x: number; y: number } | null;
+  groups: { title: string; items: MenuItem[] }[];
 }) {
+  const list = groups.filter((g) => g.items.length > 0);
+  const body = list.map((g, gi) => (
+    <View key={g.title} style={{ paddingTop: gi === 0 ? 0 : 6, marginTop: gi === 0 ? 0 : 6, borderTopWidth: gi === 0 ? 0 : 1, borderTopColor: C.line }}>
+      <Text style={{ color: C.muted, fontSize: 11, fontWeight: '800', letterSpacing: 0.6, textTransform: 'uppercase', paddingHorizontal: 12, paddingTop: 6, paddingBottom: 2 }}>{g.title}</Text>
+      {g.items.map((it) => (
+        <Pressable key={it.label} onPress={() => { onClose(); it.onPress(); }} accessibilityRole="menuitem"
+          style={({ pressed, hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, backgroundColor: pressed || hovered ? C.surface2 : 'transparent' })}>
+          <Ionicons name={it.icon as any} size={19} color={C.brand} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: C.text, fontSize: 14, fontWeight: '600' }}>{it.label}</Text>
+            {it.hint ? <Text style={{ color: C.muted, fontSize: 12, marginTop: 1 }}>{it.hint}</Text> : null}
+          </View>
+        </Pressable>
+      ))}
+    </View>
+  ));
+  if (anchor) {
+    return (
+      <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+        <Pressable onPress={onClose} style={{ flex: 1 }}>
+          <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} accessibilityRole="menu"
+            style={{ position: 'absolute', top: anchor.y, right: anchor.x, width: 330, backgroundColor: C.surface, borderRadius: 14, borderWidth: 1, borderColor: C.line, padding: 6, ...shadow, ...(isWeb ? { boxShadow: '0 16px 40px rgba(0,0,0,0.35)' } as any : null) }}>
+            {body}
+          </Pressable>
+        </Pressable>
+      </Modal>
+    );
+  }
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
-        <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} style={{ backgroundColor: C.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 14, paddingBottom: 30, borderTopWidth: 1, borderColor: C.line }}>
-          {items.map((it) => (
-            <Pressable key={it.label} onPress={() => { onClose(); it.onPress(); }}
-              style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 13, paddingHorizontal: 10, borderRadius: 12, backgroundColor: pressed ? C.surface2 : 'transparent' })}>
-              <Ionicons name={it.icon as any} size={20} color={C.brand} />
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '600' }}>{it.label}</Text>
-                {it.hint ? <Text style={{ color: C.muted, fontSize: 12, marginTop: 1 }}>{it.hint}</Text> : null}
-              </View>
-            </Pressable>
-          ))}
-          <Pressable onPress={onClose} style={{ alignItems: 'center', marginTop: 8 }}>
+        <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} style={{ backgroundColor: C.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 10, paddingBottom: 26, borderTopWidth: 1, borderColor: C.line }}>
+          <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: C.line, alignSelf: 'center', marginBottom: 8 }} />
+          {body}
+          <Pressable onPress={onClose} style={{ alignItems: 'center', marginTop: 10, paddingVertical: 8 }}>
             <Text style={{ color: C.muted }}>Cancelar</Text>
           </Pressable>
         </Pressable>
       </Pressable>
     </Modal>
+  );
+}
+
+// Botón "Opciones" (computador) o "···" (celular). Devuelve dónde abrir el menú.
+function OptionsButton({ wide, open, onPress }: { wide: boolean; open: boolean; onPress: (anchor: { x: number; y: number } | null) => void }) {
+  const ref = useRef<any>(null);
+  function press() {
+    let anchor: { x: number; y: number } | null = null;
+    try {
+      const r = (ref.current as HTMLElement)?.getBoundingClientRect?.();
+      if (r && typeof window !== 'undefined') anchor = { x: Math.max(8, window.innerWidth - r.right), y: r.bottom + 6 };
+    } catch { /* nativo */ }
+    onPress(anchor);
+  }
+  return (
+    <Pressable ref={ref} onPress={press} hitSlop={6} accessibilityRole="button" accessibilityLabel="Opciones del proyecto" accessibilityState={{ expanded: open }}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: open ? C.brand : C.line, backgroundColor: open ? C.brand + '18' : C.surface2, borderRadius: R.pill, paddingVertical: 7, paddingHorizontal: wide ? 12 : 9 }}>
+      <Ionicons name={wide ? 'options-outline' : 'ellipsis-horizontal'} size={15} color={open ? C.brand : C.muted} />
+      {wide && <Text style={{ color: C.text, fontSize: 12.5, fontWeight: '600' }}>Opciones</Text>}
+      {wide && <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={13} color={C.muted} />}
+    </Pressable>
   );
 }
 
