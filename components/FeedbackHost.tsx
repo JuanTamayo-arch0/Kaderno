@@ -45,7 +45,7 @@ function DialogView({ req }: { req: DialogReq }) {
   return (
     <Modal visible transparent animationType="fade" onRequestClose={() => req.resolve(cancelValue)}>
       <Pressable onPress={() => req.resolve(cancelValue)} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-        <Pressable onPress={() => {}} accessibilityRole="alert" accessibilityViewIsModal
+        <Pressable onPress={() => {}} accessibilityRole="alert" accessibilityViewIsModal dataSet={{ anim: 'sheet' }}
           style={{ width: '100%', maxWidth: 420, backgroundColor: C.surface, borderRadius: 16, borderWidth: 1, borderColor: C.line, padding: 20 }}>
           <Text style={{ color: C.text, fontSize: 17, fontWeight: '700' }}>{req.title}</Text>
           {!!req.message && <Text style={{ color: C.muted, fontSize: 14, lineHeight: 20, marginTop: 8 }}>{req.message}</Text>}
@@ -80,7 +80,7 @@ function ToastView({ t }: { t: ToastReq }) {
   }, [t]);
   const accent = t.tone === 'bad' ? C.bad : t.tone === 'good' ? C.good : C.brand;
   return (
-    <View accessibilityLiveRegion="polite" accessibilityRole="alert"
+    <View accessibilityLiveRegion="polite" accessibilityRole="alert" dataSet={{ anim: 'toast' }}
       style={{ flexDirection: 'row', alignItems: 'center', gap: 12, maxWidth: 520, width: '100%', backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderLeftWidth: 4, borderLeftColor: accent, borderRadius: 12, paddingVertical: 10, paddingLeft: 14, paddingRight: 8, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 6 }}>
       <Text style={{ color: C.text, fontSize: 14, flex: 1 }}>{t.message}</Text>
       {t.actionLabel ? (

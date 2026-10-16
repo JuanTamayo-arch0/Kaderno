@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Platform, Pressable, Text, TextInput, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../lib/theme';
 import { Step, addStep, deleteStep, renameStep, reorderSteps, toggleStep } from '../lib/db';
 import { ProgressBar } from './ProgressBar';

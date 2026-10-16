@@ -15,6 +15,14 @@ for intento in 1 2 3 4 5; do
       if printf '%s' "$CFG" | grep -q "SUPABASE_URL: *''"; then
         echo "AVISO: kaderno-config.js del servidor está vacío; la app usará lo del build"
       fi
+      # Rendimiento (solo avisa): ¿el JavaScript viaja comprimido y con caché larga?
+      HDR="$(curl -fsS --max-time 20 -o /dev/null -D - -H 'Accept-Encoding: gzip, br' "$URL$JS" || true)"
+      if ! printf '%s' "$HDR" | grep -qiE '^content-encoding: *(gzip|br)'; then
+        echo "AVISO: el JavaScript se envía SIN comprimir (pesa unas 4 veces más). Ver deploy/nginx-rendimiento.conf"
+      fi
+      if ! printf '%s' "$HDR" | grep -qiE '^cache-control:.*(immutable|max-age=[0-9]{6,})'; then
+        echo "AVISO: el JavaScript no tiene caché larga. Ver deploy/nginx-rendimiento.conf"
+      fi
       echo "OK: $URL responde y carga $JS"
       exit 0
     else

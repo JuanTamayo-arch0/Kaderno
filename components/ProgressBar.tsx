@@ -1,4 +1,4 @@
-import { Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 import { C } from '../lib/theme';
 
 // Barra de progreso porcentual. Se usa en las tarjetas de tarea (microtareas)
@@ -17,7 +17,7 @@ export function ProgressBar({
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
       <View style={{ flex: 1, height, borderRadius: height, backgroundColor: C.surface2, overflow: 'hidden' }}>
-        <View style={{ width: `${pct}%`, height: '100%', borderRadius: height, backgroundColor: tone }} />
+        <View style={{ width: `${pct}%`, height: '100%', borderRadius: height, backgroundColor: tone, ...(Platform.OS === 'web' ? { transitionProperty: 'width, background-color', transitionDuration: '400ms', transitionTimingFunction: 'cubic-bezier(.2,.8,.2,1)' } as any : null) }} />
       </View>
       {showLabel && (
         <Text style={{ color: full ? C.good : C.muted, fontSize: compact ? 10.5 : 11.5, fontWeight: '700', minWidth: compact ? 30 : 58, textAlign: 'right' }}>

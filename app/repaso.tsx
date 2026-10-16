@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../lib/theme';
 import { useResponsive } from '../lib/responsive';
 import { RequireAuth } from '../components/RequireAuth';
@@ -214,7 +214,7 @@ function CardEditor({ visible, card, subjects, onClose, onSaved }: { visible: bo
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-        <Pressable onPress={() => {}} style={{ width: '100%', maxWidth: 520, backgroundColor: C.surface, borderRadius: 18, borderWidth: 1, borderColor: C.line, padding: 18 }}>
+        <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} style={{ width: '100%', maxWidth: 520, backgroundColor: C.surface, borderRadius: 18, borderWidth: 1, borderColor: C.line, padding: 18 }}>
           <Text style={{ color: C.text, fontSize: 18, fontWeight: '700', marginBottom: 12 }}>{card ? 'Editar tarjeta' : 'Nueva tarjeta'}</Text>
           <Field label="Pregunta" value={front} onChangeText={setFront} multiline autoFocus inputStyle={{ minHeight: 60, textAlignVertical: 'top' }} />
           <Field label="Respuesta" value={back} onChangeText={setBack} multiline inputStyle={{ minHeight: 80, textAlignVertical: 'top' }} error={err} />

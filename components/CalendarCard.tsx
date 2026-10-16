@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Linking, Platform, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../lib/theme';
 import { Button, Card } from './ds';
 import { SUPABASE_URL, CALENDAR_URL } from '../lib/supabase';

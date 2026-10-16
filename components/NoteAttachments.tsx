@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Modal, Pressable, Text, View } from 'react-native';
 import { confirm, notify, friendlyError, toast } from '../lib/feedback';
 import * as ImagePicker from 'expo-image-picker';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { C, R } from '../lib/theme';
 import { NoteImage, getNoteImages, addNoteImage, deleteNoteImage, signedUrl } from '../lib/db';
 

@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, currentUserId, dedupe } from './supabase';
 import { logActivity } from './projects';
 import { MAX_FILE_BYTES, guessMime, humanSize, versionPath } from './fileVersions';
 
@@ -41,9 +41,9 @@ function isMissing(e: any): boolean {
 }
 
 async function uid(): Promise<string> {
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) throw new Error('No hay sesión activa');
-  return data.user.id;
+  const id = await currentUserId();
+  if (!id) throw new Error('No hay sesión activa');
+  return id;
 }
 
 function checkSize(u: Upload) {

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { C } from '../lib/theme';
 import { RequireAuth } from '../components/RequireAuth';
@@ -16,7 +16,7 @@ import { confirm, notify, toast, friendlyError, flushPendingDeletes } from '../l
 import { saveFile } from '../lib/fileIO';
 import { Screen, Button, Card, Field, IconButton, ListRow, SectionLabel, Toggle } from '../components/ds';
 import { Avatar } from '../components/SideNav';
-import { clearHoyHidden, resetHoyHiddenCache } from '../lib/hoyHidden';
+import { clearHoyHidden, resetHoyHiddenCache, saveHoyVista } from '../lib/hoyHidden';
 
 // ============================================================
 //  Ajustes: cuenta, apariencia, avisos, calendario, instalar la app,
@@ -130,8 +130,8 @@ function Ajustes() {
         <Divider />
         <ListRow title="Tipos de tarea" subtitle="Laboratorio, exposición, lectura…" left={<Ionicons name="pricetags-outline" size={20} color={C.muted} />} onPress={() => router.push('/tipos')} />
         <Divider />
-        <Toggle label="Tareas de proyectos en Hoy" hint="Muestra en Hoy lo que te toca en tus proyectos." value={hoyProy}
-          onChange={(v) => { setHoyProy(v); savePrefs({ hoyProyectos: v }).catch(() => {}); }} />
+        <Toggle label="Tareas de proyectos en Hoy" hint="También se cambia en Hoy con Todo, Materias o Proyectos." value={hoyProy}
+          onChange={(v) => { setHoyProy(v); saveHoyVista(v ? 'todo' : 'materias').catch(() => {}); }} />
         {hiddenN > 0 && (
           <>
             <Divider />
@@ -252,7 +252,7 @@ function PasswordModal({ visible, onClose }: { visible: boolean; onClose: () => 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-        <Pressable onPress={() => {}} style={{ width: '100%', maxWidth: 420, backgroundColor: C.surface, borderRadius: 18, borderWidth: 1, borderColor: C.line, padding: 18 }}>
+        <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} style={{ width: '100%', maxWidth: 420, backgroundColor: C.surface, borderRadius: 18, borderWidth: 1, borderColor: C.line, padding: 18 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
             <Text style={{ color: C.text, fontSize: 18, fontWeight: '700', flex: 1 }}>Cambiar contraseña</Text>
             <IconButton icon="close" label="Cerrar" onPress={onClose} />

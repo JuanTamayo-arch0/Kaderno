@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { C, R } from '../../lib/theme';
 import { notify } from '../../lib/confirm';
 import { copyText, pickTextFile, readWebFile, saveFile } from '../../lib/fileIO';
@@ -190,7 +190,7 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 16 }}>
-        <Pressable onPress={() => {}} style={{ backgroundColor: C.surface, borderRadius: 20, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: step === 'revisar' ? 760 : 640, maxHeight: '92%', overflow: 'hidden' }}>
+        <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} style={{ backgroundColor: C.surface, borderRadius: 20, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: step === 'revisar' ? 760 : 640, maxHeight: '92%', overflow: 'hidden' }}>
           {/* cabecera */}
           <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 18, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: C.line }}>
             {step === 'revisar' && (

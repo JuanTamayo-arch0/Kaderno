@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { C, R } from '../lib/theme';
 import { Subject } from '../lib/db';
 import { SubjectIcon } from './SubjectIcon';
@@ -29,7 +29,7 @@ export function SubjectPicker({ subjects, value, onChange, allowNone = true, pla
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable onPress={() => setOpen(false)} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-          <Pressable onPress={() => {}} style={{ backgroundColor: C.surface, borderRadius: 18, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 420, maxHeight: '70%', padding: 10 }}>
+          <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} style={{ backgroundColor: C.surface, borderRadius: 18, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 420, maxHeight: '70%', padding: 10 }}>
             <Text style={{ color: C.text, fontSize: 15, fontWeight: '700', padding: 10 }}>Elegir materia</Text>
             <ScrollView>
               {allowNone && (

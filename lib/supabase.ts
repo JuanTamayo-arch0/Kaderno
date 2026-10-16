@@ -40,3 +40,29 @@ export const supabase = createClient(
     },
   }
 );
+
+/**
+ * Id de quien tiene la sesión abierta, SIN ir a la red: la sesión ya está
+ * guardada en el dispositivo (getUser() pregunta al servidor cada vez y
+ * sumaba una ida y vuelta antes de cada consulta). La seguridad no depende de
+ * esto: la pone RLS en el servidor con el token.
+ */
+export async function currentUserId(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.user?.id ?? null;
+}
+
+/**
+ * Comparte una misma lectura entre quienes la piden a la vez. Al abrir Hoy,
+ * varias partes piden lo mismo (materias, preferencias, contadores); así sale
+ * una sola petición. No guarda nada: cuando termina, la siguiente vuelve a ir
+ * a la red, así que nunca devuelve datos viejos.
+ */
+const inflight = new Map<string, Promise<any>>();
+export function dedupe<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const hit = inflight.get(key);
+  if (hit) return hit as Promise<T>;
+  const p = fn().finally(() => { if (inflight.get(key) === p) inflight.delete(key); });
+  inflight.set(key, p);
+  return p;
+}

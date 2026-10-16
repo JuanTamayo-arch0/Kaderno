@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, currentUserId, dedupe } from './supabase';
 import { sm2, localISODate } from './srs';
 
 // ---------- Tipos ----------
@@ -57,17 +57,19 @@ async function v14<R extends { error: any }>(run: (on: boolean) => PromiseLike<R
 }
 
 async function uid(): Promise<string> {
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) throw new Error('No hay sesión activa');
-  return data.user.id;
+  const id = await currentUserId();
+  if (!id) throw new Error('No hay sesión activa');
+  return id;
 }
 
 // ---------- Materias ----------
 export async function getSubjects(): Promise<Subject[]> {
-  const { data, error } = await supabase
-    .from('subjects').select('*').eq('archived', false).order('created_at');
-  if (error) throw error;
-  return data as Subject[];
+  return dedupe('subjects', async () => {
+    const { data, error } = await supabase
+      .from('subjects').select('*').eq('archived', false).order('created_at');
+    if (error) throw error;
+    return data as Subject[];
+  });
 }
 export async function addSubject(name: string, color: string, icon: string, credits = 0): Promise<void> {
   const { error } = await supabase.from('subjects').insert({ user_id: await uid(), name, color, icon, credits });
@@ -96,6 +98,9 @@ export async function getArchivedSubjects(): Promise<(Subject & { archived_at?: 
 
 // ---------- Tareas ----------
 export async function getTasks(subjectId?: string): Promise<Task[]> {
+  return dedupe(`tasks:${subjectId ?? '*'}`, () => getTasksNow(subjectId));
+}
+async function getTasksNow(subjectId?: string): Promise<Task[]> {
   const { data, error } = await v14((on) => {
     let q = supabase.from('assignments').select('*');
     if (on) q = q.is('deleted_at', null);
@@ -198,9 +203,11 @@ export async function reorderSteps(ordered: { id: string }[]): Promise<void> {
 
 // ---------- Tipos de tarea propios ----------
 export async function getTaskTypes(): Promise<TaskTypeRow[]> {
-  const { data, error } = await supabase.from('task_types').select('*').order('position');
-  if (error) throw error;
-  return data as TaskTypeRow[];
+  return dedupe('task-types', async () => {
+    const { data, error } = await supabase.from('task_types').select('*').order('position');
+    if (error) throw error;
+    return data as TaskTypeRow[];
+  });
 }
 export async function upsertTaskType(t: { key: string; label: string; icon: string; color: string; position?: number }): Promise<void> {
   const { error } = await supabase.from('task_types')
@@ -283,9 +290,11 @@ export async function getTrash(): Promise<{ tasks: Task[]; notes: Note[]; subjec
 
 // ---------- Horario ----------
 export async function getSchedule(): Promise<Slot[]> {
-  const { data, error } = await supabase.from('schedule').select('*');
-  if (error) throw error;
-  return data as Slot[];
+  return dedupe('schedule', async () => {
+    const { data, error } = await supabase.from('schedule').select('*');
+    if (error) throw error;
+    return data as Slot[];
+  });
 }
 export async function setSlot(day: number, slot: number, subjectId: string): Promise<void> {
   const { error } = await supabase
@@ -507,6 +516,9 @@ export async function getDueFlashcards(): Promise<Flashcard[]> {
   return data as Flashcard[];
 }
 export async function countDueFlashcards(): Promise<number> {
+  return dedupe('flash-due', countDueNow);
+}
+async function countDueNow(): Promise<number> {
   const today = localISODate(new Date());
   const { count, error } = await supabase.from('flashcards').select('*', { count: 'exact', head: true }).lte('due_date', today);
   if (error) throw error;
@@ -620,25 +632,34 @@ export async function clearOracleMessages(): Promise<void> {
 }
 
 // ---------- Personalización sincronizada entre dispositivos ----------
+// Las preferencias se piden desde varios lados al abrir la app (tema, Hoy,
+// avisos). Se recuerdan 10 s y se actualizan al guardar desde aquí.
+let prefsMemo: { id: string; at: number; value: any } | null = null;
 export async function fetchPrefs(): Promise<any | null> {
-  const { data: u } = await supabase.auth.getUser();
-  if (!u?.user) return null;
-  const { data, error } = await supabase.from('user_prefs').select('settings').eq('user_id', u.user.id).maybeSingle();
-  if (error) return null;
-  return data?.settings ?? null;
+  const id = await currentUserId();
+  if (!id) return null;
+  if (prefsMemo && prefsMemo.id === id && Date.now() - prefsMemo.at < 10_000) return prefsMemo.value;
+  return dedupe('prefs', async () => {
+    const { data, error } = await supabase.from('user_prefs').select('settings').eq('user_id', id).maybeSingle();
+    if (error) return null;
+    const value = data?.settings ?? null;
+    prefsMemo = { id, at: Date.now(), value };
+    return value;
+  });
 }
 
 // Guarda MEZCLANDO con lo que ya había: la personalización (tema, fuente…) y la
 // configuración del horario viven en el mismo jsonb, así que si esto sobrescribiera
 // el objeto completo, guardar una cosa borraría la otra.
 export async function savePrefs(settings: any): Promise<void> {
-  const { data: u } = await supabase.auth.getUser();
-  if (!u?.user) return;
+  const id = await currentUserId();
+  if (!id) return;
   const prev = (await fetchPrefs()) ?? {};
   const merged = { ...prev, ...settings };
   const { error } = await supabase.from('user_prefs')
-    .upsert({ user_id: u.user.id, settings: merged, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
-  if (error) throw error;
+    .upsert({ user_id: id, settings: merged, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+  if (error) { prefsMemo = null; throw error; }
+  prefsMemo = { id, at: Date.now(), value: merged };
 }
 
 // ---------- Fondo de pantalla propio (bucket público "wallpapers") ----------

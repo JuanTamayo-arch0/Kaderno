@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../lib/theme';
 import { taskTypeMeta } from '../lib/taskTypes';
 import { Subject, Task } from '../lib/db';

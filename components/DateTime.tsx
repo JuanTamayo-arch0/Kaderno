@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { C, uiScheme } from '../lib/theme';
 import { fromISODate, isoDate, fmtLongDate, fmtHHMM, capitalize, addDays, startOfDay } from '../lib/time';

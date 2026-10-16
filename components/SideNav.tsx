@@ -1,7 +1,7 @@
 import React from 'react';
 import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../lib/theme';
 import { SIDEBAR_W } from '../lib/responsive';
 import { useAuth } from '../lib/auth';

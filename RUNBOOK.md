@@ -716,3 +716,32 @@ Ajustes también trae botones para abrir el enlace directo en Google Calendar o 
 
 - `npm test`: además de lo anterior, pasos sugeridos, nombres y rutas de archivos, detección de versiones, enlaces y diagnóstico del calendario, zona horaria y horario por defecto en el .ics.
 - `bash tests/run_sql.sh`: ahora también corre `schema_v15.sql` dos veces sobre un archivo viejo y prueba numeración automática, restaurar, historial que no se puede editar ni borrar, permisos de editor, viewer y extraños, y borrado en cascada.
+
+## Versión 14: Hoy por materias o proyectos, tablero fluido, velocidad y animaciones
+
+No hay migración de base de datos ni funciones nuevas que desplegar. Se publica como siempre (fusionar en `main`).
+
+### 1. Nginx (recomendado, una sola vez)
+
+Copia el contenido de `deploy/nginx-rendimiento.conf` dentro del `server { ... }` HTTPS de Kaderno y recarga:
+
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+Hace dos cosas: comprime el JavaScript (en Ubuntu, Nginx solo comprime HTML si no se le dice otra cosa; el JS pasa de unos 1,8 MB a unos 500 KB) y guarda un año los archivos del build, que llevan una huella en el nombre. Después de cada despliegue, `deploy/comprobar-sitio.sh` avisa si alguna de las dos cosas falta.
+
+### 2. Qué cambió
+
+- **Hoy: Todo, Materias o Proyectos.** Arriba de la lista hay un selector con el número de pendientes de cada lado. "Materias" esconde las tareas de proyectos; "Proyectos" muestra solo esas y cambia los filtros por proyecto. El resumen, la semana, la agenda y el calendario siguen la misma vista. Se recuerda entre dispositivos y es el mismo ajuste de "Tareas de proyectos en Hoy" en Ajustes.
+- **Tablero.** El arrastre se rehízo:
+  - Con ratón, la tarjeta se arrastra apenas se mueve; un clic sin mover la abre como siempre. Ya no hay que "seleccionarla" primero (mantener presionado activaba el modo seleccionar; ahora eso está solo en el botón Seleccionar).
+  - En el celular, se mantiene el dedo un instante (0,2 s) y se arrastra; si el dedo se mueve enseguida, es scroll normal. El botón de mover sigue ahí como alternativa.
+  - La tarjeta flota bajo el puntero, la columna de destino se ilumina y aparece un hueco del alto de la tarjeta donde va a caer. El tablero y la columna se desplazan solos cerca de los bordes. Esc cancela.
+- **Velocidad.**
+  - El primer arranque descarga un 35 % menos (de 769 KB a 500 KB comprimidos): cada pantalla se descarga cuando se abre y los íconos ya no traen las otras 15 familias que no se usan.
+  - Al abrir Hoy se hacen 17 peticiones en vez de 27 (y un proyecto, 14 en vez de 30). Antes cada consulta preguntaba primero al servidor quién era el usuario (6 idas y vueltas en fila) y la app se remontaba entera al arrancar, así que todo se pedía dos veces.
+  - Hoy y los proyectos se pintan al instante con lo de la visita anterior y se actualizan cuando llega lo nuevo. Esa copia vive en el navegador y se borra al cerrar sesión.
+  - El service worker descarga en segundo plano el resto de pantallas y la fuente de íconos, y cada versión nueva limpia la caché de la anterior. Si se publica una versión con una pestaña abierta, la pestaña se recarga sola si le falta algún archivo.
+  - Se abre la conexión con Supabase mientras carga la app.
+- **Animaciones.** Entrada suave de cada pantalla y de las listas (escalonada), ventanas y menús que suben, avisos que suben desde abajo, botones y tarjetas que se hunden al presionar y se elevan al pasar el ratón, el círculo de tarea que rebota al marcarla hecha, barras de progreso e interruptores que se deslizan, y brillo en los esqueletos de carga. Todo dura entre 0,12 y 0,26 s y se apaga si el sistema tiene "reducir movimiento".

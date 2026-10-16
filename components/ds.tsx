@@ -3,7 +3,7 @@ import {
   ActivityIndicator, Platform, Pressable, ScrollView, Text, TextInput, View,
   type PressableProps, type StyleProp, type TextInputProps, type TextStyle, type ViewStyle,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C, R, S } from '../lib/theme';
@@ -52,6 +52,7 @@ export function Button({
   return (
     <Pressable
       onPress={off ? undefined : onPress}
+      dataSet={off ? undefined : { press: '1' }}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled: !!off, busy: !!busy }}
@@ -76,7 +77,7 @@ export function IconButton({
   style?: StyleProp<ViewStyle>; badge?: number;
 }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label}
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} dataSet={{ press: '1' }}
       style={({ pressed, focused }: any) => [{
         width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
         backgroundColor: active ? C.brand + '22' : pressed ? C.surface2 : 'transparent',
@@ -122,7 +123,7 @@ export function Card({ children, style, onPress, accessibilityLabel, padded = tr
   const base: ViewStyle = { backgroundColor: C.surface, borderColor: C.line, borderWidth: 1, borderRadius: 14, padding: padded ? 16 : 0 };
   if (!onPress) return <View style={[base, style]}>{children}</View>;
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={accessibilityLabel}
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={accessibilityLabel} dataSet={{ press: '1', lift: '1' }}
       style={({ pressed, focused }: any) => [base, { opacity: pressed ? 0.85 : 1 }, focused ? focusRingStyle() : null, style]}>
       {children}
     </Pressable>
@@ -150,7 +151,7 @@ export function ListRow({
   const base: ViewStyle = { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14, minHeight: 52 };
   if (!onPress) return <View style={[base, style]}>{inner}</View>;
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={title}
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={title} dataSet={{ press: '1' }}
       style={({ pressed, focused }: any) => [base, { backgroundColor: pressed ? C.surface2 : 'transparent' }, focused ? focusRingStyle() : null, style]}>
       {inner}
     </Pressable>
@@ -204,7 +205,7 @@ export function Segmented<K extends string>({ items, value, onChange, style }: {
 // ---------- Chip de filtro ----------
 export function FilterChip({ label, active, onPress, color, icon }: { label: string; active: boolean; onPress: () => void; color?: string; icon?: React.ReactNode }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: active }}
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: active }} dataSet={{ press: '1' }}
       style={({ pressed, focused }: any) => [{
         flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36,
         paddingVertical: 7, paddingHorizontal: 12, borderRadius: R.pill, borderWidth: 1, marginRight: S.sm,
@@ -234,7 +235,7 @@ export function EmptyState({ icon, title, text, action, compact }: {
 
 // ---------- Esqueleto de carga ----------
 export function Skeleton({ height = 64, style }: { height?: number; style?: StyleProp<ViewStyle> }) {
-  return <View style={[{ height, borderRadius: 12, backgroundColor: C.surface, borderWidth: 1, borderColor: C.line, marginBottom: 8, opacity: 0.7 }, style]} />;
+  return <View dataSet={{ skeleton: '1' }} style={[{ height, borderRadius: 12, backgroundColor: C.surface, borderWidth: 1, borderColor: C.line, marginBottom: 8, opacity: 0.7 }, style]} />;
 }
 
 // ---------- Error con reintentar ----------
@@ -310,7 +311,7 @@ export function Screen({
   ) : <View style={{ height: top }} />;
 
   const inner = (
-    <View style={[{ paddingHorizontal: padded ? padX : 0, paddingBottom: scroll ? 40 : 0, flex: scroll ? undefined : 1, width: '100%', maxWidth: maxWidth && isWide ? maxWidth + padX * 2 : undefined, alignSelf: maxWidth && isWide ? 'center' : 'auto' }, contentStyle]}>
+    <View dataSet={{ anim: 'page' }} style={[{ paddingHorizontal: padded ? padX : 0, paddingBottom: scroll ? 40 : 0, flex: scroll ? undefined : 1, width: '100%', maxWidth: maxWidth && isWide ? maxWidth + padX * 2 : undefined, alignSelf: maxWidth && isWide ? 'center' : 'auto' }, contentStyle]}>
       {children}
     </View>
   );
@@ -343,8 +344,8 @@ export function Toggle({ value, onChange, label, hint }: { value: boolean; onCha
         <Text style={{ color: C.text, fontSize: 15, fontWeight: '600' }}>{label}</Text>
         {!!hint && <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{hint}</Text>}
       </View>
-      <View style={{ width: 44, height: 26, borderRadius: 13, padding: 3, backgroundColor: value ? C.brand : C.line, alignItems: value ? 'flex-end' : 'flex-start' }}>
-        <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: value ? C.onBrand : C.surface }} />
+      <View style={{ width: 44, height: 26, borderRadius: 13, padding: 3, backgroundColor: value ? C.brand : C.line, ...webOnly({ transitionProperty: 'background-color', transitionDuration: '180ms' }) }}>
+        <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: value ? C.onBrand : C.surface, transform: [{ translateX: value ? 18 : 0 }], ...webOnly({ transitionProperty: 'transform, background-color', transitionDuration: '180ms', transitionTimingFunction: 'cubic-bezier(.2,.8,.2,1)' }) }} />
       </View>
     </Pressable>
   );

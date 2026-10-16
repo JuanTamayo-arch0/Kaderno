@@ -2,8 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { RequireAuth } from '../components/RequireAuth';
 import { Screen, Button } from '../components/ds';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Modal, Pressable, ScrollView, Text, TextInput, View, Platform } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { C, R, SUBJECT_COLORS } from '../lib/theme';
 import { useResponsive } from '../lib/responsive';
 import { confirm, notify } from '../lib/confirm';
@@ -257,7 +257,7 @@ function TypeEditor({ draft, busy, isWide, onChange, onClose, onSave }: {
   );
 
   return (
-    <Modal visible={!!d} transparent animationType={isWide ? 'fade' : 'slide'} onRequestClose={onClose}>
+    <Modal visible={!!d} transparent animationType={isWide || Platform.OS === 'web' ? 'fade' : 'slide'} onRequestClose={onClose}>
       {isWide ? (
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           <View style={{ width: '100%', maxWidth: 520, maxHeight: '86%', backgroundColor: C.surface, borderRadius: R.xl, borderWidth: 1, borderColor: C.line, padding: 22 }}>

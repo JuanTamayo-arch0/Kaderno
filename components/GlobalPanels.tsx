@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C } from '../lib/theme';
 import { useResponsive } from '../lib/responsive';
@@ -82,9 +82,9 @@ function Panel({ visible, onClose, children, top, maxWidth = 560 }: { visible: b
     return () => window.removeEventListener('keydown', h);
   }, [visible, onClose]);
   return (
-    <Modal visible={visible} transparent animationType={isWide ? 'fade' : 'slide'} onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType={isWide || Platform.OS === 'web' ? 'fade' : 'slide'} onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: isWide ? (top ? 'flex-start' : 'center') : 'flex-end', alignItems: isWide ? 'center' : 'stretch', padding: isWide ? 24 : 0, paddingTop: isWide && top ? 90 : undefined }}>
-        <Pressable onPress={() => {}} accessibilityViewIsModal
+        <Pressable onPress={() => {}} accessibilityViewIsModal dataSet={{ anim: 'sheet' }}
           style={isWide
             ? { width: '100%', maxWidth, maxHeight: '80%', backgroundColor: C.surface, borderRadius: 16, borderWidth: 1, borderColor: C.line, padding: 18 }
             : { backgroundColor: C.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 16, paddingBottom: 16 + insets.bottom, maxHeight: '92%', borderTopWidth: 1, borderColor: C.line }}>

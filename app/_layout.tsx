@@ -13,7 +13,7 @@ import {
   loadPersonalizeNative, savePersonalize, scaleOf,
 } from '../lib/theme';
 import { fetchPrefs, savePrefs } from '../lib/db';
-import { loadTaskTypes } from '../lib/taskTypes';
+import { loadTaskTypes, taskTypeList } from '../lib/taskTypes';
 import { SCHEDULE, applyRemoteSchedule, loadScheduleNative } from '../lib/schedule';
 import { AppBackground } from '../components/AppBackground';
 import { FeedbackHost } from '../components/FeedbackHost';
@@ -21,6 +21,10 @@ import { GlobalPanels } from '../components/GlobalPanels';
 import { toast } from '../lib/feedback';
 import { beep, loadFocus, setFocusCompleteHandler } from '../lib/focusTimer';
 import { registerServiceWorker } from '../lib/push';
+import { installMotion } from '../lib/motion';
+
+// Animaciones CSS (solo web): se inyectan una vez, antes del primer render.
+installMotion();
 
 // Al terminar un pomodoro o un descanso: sonido, aviso del navegador y mensaje.
 setFocusCompleteHandler((mode, s) => {
@@ -88,7 +92,10 @@ function Shell() {
 
     // Los tipos propios se cargan aparte: taskTypeMeta() los lee de memoria
     // durante el render, así que hay que repintar cuando lleguen.
-    loadTaskTypes().then(() => { if (!cancel) setRev((n) => n + 1); }).catch(() => { });
+    // Solo se remonta si cambiaron: remontar recarga TODAS las pantallas (antes
+    // pasaba siempre al abrir la app y cada pantalla pedía sus datos dos veces).
+    const typesBefore = JSON.stringify(taskTypeList());
+    loadTaskTypes().then(() => { if (!cancel && JSON.stringify(taskTypeList()) !== typesBefore) setRev((n) => n + 1); }).catch(() => { });
 
     fetchPrefs()
       .then((remote) => {
@@ -100,10 +107,16 @@ function Shell() {
         // `schedule` vive en el mismo jsonb pero no es parte de la
         // personalización: se separa para que no acabe dentro de PSettings.
         const { schedule, ...pers } = remote as Record<string, any>;
+        const schedBefore = JSON.stringify(SCHEDULE);
         if (schedule) applyRemoteSchedule(schedule);
-        const merged = { ...DEFAULTS, ...pers };
-        if (JSON.stringify(merged) === JSON.stringify(PERSONALIZE)) {
-          if (schedule) setRev((n) => n + 1);
+        const schedChanged = JSON.stringify(SCHEDULE) !== schedBefore;
+        // Solo las claves de personalización: el mismo jsonb guarda también avisos,
+        // vista de Hoy, etc. Con esas claves la comparación nunca daba igual y la
+        // app se remontaba entera en cada arranque.
+        const pick = (o: Record<string, any>) => Object.fromEntries((Object.keys(DEFAULTS) as (keyof typeof DEFAULTS)[]).map((k) => [k, o[k] ?? DEFAULTS[k]])) as typeof DEFAULTS;
+        const merged = pick({ ...DEFAULTS, ...pers });
+        if (JSON.stringify(merged) === JSON.stringify(pick(PERSONALIZE as any))) {
+          if (schedChanged) setRev((n) => n + 1);
           return;
         }
         savePersonalize(merged).then(() => {
