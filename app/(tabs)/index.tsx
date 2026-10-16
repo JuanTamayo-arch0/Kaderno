@@ -11,6 +11,8 @@ import {
 } from '../../lib/db';
 import { getMyProjectTasks, type MyProjectTask } from '../../lib/projects';
 import { readSnap, writeSnap } from '../../lib/snapshot';
+import { celebrate } from '../../lib/celebrate';
+import { prefersReducedMotion } from '../../lib/motion';
 import { SCHEDULE } from '../../lib/schedule';
 import {
   BUCKET_LABEL, BUCKET_ORDER, Bucket, bucketOf, compareDue, fmtLongDate, capitalize, isoDate, addDays,
@@ -67,6 +69,7 @@ export default function Hoy() {
   const [day, setDay] = useState<string | null>(null);
   const [showDone, setShowDone] = useState(false);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
+  const [leaving, setLeaving] = useState<Set<string>>(new Set());   // filas que se están yendo (animación al completar)
   const [now, setNow] = useState(new Date());
 
   const load = useCallback(async () => {
@@ -111,11 +114,22 @@ export default function Hoy() {
   // ---------- Acciones ----------
   async function toggle(t: Task) {
     const done = t.status !== 'done';
-    setTasks((xs) => xs?.map((x) => x.id === t.id ? { ...x, status: done ? 'done' : 'pending', completed_at: done ? new Date().toISOString() : null } : x) ?? null);
+    const apply = () => setTasks((xs) => xs?.map((x) => x.id === t.id ? { ...x, status: done ? 'done' : 'pending', completed_at: done ? new Date().toISOString() : null } : x) ?? null);
+    // Al completar: la fila se marca, se tacha y se desliza fuera; luego sale de la lista.
+    if (done && Platform.OS === 'web' && !prefersReducedMotion()) {
+      setLeaving((s) => new Set(s).add(t.id));
+      setTimeout(() => { apply(); setLeaving((s) => { const n = new Set(s); n.delete(t.id); return n; }); }, 430);
+    } else apply();
+    // ¿Era lo último de hoy? Celebración.
+    const urgent = (x: { due_date?: string | null; due_at?: string | null }) => { const b = bucketOf(x as any, now); return b === 'today' || b === 'overdue'; };
+    const allDone = done && urgent(t)
+      && allPending.filter((x) => x.id !== t.id && urgent(x)).length === 0
+      && notHidden.filter((p) => urgent(p)).length === 0;
     try {
       await toggleTask(t.id, done);
       refreshNavCounts(true);
-      if (done) toast(`Hecha: ${t.title}`, { tone: 'good', actionLabel: 'Deshacer', onAction: () => toggle({ ...t, status: 'done' }) });
+      if (allDone) { setTimeout(() => celebrate(), 220); toast('¡Terminaste todo lo de hoy!', { tone: 'good', actionLabel: 'Deshacer', onAction: () => toggle({ ...t, status: 'done' }) }); }
+      else if (done) toast(`Hecha: ${t.title}`, { tone: 'good', actionLabel: 'Deshacer', onAction: () => toggle({ ...t, status: 'done' }) });
     } catch (e) {
       setTasks((xs) => xs?.map((x) => x.id === t.id ? t : x) ?? null);
       toast(friendlyError(e), { tone: 'bad' });
@@ -332,7 +346,7 @@ export default function Hoy() {
   ) : null;
 
   const renderRow = (r: Row) => r.kind === 'task' ? (
-    <TaskRow key={r.t.id} task={r.t} subject={subjOf(r.t.subject_id)} steps={steps[r.t.id]} focusMin={focusBy[r.t.id]}
+    <TaskRow key={r.t.id} task={leaving.has(r.t.id) ? { ...r.t, status: 'done' } : r.t} subject={subjOf(r.t.subject_id)} steps={steps[r.t.id]} focusMin={focusBy[r.t.id]}
       onToggle={toggle} onOpen={(t) => openTask(t)} actions={actionsFor(r.t)}
       onStepsChange={(id, next) => setSteps((s) => ({ ...s, [id]: next }))} />
   ) : (
@@ -367,7 +381,7 @@ export default function Hoy() {
       <View key={b}>
         <SectionLabel text={BUCKET_LABEL[b]} count={rows.length} tone={b === 'overdue' ? C.bad : undefined} />
         {rows.map((r, i) => (
-          <View key={r.kind === 'task' ? r.t.id : 'p' + r.p.id} dataSet={{ anim: 'enter', i: String(Math.min(i, 8)) }}>{renderRow(r)}</View>
+          <View key={r.kind === 'task' ? r.t.id : 'p' + r.p.id} dataSet={{ anim: r.kind === 'task' && leaving.has(r.t.id) ? 'leave' : 'enter', i: String(Math.min(i, 8)) }}>{renderRow(r)}</View>
         ))}
       </View>
     ))

@@ -144,5 +144,6 @@ export async function getProjectTasksForBulk(projectId: string): Promise<Existin
     start_at: (t.start_at as string | null) ?? null,
     due_at: (t.due_at as string | null) ?? null,
     checklist: byTask.get(String(t.id)) ?? [],
+    position: typeof t.position === 'number' ? t.position : 0,
   }));
 }

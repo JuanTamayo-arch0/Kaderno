@@ -745,3 +745,49 @@ Hace dos cosas: comprime el JavaScript (en Ubuntu, Nginx solo comprime HTML si n
   - El service worker descarga en segundo plano el resto de pantallas y la fuente de íconos, y cada versión nueva limpia la caché de la anterior. Si se publica una versión con una pestaña abierta, la pestaña se recarga sola si le falta algún archivo.
   - Se abre la conexión con Supabase mientras carga la app.
 - **Animaciones.** Entrada suave de cada pantalla y de las listas (escalonada), ventanas y menús que suben, avisos que suben desde abajo, botones y tarjetas que se hunden al presionar y se elevan al pasar el ratón, el círculo de tarea que rebota al marcarla hecha, barras de progreso e interruptores que se deslizan, y brillo en los esqueletos de carga. Todo dura entre 0,12 y 0,26 s y se apaga si el sistema tiene "reducir movimiento".
+
+## Versión 15: importar sin duplicar, ordenar el tablero, sonidos y más velocidad
+
+No hay migración ni funciones nuevas. Se publica al fusionar en `main`.
+
+### 1. Importar ya no duplica
+
+Antes, una fila sin `id` siempre se creaba como tarea nueva. Si una IA devolvía el plan completo sin ids (como el JSON de Zenit: 9 tareas con id y 59 sin id), cada importación volvía a crear las 59.
+
+Ahora cada fila sin id se compara con lo que ya está en el tablero:
+1. por el código al inicio del título (`H-009 · ...`, `HU12: ...`, `[RF-2] ...`), si ese código es único;
+2. si no, por el título completo (sin tildes, mayúsculas ni signos).
+
+Las que coinciden se **actualizan** (estado, descripción, responsable, fechas y checklist que vengan en el archivo). En la revisión se elige: actualizarlas (recomendado), dejarlas como están o crearlas otra vez. Probado con el JSON real: reimportarlo sobre un tablero que ya lo tiene crea 0 tareas.
+
+Opción nueva al importar: **Reemplazar el tablero con este archivo**. Lo que está en el tablero y no viene en el archivo se borra. Se puede deshacer.
+
+El prompt para la IA ahora pide conservar el `id` o el código del título al devolver tareas existentes.
+
+### 2. Ordenar el tablero
+
+Botón **Ordenar** en el proyecto (en el celular, en el menú `···`):
+- **Quitar repetidas**: agrupa las tarjetas con el mismo código o título y deja una por grupo, la más trabajada (terminada, con responsable, con checklist avanzado; si empatan, la que estaba primero). Muestra la lista antes de borrar. Con el tablero de Zenit duplicado tres veces, deja de nuevo las 68.
+- **Vaciar el tablero**: borra todas las tarjetas (columnas, archivos e integrantes se quedan).
+
+Las dos se hacen en un solo lote con **Deshacer**.
+
+Para limpiar el tablero actual: Ordenar, Quitar repetidas. Desde ahí, importar el JSON actualiza en vez de duplicar.
+
+### 3. Movimiento y sonido
+
+- Completar una tarea en Hoy: el círculo rebota con un anillo, la fila se tacha y se desliza fuera, y suena un "hecho" de dos notas. Si era lo último de hoy (incluidas las vencidas), confeti y arpegio.
+- Pasos (checklist): tic al marcar, rebote del cuadro; en proyectos se marcan al instante (antes esperaban al servidor).
+- Tablero: sonido al soltar una tarjeta; si cae en la columna final, suena como completada.
+- Agregar con el botón +: burbuja que sube. Borrar: barrido grave. Errores: aviso corto.
+- Pomodoro terminado: confeti.
+- Los anillos de Enfoque y Estudiar avanzan suavemente en vez de saltar cada segundo.
+- Los sonidos se sintetizan en el navegador (no se descargan archivos) y se apagan en **Ajustes, Sonidos**. En el celular también vibra un instante.
+
+### 4. Velocidad
+
+- Descarga inicial: 500 KB a 415 KB comprimidos (769 KB antes de la versión 14).
+  - Markdown (notas y Oráculo), selector de imágenes y archivos se cargan solo cuando se usan.
+  - Los anillos de progreso usan el SVG del navegador en vez de react-native-svg.
+  - Se quitó el cliente de tiempo real de Supabase, que la app no usa (`metro.config.js`, `lib/stubs/realtime.js`).
+- Tablero: una tarjeta solo se vuelve a pintar si cambió; arrastrar en tableros grandes ya no repinta todo.

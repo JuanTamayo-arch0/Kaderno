@@ -2,8 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { confirm, notify, friendlyError, toast } from '../lib/feedback';
 import { useRouter } from 'expo-router';
-import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
 import { decode } from 'base64-arraybuffer';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../lib/theme';
@@ -34,16 +32,19 @@ export function SubjectFiles({ subjectId }: { subjectId: string }) {
   useEffect(() => { load(); }, [load]);
 
   async function pickAndUpload() {
+    const DocumentPicker = await import('expo-document-picker');
     const res = await DocumentPicker.getDocumentAsync({ type: '*/*', copyToCacheDirectory: true, multiple: false });
     if (res.canceled || !res.assets?.length) return;
     const a = res.assets[0];
     setBusy(true);
     try {
       let body: Blob | ArrayBuffer | Uint8Array;
+      // En web el selector ya trae el archivo; en el celular se lee con expo-file-system (se carga solo ahí).
+      const FileSystem: any = (a as any).file ? null : await import('expo-file-system');
       if ((a as any).file) {
         body = (a as any).file; // web: objeto File
-      } else if ((FileSystem as any).readAsStringAsync) {
-        const b64 = await (FileSystem as any).readAsStringAsync(a.uri, { encoding: 'base64' });
+      } else if (FileSystem?.readAsStringAsync) {
+        const b64 = await FileSystem.readAsStringAsync(a.uri, { encoding: 'base64' });
         body = decode(b64);
       } else {
         body = await (await fetch(a.uri)).blob();

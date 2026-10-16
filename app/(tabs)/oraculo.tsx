@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import Markdown from 'react-native-markdown-display';
+import { LazyMarkdown as Markdown } from '../../components/LazyMarkdown';
 import { C } from '../../lib/theme';
 import { useResponsive } from '../../lib/responsive';
 import { Subject, getSubjects, askOracle, getOracleMessages, saveOracleMessage, clearOracleMessages, reindexNotes, addFlashcards } from '../../lib/db';

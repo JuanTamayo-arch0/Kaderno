@@ -1,3 +1,4 @@
+import { play } from './sound';
 // ============================================================
 //  Avisos, confirmaciones y mensajes cortos ("toasts") propios.
 //
@@ -85,6 +86,7 @@ export function confirm(
 export function toast(message: string, opts: Partial<Omit<ToastReq, 'id' | 'message'>> = {}): number {
   const id = seq++;
   const t: ToastReq = { id, message, duration: opts.actionLabel ? 6000 : 3200, ...opts };
+  if (t.tone === 'bad') { try { play('error'); } catch { /* */ } }
   state = { ...state, toasts: [...state.toasts.slice(-2), t] };
   emit();
   return id;

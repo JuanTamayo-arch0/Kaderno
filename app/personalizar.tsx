@@ -3,7 +3,6 @@ import { RequireAuth } from '../components/RequireAuth';
 import { ActivityIndicator, Platform, Pressable, ScrollView, Text, View, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import * as ImagePicker from 'expo-image-picker';
 import { Screen, Button } from '../components/ds';
 import {
   C, R, THEMES, derive, inkOn, fontFamilyOf, DARK_THEMES, LIGHT_THEMES, BACKGROUNDS, FONTS, SIZES,
@@ -52,6 +51,7 @@ function Personalizar() {
 
   async function pickBg() {
     try {
+      const ImagePicker = await import('expo-image-picker');
       const res = await ImagePicker.launchImageLibraryAsync({ quality: 0.6, base64: true });
       if (res.canceled || !res.assets?.length) return;
       const a = res.assets[0];

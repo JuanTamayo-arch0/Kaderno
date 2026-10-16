@@ -22,6 +22,7 @@ import { toast } from '../lib/feedback';
 import { beep, loadFocus, setFocusCompleteHandler } from '../lib/focusTimer';
 import { registerServiceWorker } from '../lib/push';
 import { installMotion } from '../lib/motion';
+import { celebrate } from '../lib/celebrate';
 
 // Animaciones CSS (solo web): se inyectan una vez, antes del primer render.
 installMotion();
@@ -32,6 +33,8 @@ setFocusCompleteHandler((mode, s) => {
   const title = mode === 'work' ? 'Pomodoro terminado' : 'Fin del descanso';
   const body = mode === 'work' ? `Buen trabajo. Descanso de ${s.cycle === 0 ? s.longBreakMin : s.breakMin} min.` : 'Cuando quieras, empieza el siguiente pomodoro.';
   toast(`${title}. ${body}`, { tone: 'good', duration: 8000 });
+  // Pomodoro completo con la pestaña a la vista: un poco de confeti.
+  if (mode === 'work' && Platform.OS === 'web' && typeof document !== 'undefined' && !document.hidden) celebrate();
   if (Platform.OS === 'web' && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted' && document.hidden) {
     try { new Notification(title, { body, icon: '/icon-192.png' }); } catch { /* noop */ }
   }

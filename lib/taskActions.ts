@@ -5,6 +5,7 @@ import { Task, deleteTask, restoreTask, hasV14 } from './db';
 import { confirm, notify, toast, friendlyError } from './feedback';
 import { dataChanged } from './uiBus';
 import { refreshNavCounts } from './navCounts';
+import { play } from './sound';
 
 export async function removeTask(t: Pick<Task, 'id' | 'title'>, after?: () => void): Promise<boolean> {
   try {
@@ -13,6 +14,7 @@ export async function removeTask(t: Pick<Task, 'id' | 'title'>, after?: () => vo
       if (!ok) return false;
     }
     await deleteTask(t.id);
+    play('delete');
     after?.(); dataChanged(); refreshNavCounts(true);
     if (hasV14()) {
       toast('Tarea enviada a la papelera', {

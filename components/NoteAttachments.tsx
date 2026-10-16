@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Modal, Pressable, Text, View } from 'react-native';
 import { confirm, notify, friendlyError, toast } from '../lib/feedback';
-import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C, R } from '../lib/theme';
 import { NoteImage, getNoteImages, addNoteImage, deleteNoteImage, signedUrl } from '../lib/db';
+
+// Se carga al usarlo: así expo-image-picker no se descarga al abrir la app.
+const loadPicker = () => import('expo-image-picker');
+// Se precarga en segundo plano poco después de abrir, para que al tocar "subir foto" ya esté listo.
+if (typeof window !== 'undefined') setTimeout(() => { Promise.resolve().then(loadPicker).catch(() => {}); }, 4000);
 
 // Muestra y gestiona los diagramas/imágenes adjuntas de una nota.
 // Al adjuntar, el sistema ofrece recortar la imagen (allowsEditing).
@@ -27,11 +31,11 @@ export function NoteAttachments({ noteId }: { noteId: string }) {
   useEffect(() => { load(); }, [load]);
 
   async function attach(fromCamera: boolean) {
-    const perm = fromCamera ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const perm = fromCamera ? await (await loadPicker()).requestCameraPermissionsAsync() : await (await loadPicker()).requestMediaLibraryPermissionsAsync();
     if (!perm.granted) { notify('Permiso necesario', 'Autoriza el acceso a la cámara o a las fotos para adjuntar.'); return; }
     const res = fromCamera
-      ? await ImagePicker.launchCameraAsync({ allowsEditing: true, base64: true, quality: 0.7 })
-      : await ImagePicker.launchImageLibraryAsync({ allowsEditing: true, base64: true, quality: 0.7 });
+      ? await (await loadPicker()).launchCameraAsync({ allowsEditing: true, base64: true, quality: 0.7 })
+      : await (await loadPicker()).launchImageLibraryAsync({ allowsEditing: true, base64: true, quality: 0.7 });
     if (res.canceled || !res.assets[0].base64) return;
     setBusy(true);
     try { await addNoteImage(noteId, res.assets[0].base64!); await load(); }

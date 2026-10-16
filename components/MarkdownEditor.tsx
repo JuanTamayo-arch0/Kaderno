@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import Markdown from 'react-native-markdown-display';
+import { LazyMarkdown as Markdown } from './LazyMarkdown';
 import { C, R } from '../lib/theme';
 
 // Editor de notas en Markdown con barra de formato y vista de lectura renderizada (estilo Notion).

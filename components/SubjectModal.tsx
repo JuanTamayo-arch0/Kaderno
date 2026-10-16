@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import * as ImagePicker from 'expo-image-picker';
 import { C, SUBJECT_COLORS, SUBJECT_ICONS } from '../lib/theme';
 import { Subject, addSubject, updateSubject, archiveSubject, restoreSubject, addGrade } from '../lib/db';
 import { confirm, notify, toast, friendlyError } from '../lib/feedback';
 import { Button, Field, IconButton } from './ds';
 import { SubjectIcon, isPhotoIcon } from './SubjectIcon';
+
+// Se carga al usarlo: así expo-image-picker no se descarga al abrir la app.
+const loadPicker = () => import('expo-image-picker');
+// Se precarga en segundo plano poco después de abrir, para que al tocar "subir foto" ya esté listo.
+if (typeof window !== 'undefined') setTimeout(() => { Promise.resolve().then(loadPicker).catch(() => {}); }, 4000);
 
 // Crear, editar o archivar una materia.
 export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchived }: {
@@ -33,7 +37,7 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
   }
   async function pickIcon() {
     try {
-      const res = await ImagePicker.launchImageLibraryAsync({ allowsEditing: true, aspect: [1, 1], quality: 0.5, base64: true });
+      const res = await (await loadPicker()).launchImageLibraryAsync({ allowsEditing: true, aspect: [1, 1], quality: 0.5, base64: true });
       if (res.canceled || !res.assets?.length) return;
       const a = res.assets[0];
       const uri = a.uri?.startsWith('data:') ? a.uri : (a.base64 ? `data:${a.mimeType ?? 'image/jpeg'};base64,${a.base64}` : a.uri);

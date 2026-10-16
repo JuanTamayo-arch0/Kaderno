@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Image, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import * as ImagePicker from 'expo-image-picker';
 import { C } from '../../lib/theme';
 import { useResponsive } from '../../lib/responsive';
 import { Subject, Note, getSubjects, getNotes, uploadPhoto, runOCR, addNote, addNoteImage, indexNote } from '../../lib/db';
@@ -10,6 +9,11 @@ import { notify, toast, friendlyError } from '../../lib/feedback';
 import { Screen, Button, Card, Field, IconButton, SectionLabel, EmptyState } from '../../components/ds';
 import { SubjectPicker } from '../../components/SubjectPicker';
 import { SubjectIcon } from '../../components/SubjectIcon';
+
+// Se carga al usarlo: así expo-image-picker no se descarga al abrir la app.
+const loadPicker = () => import('expo-image-picker');
+// Se precarga en segundo plano poco después de abrir, para que al tocar "subir foto" ya esté listo.
+if (typeof window !== 'undefined') setTimeout(() => { Promise.resolve().then(loadPicker).catch(() => {}); }, 4000);
 
 // ============================================================
 //  Capturar: de foto a nota editable.
@@ -61,11 +65,11 @@ export default function Capturar() {
   }, []);
 
   async function pick(fromCamera: boolean) {
-    const perm = fromCamera ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const perm = fromCamera ? await (await loadPicker()).requestCameraPermissionsAsync() : await (await loadPicker()).requestMediaLibraryPermissionsAsync();
     if (!perm.granted) { notify('Permiso necesario', 'Autoriza el acceso a la cámara o a las fotos para continuar.'); return; }
     const res = fromCamera
-      ? await ImagePicker.launchCameraAsync({ base64: true, quality: 0.6 })
-      : await ImagePicker.launchImageLibraryAsync({ base64: true, quality: 0.6, allowsMultipleSelection: true, selectionLimit: 10 });
+      ? await (await loadPicker()).launchCameraAsync({ base64: true, quality: 0.6 })
+      : await (await loadPicker()).launchImageLibraryAsync({ base64: true, quality: 0.6, allowsMultipleSelection: true, selectionLimit: 10 });
     if (res.canceled) return;
     for (const a of res.assets) if (a.base64) addPage({ uri: a.uri, base64: a.base64 });
   }

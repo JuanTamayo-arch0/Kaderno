@@ -36,6 +36,12 @@ const CSS = `
 @keyframes kd-landed { 0% { transform: scale(.97); filter: brightness(1.25); } 100% { transform: none; filter: none; } }
 @keyframes kd-shimmer { from { background-position: 150% 0; } to { background-position: -50% 0; } }
 @keyframes kd-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes kd-leave {
+  0% { opacity: 1; max-height: 260px; }
+  45% { opacity: 1; transform: none; max-height: 260px; }
+  100% { opacity: 0; transform: translateX(28px); max-height: 0; }
+}
+@keyframes kd-ring { from { box-shadow: 0 0 0 0 rgba(55,201,139,.6); } to { box-shadow: 0 0 0 11px rgba(55,201,139,0); } }
 
 [data-anim="enter"] { animation: kd-enter .26s ${EASE} both; }
 [data-anim="enter"][data-i="1"] { animation-delay: 25ms; }
@@ -52,6 +58,9 @@ const CSS = `
 [data-anim="grow"] { animation: kd-grow .16s ${EASE} both; transform-origin: top; }
 [data-anim="toast"] { animation: kd-toast .24s ${EASE} both; }
 [data-anim="fade"] { animation: kd-fade .2s ease both; }
+[data-anim="leave"] { animation: kd-leave .42s cubic-bezier(.4,0,.2,1) both; overflow: hidden; pointer-events: none; }
+[data-anim="pop"] { position: relative; }
+[data-anim="pop"]::after { content: ''; position: absolute; inset: -2px; border-radius: inherit; animation: kd-ring .5s ease-out both; pointer-events: none; }
 [data-landed="1"] > * { animation: kd-landed .45s ${EASE} both; }
 
 [data-press] { transition: transform .12s ease, background-color .15s ease, border-color .15s ease, box-shadow .2s ease, opacity .15s ease; }
@@ -68,7 +77,7 @@ const CSS = `
 [data-ghost] > * { transform: scale(1.03); transition: transform .15s ${EASE}; }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-anim], [data-landed] > *, [data-skeleton] { animation: none !important; }
+  [data-anim], [data-anim]::after, [data-landed] > *, [data-skeleton] { animation: none !important; }
   [data-press], [data-lift], [data-ghost] > * { transition: none !important; transform: none !important; }
 }
 `;

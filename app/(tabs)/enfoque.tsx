@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { Platform, Pressable, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
+import { ProgressRing } from '../../components/Ring';
 import { C } from '../../lib/theme';
 import { useResponsive } from '../../lib/responsive';
 import { Subject, Task, FocusSession, getSubjects, getTasks, getFocusDetail } from '../../lib/db';
@@ -52,11 +52,7 @@ export default function Enfoque() {
         ))}
       </View>
       <View style={{ width: 228, height: 228, alignItems: 'center', justifyContent: 'center' }} accessibilityRole="timer" accessibilityLabel={`${s.mode === 'work' ? 'Enfoque' : 'Descanso'}, quedan ${f.label}`}>
-        <Svg width={228} height={228} style={{ position: 'absolute', transform: [{ rotate: '-90deg' }] }}>
-          <Defs><LinearGradient id="g" x1="0" y1="0" x2="1" y2="1"><Stop offset="0" stopColor={modeColor} /><Stop offset="1" stopColor={s.mode === 'work' ? C.brand2 : C.good} /></LinearGradient></Defs>
-          <Circle cx={114} cy={114} r={RAD} stroke={C.surface2} strokeWidth={14} fill="none" />
-          <Circle cx={114} cy={114} r={RAD} stroke="url(#g)" strokeWidth={14} fill="none" strokeLinecap="round" strokeDasharray={CIRC} strokeDashoffset={CIRC * (1 - f.frac)} />
-        </Svg>
+        <ProgressRing size={228} stroke={14} inset={7} frac={f.frac} color={modeColor} color2={s.mode === 'work' ? C.brand2 : C.good} track={C.surface2} />
         <Text style={{ color: C.text, fontSize: 46, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{f.label}</Text>
         <Text style={{ color: s.mode === 'work' ? C.muted : C.goodText, marginTop: 2, fontSize: 14, fontWeight: '600' }}>{s.mode === 'work' ? 'Enfoque' : s.cycle === 0 ? 'Descanso largo' : 'Descanso'}</Text>
       </View>
