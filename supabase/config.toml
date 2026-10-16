@@ -1,0 +1,15 @@
+# Configuración mínima para la CLI de Supabase (npx supabase ...).
+# Lo importante es que las funciones que se llaman sin sesión no exijan JWT,
+# aunque alguien las despliegue sin la bandera --no-verify-jwt:
+#   · ical: la piden Google Calendar y el iPhone, que no mandan sesión.
+#           Con JWT activo responde 401 y el iPhone dice "No se puede conectar
+#           mediante SSL".
+#   · notify: la llama pg_cron con el encabezado x-cron-secret.
+# Las demás (ai, ocr) siguen exigiendo la sesión del usuario.
+project_id = "kaderno"
+
+[functions.ical]
+verify_jwt = false
+
+[functions.notify]
+verify_jwt = false

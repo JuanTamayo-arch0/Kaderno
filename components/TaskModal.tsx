@@ -14,6 +14,7 @@ import { combine, dueTimeHHMM, isoDate } from '../lib/time';
 import { notify, toast, friendlyError, deleteWithUndo } from '../lib/feedback';
 import { scheduleLocalReminder } from '../lib/notifications';
 import { removeTask } from '../lib/taskActions';
+import { StepSuggestions } from './StepSuggestions';
 import { startFocus } from '../lib/focusTimer';
 import type { TaskDraft } from '../lib/uiBus';
 
@@ -99,6 +100,21 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
       onSaved(id);
     } catch (e) { notify('No se pudo guardar', friendlyError(e)); }
     finally { setBusy(false); }
+  }
+
+  // Agrega los pasos sugeridos: directo a la base si la tarea ya existe, en
+  // memoria (ids tmp-*) si se está creando.
+  async function addSuggested(titles: string[]) {
+    if (editTask) {
+      const added: Step[] = [];
+      for (let i = 0; i < titles.length; i++) {
+        try { added.push(await addStep(editTask.id, titles[i], steps.length + i)); } catch (e) { notify('No se pudo agregar el paso', friendlyError(e)); break; }
+      }
+      setSteps((prev) => [...prev, ...added]);
+    } else {
+      const stamp = Date.now();
+      setSteps((prev) => [...prev, ...titles.map((t, i) => ({ id: `tmp-sug-${stamp}-${i}`, assignment_id: '', title: t, done: false, position: prev.length + i }))]);
+    }
   }
 
   async function createType() {
@@ -228,6 +244,7 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
         <SubtaskList assignmentId={editTask?.id ?? null} steps={steps} onChange={setSteps} />
         {steps.length === 0 && <Text style={{ color: C.muted, fontSize: 12, marginTop: 8 }}>Divide la tarea en pasos y verás el avance.</Text>}
       </View>
+      <StepSuggestions title={title} description={description} typeKey={type} existing={steps.map((s) => s.title)} onAdd={addSuggested} />
     </ScrollView>
   );
 

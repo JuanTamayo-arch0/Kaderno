@@ -13,4 +13,7 @@ window.KADERNO_CONFIG = {
   SUPABASE_ANON_KEY: '',
   // Llave pública para las notificaciones push (ver RUNBOOK.md, sección v12).
   VAPID_PUBLIC_KEY: '',
+  // Opcional: enlace del calendario por el dominio de Kaderno, p. ej.
+  // 'https://tu-dominio/calendario' (requiere el bloque de Nginx de RUNBOOK.md, versión 13).
+  CALENDAR_URL: '',
 };

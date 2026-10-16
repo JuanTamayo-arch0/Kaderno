@@ -665,3 +665,54 @@ Luego `sudo nginx -t && sudo systemctl reload nginx`.
 
 - `npm test`: además de lo de v11, contraste de los 10 temas, agregar con texto, sílabo, recordatorios, fechas, agenda, promedios, SM-2 y el calendario .ics.
 - `bash tests/run_sql.sh`: ahora también corre `schema_v14.sql` y prueba recordatorios, resúmenes, avisos de proyecto, papelera, permisos de la bandeja y el enlace de calendario.
+
+## Versión 13: pasos sugeridos, archivos con versiones, calendario y ocultar en Hoy
+
+### 1. Migración de la base de datos
+
+Corre `supabase/schema_v15.sql` en Supabase, SQL Editor. Necesita `schema_v12.sql` (proyectos) y se puede correr dos veces. Crea la tabla `project_file_versions`, agrega a `project_files` la versión actual, la descripción y quién lo cambió por última vez, y deja los archivos que ya existían como versión 1.
+
+Mientras no la corras, la pestaña Archivos de cada proyecto avisa que falta este paso y no deja subir.
+
+### 2. Volver a desplegar funciones
+
+```bash
+npx supabase functions deploy ai
+npx supabase functions deploy ical --no-verify-jwt
+```
+
+- `ai`: ahora también sugiere pasos (botón "Mejorar con IA" dentro de "Sugerir pasos"). Sin redesplegar, las sugerencias sin IA siguen funcionando.
+- `ical`: responde a la prueba desde Ajustes, acepta el token también como `/ical/<token>.ics`, usa el horario por defecto si nunca lo cambiaste y avisa la zona horaria al calendario.
+
+`supabase/config.toml` deja `ical` y `notify` sin verificación de JWT, así que aunque alguien despliegue sin la bandera no se vuelve a romper.
+
+### 3. Calendario: "No se puede conectar mediante SSL"
+
+El iPhone muestra ese mensaje ante cualquier fallo al suscribirse (y Google solo dice que no pudo agregarlo). El certificado de Supabase es válido; casi siempre la causa es que la función `ical` exige inicio de sesión (respuesta 401) o no está desplegada (404).
+
+1. Despliega `ical` como en el paso 2.
+2. En Kaderno, Ajustes, Calendario, toca **Probar enlace**: dice si funciona o qué falta.
+3. Si quieres que el enlace salga por tu dominio (recomendado; termina en `.ics` y funciona aunque la verificación JWT quede activa):
+   - Copia el bloque de `deploy/nginx-calendario.conf` dentro del `server { ... }` HTTPS de Kaderno, antes de otros `location ~`. Cambia `TU-PROYECTO` y `TU-ANON-KEY` (la llave pública; la service role nunca va ahí).
+   - `sudo nginx -t && sudo systemctl reload nginx`
+   - En `/var/www/kaderno-app/shared/kaderno-config.js` agrega `CALENDAR_URL: 'https://tu-dominio/calendario',`
+   - Recarga Kaderno y toca **Obtener mi enlace**: ahora sale con tu dominio (el token es el mismo). Si ya habías pegado el enlace de Supabase en un calendario, quítalo y suscríbete con el nuevo.
+
+Ajustes también trae botones para abrir el enlace directo en Google Calendar o en el iPhone/Mac (webcal), y **Descargar .ics** como plan B (una copia de hoy que no se actualiza sola).
+
+### 4. Qué cambió en la app
+
+- **Sugerir pasos** (en la ventana de una tarea personal y de una tarea de proyecto): lee la descripción y propone microtareas. Entiende listas, frases ("luego..."), "incluir A, B y C" y rangos ("ejercicios 1 a 15" se parte en tandas de cinco); si no hay descripción usa pasos típicos según el tipo (examen, informe, exposición, ensayo, lectura, taller, proyecto, video). Se agregan con un toque o todos a la vez. "Mejorar con IA" pide otras a la función `ai`.
+- **Archivos del proyecto** (pestaña nueva junto a Tablero, Lista y Equipo):
+  - Subir un archivo (hasta 25 MB). En el computador también se puede soltar sobre la lista.
+  - Subir una versión nueva desde la fila, desde el historial o soltando el archivo sobre la fila. Si el nombre se parece a uno que ya está ("Informe_v2.docx", "Informe final corregido.docx"), Kaderno propone guardarlo como versión de ese.
+  - Cada versión guarda una nota de qué cambió, quién la subió y cuándo.
+  - Historial: ver, descargar o **restaurar** cualquier versión. Restaurar crea una versión nueva igual a la vieja; nunca se pierde nada.
+  - Editar nombre y descripción, y eliminar el archivo con todo su historial (solo quien puede editar el proyecto).
+  - Todo queda en la bitácora del proyecto. Quien solo mira puede ver y descargar.
+- **Ocultar de Hoy**: en Hoy, el botón `···` de una tarea de proyecto (o mantenerla presionada) ofrece "Ocultar esta tarea de Hoy" u "Ocultar todo el proyecto de Hoy", con Deshacer. En la pantalla del proyecto está el botón "Ocultar de Hoy" / "Mostrar en Hoy". Solo cambia tu vista: la tarea sigue en el tablero para el equipo. Ajustes muestra cuántas hay ocultas y permite mostrarlas todas.
+
+### 5. Pruebas
+
+- `npm test`: además de lo anterior, pasos sugeridos, nombres y rutas de archivos, detección de versiones, enlaces y diagnóstico del calendario, zona horaria y horario por defecto en el .ics.
+- `bash tests/run_sql.sh`: ahora también corre `schema_v15.sql` dos veces sobre un archivo viejo y prueba numeración automática, restaurar, historial que no se puede editar ni borrar, permisos de editor, viewer y extraños, y borrado en cascada.

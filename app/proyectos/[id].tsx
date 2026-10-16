@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RequireAuth } from '../../components/RequireAuth';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
@@ -8,9 +8,13 @@ import { C, R, shadow, uiScheme, SUBJECT_COLORS } from '../../lib/theme';
 import { useResponsive, SIDEBAR_W } from '../../lib/responsive';
 import { confirm, notify } from '../../lib/confirm';
 import { ProgressBar } from '../../components/ProgressBar';
+import { StepSuggestions } from '../../components/StepSuggestions';
+import { loadHoyHidden, setProjectHidden } from '../../lib/hoyHidden';
+import { toast } from '../../lib/feedback';
 import { SideNav } from '../../components/SideNav';
 import { useAuth } from '../../lib/auth';
 import { ImportSheet } from '../../components/projects/ImportSheet';
+import { ProjectFiles } from '../../components/projects/ProjectFiles';
 import { BulkAction, BulkBar, BulkDialog, ExportSheet, confirmBulkDelete } from '../../components/projects/BulkTools';
 import { undoProjectBatch } from '../../lib/projectsBulk';
 import { Subject, getSubjects } from '../../lib/db';
@@ -25,7 +29,7 @@ import {
 } from '../../lib/projects';
 
 // ============================================================
-//  Pantalla de un proyecto: Tablero, Lista y Equipo.
+//  Pantalla de un proyecto: Tablero, Lista, Archivos y Equipo.
 //
 //  Sobre el arrastrar y soltar: en web NO se usa PanResponder ni una librería
 //  de gestos. Se envuelven las tarjetas en un <div draggable> de verdad con
@@ -55,6 +59,7 @@ const COARSE_POINTER = (() => {
 const VIEWS = [
   { key: 'tablero', label: 'Tablero', icon: 'grid-outline' },
   { key: 'lista', label: 'Lista', icon: 'list-outline' },
+  { key: 'archivos', label: 'Archivos', icon: 'folder-open-outline' },
   { key: 'equipo', label: 'Equipo', icon: 'people-outline' },
 ] as const;
 type ViewKey = (typeof VIEWS)[number]['key'];
@@ -118,6 +123,7 @@ function ProyectoDetalle() {
   const cols = useMemo(() => columnsOf(project), [project]);
   const role: ProjectRole | null = useMemo(() => myRole(members, myId), [members, myId]);
   const editable = canEdit(role);
+  const isTaskView = view === 'tablero' || view === 'lista';
   const subject = subjects.find((s) => s.id === project?.subject_id) ?? null;
 
   // Tarjetas agrupadas por columna. Las que quedaron con un `status` que ya no
@@ -137,6 +143,16 @@ function ProyectoDetalle() {
   }, [tasks, cols]);
 
   const doneCount = tasks.filter((t) => t.done).length;
+
+  // Ocultar o mostrar las tareas de este proyecto en "Hoy" (solo para mí).
+  const [hiddenInHoy, setHiddenInHoy] = useState(false);
+  useEffect(() => { loadHoyHidden().then((h) => setHiddenInHoy(h.projects.includes(projectId))).catch(() => {}); }, [projectId]);
+  async function toggleHoy() {
+    const next = !hiddenInHoy;
+    setHiddenInHoy(next);
+    try { await setProjectHidden(projectId, next); toast(next ? 'Tus tareas de este proyecto ya no aparecen en Hoy' : 'Tus tareas de este proyecto vuelven a aparecer en Hoy'); }
+    catch (e: any) { setHiddenInHoy(!next); notify('No se pudo cambiar', e?.message ?? ''); }
+  }
 
   function toggleSelect(id: string) {
     setSelected((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -236,7 +252,7 @@ function ProyectoDetalle() {
           </View>
           {isWide ? (
             <>
-              {editable && view !== 'equipo' && !selecting && (
+              {editable && isTaskView && !selecting && (
                 <HeaderBtn icon="checkbox-outline" label="Seleccionar" wide onPress={() => setSelecting(true)} />
               )}
               {editable && project && (
@@ -244,6 +260,9 @@ function ProyectoDetalle() {
               )}
               {project && (
                 <HeaderBtn icon="download-outline" label="Exportar" wide onPress={() => setExportOpen(true)} />
+              )}
+              {project && (
+                <HeaderBtn icon={hiddenInHoy ? 'eye-outline' : 'eye-off-outline'} label={hiddenInHoy ? 'Mostrar en Hoy' : 'Ocultar de Hoy'} wide onPress={toggleHoy} />
               )}
               {editable && view === 'tablero' && (
                 <HeaderBtn icon="options-outline" label="Columnas" wide onPress={() => setColsModal(true)} />
@@ -255,18 +274,19 @@ function ProyectoDetalle() {
         </View>
 
         {/* pestañas */}
-        <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12, flexGrow: 0 }} contentContainerStyle={{ gap: 8 }} accessibilityRole="tablist">
           {VIEWS.map((v) => {
             const on = v.key === view;
             return (
-              <Pressable key={v.key} onPress={() => setView(v.key)}
+              <Pressable key={v.key} onPress={() => { setView(v.key); if (v.key !== 'tablero' && v.key !== 'lista') endSelecting(); }}
+                accessibilityRole="tab" accessibilityState={{ selected: on }}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 14, borderRadius: R.pill, borderWidth: 1, backgroundColor: on ? C.brand : C.surface2, borderColor: on ? C.brand : C.line }}>
                 <Ionicons name={v.icon as any} size={14} color={on ? C.onBrand : C.muted} />
                 <Text style={{ color: on ? C.onBrand : C.text, fontSize: 13, fontWeight: on ? '700' : '500' }}>{v.label}</Text>
               </Pressable>
             );
           })}
-        </View>
+        </ScrollView>
       </View>
 
       {/* ---------- Cuerpo ---------- */}
@@ -302,6 +322,8 @@ function ProyectoDetalle() {
             load();
           }}
         />
+      ) : view === 'archivos' ? (
+        <ProjectFiles projectId={projectId} members={members} editable={editable} isWide={isWide} onChanged={load} />
       ) : (
         <Equipo
           project={project} members={members} tasks={tasks} activity={activity}
@@ -352,10 +374,11 @@ function ProyectoDetalle() {
         visible={moreOpen}
         onClose={() => setMoreOpen(false)}
         items={[
-          ...(editable && view !== 'equipo' && !selecting ? [{ icon: 'checkbox-outline', label: 'Seleccionar varias', hint: 'Cambiar columna, responsable o fechas a la vez', onPress: () => setSelecting(true) }] : []),
+          ...(editable && isTaskView && !selecting ? [{ icon: 'checkbox-outline', label: 'Seleccionar varias', hint: 'Cambiar columna, responsable o fechas a la vez', onPress: () => setSelecting(true) }] : []),
           ...(editable ? [{ icon: 'cloud-upload-outline', label: 'Importar tareas', hint: 'Desde un CSV, un JSON o una IA', onPress: () => setImportOpen(true) }] : []),
           { icon: 'download-outline', label: 'Exportar tareas', hint: 'Para editarlas en Excel y volver a subirlas', onPress: () => setExportOpen(true) },
           ...(editable && view === 'tablero' ? [{ icon: 'options-outline', label: 'Columnas del tablero', onPress: () => setColsModal(true) }] : []),
+          { icon: hiddenInHoy ? 'eye-outline' : 'eye-off-outline', label: hiddenInHoy ? 'Mostrar mis tareas de este proyecto en Hoy' : 'Ocultar mis tareas de este proyecto de Hoy', onPress: toggleHoy },
         ]}
       />
 
@@ -392,7 +415,7 @@ function ProyectoDetalle() {
         }}
       />
 
-      {selecting && view !== 'equipo' && (
+      {selecting && isTaskView && (
         <BulkBar
           count={selected.size}
           total={tasks.length}
@@ -1314,7 +1337,7 @@ function PTaskModal({ visible, task, projectId, status, cols, members, steps, ed
 
             {!task ? (
               <Text style={{ color: C.muted, fontSize: 12, lineHeight: 18 }}>
-                Guarda la tarea primero y aquí podrás partirla en pasos con su barra de avance.
+                Guarda la tarea primero y aquí podrás partirla en pasos (con sugerencias según la descripción) y ver su avance.
               </Text>
             ) : (
               <View style={{ backgroundColor: C.surface2 + '80', borderRadius: 12, borderWidth: 1, borderColor: C.line, padding: 10 }}>
@@ -1354,6 +1377,15 @@ function PTaskModal({ visible, task, projectId, status, cols, members, steps, ed
                   </View>
                 )}
               </View>
+            )}
+            {task && editable && (
+              <StepSuggestions title={title} description={desc} existing={steps.map((x) => x.title)}
+                onAdd={async (titles) => {
+                  try {
+                    for (let i = 0; i < titles.length; i++) await addProjectStep(projectId, task.id, titles[i], (steps.length + i + 1) * 1000);
+                    onStepsChanged();
+                  } catch (e: any) { notify('No se pudo agregar', e.message); }
+                }} />
             )}
 
             {editable && (

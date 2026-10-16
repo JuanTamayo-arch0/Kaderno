@@ -72,6 +72,8 @@ else
 window.KADERNO_CONFIG = {
   SUPABASE_URL: '',
   SUPABASE_ANON_KEY: '',
+  VAPID_PUBLIC_KEY: '',
+  CALENDAR_URL: '',
 };
 JS
     echo "   creado $BASE/shared/kaderno-config.js vacío: llénalo con tus valores"

@@ -240,7 +240,7 @@ test('ics: entregas con y sin hora, clases semanales y texto escapado', () => {
   const lines = ics.split('\r\n');
   assert.equal(lines[0], 'BEGIN:VCALENDAR');
   assert.equal((ics.match(/BEGIN:VEVENT/g) ?? []).length, 3 + 2, 'tres entregas y dos clases');
-  assert.ok(ics.includes('SUMMARY:[Cálculo II] Parcial\\, cap. 7\; series'));
+  assert.ok(ics.includes('SUMMARY:[Cálculo II] Parcial\\, cap. 7\\; series'));
   assert.ok(ics.includes('DTSTART:20261016T143000Z') && ics.includes('DTEND:20261016T150000Z'));
   assert.ok(ics.includes('DTSTART;VALUE=DATE:20261020') && ics.includes('DTEND;VALUE=DATE:20261021'));
   assert.ok(ics.includes('DESCRIPTION:Línea 1\\nLínea 2'));

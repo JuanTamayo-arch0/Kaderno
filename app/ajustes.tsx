@@ -6,15 +6,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { C } from '../lib/theme';
 import { RequireAuth } from '../components/RequireAuth';
 import { useAuth } from '../lib/auth';
-import { supabase, SUPABASE_URL } from '../lib/supabase';
-import { fetchPrefs, savePrefs, getCalendarToken, exportMyData, hasV14 } from '../lib/db';
+import { supabase } from '../lib/supabase';
+import { fetchPrefs, savePrefs, exportMyData, hasV14 } from '../lib/db';
+import { CalendarCard } from '../components/CalendarCard';
 import { updateMyProfile } from '../lib/projects';
 import { getPushStatus, enablePush, disablePush, testLocalNotification, isStandalone, type PushStatus } from '../lib/push';
 import { canPromptInstall, onInstallChange, promptInstall, isIOSWeb } from '../lib/pwa';
 import { confirm, notify, toast, friendlyError, flushPendingDeletes } from '../lib/feedback';
-import { copyText, saveFile } from '../lib/fileIO';
+import { saveFile } from '../lib/fileIO';
 import { Screen, Button, Card, Field, IconButton, ListRow, SectionLabel, Toggle } from '../components/ds';
 import { Avatar } from '../components/SideNav';
+import { clearHoyHidden, resetHoyHiddenCache } from '../lib/hoyHidden';
 
 // ============================================================
 //  Ajustes: cuenta, apariencia, avisos, calendario, instalar la app,
@@ -32,18 +34,21 @@ function Ajustes() {
   const [name, setName] = useState<string>((session?.user?.user_metadata?.full_name as string) ?? '');
   const [nameDirty, setNameDirty] = useState(false);
   const [hoyProy, setHoyProy] = useState(true);
+  const [hiddenN, setHiddenN] = useState(0);
   const [notif, setNotif] = useState<Notif>(DEFAULT_NOTIF);
   const [push, setPush] = useState<PushStatus>('unsupported');
   const [pushBusy, setPushBusy] = useState(false);
-  const [icsUrl, setIcsUrl] = useState<string | null>(null);
   const [pwModal, setPwModal] = useState(false);
   const [canInstall, setCanInstall] = useState(canPromptInstall());
   const scroller = React.useRef<any>(null);
 
   useFocusEffect(useCallback(() => {
+    resetHoyHiddenCache();
     fetchPrefs().then((p) => {
       if (!p) return;
       if (p.hoyProyectos === false) setHoyProy(false);
+      const ho = p.hoyOcultas ?? {};
+      setHiddenN((Array.isArray(ho.tasks) ? ho.tasks.length : 0) + (Array.isArray(ho.projects) ? ho.projects.length : 0));
       setNotif({ ...DEFAULT_NOTIF, ...(p.notif ?? {}) });
     }).catch(() => {});
     getPushStatus().then(setPush).catch(() => {});
@@ -79,13 +84,6 @@ function Ajustes() {
       if (st === 'denied') notify('Notificaciones bloqueadas', 'Las bloqueaste en el navegador. Ábrelas desde el candado junto a la dirección del sitio y permite las notificaciones.');
     } catch (e) { notify('No se pudieron activar', friendlyError(e)); }
     finally { setPushBusy(false); }
-  }
-  async function showIcs(regen = false) {
-    try {
-      const t = await getCalendarToken(regen);
-      setIcsUrl(`${SUPABASE_URL}/functions/v1/ical?token=${t}`);
-      if (regen) toast('Enlace nuevo creado. El anterior ya no funciona.');
-    } catch (e) { notify('No se pudo crear el enlace', friendlyError(e)); }
   }
   async function exportData() {
     try {
@@ -134,6 +132,14 @@ function Ajustes() {
         <Divider />
         <Toggle label="Tareas de proyectos en Hoy" hint="Muestra en Hoy lo que te toca en tus proyectos." value={hoyProy}
           onChange={(v) => { setHoyProy(v); savePrefs({ hoyProyectos: v }).catch(() => {}); }} />
+        {hiddenN > 0 && (
+          <>
+            <Divider />
+            <ListRow title={`${hiddenN} ${hiddenN === 1 ? 'oculta' : 'ocultas'} en Hoy`} subtitle="Tareas o proyectos que escondiste de Hoy. Siguen en sus tableros."
+              left={<Ionicons name="eye-off-outline" size={20} color={C.muted} />} chevron={false}
+              right={<Button label="Mostrar todo" kind="secondary" size="sm" onPress={async () => { try { await clearHoyHidden(); setHiddenN(0); toast('Listo: vuelven a aparecer en Hoy'); } catch (e) { notify('No se pudo', friendlyError(e)); } }} />} />
+          </>
+        )}
       </Card>
 
       <SectionLabel text="Avisos" />
@@ -170,19 +176,7 @@ function Ajustes() {
       </Card>
 
       <SectionLabel text="Calendario" />
-      <Card>
-        <Text style={{ color: C.text, fontSize: 15, fontWeight: '600' }}>Ver tus entregas y clases en Google Calendar o Apple</Text>
-        <Text style={{ color: C.muted, fontSize: 13, marginTop: 4, lineHeight: 19 }}>Kaderno crea un enlace privado. Pégalo en Google Calendar (Otros calendarios, Desde URL) o en el iPhone (Ajustes, Calendario, Cuentas, Agregar calendario suscrito). Se actualiza solo.</Text>
-        {icsUrl ? (
-          <View style={{ marginTop: 12, gap: 8 }}>
-            <Text selectable style={{ color: C.text, fontSize: 12.5, backgroundColor: C.surface2, padding: 10, borderRadius: 8, fontFamily: Platform.OS === 'web' ? 'monospace' : undefined }}>{icsUrl}</Text>
-            <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-              <Button label="Copiar enlace" icon="copy-outline" size="sm" onPress={async () => { if (await copyText(icsUrl)) toast('Enlace copiado'); }} />
-              <Button label="Crear enlace nuevo" kind="secondary" size="sm" onPress={async () => { if (await confirm('¿Crear un enlace nuevo?', 'El enlace anterior dejará de funcionar en los calendarios donde lo hayas pegado.', 'Crear nuevo')) showIcs(true); }} />
-            </View>
-          </View>
-        ) : <Button label="Obtener mi enlace" icon="calendar-outline" kind="secondary" size="sm" onPress={() => showIcs(false)} style={{ marginTop: 12, alignSelf: 'flex-start' }} />}
-      </Card>
+      <CalendarCard />
 
       {Platform.OS === 'web' && !isStandalone() && (
         <>

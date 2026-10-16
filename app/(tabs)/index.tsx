@@ -26,7 +26,8 @@ import { Screen, Button, Card, EmptyState, ErrorState, FilterChip, IconButton, S
 import { TaskRow } from '../../components/TaskRow';
 import { MiniCalendar } from '../../components/MiniCalendar';
 import { Avatar } from '../../components/SideNav';
-import type { MenuAction } from '../../components/ActionMenu';
+import { ActionMenu, type MenuAction } from '../../components/ActionMenu';
+import { type HoyHidden, setTaskHidden, setProjectHidden, clearHoyHidden, pruneHiddenTasks, resetHoyHiddenCache } from '../../lib/hoyHidden';
 
 // ============================================================
 //  Hoy.
@@ -49,7 +50,8 @@ export default function Hoy() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [steps, setSteps] = useState<Record<string, Step[]>>({});
-  const [ptasks, setPtasks] = useState<MyProjectTask[]>([]);
+  const [allPtasks, setPtasks] = useState<MyProjectTask[]>([]);
+  const [hiddenH, setHiddenH] = useState<HoyHidden>({ tasks: [], projects: [] });
   const [slots, setSlots] = useState<Slot[]>([]);
   const [repaso, setRepaso] = useState(0);
   const [focusToday, setFocusToday] = useState<{ todayMin: number; streak: number }>({ todayMin: 0, streak: 0 });
@@ -68,7 +70,10 @@ export default function Hoy() {
       const pending = t.filter((x) => x.status !== 'done').map((x) => x.id);
       getStepsFor(pending).then(setSteps).catch(() => {});
       getFocusByTask(pending).then(setFocusBy).catch(() => {});
-      if ((prefs as any)?.hoyProyectos !== false) getMyProjectTasks().then(setPtasks).catch(() => setPtasks([]));
+      resetHoyHiddenCache();
+      const ho = (prefs as any)?.hoyOcultas ?? {};
+      setHiddenH({ tasks: Array.isArray(ho.tasks) ? ho.tasks : [], projects: Array.isArray(ho.projects) ? ho.projects : [] });
+      if ((prefs as any)?.hoyProyectos !== false) getMyProjectTasks().then((pt) => { setPtasks(pt); pruneHiddenTasks(pt.map((x) => x.id)).catch(() => {}); }).catch(() => setPtasks([]));
       else setPtasks([]);
       countDueFlashcards().then(setRepaso).catch(() => {});
       getFocusDetail().then((d) => setFocusToday({ todayMin: d.todayMin, streak: d.streak })).catch(() => {});
@@ -110,6 +115,27 @@ export default function Hoy() {
     try { await moveTaskDate(t, iso); toast(`Movida a ${label}`); load(); }
     catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
   }
+  async function hideProj(p: MyProjectTask, wholeProject: boolean) {
+    const name = p.project?.name ?? 'el proyecto';
+    const apply = (hidden: boolean) => setHiddenH((h) => wholeProject
+      ? { ...h, projects: hidden ? [...h.projects, p.project_id] : h.projects.filter((x) => x !== p.project_id) }
+      : { ...h, tasks: hidden ? [...h.tasks, p.id] : h.tasks.filter((x) => x !== p.id) });
+    apply(true);
+    try {
+      if (wholeProject) await setProjectHidden(p.project_id, true); else await setTaskHidden(p.id, true);
+      toast(wholeProject ? `Ocultaste ${name} de Hoy` : 'Tarea oculta de Hoy (sigue en el tablero)', {
+        actionLabel: 'Deshacer',
+        onAction: () => { apply(false); (wholeProject ? setProjectHidden(p.project_id, false) : setTaskHidden(p.id, false)).catch(() => {}); },
+      });
+    } catch (e) { apply(false); toast(friendlyError(e), { tone: 'bad' }); }
+  }
+  async function showHidden() {
+    const prev = hiddenH;
+    setHiddenH({ tasks: [], projects: [] });
+    try { await clearHoyHidden(); toast('Volvieron a aparecer las tareas de proyecto ocultas'); }
+    catch (e) { setHiddenH(prev); toast(friendlyError(e), { tone: 'bad' }); }
+  }
+
   const actionsFor = (t: Task): MenuAction[] => {
     const today = startOfDay(new Date());
     const list: MenuAction[] = [
@@ -127,6 +153,9 @@ export default function Hoy() {
   // ---------- Datos derivados ----------
   const live = (tasks ?? []).filter((t) => !hidden.has(t.id) && (!t.subject_id || !subjects.length || subjects.some((s) => s.id === t.subject_id)));
   const pending = live.filter((t) => t.status !== 'done');
+  // Tareas de proyecto que no se ocultaron de Hoy (por tarea o por proyecto).
+  const ptasks = allPtasks.filter((p) => !hiddenH.tasks.includes(p.id) && !hiddenH.projects.includes(p.project_id));
+  const hiddenCount = allPtasks.length - ptasks.length;
   const visibleTasks = pending.filter((t) => !filter || t.subject_id === filter)
     .filter((t) => !day || (dueDay(t) && isoDate(dueDay(t)!) === day));
   const visibleProj = ptasks.filter((p) => !filter || p.project?.id === filter || false)
@@ -264,7 +293,12 @@ export default function Hoy() {
       onToggle={toggle} onOpen={(t) => openTask(t)} actions={actionsFor(r.t)}
       onStepsChange={(id, next) => setSteps((s) => ({ ...s, [id]: next }))} />
   ) : (
-    <ProjectRow key={'p' + r.p.id} p={r.p} onOpen={() => router.push(`/proyectos/${r.p.project_id}`)} />
+    <ProjectRow key={'p' + r.p.id} p={r.p} onOpen={() => router.push(`/proyectos/${r.p.project_id}`)}
+      actions={[
+        { label: 'Abrir el proyecto', icon: 'open-outline', onPress: () => router.push(`/proyectos/${r.p.project_id}`) },
+        { label: 'Ocultar esta tarea de Hoy', icon: 'eye-off-outline', onPress: () => hideProj(r.p, false) },
+        { label: `Ocultar todo ${r.p.project?.name ?? 'este proyecto'} de Hoy`, icon: 'eye-off', onPress: () => hideProj(r.p, true) },
+      ]} />
   );
 
   const list = tasks === null ? (
@@ -340,6 +374,13 @@ export default function Hoy() {
       {week}
       {filters}
       {list}
+      {hiddenCount > 0 && !filter && (
+        <Pressable onPress={showHidden} accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10 }}>
+          <Ionicons name="eye-off-outline" size={16} color={C.muted} />
+          <Text style={{ color: C.muted, fontSize: 13 }}>{hiddenCount} {hiddenCount === 1 ? 'tarea de proyecto oculta' : 'tareas de proyecto ocultas'} · </Text>
+          <Text style={{ color: C.brand, fontSize: 13, fontWeight: '700' }}>Mostrar</Text>
+        </Pressable>
+      )}
       {doneBlock}
       {(!isWide || width < 1100) && repasoCard}
     </>
@@ -383,11 +424,13 @@ function AgendaRow({ it, now, isToday }: { it: AgendaItem; now: Date; isToday: b
   );
 }
 
-function ProjectRow({ p, onOpen }: { p: MyProjectTask; onOpen: () => void }) {
+function ProjectRow({ p, onOpen, actions }: { p: MyProjectTask; onOpen: () => void; actions: MenuAction[] }) {
   const due = fmtDue(p);
   const b = bucketOf(p);
+  const [menu, setMenu] = useState(false);
   return (
-    <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={`${p.title}, proyecto ${p.project?.name ?? ''}${due ? ', ' + due : ''}`}
+    <>
+    <Pressable onPress={onOpen} onLongPress={() => setMenu(true)} delayLongPress={350} accessibilityRole="button" accessibilityLabel={`${p.title}, proyecto ${p.project?.name ?? ''}${due ? ', ' + due : ''}`}
       style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, paddingLeft: 14, minHeight: 54, backgroundColor: hovered ? C.surface2 : C.surface, borderColor: C.line, borderWidth: 1, borderRadius: 12, marginBottom: 8 })}>
       <View style={{ width: 22, height: 22, borderRadius: 7, backgroundColor: (p.project?.color ?? C.brand) + '26', alignItems: 'center', justifyContent: 'center' }}>
         <Text style={{ fontSize: 12 }}>{p.project?.icon ?? '📦'}</Text>
@@ -402,7 +445,12 @@ function ProjectRow({ p, onOpen }: { p: MyProjectTask; onOpen: () => void }) {
           {!!due && <Text style={{ color: b === 'overdue' ? C.badText : b === 'today' ? C.warnText : C.muted, fontSize: 12.5, fontWeight: b === 'overdue' || b === 'today' ? '700' : '500' }}>{due}</Text>}
         </View>
       </View>
-      <Ionicons name="chevron-forward" size={18} color={C.muted} />
+      <Pressable onPress={() => setMenu(true)} accessibilityRole="button" accessibilityLabel={`Más acciones para "${p.title}"`}
+        style={({ hovered }: any) => ({ width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginRight: -6, backgroundColor: hovered ? C.line : 'transparent' })}>
+        <Ionicons name="ellipsis-horizontal" size={18} color={C.muted} />
+      </Pressable>
     </Pressable>
+    <ActionMenu visible={menu} title={p.title} actions={actions} onClose={() => setMenu(false)} />
+    </>
   );
 }

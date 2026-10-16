@@ -1,6 +1,6 @@
 // ============================================================
 //  Edge Function: ai
-//  Genera un RESUMEN o FLASHCARDS a partir del texto de una nota,
+//  Genera un RESUMEN, FLASHCARDS o MICROTAREAS (task: 'steps') a partir de un texto,
 //  usando un modelo de Claude.
 //
 //  Desplegar:   npx supabase functions deploy ai
@@ -24,7 +24,11 @@ Deno.serve(async (req) => {
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (!apiKey) return json({ error: 'ANTHROPIC_API_KEY no configurada' }, 500);
 
-    const prompt = task === 'flashcards'
+    const prompt = task === 'steps'
+      ? 'Eres un asistente de estudio. Divide esta tarea universitaria en entre 3 y 7 microtareas concretas, ' +
+        'en el orden en que conviene hacerlas, cada una de máximo 8 palabras y empezando con un verbo. ' +
+        'Devuelve SOLO un arreglo JSON de textos, sin nada más, por ejemplo ["Leer el enunciado","Hacer el esquema"]. Tarea:\n\n' + content
+      : task === 'flashcards'
       ? 'A partir de estos apuntes, crea entre 4 y 8 tarjetas de estudio (flashcards). ' +
         'Devuelve SOLO un arreglo JSON válido, sin texto adicional, con este formato: ' +
         '[{"front":"pregunta","back":"respuesta"}]. Preguntas claras y respuestas concisas. Apuntes:\n\n' + content
@@ -52,6 +56,12 @@ Deno.serve(async (req) => {
       let cards: { front: string; back: string }[] = [];
       try { cards = JSON.parse(match ? match[0] : text); } catch { cards = []; }
       return json({ cards });
+    }
+    if (task === 'steps') {
+      const match = text.match(/\[[\s\S]*\]/);
+      let steps: string[] = [];
+      try { steps = (JSON.parse(match ? match[0] : text) as unknown[]).map((x) => String(x).trim()).filter(Boolean).slice(0, 8); } catch { steps = []; }
+      return json({ steps });
     }
     return json({ summary: text });
   } catch (e) {
