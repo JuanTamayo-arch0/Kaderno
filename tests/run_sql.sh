@@ -16,3 +16,10 @@ for f in tests/sql/00_supabase_stub.sql supabase/schema.sql supabase/schema_v2.s
   echo "== k14 $f"; $PSQL -d k14 -f $f 2>&1 | grep -v "NOTICE" | grep -v "^$" | head -20
 done
 $PSQL -d k14 -f tests/sql/14_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line" | grep -v "^ *$"
+
+# ---------- schema_v15 (versiones de archivos) ----------
+psql -h $P -p 54329 -U postgres -qX -c "drop database if exists k15" && psql -h $P -p 54329 -U postgres -qX -c "create database k15" || exit 1
+for f in tests/sql/00_supabase_stub.sql supabase/schema_v12.sql tests/sql/02_seed.sql tests/sql/15_antes.sql supabase/schema_v15.sql supabase/schema_v15.sql; do
+  echo "== k15 $f"; $PSQL -d k15 -f $f 2>&1 | grep -v "NOTICE" | grep -v "^$" | head -20
+done
+$PSQL -d k15 -f tests/sql/15_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line" | grep -v "^ *$"

@@ -5,10 +5,17 @@
 
 export type IcsTask = { id: string; title: string; description?: string | null; due_date?: string | null; due_at?: string | null; subject?: string | null; kind?: 'task' | 'project'; project?: string | null; done?: boolean };
 export type IcsClass = { id: string; subject: string; day: number; start: string; end: string }; // day 0 = lunes, HH:MM
-export type IcsInput = { name: string; tasks: IcsTask[]; classes: IcsClass[]; now: Date; weeks?: number; appUrl?: string };
+export type IcsInput = { name: string; tasks: IcsTask[]; classes: IcsClass[]; now: Date; weeks?: number; appUrl?: string; tz?: string };
+
+/** Bloques del horario por defecto (los mismos de lib/schedule.ts) para quien nunca los cambió. */
+export const DEFAULT_ICS_BLOCKS: { start: string; end: string }[] = [
+  { start: '06:00', end: '08:00' }, { start: '08:00', end: '10:00' }, { start: '10:00', end: '12:00' },
+  { start: '12:00', end: '14:00' }, { start: '14:00', end: '16:00' }, { start: '16:00', end: '18:00' },
+  { start: '18:00', end: '20:00' },
+];
 
 export function escapeText(s: string): string {
-  return s.replace(/\\/g, '\\\\').replace(/;/g, '\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+  return s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
 }
 
 /** Corta líneas a 75 octetos como pide el estándar (continuación con espacio). */
@@ -41,6 +48,8 @@ export function buildIcs(inp: IcsInput): string {
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Kaderno//Calendario//ES', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
     `X-WR-CALNAME:${escapeText(inp.name)}`, 'X-PUBLISHED-TTL:PT1H', 'REFRESH-INTERVAL;VALUE=DURATION:PT1H',
   ];
+  // Las clases van en hora local "flotante"; esto le dice al calendario cuál es esa zona.
+  if (inp.tz && /^[A-Za-z_]+(\/[A-Za-z0-9_+-]+)*$/.test(inp.tz)) L.push(`X-WR-TIMEZONE:${inp.tz}`);
   const stamp = utcStamp(inp.now);
 
   for (const t of inp.tasks) {

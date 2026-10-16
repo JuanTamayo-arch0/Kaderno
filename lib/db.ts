@@ -547,6 +547,15 @@ export async function aiFlashcards(content: string): Promise<{ front: string; ba
   return (data as any)?.cards ?? [];
 }
 
+export async function aiSteps(title: string, description: string | null): Promise<string[]> {
+  const content = `Título: ${title}${description ? `\nDescripción: ${description}` : ''}`;
+  const { data, error } = await supabase.functions.invoke('ai', { body: { task: 'steps', content } });
+  if (error) throw error;
+  const steps = (data as any)?.steps;
+  if (!Array.isArray(steps)) throw new Error('La función de IA no conoce la tarea "steps" (hay que volver a desplegarla).');
+  return steps.map((s: unknown) => String(s));
+}
+
 // ---------- Búsqueda global ----------
 export type ProjectTaskHit = { id: string; title: string; project_id: string; due_at: string | null; due_date: string | null; done: boolean };
 export async function search(q: string): Promise<{ notes: Note[]; tasks: Task[]; subjects: Subject[]; flashcards: Flashcard[]; projectTasks: ProjectTaskHit[] }> {

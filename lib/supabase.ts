@@ -19,6 +19,8 @@ const isPlaceholder = (v: string) =>
 // Llave pública VAPID para las notificaciones push (ver RUNBOOK, sección v12).
 export const VAPID_PUBLIC_KEY: string = runtime.VAPID_PUBLIC_KEY || (process.env.EXPO_PUBLIC_VAPID_PUBLIC_KEY as string) || '';
 export const SUPABASE_URL: string = supabaseUrl;
+// Base opcional del enlace de calendario por el dominio de Kaderno (proxy de Nginx).
+export const CALENDAR_URL: string = runtime.CALENDAR_URL || (process.env.EXPO_PUBLIC_CALENDAR_URL as string) || '';
 
 export const SUPABASE_READY: boolean = !isPlaceholder(supabaseUrl) && !isPlaceholder(supabaseAnonKey);
 

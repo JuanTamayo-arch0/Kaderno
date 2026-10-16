@@ -38,6 +38,35 @@ export async function pickTextFile(): Promise<PickedFile | null> {
   return { name: a.name ?? 'archivo', bytes };
 }
 
+export type PickedAny = PickedFile & { mime: string | null; size: number };
+
+/** Cualquier tipo de archivo (para los archivos de un proyecto). null si se canceló. */
+export async function pickAnyFile(): Promise<PickedAny | null> {
+  if (isWeb) {
+    return new Promise((resolve, reject) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.onchange = async () => {
+        const f = input.files?.[0];
+        if (!f) return resolve(null);
+        try { resolve(await readWebAny(f)); } catch (e) { reject(e); }
+      };
+      input.click();
+    });
+  }
+  const res = await DocumentPicker.getDocumentAsync({ type: '*/*', copyToCacheDirectory: true, multiple: false });
+  if (res.canceled || !res.assets?.length) return null;
+  const a = res.assets[0];
+  const bytes = await new File(a.uri).bytes();
+  return { name: a.name ?? 'archivo', bytes, mime: a.mimeType ?? null, size: a.size ?? bytes.byteLength };
+}
+
+/** Archivo de cualquier tipo soltado o elegido en el navegador. */
+export async function readWebAny(f: { name: string; type?: string; size?: number; arrayBuffer: () => Promise<ArrayBuffer> }): Promise<PickedAny> {
+  const bytes = new Uint8Array(await f.arrayBuffer());
+  return { name: f.name, bytes, mime: f.type || null, size: f.size ?? bytes.byteLength };
+}
+
 /** Un archivo soltado o elegido en el navegador. */
 export async function readWebFile(f: { name: string; arrayBuffer: () => Promise<ArrayBuffer> }): Promise<PickedFile> {
   return { name: f.name, bytes: new Uint8Array(await f.arrayBuffer()) };
