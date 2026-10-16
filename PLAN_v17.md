@@ -1,6 +1,6 @@
 # PLAN v17: Mascotas de estudio
 
-Estado: diseño listo para revisar (canvas "Mascotas de Kaderno"). Arte en `lib/pets/art.ts`. Falta aprobar para construir.
+Estado: diseño listo para revisar (canvas "Mascotas de Kaderno" y prototipo jugable "Mascotas pixel de Kaderno"). Arte en pixel art en `lib/pets/art.ts`. Falta aprobar para construir.
 
 ## 1. Decisiones tomadas
 
@@ -10,26 +10,30 @@ Estado: diseño listo para revisar (canvas "Mascotas de Kaderno"). Arte en `lib/
 | Moneda | Una por especie: pescados, ovillos, huesos y semillas |
 | Cuánto habla | "Solo cuando importa" por defecto; "Conversador" como opción |
 | Varias mascotas | Se elige una gratis al empezar; las demás se adoptan con monedas y se cambia entre ellas |
-| Arte | Propio, en SVG por capas (no se parece a mascotas conocidas) |
+| Arte | Pixel art propio de 32 x 32 (no se parece a mascotas conocidas) |
+| Movimiento | Se mueve por la pantalla: camina, salta, se puede arrastrar y soltar |
 
 Consecuencia de "una moneda por especie": cada mascota tiene su propio saldo, nivel y ropa. Lo que se gana lo gana la mascota activa. La ropa se compra con la moneda de la mascota que la va a usar y es solo suya. Adoptar se paga con la moneda de la mascota activa.
 
 ## 2. La mascota en pantalla
 
-- Vive en una esquina: abajo a la derecha en computador; en el celular, sobre la barra de abajo. Se puede arrastrar a otra esquina y se recuerda.
-- Nunca tapa botones: deja libre el botón + y los avisos (toasts suben por encima de ella).
-- Al cambiar de pantalla da un saltito hasta su lugar (sensación de que "se mueve" por la app).
-- Respira y parpadea sola; cambia de ánimo según lo que pasa:
+- Camina sola por el borde de abajo: en el celular, sobre la barra de abajo; en el computador, al pie de la pantalla (a la derecha del menú lateral).
+- Pasea a ratos: camina, se detiene, mira a los lados, a veces se sienta. Nunca se queda parada encima del botón +; cuando lo tiene en el camino, lo salta.
+- Se puede agarrar y arrastrar. Al soltarla cae con gravedad (y se aplasta un poco al llegar). Si cae sobre una tarjeta, se queda arriba paseando por el borde y después se baja de un salto. Al hacer scroll, salta al piso.
+- Los avisos (toasts), menús y diálogos quedan siempre por encima de ella.
+- Al cambiar de pantalla sigue donde estaba (es la misma mascota, no se vuelve a montar).
+- Ajuste "Movimiento": "Pasea" (por defecto) o "Quieta en su esquina". Con "reducir movimiento" del sistema empieza quieta y solo cambia de cara.
+- Cambia de ánimo según lo que pasa:
 
 | Ánimo | Cuándo |
 |---|---|
 | Normal | En reposo |
-| Feliz | Terminas una tarea, un pomodoro o todo lo del día |
-| Concentrado | Durante un enfoque (y no habla) |
+| Feliz | Terminas una tarea, un pomodoro o todo lo del día (da dos saltitos) |
+| Concentrado | Durante un enfoque: se va a su esquina y no habla |
 | Preocupado | Hay vencidas o un parcial en menos de 2 días sin repaso |
-| Dormido | Después de las 11 pm o tras 10 min sin actividad |
+| Dormido | Después de las 11 pm o tras 10 min sin actividad; se despierta al tocar algo |
 
-- Tocarla abre su globo: el mensaje actual y accesos rápidos ("¿Qué hago ahora?", "Empezar enfoque", "Preguntarle al Oráculo", "Tienda").
+- Tocarla abre su globo: el mensaje actual y accesos rápidos ("¿Qué hago ahora?", "Empezar enfoque", "Preguntarle al Oráculo", "Tienda"). El globo la sigue mientras camina.
 
 ## 3. Qué dice y cuándo
 
@@ -99,12 +103,21 @@ Adoptar: la segunda 600, la tercera 1.000, la cuarta 1.500 (moneda de la mascota
 
 Ritmo esperado: con 1 hora diaria de enfoque y 2 tareas, unas 80 monedas por día. Primera prenda el día 1, segunda mascota en una semana y media, corona en unos dos meses.
 
-## 5. Arte
+## 5. Arte y animación
 
-- `lib/pets/art.ts`: cada especie en un lienzo de 160 × 160 con tres anclajes (cabeza, ojos, cuello). La ropa se dibuja centrada en (0, 0) y se coloca en el anclaje; la misma prenda le sirve a las cuatro.
-- Salida como texto SVG: en web se inyecta tal cual; en celular, con `SvgXml`.
-- Animaciones en CSS (`lib/motion.ts`): respirar (escala 1 a 1,03 cada 3,2 s), parpadear (cada 4 a 6 s), saltito al cambiar de pantalla, salto al celebrar, "z z" al dormir. Con "reducir movimiento", quieta.
-- Peso: unos 2 KB por mascota; el módulo se carga después del arranque (no suma al tiempo de carga).
+- Pixel art en `lib/pets/art.ts`: cada mascota es una cuadrícula de 32 x 32. Se dibuja la mitad izquierda y se refleja; encima van capas para lo que no es simétrico (cola del gato y del perro, mancha del perro, cresta, pico y cola del loro), los ojos según el ánimo, las patas y la ropa.
+- La ropa son cuadrículas pequeñas que se colocan en tres anclajes (cabeza, ojos y cuello); la misma prenda le sirve a las cuatro.
+- Cuadros: quieto, respira, parpadeo, 4 de caminar, salto, agarrado, cae y 2 de dormir. `petSheet` los pone en fila para animarlos con CSS `steps()`.
+- Salida como texto SVG (un trazo por color, `crispEdges`): unos 3 a 4 KB por cuadro, nítido en tamaños múltiplos de 32 (64, 96, 160). En web se usa como imagen de fondo; en celular, con `SvgXml`.
+- Para mirar a un lado se voltea la imagen y las pupilas se corren un píxel.
+
+### Motor de movimiento (`lib/pets/motion.ts`)
+
+- Estados: quieto, camina, en el aire (salto o caída), agarrado, duerme.
+- Física simple: gravedad, velocidad de caminar de unos 36 px/s, salto calculado para pasar el botón + con margen.
+- Superficies: el piso (borde de abajo) y las tarjetas marcadas como "se puede pisar". Las tarjetas son de un solo sentido: se sube cayendo desde arriba y se baja atravesándolas.
+- Rendimiento: un solo `requestAnimationFrame` que solo mueve `transform` (sin recalcular la página); camina un rato y descansa; se detiene del todo cuando la app no está a la vista o la mascota está quieta en su esquina.
+- El prototipo "Mascotas pixel de Kaderno" tiene este motor funcionando y sirve de referencia.
 
 ## 6. Datos (schema_v16.sql)
 
@@ -126,7 +139,8 @@ Disparadores que llaman `pet_award`: al cerrar una sesión de enfoque, al pasar 
 
 ## 7. Pantallas y componentes
 
-- `components/pets/PetBuddy.tsx`: la mascota flotante, su globo y su menú. Montada una vez en el layout raíz.
+- `components/pets/PetBuddy.tsx`: la mascota, su globo y su menú. Montada una vez en el layout raíz, en una capa encima del contenido que solo captura toques sobre la mascota.
+- `lib/pets/motion.ts`: el motor de movimiento (puro, sin React) para poder probarlo.
 - `lib/pets/brain.ts`: decide ánimo y mensaje a partir de eventos (tareas, enfoque, navegación) con los límites de frecuencia. Puro y probado.
 - `lib/pets/lines.ts`: frases por situación y especie, y el banco de frases del día.
 - `app/mascota.tsx`: la mascota en grande, nombre, nivel, saldo, vestir (prendas compradas) y tienda (ropa y adoptar).
@@ -136,12 +150,12 @@ Disparadores que llaman `pet_award`: al cerrar una sesión de enfoque, al pasar 
 
 ## 8. Fases
 
-1. **Compañero**: elegir mascota y nombre, mascota en pantalla con ánimos y animaciones, mensajes por eventos, frase del día, ajustes.
+1. **Compañero**: elegir mascota y nombre, mascota que camina y se arrastra, ánimos y animaciones, mensajes por eventos, frase del día, ajustes (incluido "Movimiento").
 2. **Progreso**: monedas, nivel, tienda con las 10 prendas, vestir, adoptar y cambiar de mascota.
 3. **Más**: Oráculo con la cara de la mascota, logros ("una semana sin vencidas"), prendas de temporada.
 
 ## 9. Pruebas
 
-- Unitarias: `brain.ts` (qué dice en cada situación, límites de frecuencia, silencio durante enfoque), cálculo de nivel, precios.
+- Unitarias: `brain.ts` (qué dice en cada situación, límites de frecuencia, silencio durante enfoque), `motion.ts` (salta el botón +, aterriza en tarjetas, se baja, no sale de la pantalla), arte (cada especie y prenda cabe en 32 x 32), cálculo de nivel, precios.
 - SQL: `pet_award` no paga dos veces la misma tarea, respeta el tope diario, no deja comprar sin saldo o sin nivel, una sola mascota activa, RLS entre usuarios.
-- Navegador: la mascota no tapa el botón + ni los avisos, se arrastra y recuerda la esquina, se calla en enfoque.
+- Navegador: la mascota no se queda sobre el botón + ni tapa los avisos, se arrastra y cae, se calla en enfoque, se queda quieta con "reducir movimiento".
