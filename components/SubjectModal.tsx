@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
 import { C, SUBJECT_COLORS, SUBJECT_ICONS } from '../lib/theme';
 import { Subject, addSubject, updateSubject, archiveSubject, restoreSubject, addGrade } from '../lib/db';
@@ -67,7 +67,7 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-        <Pressable onPress={() => {}} accessibilityViewIsModal style={{ backgroundColor: C.surface, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 440, maxHeight: '90%' }}>
+        <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} accessibilityViewIsModal style={{ backgroundColor: C.surface, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 440, maxHeight: '90%' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
             <Text style={{ color: C.text, fontSize: 18, fontWeight: '700', flex: 1 }} accessibilityRole="header">{editSubject ? 'Editar materia' : 'Nueva materia'}</Text>
             <IconButton icon="close" label="Cerrar" onPress={onClose} />
@@ -139,7 +139,7 @@ export function GradeModal({ visible, subjectId, defaultScale = 5, onClose, onSa
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-        <Pressable onPress={() => {}} style={{ backgroundColor: C.surface, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 460 }}>
+        <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} style={{ backgroundColor: C.surface, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 460 }}>
           <Text style={{ color: C.text, fontSize: 18, fontWeight: '700', marginBottom: 12 }}>Nueva evaluación</Text>
           <Field label="Nombre" value={name} onChangeText={setName} placeholder="Ej: Parcial 1" autoFocus />
           <View style={{ flexDirection: 'row', gap: 10 }}>

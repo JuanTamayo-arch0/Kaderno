@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { C, R } from '../lib/theme';
 import { useResponsive } from '../lib/responsive';
 import { SubjectPicker } from './SubjectPicker';
@@ -256,10 +256,10 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
   );
 
   return (
-    <Modal visible={visible} transparent animationType={isWide ? 'fade' : 'slide'} onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType={isWide || Platform.OS === 'web' ? 'fade' : 'slide'} onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: isWide ? 'center' : 'stretch', justifyContent: isWide ? 'center' : 'flex-end', padding: isWide ? 24 : 0 }}>
-          <Pressable onPress={() => {}} accessibilityViewIsModal
+          <Pressable onPress={() => {}} accessibilityViewIsModal dataSet={{ anim: 'sheet' }}
             style={isWide
               ? { width: '100%', maxWidth: 580, maxHeight: '90%', backgroundColor: C.surface, borderRadius: R.xl, borderWidth: 1, borderColor: C.line, padding: 22 }
               : { backgroundColor: C.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18, paddingBottom: 24, maxHeight: '94%', borderTopWidth: 1, borderColor: C.line }}>

@@ -35,6 +35,7 @@ TAG="$(git rev-parse --short HEAD 2>/dev/null || echo local)"
 echo "== Compilando versión web"
 rm -rf dist
 npx expo export --platform web --output-dir dist
+node deploy/postbuild.mjs dist
 test -f dist/index.html
 
 echo "== Subiendo ($TAG) a $HOST"

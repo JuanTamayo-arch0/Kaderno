@@ -4,7 +4,7 @@ import {
   Text, TextInput, View, useWindowDimensions,
 } from 'react-native';
 import { Redirect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase, SUPABASE_READY } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { C, currentTheme, shadow, inkOn } from '../lib/theme';

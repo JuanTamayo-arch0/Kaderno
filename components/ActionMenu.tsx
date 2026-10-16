@@ -1,6 +1,6 @@
 import React from 'react';
-import { Modal, Pressable, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Modal, Platform, Pressable, Text, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C } from '../lib/theme';
 import { useResponsive } from '../lib/responsive';
@@ -13,9 +13,9 @@ export function ActionMenu({ visible, title, actions, onClose }: { visible: bool
   const { isWide } = useResponsive();
   const insets = useSafeAreaInsets();
   return (
-    <Modal visible={visible} transparent animationType={isWide ? 'fade' : 'slide'} onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType={isWide || Platform.OS === 'web' ? 'fade' : 'slide'} onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: isWide ? 'center' : 'flex-end', alignItems: isWide ? 'center' : 'stretch' }}>
-        <Pressable onPress={() => {}} accessibilityViewIsModal
+        <Pressable onPress={() => {}} accessibilityViewIsModal dataSet={{ anim: 'sheet' }}
           style={isWide
             ? { width: 320, backgroundColor: C.surface, borderRadius: 14, borderWidth: 1, borderColor: C.line, paddingVertical: 8 }
             : { backgroundColor: C.surface, borderTopLeftRadius: 18, borderTopRightRadius: 18, paddingTop: 10, paddingBottom: 10 + insets.bottom, borderTopWidth: 1, borderColor: C.line }}>

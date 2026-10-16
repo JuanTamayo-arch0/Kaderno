@@ -37,3 +37,16 @@ export async function pruneHiddenTasks(pendingIds: string[]) {
   if (keep.length !== h.tasks.length) await save({ ...h, tasks: keep });
 }
 export function resetHoyHiddenCache() { cache = null; }
+
+// ---------- Qué mostrar en Hoy: todo, solo materias o solo proyectos ----------
+export type HoyVista = 'todo' | 'materias' | 'proyectos';
+/** Lee la vista guardada. Respeta el ajuste viejo "Tareas de proyectos en Hoy" apagado. */
+export function vistaFromPrefs(prefs: any): HoyVista {
+  const v = prefs?.hoyVista;
+  if (v === 'todo' || v === 'materias' || v === 'proyectos') return v;
+  return prefs?.hoyProyectos === false ? 'materias' : 'todo';
+}
+/** Guarda la vista y deja el ajuste viejo coherente (Ajustes lo sigue mostrando). */
+export async function saveHoyVista(v: HoyVista) {
+  await savePrefs({ hoyVista: v, hoyProyectos: v !== 'materias' });
+}

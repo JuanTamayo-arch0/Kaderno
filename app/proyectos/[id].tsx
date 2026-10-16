@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { RequireAuth } from '../../components/RequireAuth';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { C, R, shadow, uiScheme, SUBJECT_COLORS } from '../../lib/theme';
 import { useResponsive, SIDEBAR_W } from '../../lib/responsive';
@@ -15,6 +15,8 @@ import { SideNav } from '../../components/SideNav';
 import { useAuth } from '../../lib/auth';
 import { ImportSheet } from '../../components/projects/ImportSheet';
 import { ProjectFiles } from '../../components/projects/ProjectFiles';
+import { DragCard, DragGhost, useBoardDrag } from '../../components/projects/BoardDrag';
+import { readSnap, writeSnap } from '../../lib/snapshot';
 import { BulkAction, BulkBar, BulkDialog, ExportSheet, confirmBulkDelete } from '../../components/projects/BulkTools';
 import { undoProjectBatch } from '../../lib/projectsBulk';
 import { Subject, getSubjects } from '../../lib/db';
@@ -56,6 +58,8 @@ const COARSE_POINTER = (() => {
   } catch { return false; }
 })();
 
+type ProjSnap = { project: Project; members: Member[]; tasks: PTask[]; steps: Record<string, PStep[]>; subjects: Subject[] };
+
 const VIEWS = [
   { key: 'tablero', label: 'Tablero', icon: 'grid-outline' },
   { key: 'lista', label: 'Lista', icon: 'list-outline' },
@@ -72,13 +76,16 @@ function ProyectoDetalle() {
   const { session } = useAuth();
   const myId = session?.user.id ?? null;
 
-  const [project, setProject] = useState<Project | null>(null);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [tasks, setTasks] = useState<PTask[]>([]);
-  const [steps, setSteps] = useState<Record<string, PStep[]>>({});
+  // Foto de la última visita: el tablero aparece al instante y se actualiza al llegar los datos.
+  const snapKey = myId && projectId ? `proj:${myId}:${projectId}` : null;
+  const [snap] = useState(() => readSnap<ProjSnap>(snapKey));
+  const [project, setProject] = useState<Project | null>(snap?.project ?? null);
+  const [members, setMembers] = useState<Member[]>(snap?.members ?? []);
+  const [tasks, setTasks] = useState<PTask[]>(snap?.tasks ?? []);
+  const [steps, setSteps] = useState<Record<string, PStep[]>>(snap?.steps ?? {});
   const [activity, setActivity] = useState<(Activity & { profile?: Profile | null })[]>([]);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [subjects, setSubjects] = useState<Subject[]>(snap?.subjects ?? []);
+  const [loading, setLoading] = useState(!snap);
   const [gone, setGone] = useState(false);
 
   const [view, setView] = useState<ViewKey>('tablero');
@@ -97,8 +104,17 @@ function ProyectoDetalle() {
   const [moreOpen, setMoreOpen] = useState(false);   // menú de acciones en el celular
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const load = useCallback(async () => {
+  // Si ya hay una carga en curso, la segunda llamada espera esa misma en vez de
+  // lanzar otra igual (antes, al abrir el proyecto se pedía todo dos veces).
+  const loading_ = useRef<Promise<void> | null>(null);
+  const load = useCallback(async (): Promise<void> => {
     if (!projectId) return;
+    if (loading_.current) return loading_.current;
+    loading_.current = loadNow().finally(() => { loading_.current = null; });
+    return loading_.current;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+  async function loadNow() {
     try {
       const p = await getProject(projectId);
       if (!p) { setGone(true); return; }
@@ -110,12 +126,13 @@ function ProyectoDetalle() {
         getSubjects(),
       ]);
       setProject(p); setMembers(ms); setTasks(ts); setSteps(st); setActivity(ac); setSubjects(sj);
+      writeSnap(snapKey, { project: p, members: ms, tasks: ts, steps: st, subjects: sj } satisfies ProjSnap);
     } catch (e: any) {
       notify('No se pudo abrir el proyecto', e.message);
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  }
 
   // Igual que en la lista: sin websockets todavía, se recarga al volver.
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -451,7 +468,7 @@ function MoreMenu({ visible, items, onClose }: {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
-        <Pressable onPress={() => {}} style={{ backgroundColor: C.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 14, paddingBottom: 30, borderTopWidth: 1, borderColor: C.line }}>
+        <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} style={{ backgroundColor: C.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 14, paddingBottom: 30, borderTopWidth: 1, borderColor: C.line }}>
           {items.map((it) => (
             <Pressable key={it.label} onPress={() => { onClose(); it.onPress(); }}
               style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 13, paddingHorizontal: 10, borderRadius: 12, backgroundColor: pressed ? C.surface2 : 'transparent' })}>
@@ -482,41 +499,6 @@ function HeaderBtn({ icon, label, wide, onPress }: { icon: string; label: string
 }
 
 // ============================================================
-//  Envoltorios de arrastrar y soltar (solo web)
-// ============================================================
-
-function Draggable({ id, enabled, onStart, onEnd, children }: {
-  id: string; enabled: boolean; onStart: () => void; onEnd: () => void; children: React.ReactNode;
-}) {
-  if (!isWeb || !enabled) return <>{children}</>;
-  return React.createElement('div', {
-    draggable: true,
-    onDragStart: (e: any) => {
-      // Algunos navegadores no inician el arrastre si no hay datos puestos.
-      try { e.dataTransfer.setData('text/plain', id); e.dataTransfer.effectAllowed = 'move'; } catch { /* da igual */ }
-      onStart();
-    },
-    onDragEnd: onEnd,
-    style: { cursor: 'grab' },
-  }, children);
-}
-
-function DropZone({ enabled, onOver, onLeave, onDrop, grow, children }: {
-  enabled: boolean; onOver: () => void; onLeave: () => void; onDrop: () => void;
-  grow?: boolean; children: React.ReactNode;
-}) {
-  if (!isWeb || !enabled) return <>{children}</>;
-  return React.createElement('div', {
-    // stopPropagation para que una tarjeta y su columna no se peleen por el mismo
-    // arrastre: gana la zona más interna, que es la que el dedo/ratón señala.
-    onDragOver: (e: any) => { e.preventDefault(); e.stopPropagation(); try { e.dataTransfer.dropEffect = 'move'; } catch {} onOver(); },
-    onDragLeave: (e: any) => { e.stopPropagation(); onLeave(); },
-    onDrop: (e: any) => { e.preventDefault(); e.stopPropagation(); onDrop(); },
-    style: grow ? { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 } : { display: 'block' },
-  }, children);
-}
-
-// ============================================================
 //  Vista TABLERO
 // ============================================================
 
@@ -537,84 +519,65 @@ function Tablero({ cols, grouped, steps, members, subject, editable, isWide, myI
   onMove: (t: PTask) => void;
   onDrop: (taskId: string, colKey: string, beforeId: string | null) => void;
 }) {
-  const dragRef = useRef<string | null>(null);
-  const [dragId, setDragId] = useState<string | null>(null);
-  const [over, setOver] = useState<string | null>(null);  // "colKey|beforeId" o "colKey|end"
-
+  const dnd = useBoardDrag({ enabled: editable && !selecting, onDrop });
+  const drag = dnd.drag;
   const width = isWide ? 300 : 270;
+  const dragged = drag ? Object.values(grouped).flat().find((t) => t.id === drag.id) ?? null : null;
+  const draggedCol = drag ? cols.find((c) => c.key === drag.fromCol) : null;
 
-  function fire(colKey: string, beforeId: string | null) {
-    const id = dragRef.current;
-    setOver(null); setDragId(null); dragRef.current = null;
-    if (id) onDrop(id, colKey, beforeId);
-  }
+  const placeholder = (col: BoardColumn) => (
+    <View key="__hueco" dataSet={{ anim: 'grow' }}
+      style={{ height: drag?.height ?? 60, borderRadius: 12, borderWidth: 2, borderStyle: 'dashed', borderColor: col.color + 'aa', backgroundColor: col.color + '14', marginBottom: 8 }} />
+  );
 
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={isWide}
-      style={{ flex: 1 }}
-      contentContainerStyle={{ padding: isWide ? 24 : 12, gap: 12, alignItems: 'stretch' }}>
-      {cols.map((col) => {
-        const list = grouped[col.key] ?? [];
-        const endKey = `${col.key}|end`;
-        return (
-          <View key={col.key} style={{ width, backgroundColor: C.surface + 'cc', borderRadius: R.lg, borderWidth: 1, borderColor: over?.startsWith(col.key + '|') ? col.color : C.line, padding: 10 }}>
-            {/* cabecera de columna */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10, paddingHorizontal: 2 }}>
-              <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: col.color }} />
-              <Text numberOfLines={1} style={{ color: C.text, fontSize: 13.5, fontWeight: '700', flex: 1 }}>{col.label}</Text>
-              <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700' }}>{list.length}</Text>
-              {editable && (
-                <Pressable onPress={() => onAdd(col.key)} hitSlop={8}>
-                  <Ionicons name="add" size={17} color={C.muted} />
-                </Pressable>
-              )}
-            </View>
+    <View style={{ flex: 1 }}>
+      <ScrollView ref={dnd.boardRef} horizontal showsHorizontalScrollIndicator={isWide}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: isWide ? 24 : 12, gap: 12, alignItems: 'stretch' }}>
+        {cols.map((col) => {
+          const list = grouped[col.key] ?? [];
+          const isOver = !!drag && drag.overCol === col.key;
+          return (
+            <View key={col.key} ref={dnd.colRef(col.key)}
+              style={{ width, backgroundColor: isOver ? col.color + '10' : C.surface + 'cc', borderRadius: R.lg, borderWidth: 1, borderColor: isOver ? col.color : C.line, padding: 10, ...(isWeb ? { transitionProperty: 'background-color, border-color', transitionDuration: '150ms' } as any : null) }}>
+              {/* cabecera de columna */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10, paddingHorizontal: 2 }}>
+                <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: col.color }} />
+                <Text numberOfLines={1} style={{ color: C.text, fontSize: 13.5, fontWeight: '700', flex: 1 }}>{col.label}</Text>
+                <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700' }}>{list.length}</Text>
+                {editable && (
+                  <Pressable onPress={() => onAdd(col.key)} hitSlop={8} accessibilityLabel={`Agregar tarjeta en ${col.label}`}>
+                    <Ionicons name="add" size={17} color={C.muted} />
+                  </Pressable>
+                )}
+              </View>
 
-            <DropZone
-              enabled={editable}
-              grow
-              onOver={() => setOver(endKey)}
-              onLeave={() => setOver((o) => (o === endKey ? null : o))}
-              onDrop={() => fire(col.key, null)}
-            >
-              <ScrollView style={{ maxHeight: isWide ? 620 : 460 }} showsVerticalScrollIndicator={false}>
-                {list.map((t) => {
-                  const k = `${col.key}|${t.id}`;
-                  return (
-                    <View key={t.id}>
-                      {/* línea que indica dónde va a caer la tarjeta */}
-                      {over === k && <View style={{ height: 3, borderRadius: 2, backgroundColor: col.color, marginBottom: 6 }} />}
-                      <DropZone
-                        enabled={editable && dragId !== t.id}
-                        onOver={() => setOver(k)}
-                        onLeave={() => setOver((o) => (o === k ? null : o))}
-                        onDrop={() => fire(col.key, t.id)}
-                      >
-                        <Draggable
-                          id={t.id}
-                          enabled={editable && !selecting}
-                          onStart={() => { dragRef.current = t.id; setDragId(t.id); }}
-                          onEnd={() => { dragRef.current = null; setDragId(null); setOver(null); }}
-                        >
-                          <TaskCard
-                            task={t} steps={steps[t.id] ?? []} members={members} subject={subject}
-                            color={col.color} dim={dragId === t.id} mine={!!myId && t.assignee_id === myId}
-                            showMove={editable && !selecting && (!isWeb || !isWide || COARSE_POINTER)}
-                            selecting={selecting} selected={selected.has(t.id)}
-                            onPress={() => (selecting ? onToggleSelect(t.id) : onOpen(t))} onMove={() => onMove(t)}
-                            onLongPress={editable ? () => onToggleSelect(t.id) : undefined}
-                          />
-                        </Draggable>
-                      </DropZone>
-                    </View>
-                  );
-                })}
+              <ScrollView ref={dnd.listRef(col.key)} style={{ maxHeight: isWide ? 620 : 460 }} showsVerticalScrollIndicator={false}>
+                {list.map((t, i) => (
+                  <React.Fragment key={t.id}>
+                    {isOver && drag!.beforeId === t.id && placeholder(col)}
+                    <DragCard binding={dnd.bind(t.id, col.key, list[i + 1]?.id ?? null)} hidden={drag?.id === t.id} landed={dnd.landed === t.id}>
+                      <View dataSet={{ anim: 'enter', i: String(Math.min(i, 8)) }}>
+                        <TaskCard
+                          task={t} steps={steps[t.id] ?? []} members={members} subject={subject}
+                          color={col.color} dim={false} mine={!!myId && t.assignee_id === myId}
+                          showMove={editable && !selecting && (!isWeb || !isWide || COARSE_POINTER)}
+                          selecting={selecting} selected={selected.has(t.id)}
+                          onPress={() => { if (dnd.consumeClick()) return; if (selecting) onToggleSelect(t.id); else onOpen(t); }}
+                          onMove={() => onMove(t)}
+                          onLongPress={editable && !dnd.isActive ? () => onToggleSelect(t.id) : undefined}
+                        />
+                      </View>
+                    </DragCard>
+                  </React.Fragment>
+                ))}
 
-                {over === endKey && <View style={{ height: 3, borderRadius: 2, backgroundColor: col.color, marginBottom: 6 }} />}
+                {isOver && drag!.beforeId === null && placeholder(col)}
 
-                {list.length === 0 && (
+                {list.length === 0 && !isOver && (
                   <View style={{ paddingVertical: 22, alignItems: 'center', borderWidth: 1, borderColor: C.line, borderStyle: 'dashed', borderRadius: 12 }}>
-                    <Text style={{ color: C.muted, fontSize: 12 }}>Nada por aquí</Text>
+                    <Text style={{ color: C.muted, fontSize: 12 }}>{dnd.isActive ? 'Arrastra una tarjeta aquí' : 'Nada por aquí'}</Text>
                   </View>
                 )}
 
@@ -626,11 +589,21 @@ function Tablero({ cols, grouped, steps, members, subject, editable, isWide, myI
                   </Pressable>
                 )}
               </ScrollView>
-            </DropZone>
+            </View>
+          );
+        })}
+      </ScrollView>
+
+      <DragGhost drag={drag} ghostRef={dnd.ghostRef}>
+        {dragged && draggedCol && (
+          <View style={{ borderRadius: 12, ...(isWeb ? { boxShadow: '0 18px 40px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.3)' } as any : null) }}>
+            <TaskCard task={dragged} steps={steps[dragged.id] ?? []} members={members} subject={subject}
+              color={draggedCol.color} dim={false} mine={!!myId && dragged.assignee_id === myId}
+              showMove={false} selecting={false} selected={false} onPress={() => {}} onMove={() => {}} />
           </View>
-        );
-      })}
-    </ScrollView>
+        )}
+      </DragGhost>
+    </View>
   );
 }
 
@@ -647,7 +620,7 @@ function TaskCard({ task, steps, members, subject, color, dim, mine, showMove, s
   const due = dueInfo(task, task.done);
 
   return (
-    <Pressable onPress={onPress} onLongPress={onLongPress} delayLongPress={350} style={({ pressed }) => ({
+    <Pressable onPress={onPress} onLongPress={onLongPress} delayLongPress={350} dataSet={{ press: '1', lift: '1' }} style={({ pressed }) => ({
       backgroundColor: selected ? C.brand + '1a' : C.surface, borderRadius: 12, borderWidth: 1, borderColor: selected ? C.brand : mine ? C.brand + '77' : C.line,
       padding: 11, marginBottom: 8, opacity: dim ? 0.4 : pressed ? 0.8 : 1, borderLeftWidth: 3, borderLeftColor: color, ...shadow,
     })}>
@@ -657,7 +630,7 @@ function TaskCard({ task, steps, members, subject, color, dim, mine, showMove, s
           {task.title}
         </Text>
         {showMove && (
-          <Pressable onPress={onMove} hitSlop={8}>
+          <Pressable onPress={onMove} hitSlop={8} dataSet={{ nodrag: '1' }} accessibilityLabel={`Mover "${task.title}" a otra columna`}>
             <Ionicons name="swap-horizontal" size={16} color={C.muted} />
           </Pressable>
         )}
@@ -733,7 +706,7 @@ function MoveMenu({ task, cols, onClose, onPick }: {
   return (
     <Modal visible={!!task} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
-        <Pressable onPress={() => {}} style={{ backgroundColor: C.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18, paddingBottom: 34, borderTopWidth: 1, borderColor: C.line }}>
+        <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} style={{ backgroundColor: C.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18, paddingBottom: 34, borderTopWidth: 1, borderColor: C.line }}>
           <Text style={{ color: C.text, fontSize: 16, fontWeight: '700' }}>Mover tarjeta</Text>
           <Text numberOfLines={2} style={{ color: C.muted, fontSize: 12.5, marginTop: 3, marginBottom: 12 }}>{task?.title}</Text>
           {cols.map((c) => {
@@ -1235,7 +1208,7 @@ function PTaskModal({ visible, task, projectId, status, cols, members, steps, ed
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-        <Pressable onPress={() => {}} style={{ backgroundColor: C.surface, borderRadius: 20, padding: 18, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 540, maxHeight: '90%' }}>
+        <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} style={{ backgroundColor: C.surface, borderRadius: 20, padding: 18, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 540, maxHeight: '90%' }}>
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
               <Text style={{ color: C.text, fontSize: 17, fontWeight: '700', flex: 1 }}>
@@ -1462,7 +1435,7 @@ function ColumnsModal({ visible, cols, counts, onClose, onSave }: {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-        <Pressable onPress={() => {}} style={{ backgroundColor: C.surface, borderRadius: 20, padding: 18, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 560, maxHeight: '90%' }}>
+        <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} style={{ backgroundColor: C.surface, borderRadius: 20, padding: 18, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 560, maxHeight: '90%' }}>
           <ScrollView showsVerticalScrollIndicator={false}>
             <Text style={{ color: C.text, fontSize: 17, fontWeight: '700' }}>Columnas del tablero</Text>
             <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 4, marginBottom: 14, lineHeight: 19 }}>

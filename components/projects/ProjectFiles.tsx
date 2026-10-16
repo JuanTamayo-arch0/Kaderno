@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { C, R } from '../../lib/theme';
 import { Badge, Button, EmptyState, ErrorState, Field, IconButton, Skeleton } from '../ds';
@@ -267,7 +267,7 @@ function UploadDialog({ pending, onClose, onDone }: {
   return (
     <Modal visible transparent animationType="fade" onRequestClose={busy ? undefined : onClose}>
       <Pressable onPress={busy ? undefined : onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-        <Pressable onPress={() => {}} style={{ backgroundColor: C.surface, borderRadius: 20, padding: 18, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 480 }}>
+        <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} style={{ backgroundColor: C.surface, borderRadius: 20, padding: 18, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 480 }}>
           <Text style={{ color: C.text, fontSize: 17, fontWeight: '800' }}>{versionOf ? 'Subir versión nueva' : 'Subir archivo'}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12, padding: 10, borderRadius: 12, backgroundColor: C.surface2 }}>
             <Ionicons name={KIND_ICON[kindOf(upload.name, upload.mime)] as any} size={20} color={C.brand} />
@@ -375,7 +375,7 @@ function FileSheet({ file, who, editable, onClose, onOpen, onDownload, onNewVers
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 16 }}>
-        <Pressable onPress={() => {}} style={{ backgroundColor: C.surface, borderRadius: 20, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 620, maxHeight: '92%', overflow: 'hidden' }}>
+        <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} style={{ backgroundColor: C.surface, borderRadius: 20, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 620, maxHeight: '92%', overflow: 'hidden' }}>
           {/* cabecera */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderBottomWidth: 1, borderBottomColor: C.line }}>
             <View style={{ width: 42, height: 42, borderRadius: 11, backgroundColor: C.brand + '18', alignItems: 'center', justifyContent: 'center' }}>

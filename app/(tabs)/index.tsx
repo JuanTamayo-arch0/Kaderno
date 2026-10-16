@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { C } from '../../lib/theme';
 import { useResponsive } from '../../lib/responsive';
@@ -10,6 +10,7 @@ import {
   getSchedule, countDueFlashcards, fetchPrefs, getFocusDetail, getFocusByTask, hasV14,
 } from '../../lib/db';
 import { getMyProjectTasks, type MyProjectTask } from '../../lib/projects';
+import { readSnap, writeSnap } from '../../lib/snapshot';
 import { SCHEDULE } from '../../lib/schedule';
 import {
   BUCKET_LABEL, BUCKET_ORDER, Bucket, bucketOf, compareDue, fmtLongDate, capitalize, isoDate, addDays,
@@ -27,7 +28,7 @@ import { TaskRow } from '../../components/TaskRow';
 import { MiniCalendar } from '../../components/MiniCalendar';
 import { Avatar } from '../../components/SideNav';
 import { ActionMenu, type MenuAction } from '../../components/ActionMenu';
-import { type HoyHidden, setTaskHidden, setProjectHidden, clearHoyHidden, pruneHiddenTasks, resetHoyHiddenCache } from '../../lib/hoyHidden';
+import { type HoyHidden, type HoyVista, setTaskHidden, setProjectHidden, clearHoyHidden, pruneHiddenTasks, resetHoyHiddenCache, vistaFromPrefs, saveHoyVista } from '../../lib/hoyHidden';
 
 // ============================================================
 //  Hoy.
@@ -39,6 +40,7 @@ import { type HoyHidden, setTaskHidden, setProjectHidden, clearHoyHidden, pruneH
 // ============================================================
 
 type Row = { kind: 'task'; t: Task } | { kind: 'project'; p: MyProjectTask };
+type HoySnap = { subjects: Subject[]; tasks: Task[]; steps: Record<string, Step[]>; ptasks: MyProjectTask[]; hiddenH: HoyHidden; slots: Slot[]; repaso: number; vista: HoyVista };
 
 export default function Hoy() {
   const router = useRouter();
@@ -47,17 +49,21 @@ export default function Hoy() {
   const counts = useNavCounts();
   const focus = useFocusTimer();
 
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [tasks, setTasks] = useState<Task[] | null>(null);
-  const [steps, setSteps] = useState<Record<string, Step[]>>({});
-  const [allPtasks, setPtasks] = useState<MyProjectTask[]>([]);
-  const [hiddenH, setHiddenH] = useState<HoyHidden>({ tasks: [], projects: [] });
-  const [slots, setSlots] = useState<Slot[]>([]);
-  const [repaso, setRepaso] = useState(0);
+  // Lo de la vez anterior se pinta de inmediato; load() lo reemplaza al llegar.
+  const snapKey = session?.user?.id ? `hoy:${session.user.id}` : null;
+  const [snap] = useState(() => readSnap<HoySnap>(snapKey));
+  const [subjects, setSubjects] = useState<Subject[]>(snap?.subjects ?? []);
+  const [tasks, setTasks] = useState<Task[] | null>(snap?.tasks ?? null);
+  const [steps, setSteps] = useState<Record<string, Step[]>>(snap?.steps ?? {});
+  const [allPtasks, setPtasks] = useState<MyProjectTask[]>(snap?.ptasks ?? []);
+  const [hiddenH, setHiddenH] = useState<HoyHidden>(snap?.hiddenH ?? { tasks: [], projects: [] });
+  const [slots, setSlots] = useState<Slot[]>(snap?.slots ?? []);
+  const [repaso, setRepaso] = useState(snap?.repaso ?? 0);
   const [focusToday, setFocusToday] = useState<{ todayMin: number; streak: number }>({ todayMin: 0, streak: 0 });
   const [focusBy, setFocusBy] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<string | null>(null);
+  const [vista, setVista] = useState<HoyVista>(snap?.vista ?? 'todo');
   const [day, setDay] = useState<string | null>(null);
   const [showDone, setShowDone] = useState(false);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
@@ -73,14 +79,21 @@ export default function Hoy() {
       resetHoyHiddenCache();
       const ho = (prefs as any)?.hoyOcultas ?? {};
       setHiddenH({ tasks: Array.isArray(ho.tasks) ? ho.tasks : [], projects: Array.isArray(ho.projects) ? ho.projects : [] });
-      if ((prefs as any)?.hoyProyectos !== false) getMyProjectTasks().then((pt) => { setPtasks(pt); pruneHiddenTasks(pt.map((x) => x.id)).catch(() => {}); }).catch(() => setPtasks([]));
-      else setPtasks([]);
+      setVista(vistaFromPrefs(prefs));
+      // Se traen siempre, aunque la vista sea "Materias", para cambiar de vista al instante.
+      getMyProjectTasks().then((pt) => { setPtasks(pt); pruneHiddenTasks(pt.map((x) => x.id)).catch(() => {}); }).catch(() => setPtasks([]));
       countDueFlashcards().then(setRepaso).catch(() => {});
       getFocusDetail().then((d) => setFocusToday({ todayMin: d.todayMin, streak: d.streak })).catch(() => {});
-      refreshNavCounts(true);
+      refreshNavCounts();  // sin forzar: la barra ya los pidió al abrir; tras cambios se fuerzan solos
     } catch (e) { setError(friendlyError(e)); if (!tasks) setTasks([]); }
   }, []);
   useFocusEffect(useCallback(() => { load(); setNow(new Date()); }, [load]));
+  // Guarda la foto para la próxima vez (solo cuando ya hay datos reales).
+  useEffect(() => {
+    if (!tasks || !snapKey) return;
+    const id = setTimeout(() => writeSnap(snapKey, { subjects, tasks, steps, ptasks: allPtasks, hiddenH, slots, repaso, vista } satisfies HoySnap), 400);
+    return () => clearTimeout(id);
+  }, [snapKey, subjects, tasks, steps, allPtasks, hiddenH, slots, repaso, vista]);
   useEffect(() => onDataChanged(load), [load]);
   useEffect(() => { const id = setInterval(() => setNow(new Date()), 60000); return () => clearInterval(id); }, []);
 
@@ -152,24 +165,32 @@ export default function Hoy() {
 
   // ---------- Datos derivados ----------
   const live = (tasks ?? []).filter((t) => !hidden.has(t.id) && (!t.subject_id || !subjects.length || subjects.some((s) => s.id === t.subject_id)));
-  const pending = live.filter((t) => t.status !== 'done');
+  const allPending = live.filter((t) => t.status !== 'done');
   // Tareas de proyecto que no se ocultaron de Hoy (por tarea o por proyecto).
-  const ptasks = allPtasks.filter((p) => !hiddenH.tasks.includes(p.id) && !hiddenH.projects.includes(p.project_id));
-  const hiddenCount = allPtasks.length - ptasks.length;
+  const notHidden = allPtasks.filter((p) => !hiddenH.tasks.includes(p.id) && !hiddenH.projects.includes(p.project_id));
+  const hiddenCount = allPtasks.length - notHidden.length;
+  // La vista elegida arriba de la lista decide qué entra en todo lo demás (resumen, semana, agenda).
+  const pending = vista === 'proyectos' ? [] : allPending;
+  const ptasks = vista === 'materias' ? [] : notHidden;
+  const projectsInHoy = useMemo(() => {
+    const m = new Map<string, NonNullable<MyProjectTask['project']>>();
+    notHidden.forEach((p) => { if (p.project) m.set(p.project.id, p.project); });
+    return [...m.values()];
+  }, [notHidden]);
   const visibleTasks = pending.filter((t) => !filter || t.subject_id === filter)
     .filter((t) => !day || (dueDay(t) && isoDate(dueDay(t)!) === day));
-  const visibleProj = ptasks.filter((p) => !filter || p.project?.id === filter || false)
+  const visibleProj = ptasks.filter((p) => !filter || p.project?.id === filter)
     .filter((p) => !day || (dueDay(p) && isoDate(dueDay(p)!) === day));
 
   const groups = useMemo(() => {
     const map = new Map<Bucket, Row[]>();
     visibleTasks.forEach((t) => { const b = bucketOf(t, now); (map.get(b) ?? map.set(b, []).get(b)!).push({ kind: 'task', t }); });
-    if (!filter) visibleProj.forEach((p) => { const b = bucketOf(p, now); (map.get(b) ?? map.set(b, []).get(b)!).push({ kind: 'project', p }); });
+    if (!filter || vista === 'proyectos') visibleProj.forEach((p) => { const b = bucketOf(p, now); (map.get(b) ?? map.set(b, []).get(b)!).push({ kind: 'project', p }); });
     const key = (r: Row) => r.kind === 'task' ? r.t : r.p;
     return BUCKET_ORDER.filter((b) => map.has(b)).map((b) => ({ b, rows: map.get(b)!.sort((x, y) => compareDue(key(x), key(y))) }));
-  }, [visibleTasks, visibleProj, filter, now]);
+  }, [visibleTasks, visibleProj, filter, vista, now]);
 
-  const doneRecent = live.filter((t) => t.status === 'done' && (!t.completed_at || dayDiff(new Date(), new Date(t.completed_at)) <= 7))
+  const doneRecent = live.filter((t) => vista !== 'proyectos' && t.status === 'done' && (!t.completed_at || dayDiff(new Date(), new Date(t.completed_at)) <= 7))
     .filter((t) => !filter || t.subject_id === filter);
   const todayCount = pending.filter((t) => bucketOf(t, now) === 'today').length + ptasks.filter((p) => bucketOf(p, now) === 'today').length;
   const overdueCount = pending.filter((t) => bucketOf(t, now) === 'overdue').length + ptasks.filter((p) => bucketOf(p, now) === 'overdue').length;
@@ -266,14 +287,36 @@ export default function Hoy() {
     </ScrollView>
   );
 
-  const filters = subjects.length > 1 ? (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8, marginBottom: 2 }}>
-      <FilterChip label="Todas" active={!filter} onPress={() => setFilter(null)} />
-      {subjects.map((s) => (
-        <FilterChip key={s.id} label={s.name} color={s.color} active={filter === s.id} onPress={() => setFilter(filter === s.id ? null : s.id)} />
-      ))}
-    </ScrollView>
-  ) : null;
+  async function changeVista(v: HoyVista) {
+    if (v === vista) return;
+    setVista(v); setFilter(null);
+    try { await saveHoyVista(v); } catch { /* sin conexión: queda en pantalla y se reintenta la próxima vez */ }
+  }
+  const nMaterias = allPending.length;
+  const nProyectos = notHidden.length;
+  const chips = vista === 'proyectos'
+    ? projectsInHoy.map((p) => ({ id: p.id, label: `${p.icon ?? ''} ${p.name}`.trim(), color: p.color }))
+    : subjects.map((s) => ({ id: s.id, label: s.name, color: s.color }));
+  const filters = (
+    <View style={{ marginTop: 8, marginBottom: 2, gap: 8 }}>
+      {(nProyectos > 0 || vista !== 'todo') && (
+        <ScopeSwitch value={vista} onChange={changeVista}
+          items={[
+            { key: 'todo', label: 'Todo', count: nMaterias + nProyectos },
+            { key: 'materias', label: 'Materias', count: nMaterias, icon: 'school-outline' },
+            { key: 'proyectos', label: 'Proyectos', count: nProyectos, icon: 'people-outline' },
+          ]} />
+      )}
+      {chips.length > 1 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <FilterChip label={vista === 'proyectos' ? 'Todos' : 'Todas'} active={!filter} onPress={() => setFilter(null)} />
+          {chips.map((c) => (
+            <FilterChip key={c.id} label={c.label} color={c.color} active={filter === c.id} onPress={() => setFilter(filter === c.id ? null : c.id)} />
+          ))}
+        </ScrollView>
+      )}
+    </View>
+  );
 
   const repasoCard = repaso > 0 ? (
     <Card onPress={() => router.push('/repaso')} accessibilityLabel={`Repasar ${repaso} tarjetas`} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: isWide ? 0 : 12 }}>
@@ -310,14 +353,22 @@ export default function Hoy() {
       text="Crea las materias del semestre y luego anota tus entregas. También puedes importarlas del sílabo."
       action={{ label: 'Crear materias', icon: 'add', onPress: () => router.push('/bienvenida') }} />
   ) : groups.length === 0 ? (
-    <EmptyState icon="checkmark-done-outline" title={day ? 'Nada para ese día' : filter ? 'Nada pendiente en esta materia' : 'Todo al día'}
+    vista === 'proyectos' && !day && !filter ? (
+      <EmptyState icon="people-outline" title="Nada de proyectos para ti"
+        text={hiddenCount > 0 ? 'Tienes tareas de proyecto ocultas. Puedes mostrarlas abajo.' : 'Cuando te asignen una tarea en un proyecto, aparecerá aquí.'}
+        action={{ label: 'Ver todo', icon: 'list-outline', onPress: () => changeVista('todo') }} compact />
+    ) : (
+    <EmptyState icon="checkmark-done-outline" title={day ? 'Nada para ese día' : filter ? (vista === 'proyectos' ? 'Nada pendiente en este proyecto' : 'Nada pendiente en esta materia') : 'Todo al día'}
       text={day || filter ? 'Toca de nuevo el filtro para ver todo.' : 'No tienes entregas pendientes. Agrega la próxima cuando te la pongan.'}
       action={{ label: 'Agregar tarea', icon: 'add', onPress: openAdd }} compact />
+    )
   ) : (
     groups.map(({ b, rows }) => (
       <View key={b}>
         <SectionLabel text={BUCKET_LABEL[b]} count={rows.length} tone={b === 'overdue' ? C.bad : undefined} />
-        {rows.map(renderRow)}
+        {rows.map((r, i) => (
+          <View key={r.kind === 'task' ? r.t.id : 'p' + r.p.id} dataSet={{ anim: 'enter', i: String(Math.min(i, 8)) }}>{renderRow(r)}</View>
+        ))}
       </View>
     ))
   );
@@ -374,7 +425,7 @@ export default function Hoy() {
       {week}
       {filters}
       {list}
-      {hiddenCount > 0 && !filter && (
+      {hiddenCount > 0 && !filter && vista !== 'materias' && (
         <Pressable onPress={showHidden} accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10 }}>
           <Ionicons name="eye-off-outline" size={16} color={C.muted} />
           <Text style={{ color: C.muted, fontSize: 13 }}>{hiddenCount} {hiddenCount === 1 ? 'tarea de proyecto oculta' : 'tareas de proyecto ocultas'} · </Text>
@@ -430,7 +481,7 @@ function ProjectRow({ p, onOpen, actions }: { p: MyProjectTask; onOpen: () => vo
   const [menu, setMenu] = useState(false);
   return (
     <>
-    <Pressable onPress={onOpen} onLongPress={() => setMenu(true)} delayLongPress={350} accessibilityRole="button" accessibilityLabel={`${p.title}, proyecto ${p.project?.name ?? ''}${due ? ', ' + due : ''}`}
+    <Pressable onPress={onOpen} onLongPress={() => setMenu(true)} delayLongPress={350} dataSet={{ press: '1' }} accessibilityRole="button" accessibilityLabel={`${p.title}, proyecto ${p.project?.name ?? ''}${due ? ', ' + due : ''}`}
       style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, paddingLeft: 14, minHeight: 54, backgroundColor: hovered ? C.surface2 : C.surface, borderColor: C.line, borderWidth: 1, borderRadius: 12, marginBottom: 8 })}>
       <View style={{ width: 22, height: 22, borderRadius: 7, backgroundColor: (p.project?.color ?? C.brand) + '26', alignItems: 'center', justifyContent: 'center' }}>
         <Text style={{ fontSize: 12 }}>{p.project?.icon ?? '📦'}</Text>
@@ -452,5 +503,34 @@ function ProjectRow({ p, onOpen, actions }: { p: MyProjectTask; onOpen: () => vo
     </Pressable>
     <ActionMenu visible={menu} title={p.title} actions={actions} onClose={() => setMenu(false)} />
     </>
+  );
+}
+
+// Interruptor de tres posiciones: qué entra en Hoy. Se recuerda entre dispositivos.
+function ScopeSwitch({ value, onChange, items }: {
+  value: HoyVista; onChange: (v: HoyVista) => void;
+  items: { key: HoyVista; label: string; count: number; icon?: React.ComponentProps<typeof Ionicons>['name'] }[];
+}) {
+  return (
+    <View accessibilityRole="radiogroup" accessibilityLabel="Qué mostrar en Hoy"
+      style={{ flexDirection: 'row', alignSelf: 'flex-start', padding: 3, borderRadius: 12, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.line, maxWidth: '100%' }}>
+      {items.map((it) => {
+        const on = it.key === value;
+        return (
+          <Pressable key={it.key} onPress={() => onChange(it.key)} accessibilityRole="radio" accessibilityState={{ checked: on }}
+            accessibilityLabel={`${it.label}, ${it.count}`}
+            style={({ hovered }: any) => ({
+              flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 7, paddingHorizontal: 12, borderRadius: 9, minHeight: 36,
+              backgroundColor: on ? C.surface : hovered ? C.surface + '88' : 'transparent',
+              borderWidth: 1, borderColor: on ? C.line : 'transparent',
+              ...(Platform.OS === 'web' ? { transitionProperty: 'background-color, border-color', transitionDuration: '160ms' } as any : null),
+            })}>
+            {it.icon && <Ionicons name={it.icon} size={14} color={on ? C.brand : C.muted} />}
+            <Text style={{ color: on ? C.text : C.muted, fontSize: 13, fontWeight: on ? '700' : '600' }}>{it.label}</Text>
+            <Text style={{ color: on ? C.brand : C.muted, fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] }}>{it.count}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }

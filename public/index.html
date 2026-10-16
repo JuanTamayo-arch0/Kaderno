@@ -18,6 +18,36 @@
     <!-- Configuración de Supabase leída en tiempo de ejecución.
          Se puede editar en el servidor sin recompilar la app. -->
     <script src="/kaderno-config.js"></script>
+    <script>
+      // Abre la conexión con Supabase mientras se descarga la app: la primera
+      // consulta ahorra el saludo TLS (cientos de ms en el celular).
+      (function () {
+        try {
+          var u = window.KADERNO_CONFIG && window.KADERNO_CONFIG.SUPABASE_URL;
+          if (!u) return;
+          var o = new URL(u).origin;
+          ['preconnect', 'dns-prefetch'].forEach(function (rel) {
+            var l = document.createElement('link'); l.rel = rel; l.href = o;
+            if (rel === 'preconnect') l.crossOrigin = 'anonymous';
+            document.head.appendChild(l);
+          });
+        } catch (e) {}
+      })();
+      // Si se publicó una versión nueva mientras la pestaña estaba abierta, una
+      // pantalla puede pedir un archivo que ya no existe: se recarga una vez.
+      window.addEventListener('error', function (e) {
+        var t = e && e.target;
+        if (!t || t.tagName !== 'SCRIPT' || !/\/_expo\/static\//.test(t.src || '')) return;
+        try {
+          if (sessionStorage.getItem('kd-reloaded')) return;
+          sessionStorage.setItem('kd-reloaded', '1');
+        } catch (_) {}
+        location.reload();
+      }, true);
+      window.addEventListener('load', function () {
+        setTimeout(function () { try { sessionStorage.removeItem('kd-reloaded'); } catch (_) {} }, 15000);
+      });
+    </script>
     <style id="expo-reset">
       html, body { height: 100%; }
       body { overflow: hidden; }

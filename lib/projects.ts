@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, currentUserId, dedupe } from './supabase';
 
 // ============================================================
 //  Capa de datos de PROYECTOS (esquema v12).
@@ -95,9 +95,9 @@ export type Activity = {
 };
 
 async function uid(): Promise<string> {
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) throw new Error('No hay sesión activa');
-  return data.user.id;
+  const id = await currentUserId();
+  if (!id) throw new Error('No hay sesión activa');
+  return id;
 }
 
 // ---------- Columnas por defecto y plantillas ----------
@@ -609,6 +609,9 @@ export type MyProjectTask = PTask & { project: Pick<Project, 'id' | 'name' | 'co
 // Tareas de cualquier proyecto asignadas a mí y sin terminar. Se usa en "Hoy"
 // para que el trabajo en grupo no viva en una pestaña aparte que nadie abre.
 export async function getMyProjectTasks(): Promise<MyProjectTask[]> {
+  return dedupe('my-ptasks', getMyProjectTasksNow);
+}
+async function getMyProjectTasksNow(): Promise<MyProjectTask[]> {
   const me = await uid();
   const { data, error } = await supabase.from('project_tasks').select('*')
     .eq('assignee_id', me).eq('done', false);

@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../lib/theme';
 import { RequireAuth } from '../components/RequireAuth';
 import { Task, Note, Subject, getTrash, restoreTask, purgeTask, restoreNote, purgeNote, restoreSubject, hasV14 } from '../lib/db';

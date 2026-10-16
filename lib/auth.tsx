@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
+import { clearSnaps } from './snapshot';
 
 type AuthState = { session: Session | null; loading: boolean };
 const AuthCtx = createContext<AuthState>({ session: null, loading: true });
@@ -14,7 +15,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(data.session);
       setLoading(false);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      if (event === 'SIGNED_OUT') clearSnaps();
       setSession(s);
     });
     return () => sub.subscription.unsubscribe();

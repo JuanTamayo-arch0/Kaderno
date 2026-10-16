@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { C, R, uiScheme } from '../../lib/theme';
 import { SIDEBAR_W } from '../../lib/responsive';
@@ -108,7 +108,7 @@ export function BulkDialog({ action, projectId, tasks, cols, members, onClose, o
   return (
     <Modal visible={!!action} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-        <Pressable onPress={() => {}} style={{ backgroundColor: C.surface, borderRadius: 20, padding: 18, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 480, maxHeight: '90%' }}>
+        <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} style={{ backgroundColor: C.surface, borderRadius: 20, padding: 18, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 480, maxHeight: '90%' }}>
           <ScrollView showsVerticalScrollIndicator={false}>
             {action === 'columna' && (
               <>
@@ -303,7 +303,7 @@ export function ExportSheet({ visible, project, members, onClose }: {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-        <Pressable onPress={() => {}} style={{ backgroundColor: C.surface, borderRadius: 20, padding: 18, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 460 }}>
+        <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} style={{ backgroundColor: C.surface, borderRadius: 20, padding: 18, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 460 }}>
           <Title text="Exportar tareas" onClose={onClose} />
           <Text style={{ color: C.muted, fontSize: 12.5, lineHeight: 19, marginBottom: 14 }}>
             El archivo trae una columna id. Edítalo (en Excel o con una IA) y súbelo con «Importar»: las tareas se actualizan en vez de duplicarse.

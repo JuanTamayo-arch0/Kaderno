@@ -21,12 +21,30 @@
     },
     "android": {
       "package": "com.tuusuario.kaderno",
-      "adaptiveIcon": { "backgroundColor": "#0f1115" }
+      "adaptiveIcon": {
+        "backgroundColor": "#0f1115"
+      }
     },
     "plugins": [
-      "expo-router",
-      ["expo-image-picker", { "cameraPermission": "Kaderno usa la cámara para digitalizar tus apuntes." }],
-      ["expo-notifications", {}]
+      [
+        "expo-router",
+        {
+          "asyncRoutes": {
+            "web": true,
+            "default": false
+          }
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Kaderno usa la cámara para digitalizar tus apuntes."
+        }
+      ],
+      [
+        "expo-notifications",
+        {}
+      ]
     ]
   }
 }

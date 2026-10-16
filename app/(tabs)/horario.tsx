@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { C, R, uiScheme, inkOn } from '../../lib/theme';
 import { useResponsive, SIDEBAR_W } from '../../lib/responsive';
 import { confirm, notify } from '../../lib/confirm';
@@ -246,9 +246,9 @@ export default function Horario() {
         </View>
       )}
 
-      <Modal visible={!!edit} transparent animationType={isWide ? 'fade' : 'slide'} onRequestClose={() => setEdit(null)}>
+      <Modal visible={!!edit} transparent animationType={isWide || Platform.OS === 'web' ? 'fade' : 'slide'} onRequestClose={() => setEdit(null)}>
         <Pressable onPress={() => setEdit(null)} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: isWide ? 'center' : 'flex-end', alignItems: isWide ? 'center' : 'stretch', padding: isWide ? 24 : 0 }}>
-          <Pressable onPress={() => {}} style={isWide
+          <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} style={isWide
             ? { backgroundColor: C.surface, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 420, maxHeight: '85%' }
             : { backgroundColor: C.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18, paddingBottom: 30, borderTopWidth: 1, borderColor: C.line, maxHeight: '85%' }}>
             <ScrollView>{picker}</ScrollView>
@@ -431,7 +431,7 @@ function ScheduleConfig({ visible, isWide, onClose, onApply }: {
   );
 
   return (
-    <Modal visible={visible} transparent animationType={isWide ? 'fade' : 'slide'} onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType={isWide || Platform.OS === 'web' ? 'fade' : 'slide'} onRequestClose={onClose}>
       {isWide ? (
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           <View style={{ width: '100%', maxWidth: 560, maxHeight: '88%', backgroundColor: C.surface, borderRadius: R.xl, borderWidth: 1, borderColor: C.line, padding: 22 }}>

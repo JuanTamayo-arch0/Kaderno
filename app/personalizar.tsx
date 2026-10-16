@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { RequireAuth } from '../components/RequireAuth';
 import { ActivityIndicator, Platform, Pressable, ScrollView, Text, View, Image } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
 import { Screen, Button } from '../components/ds';
 import {
