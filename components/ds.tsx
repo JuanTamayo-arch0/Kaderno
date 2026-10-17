@@ -104,6 +104,7 @@ export function Field({
       <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: C.surface2, borderWidth: 1, borderRadius: 10, borderColor: error ? C.bad : focus ? C.brand : C.line }}>
         <TextInput
           placeholderTextColor={C.muted}
+          accessibilityLabel={label}
           {...rest}
           onFocus={(e) => { setFocus(true); rest.onFocus?.(e); }}
           onBlur={(e) => { setFocus(false); rest.onBlur?.(e); }}

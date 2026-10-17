@@ -885,3 +885,33 @@ Supabase no permite cambiar la región de un proyecto existente. El camino es cr
 6. Probar con "Probar conexión" y, cuando todo esté bien, pausar el proyecto viejo.
 
 Conviene hacerlo con calma un fin de semana: mientras dura la copia, lo que se guarde en el proyecto viejo no pasa al nuevo.
+
+## Versión 19: materias y notas
+
+### 1. Base de datos (una sola vez)
+
+Correr `supabase/schema_v18.sql` en Supabase → SQL Editor. Requiere schema.sql y schema_v14. Es seguro correrlo dos veces.
+
+Agrega a `subjects` las columnas `teacher`, `room` y `link` (profesor, salón y enlace del aula virtual; el enlace solo acepta `http://` o `https://`) y a `notes` las columnas `pinned` (notas fijadas) y `updated_at` (última edición del título o el texto, la mantiene un disparador). Sin la migración la app funciona igual; al guardar profesor, salón o enlace, o al fijar una nota, avisa que falta.
+
+### 2. Qué cambió
+
+- **Página de la materia:** arriba, la ficha con profesor, salón, días de clase (del horario), créditos y aula virtual, y cuatro indicadores que no cambian al pasar de pestaña: promedio y lo que falta para pasar, próxima evaluación (con días y peso), pendientes y estudio de la semana (enfoque y tarjetas para hoy). Botones para enfocar en la materia, preguntar al Oráculo y crear tarea.
+- **Columna derecha (computador):** próxima clase, calendario del mes, notas recientes con "Nota rápida" y archivos.
+- **Tareas:** campo para escribir una tarea en una línea ("informe el jueves 6pm") y lista agrupada en vencidas, esta semana, más adelante y sin fecha.
+- **Calificaciones:** barra con lo calificado, lo pendiente y lo que falta registrar, y cuánto aporta cada nota.
+- **Notas (computador):** lista de la materia a la izquierda (buscador, fijadas y recientes) y la nota abierta al lado, con índice y "Estudiar esta nota" a la derecha en pantallas anchas. En el celular, la lista y luego la nota a pantalla completa.
+- **Editor nuevo (web):** se lee y se edita en el mismo lugar, sin asteriscos a la vista. Barra de formato delgada, barra al seleccionar texto (incluye "Flashcards" y "Explicar" con el Oráculo), menú con "/", fórmulas con LaTeX (`$x^2$` en línea y `$$...$$` centradas, con vista previa), tablas, listas de tareas que se marcan aun leyendo, imágenes pegadas o arrastradas dentro del texto. Esc vuelve a la vista de lectura. Las notas se siguen guardando en Markdown: las viejas abren igual y el resumen, las flashcards, el Oráculo y el PDF siguen funcionando. Un "$20 y $30" no se toma como fórmula.
+- **Letra de las notas:** en Personalizar se elige aparte (por defecto una serif de lectura).
+- **Lista de Materias:** resumen del semestre arriba (promedio ponderado, pendientes, próxima entrega y próxima clase) y en cada tarjeta el profesor, los días y la clase de hoy o mañana.
+- **PDF de la materia:** sale con títulos, negrillas, tablas, fórmulas e imágenes (antes salía el Markdown en bruto).
+
+### 3. Notas técnicas
+
+- El editor (TipTap + KaTeX) se descarga aparte solo al abrir una nota (unos 290 KB comprimido).
+- Las fuentes y la hoja de estilos de KaTeX están en `public/katex/`. Si se actualiza `katex`, correr `node scripts/katex-assets.mjs`.
+- Las imágenes dentro del texto quedan como `![](kd-img:<ruta>)` en el bucket `notes`, y se muestran con URL firmada.
+
+### 4. Pruebas
+
+`npm test` (incluye `tests/v19.test.ts`: días y próxima clase, próxima evaluación, grupos de tareas, orden y búsqueda de notas, índice, enlaces y PDF) y `bash tests/run_sql.sh` (incluye `tests/sql/18_pruebas.sql`).

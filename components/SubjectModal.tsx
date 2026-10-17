@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C, SUBJECT_COLORS, SUBJECT_ICONS } from '../lib/theme';
-import { Subject, Grade, addSubject, updateSubject, archiveSubject, restoreSubject, addGrade, updateGrade } from '../lib/db';
+import { Subject, Grade, addSubject, updateSubject, cleanLink, archiveSubject, restoreSubject, addGrade, updateGrade } from '../lib/db';
 import { confirm, notify, toast, friendlyError } from '../lib/feedback';
 import { Button, Field, IconButton } from './ds';
 import { SubjectIcon, isPhotoIcon } from './SubjectIcon';
@@ -14,14 +14,20 @@ const loadPicker = () => import('expo-image-picker');
 if (typeof window !== 'undefined') setTimeout(() => { Promise.resolve().then(loadPicker).catch(() => {}); }, 4000);
 
 // Crear, editar o archivar una materia.
-export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchived }: {
+export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchived, focusField }: {
   visible: boolean; editSubject?: Subject | null; onClose: () => void; onSaved: () => void; onArchived?: () => void;
+  /** Campo que recibe el foco al abrir (desde "Agregar profesor" en la ficha). */
+  focusField?: 'teacher' | 'room' | 'link';
 }) {
   const [name, setName] = useState('');
   const [color, setColor] = useState(SUBJECT_COLORS[0]);
   const [hexText, setHexText] = useState(SUBJECT_COLORS[0]);
   const [icon, setIcon] = useState(SUBJECT_ICONS[0]);
   const [credits, setCredits] = useState('');
+  const [teacher, setTeacher] = useState('');
+  const [room, setRoom] = useState('');
+  const [link, setLink] = useState('');
+  const [linkErr, setLinkErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -30,6 +36,7 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
     const s = editSubject;
     setName(s?.name ?? ''); setColor(s?.color ?? SUBJECT_COLORS[0]); setHexText(s?.color ?? SUBJECT_COLORS[0]);
     setIcon(s?.icon ?? SUBJECT_ICONS[0]); setCredits(s?.credits ? String(s.credits) : ''); setErr(null);
+    setTeacher(s?.teacher ?? ''); setRoom(s?.room ?? ''); setLink(s?.link ?? ''); setLinkErr(null);
   }, [visible, editSubject]);
 
   function onHex(t: string) {
@@ -47,11 +54,16 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
   }
   async function save() {
     if (!name.trim()) { setErr('Escribe el nombre de la materia.'); return; }
+    const l = cleanLink(link);
+    if (link.trim() && !l) { setLinkErr('Pega un enlace que empiece por https://'); return; }
     setBusy(true);
     try {
       const cr = parseInt(credits || '0', 10) || 0;
-      if (editSubject) await updateSubject(editSubject.id, { name: name.trim(), color, icon, credits: cr });
-      else await addSubject(name.trim(), color, icon, cr);
+      const extra = { teacher: teacher.trim().slice(0, 120) || null, room: room.trim().slice(0, 80) || null, link: l };
+      if (editSubject) {
+        const same = (editSubject.teacher ?? null) === extra.teacher && (editSubject.room ?? null) === extra.room && (editSubject.link ?? null) === extra.link;
+        await updateSubject(editSubject.id, { name: name.trim(), color, icon, credits: cr, ...(same ? {} : extra) });
+      } else await addSubject(name.trim(), color, icon, cr, extra);
       toast(editSubject ? 'Materia guardada' : `Materia creada: ${name.trim()}`, { tone: 'good' });
       onSaved();
     } catch (e) { notify('No se pudo guardar', friendlyError(e)); }
@@ -80,6 +92,10 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <Field label="Nombre" value={name} onChangeText={(v) => { setName(v); setErr(null); }} placeholder="Ej: Física" error={err} autoFocus={!editSubject} />
             <Field label="Créditos" value={credits} onChangeText={(v) => setCredits(v.replace(/\D/g, '').slice(0, 2))} keyboardType="number-pad" placeholder="Ej: 3" hint="Se usan para el promedio del semestre." />
+            <Field label="Profesor" value={teacher} onChangeText={setTeacher} placeholder="Ej: Ana Pérez" autoFocus={focusField === 'teacher'} maxLength={120} />
+            <Field label="Salón" value={room} onChangeText={setRoom} placeholder="Ej: Bloque 11, 201" autoFocus={focusField === 'room'} maxLength={80} />
+            <Field label="Enlace del aula virtual" value={link} onChangeText={(v) => { setLink(v); setLinkErr(null); }} placeholder="https://…" autoCapitalize="none" autoCorrect={false} keyboardType="url"
+              error={linkErr} autoFocus={focusField === 'link'} hint="Moodle, Teams, Classroom o la página del curso." />
             <Text style={lbl()}>Color</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
               {SUBJECT_COLORS.map((c) => {
