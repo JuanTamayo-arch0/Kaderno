@@ -134,6 +134,13 @@ export function applyAll(s: PSettings): void {
   PERSONALIZE = s;
 }
 
+/**
+ * Fondo de una pantalla completa. Con fondo de pantalla es transparente: el velo
+ * oscuro lo pone AppBackground una sola vez, así no desaparece al cambiar de
+ * pantalla mientras la siguiente termina de cargar.
+ */
+export function screenBg(): string { return hasWallpaper() ? 'transparent' : C.bg; }
+
 export function currentTheme(): Theme { return THEMES[PERSONALIZE.themeId] ?? THEMES.medianoche; }
 
 // Lectura SÍNCRONA en web (localStorage) para que todos los estilos tomen el tema correcto desde el primer render.

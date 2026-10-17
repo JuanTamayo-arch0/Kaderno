@@ -1,7 +1,7 @@
 import { Redirect, Tabs } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SideNav, BottomBar, NavKey } from '../../components/SideNav';
+import { BottomBar, NavKey } from '../../components/SideNav';
 import { useAuth } from '../../lib/auth';
 import { C } from '../../lib/theme';
 import { useResponsive } from '../../lib/responsive';
@@ -19,7 +19,8 @@ function Bar({ state, navigation }: any) {
   const insets = useSafeAreaInsets();
   const current = (state.routes[state.index]?.name ?? 'index') as NavKey;
   const go = (key: NavKey) => navigation.navigate(key);
-  if (isWide) return <SideNav active={current} onNavigate={go} />;
+  // En computador la barra lateral es la del layout raíz (AppSideNav).
+  if (isWide) return null;
   return <BottomBar active={current} onNavigate={go} bottomInset={insets.bottom} />;
 }
 

@@ -6,10 +6,10 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { C, R, S } from '../lib/theme';
+import { C, R, S, screenBg } from '../lib/theme';
 import { useResponsive, SIDEBAR_W } from '../lib/responsive';
 import { usePets } from '../lib/pets/store';
-import { SideNav, type NavKey } from './SideNav';
+import { type NavKey } from './SideNav';
 
 // ============================================================
 //  Sistema de diseño de Kaderno.
@@ -122,9 +122,10 @@ export function Card({ children, style, onPress, accessibilityLabel, padded = tr
   children: React.ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void; accessibilityLabel?: string; padded?: boolean;
 }) {
   const base: ViewStyle = { backgroundColor: C.surface, borderColor: C.line, borderWidth: 1, borderRadius: 14, padding: padded ? 16 : 0 };
-  if (!onPress) return <View style={[base, style]}>{children}</View>;
+  // La mascota se puede subir a las tarjetas (ver lib/pets/dom.ts).
+  if (!onPress) return <View dataSet={{ petPerch: '1' }} style={[base, style]}>{children}</View>;
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={accessibilityLabel} dataSet={{ press: '1', lift: '1' }}
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={accessibilityLabel} dataSet={{ press: '1', lift: '1', petPerch: '1' }}
       style={({ pressed, focused }: any) => [base, { opacity: pressed ? 0.85 : 1 }, focused ? focusRingStyle() : null, style]}>
       {children}
     </Pressable>
@@ -201,6 +202,32 @@ export function Segmented<K extends string>({ items, value, onChange, style }: {
       })}
     </ScrollView>
   );
+}
+
+// ---------- Fila de chips ----------
+/**
+ * Fila de filtros. En pantallas anchas los chips bajan a otra línea en vez de
+ * cortarse; en el celular se desliza de lado y se desvanece en el borde para
+ * que se note que hay más.
+ */
+export function ChipRow({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+  const { isWide } = useResponsive();
+  const ref = React.useRef<any>(null);
+  const [more, setMore] = React.useState(false);
+  React.useEffect(() => {
+    if (isWide || Platform.OS !== 'web') return;
+    const el = ref.current?.getScrollableNode?.() ?? ref.current;
+    if (!el || !el.addEventListener) return;
+    const check = () => setMore(el.scrollWidth - el.clientWidth - el.scrollLeft > 4);
+    check();
+    el.addEventListener('scroll', check, { passive: true });
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(check) : null;
+    ro?.observe(el);
+    return () => { el.removeEventListener('scroll', check); ro?.disconnect(); };
+  }, [isWide, children]);
+  if (isWide) return <View style={[{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 8 }, style]}>{children}</View>;
+  const fade = more && Platform.OS === 'web' ? ({ maskImage: 'linear-gradient(to right, #000 82%, transparent)', WebkitMaskImage: 'linear-gradient(to right, #000 82%, transparent)' } as any) : null;
+  return <ScrollView ref={ref} horizontal showsHorizontalScrollIndicator={false} style={[{ flexGrow: 0 }, style, fade]}>{children}</ScrollView>;
 }
 
 // ---------- Chip de filtro ----------
@@ -325,8 +352,7 @@ export function Screen({
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg, paddingLeft: isWide ? SIDEBAR_W : 0 }}>
-      {isWide && nav !== undefined && <SideNav active={nav} />}
+    <View style={{ flex: 1, backgroundColor: screenBg(), paddingLeft: isWide ? SIDEBAR_W : 0 }}>
       {head}
       {header ? (
         <View style={{ paddingHorizontal: padX }}>

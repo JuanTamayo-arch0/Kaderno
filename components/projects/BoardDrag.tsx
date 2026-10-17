@@ -237,6 +237,7 @@ export function DragCard({ binding, hidden, landed, children }: {
   return React.createElement('div', {
     ...binding,
     'data-landed': landed ? '1' : undefined,
+    'data-pet-perch': hidden ? undefined : '1',
     style: {
       cursor: 'grab', touchAction: 'manipulation', WebkitUserSelect: 'none', userSelect: 'none', WebkitTouchCallout: 'none',
       ...(hidden ? { height: 0, overflow: 'hidden', opacity: 0, pointerEvents: 'none' } : null),
