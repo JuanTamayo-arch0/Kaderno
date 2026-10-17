@@ -14,7 +14,7 @@ import type { Mood, Species } from './art';
 import { lineFor, dailyPhrase, type Situation } from './lines';
 
 export type TalkMode = 'importa' | 'conversador';
-export type ActionId = 'enfocar' | 'mover_hoy' | 'que_hago' | 'dos_min' | 'luego' | 'tienda' | 'terminar_enfoque' | 'seguir';
+export type ActionId = 'enfocar' | 'mover_hoy' | 'que_hago' | 'dos_min' | 'luego' | 'tienda' | 'terminar_enfoque' | 'seguir' | 'logros';
 
 export type BrainState = {
   talk: TalkMode;
@@ -36,7 +36,8 @@ export type PetEvent =
   | { type: 'agarrar' }
   | { type: 'despierta' }
   | { type: 'adoptada'; name: string }
-  | { type: 'compra' };
+  | { type: 'compra' }
+  | { type: 'logro'; title: string; reward: number };
 
 export type Reaction = {
   mood?: Mood;
@@ -142,6 +143,9 @@ export function react(ev: PetEvent, s: BrainState, sp: Species, now: number, see
       return { mood: 'feliz', moodMs: 3000, celebrate: true, say: L('adoptada', { nombre: ev.name }), ms: 6000 };
     case 'compra':
       return { mood: 'feliz', moodMs: 2500, celebrate: true, say: L('compra'), ms: 3000 };
+    case 'logro':
+      if (s.focusing) return { mood: 'feliz', moodMs: 3000 };
+      return { mood: 'feliz', moodMs: 4000, celebrate: true, say: `${L('logro')} ${ev.title}. +${ev.reward}`, actions: ['logros'], ms: 7000 };
   }
 }
 

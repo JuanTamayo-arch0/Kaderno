@@ -127,7 +127,7 @@ function Bienvenida() {
               {added.length > 0 && <Card style={{ marginTop: 16, gap: 8 }}>{added.map((a, i) => <View key={i} style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}><Ionicons name="checkmark-circle" size={17} color={C.goodText} /><Text style={{ color: C.text }}>{a}</Text></View>)}</Card>}
               <Pressable onPress={() => finish('/importar')} style={{ marginTop: 18, flexDirection: 'row', alignItems: 'center', gap: 6 }} accessibilityRole="link">
                 <Ionicons name="download-outline" size={16} color={C.brand} />
-                <Text style={{ color: C.brand, fontWeight: '700' }}>¿Tienes el cronograma del sílabo? Impórtalo completo</Text>
+                <Text style={{ color: C.brand, fontWeight: '700' }}>¿Tienes el cronograma del curso? Impórtalo completo</Text>
               </Pressable>
             </>
           )}

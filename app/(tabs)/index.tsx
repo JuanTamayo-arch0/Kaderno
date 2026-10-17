@@ -369,7 +369,7 @@ export default function Hoy() {
     <ErrorState message={error} onRetry={load} />
   ) : subjects.length === 0 && live.length === 0 ? (
     <EmptyState icon="school-outline" title="Empecemos por tus materias"
-      text="Crea las materias del semestre y luego anota tus entregas. También puedes importarlas del sílabo."
+      text="Crea las materias del semestre y luego anota tus entregas. También puedes importar el cronograma completo."
       action={{ label: 'Crear materias', icon: 'add', onPress: () => router.push('/bienvenida') }} />
   ) : groups.length === 0 ? (
     vista === 'proyectos' && !day && !filter ? (

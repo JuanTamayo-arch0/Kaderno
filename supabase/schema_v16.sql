@@ -15,6 +15,8 @@
 --     únicos: una misma tarea o sesión no paga dos veces.
 --   · pet_daily lleva lo ganado por día (tope de 300) y los repasos.
 --   · Comprar, vestir, adoptar, activar y renombrar van por funciones.
+--   · pet_achievements() calcula los logros, paga los nuevos (fuera del tope
+--     diario) y devuelve el avance de cada uno.
 -- =====================================================================
 
 -- ---------- Tablas ----------
@@ -324,11 +326,110 @@ begin
   return v_pet;
 end $$;
 
+-- ---------- Logros ----------
+-- Premio que no cuenta para el tope diario (logros). Solo lo usa la base.
+create or replace function public._pet_grant(p_user uuid, p_pet uuid, p_reason text, p_ref text, p_amount integer)
+returns boolean
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into pet_ledger (user_id, pet_id, delta, reason, ref) values (p_user, p_pet, p_amount, p_reason, p_ref)
+    on conflict (user_id, reason, ref) do nothing;
+  if not found then return false; end if;
+  update pets set coins = coins + p_amount, xp = xp + p_amount where id = p_pet;
+  return true;
+end $$;
+
+-- Calcula los logros con lo que ya hay en la base, paga los que se acaban de
+-- cumplir (a la mascota activa) y devuelve todos con su avance.
+-- Solo cuenta lo hecho desde que adoptaste tu primera mascota.
+create or replace function public.pet_achievements()
+returns table (id text, progress integer, goal integer, reward integer, unlocked_at timestamptz, is_new boolean)
+language plpgsql security definer set search_path = public as $$
+declare
+  v_user uuid := auth.uid(); v_tz text; v_today date; v_since timestamptz; v_since_day date; v_pet uuid;
+  m_done integer; m_focus_day integer; m_focus_total integer; m_streak integer := 0; m_clean integer := 0;
+  m_reviews integer; m_days integer; m_items integer; m_pets integer; m_level integer; d date; i integer; r record;
+begin
+  if v_user is null then return; end if;
+  select min(created_at) into v_since from pets where user_id = v_user;
+  if v_since is null then return; end if;
+  v_tz := public._kaderno_tz(v_user);
+  v_today := (now() at time zone v_tz)::date;
+  v_since_day := (v_since at time zone v_tz)::date;
+  select p.id into v_pet from pets p where p.user_id = v_user and p.active;
+
+  select count(*) into m_done from assignments a
+   where a.user_id = v_user and a.status = 'done' and a.deleted_at is null and a.completed_at >= v_since;
+  select coalesce(max(t.m), 0), coalesce(sum(t.m), 0) into m_focus_day, m_focus_total from (
+    select sum(f.minutes)::int as m from focus_sessions f
+     where f.user_id = v_user and f.created_at >= v_since
+     group by (f.created_at at time zone v_tz)::date
+  ) t;
+  -- Racha: días seguidos ganando algo (si hoy todavía no, cuenta desde ayer).
+  d := v_today;
+  if not exists (select 1 from pet_daily x where x.user_id = v_user and x.day = d and x.earned > 0) then d := d - 1; end if;
+  for i in 1..30 loop
+    exit when not exists (select 1 from pet_daily x where x.user_id = v_user and x.day = d and x.earned > 0);
+    m_streak := m_streak + 1; d := d - 1;
+  end loop;
+  -- Semana sin vencidas: días seguidos (hacia atrás desde ayer) en que nada se venció.
+  if not exists (
+    select 1 from assignments a
+     where a.user_id = v_user and a.deleted_at is null and a.status is distinct from 'done'
+       and coalesce((a.due_at at time zone v_tz)::date, a.due_date) < v_today - 7
+  ) then
+    for i in 1..7 loop
+      d := v_today - i;
+      exit when d < v_since_day;
+      exit when exists (
+        select 1 from assignments a
+         where a.user_id = v_user and a.deleted_at is null
+           and coalesce((a.due_at at time zone v_tz)::date, a.due_date) = d
+           and (a.status is distinct from 'done' or (a.completed_at at time zone v_tz)::date > d)
+      );
+      m_clean := m_clean + 1;
+    end loop;
+  end if;
+  select coalesce(sum(x.reviews), 0) into m_reviews from pet_daily x where x.user_id = v_user and x.day >= v_since_day;
+  select count(*) into m_days from pet_ledger l where l.user_id = v_user and l.reason = 'dia';
+  select count(*) into m_items from pet_items it where it.user_id = v_user;
+  select count(*), coalesce(max(public.pet_level(p.xp)), 1) into m_pets, m_level from pets p where p.user_id = v_user;
+
+  for r in
+    select * from (values
+      ('primera_tarea', least(m_done, 1), 1, 20),
+      ('tareas_25', m_done, 25, 60),
+      ('tareas_100', m_done, 100, 150),
+      ('enfoque_hora', m_focus_day, 60, 30),
+      ('enfoque_10h', m_focus_total, 600, 100),
+      ('racha_7', m_streak, 7, 50),
+      ('racha_30', m_streak, 30, 200),
+      ('sin_vencidas', m_clean, 7, 70),
+      ('repaso_100', m_reviews, 100, 50),
+      ('dia_5', m_days, 5, 40),
+      ('ropa_3', m_items, 3, 30),
+      ('familia', m_pets, 4, 100),
+      ('nivel_5', m_level, 5, 50),
+      ('nivel_10', m_level, 10, 150)
+    ) v(aid, prog, g, rew)
+  loop
+    id := r.aid; goal := r.g; reward := r.rew; progress := least(r.prog, r.g); is_new := false;
+    select l.created_at into unlocked_at from pet_ledger l where l.user_id = v_user and l.reason = 'logro' and l.ref = r.aid;
+    if unlocked_at is null and r.prog >= r.g and v_pet is not null then
+      if public._pet_grant(v_user, v_pet, 'logro', r.aid, r.rew) then is_new := true; unlocked_at := now(); end if;
+    end if;
+    return next;
+  end loop;
+end $$;
+
 -- ---------- Permisos ----------
 revoke all on function public._pet_award(uuid, text, text, integer) from public, anon, authenticated;
 revoke all on function public._pet_on_task_done() from public, anon, authenticated;
 revoke all on function public._pet_on_focus() from public, anon, authenticated;
 revoke all on function public._pet_on_review() from public, anon, authenticated;
+revoke all on function public._pet_grant(uuid, uuid, text, text, integer) from public, anon, authenticated;
+revoke all on function public.pet_achievements() from public, anon;
+grant execute on function public.pet_achievements() to authenticated;
 revoke all on function public.pet_adopt(text, text) from public, anon;
 revoke all on function public.pet_buy(text) from public, anon;
 revoke all on function public.pet_wear(uuid, text, text) from public, anon;

@@ -1,6 +1,6 @@
 # PLAN v17: Mascotas de estudio
 
-Estado: fases 1 y 2 construidas (rama `v17-mascotas`). La fase 3 queda pendiente. Diseño en el canvas "Mascotas de Kaderno" y el prototipo "Mascotas pixel de Kaderno".
+Estado: fases 1, 2 y 3 construidas (rama `v17-mascotas`, PR #8). De la fase 3 queda pendiente solo la ropa de temporada. Diseño en el canvas "Mascotas de Kaderno" y el prototipo "Mascotas pixel de Kaderno".
 
 ## 1. Decisiones tomadas
 
@@ -154,7 +154,7 @@ Disparadores que llaman `pet_award`: al cerrar una sesión de enfoque, al pasar 
 
 1. **Compañero**: elegir mascota y nombre, mascota que camina y se arrastra, ánimos y animaciones, mensajes por eventos, frase del día, ajustes (incluido "Movimiento").
 2. **Progreso**: monedas, nivel, tienda con las 10 prendas, vestir, adoptar y cambiar de mascota.
-3. **Más**: Oráculo con la cara de la mascota, logros ("una semana sin vencidas"), prendas de temporada.
+3. **Más**: Oráculo con la cara y el tono de la mascota, 14 logros calculados por la base (`pet_achievements`), la mascota se sube sola a las tareas. Pendiente: prendas de temporada.
 
 ## 9. Pruebas
 

@@ -17,7 +17,7 @@ import {
 } from '../../lib/pets/brain';
 import { lineFor } from '../../lib/pets/lines';
 import {
-  activePet, isMutedToday, loadPetPrefs, loadPets, onPetEvent, usePets, type PetSignal,
+  activePet, checkAchievements, isMutedToday, loadPetPrefs, loadPets, onPetEvent, usePets, type PetSignal,
 } from '../../lib/pets/store';
 import { subscribeFocus, startFocus } from '../../lib/focusTimer';
 import { getTasks, getSubjects, getFocusDetail, moveTaskDate, type Task } from '../../lib/db';
@@ -28,10 +28,10 @@ import { useAuth } from '../../lib/auth';
 
 const LABELS: Record<ActionId, string> = {
   enfocar: 'Enfocarme ya', mover_hoy: 'Mover a hoy', que_hago: '¿Qué hago ahora?', dos_min: 'Regla de 2 min',
-  luego: 'Luego', tienda: 'Tienda', terminar_enfoque: 'Ir al enfoque', seguir: 'Seguir',
+  luego: 'Luego', tienda: 'Tienda', terminar_enfoque: 'Ir al enfoque', seguir: 'Seguir', logros: 'Ver logros',
 };
-/** Pantallas donde no aparece (o ya está en grande). */
-const HIDDEN = ['/login', '/bienvenida', '/visor', '/mascota'];
+/** Pantallas donde no aparece (o ya está en grande, como en Mascota y en el Oráculo). */
+const HIDDEN = ['/login', '/bienvenida', '/visor', '/mascota', '/oraculo'];
 const BRAIN_KEY = 'pet_brain';
 
 function readBrain(): BrainState {
@@ -78,6 +78,13 @@ export function PetBuddy() {
 
   const hiddenRoute = HIDDEN.some((p) => pathname === p || pathname.startsWith(p + '/'));
   const show = Platform.OS === 'web' && typeof document !== 'undefined' && !!userId && s.available === true && s.prefs.enabled && !!pet && !hiddenRoute;
+  // Logros que se cumplieron mientras la app estaba cerrada (después del saludo).
+  useEffect(() => {
+    if (!show) return;
+    const id = setTimeout(() => { checkAchievements().catch(() => {}); }, 12000);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [show]);
 
   // ---------- Reacciones ----------
   function apply(r: Reaction | null) {
@@ -126,6 +133,8 @@ export function PetBuddy() {
         c.say(lineFor('dos_minutos', pet.species, { tarea: t?.title ?? 'lo primero' }), [{ id: 'enfocar', label: LABELS.enfocar }], 9000);
       } else if (id === 'tienda') {
         router.push('/mascota');
+      } else if (id === 'logros') {
+        router.push({ pathname: '/mascota', params: { tab: 'logros' } } as any);
       } else if (id === 'terminar_enfoque') {
         router.push('/enfoque');
       }
