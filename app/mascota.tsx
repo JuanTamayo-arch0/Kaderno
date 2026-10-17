@@ -7,8 +7,10 @@ import { RequireAuth } from '../components/RequireAuth';
 import { Screen, Button, Card, Segmented, SectionLabel, Skeleton, IconButton } from '../components/ds';
 import { useResponsive } from '../lib/responsive';
 import { ITEMS, SPECIES, type ItemId, type Species } from '../lib/pets/art';
-import { ITEM_RULES, ITEM_SHORT, SHOP_ORDER, adoptPrice, coinLabel, itemState, levelProgress, DEFAULT_NAMES, type ItemState } from '../lib/pets/economy';
-import { activePet, activatePet, adoptPet, buyItem, checkAchievements, loadPets, renamePet, usePets, wearItem, type Pet } from '../lib/pets/store';
+import { ITEM_RULES, ITEM_SHORT, SHOP_ORDER, adoptPrice, coinLabel, homeItemState, itemState, levelProgress, DEFAULT_NAMES, type ItemState } from '../lib/pets/economy';
+import { activePet, activatePet, adoptPet, buyItem, checkAchievements, loadPets, renamePet, setHome, usePets, wearItem, type Pet } from '../lib/pets/store';
+import { HOME_DEFAULT_NAMES, HOME_DEFAULT_SHORT, HOME_ITEMS, HOME_ORDER, withItem, type HomeItemId } from '../lib/pets/home';
+import { PetRoom, RoomThumb } from '../components/pets/PetRoom';
 import { ACHIEVEMENTS, sortAchievements, type AchievementRow } from '../lib/pets/achievements';
 import { confirm, friendlyError, notify, toast } from '../lib/feedback';
 import { PetChooser, PERSONALITY } from '../components/pets/PetChooser';
@@ -20,15 +22,17 @@ import { CoinIcon, PetImage, PetSprite } from '../components/pets/PetArt';
 //  adoptar y cambiar de mascota, cómo se gana y sus ajustes.
 // ============================================================
 
-type Tab = 'ropa' | 'mascotas' | 'logros' | 'ganar' | 'ajustes';
+type Tab = 'ropa' | 'casa' | 'mascotas' | 'logros' | 'ganar' | 'ajustes';
+const TABS: Tab[] = ['ropa', 'casa', 'mascotas', 'logros', 'ganar', 'ajustes'];
 const STATE_TEXT: Record<ItemState, string> = { puesta: 'Puesta', tuya: 'Tuya', comprable: '', cara: '', bloqueada: '' };
 
 function Mascota() {
   const s = usePets();
   const pet = activePet(s);
   const params = useLocalSearchParams<{ tab?: string }>();
-  const [tab, setTab] = useState<Tab>(params.tab === 'logros' ? 'logros' : 'ropa');
-  useEffect(() => { if (params.tab === 'logros') setTab('logros'); }, [params.tab]);
+  const fromParam = TABS.includes(params.tab as Tab) ? (params.tab as Tab) : null;
+  const [tab, setTab] = useState<Tab>(fromParam ?? 'ropa');
+  useEffect(() => { if (fromParam) setTab(fromParam); }, [fromParam]);
   useFocusEffect(useCallback(() => { loadPets(true).then(() => checkAchievements()).catch(() => {}); }, []));
 
   if (!s.loaded) {
@@ -57,12 +61,14 @@ function Mascota() {
       <Hero pet={pet} earnedToday={s.earnedToday} />
       <Segmented<Tab> value={tab} onChange={setTab} style={{ marginTop: 18, marginBottom: 14 }} items={[
         { key: 'ropa', label: 'Ropa', icon: 'shirt-outline' },
+        { key: 'casa', label: 'Casa', icon: 'home-outline' },
         { key: 'mascotas', label: 'Mascotas', icon: 'paw-outline', count: s.pets.length },
         { key: 'logros', label: 'Logros', icon: 'ribbon-outline', count: s.achievements?.filter((a) => a.unlocked_at).length ?? 0 },
         { key: 'ganar', label: 'Cómo se gana', icon: 'trophy-outline' },
         { key: 'ajustes', label: 'Ajustes', icon: 'options-outline' },
       ]} />
       {tab === 'ropa' && <Shop pet={pet} owned={new Set(s.items[pet.id] ?? [])} />}
+      {tab === 'casa' && <HomeShop pet={pet} owned={new Set(s.items[pet.id] ?? [])} />}
       {tab === 'mascotas' && <Pets pets={s.pets} active={pet} />}
       {tab === 'logros' && <Achievements rows={s.achievements} species={pet.species} />}
       {tab === 'ganar' && <HowToEarn pet={pet} />}
@@ -168,6 +174,74 @@ function Shop({ pet, owned }: { pet: Pet; owned: Set<string> }) {
           );
         })}
       </View>
+    </View>
+  );
+}
+
+const HOME_GROUPS: { slot: 'papel' | 'piso' | 'vista' | 'mueble'; label: string }[] = [
+  { slot: 'papel', label: 'Pared' }, { slot: 'piso', label: 'Piso' }, { slot: 'vista', label: 'Ventana' }, { slot: 'mueble', label: 'Muebles' },
+];
+
+function HomeShop({ pet, owned }: { pet: Pet; owned: Set<string> }) {
+  const { isWide } = useResponsive();
+  const coin = SPECIES[pet.species].coin;
+  const home = pet.home ?? {};
+  const [busy, setBusy] = useState<string | null>(null);
+  async function run(key: string, fn: () => Promise<unknown>) {
+    setBusy(key);
+    try { await fn(); } catch (e) { notify('No se pudo', friendlyError(e)); } finally { setBusy(null); }
+  }
+  async function press(id: HomeItemId) {
+    const r = HOME_ITEMS[id];
+    const st = homeItemState(id, pet, owned);
+    if (st === 'bloqueada') { toast(`${r.name}: se desbloquea en el nivel ${r.level}.`); return; }
+    if (st === 'cara') { toast(`Te faltan ${coinLabel(r.price - pet.coins, coin)} para ${r.name.toLowerCase()}.`); return; }
+    if (st === 'puesta') {
+      if (r.slot === 'mueble') run(id, () => setHome(pet.id, 'mueble', id, false));
+      else run(id, () => setHome(pet.id, r.slot, null));
+      return;
+    }
+    if (st === 'tuya') { run(id, () => setHome(pet.id, r.slot, id, true)); return; }
+    if (await confirm(`¿Comprar ${r.name.toLowerCase()}?`, `Cuesta ${coinLabel(r.price, coin)}. Es para la casa de ${pet.name}.`, 'Comprar')) {
+      run(id, async () => { await buyItem(id); toast(`Listo: ${r.name.toLowerCase()} en la casa de ${pet.name}`, { tone: 'good' }); });
+    }
+  }
+  const tile = (key: string, label: string, thumb: React.ReactNode, foot: React.ReactNode, on: boolean, dim: boolean, onPress: () => void, a11y: string) => (
+    <Pressable key={key} onPress={onPress} disabled={busy === key} dataSet={{ press: '1' }} accessibilityRole="button" accessibilityLabel={a11y}
+      style={{ flexBasis: isWide ? '23%' : '47%', flexGrow: 0, alignItems: 'center', gap: 4, padding: 8, borderRadius: 14, borderWidth: on ? 2 : 1, borderColor: on ? C.good : C.line, backgroundColor: C.surface, opacity: dim ? 0.55 : 1 }}>
+      {thumb}
+      <Text style={{ color: C.text, fontSize: 13, fontWeight: '800' }} numberOfLines={1}>{label}</Text>
+      {foot}
+    </Pressable>
+  );
+  const foot = (id: HomeItemId) => {
+    const st = homeItemState(id, pet, owned), r = HOME_ITEMS[id];
+    if (st === 'puesta') return <Text style={{ color: C.goodText, fontSize: 12, fontWeight: '800' }}>Puesto</Text>;
+    if (st === 'tuya') return <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700' }}>Tuyo</Text>;
+    if (st === 'bloqueada') return <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700' }}>Nivel {r.level}</Text>;
+    return <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}><CoinIcon species={pet.species} size={14} /><Text style={{ color: st === 'cara' ? C.muted : C.warnText, fontSize: 12.5, fontWeight: '900' }}>{r.price}</Text></View>;
+  };
+  const thumbW = isWide ? 150 : 132;
+  return (
+    <View style={{ gap: 12 }}>
+      <PetRoom pet={pet} height={isWide ? 260 : 200} />
+      <Text style={{ color: C.muted, fontSize: 13 }}>Esta es la casa de {pet.name}: aparece en el Oráculo. Cada mascota tiene la suya y se paga con {coin.many}. Toca algo para comprarlo, ponerlo o quitarlo.</Text>
+      {HOME_GROUPS.map((g) => (
+        <View key={g.slot} style={{ gap: 8 }}>
+          <SectionLabel text={g.label} />
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+            {g.slot !== 'mueble' && tile(`def-${g.slot}`, HOME_DEFAULT_SHORT[g.slot],
+              <RoomThumb home={{ ...home, [g.slot]: null }} width={thumbW} />,
+              !home[g.slot] ? <Text style={{ color: C.goodText, fontSize: 12, fontWeight: '800' }}>Puesto</Text> : <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700' }}>Gratis</Text>,
+              !home[g.slot], false, () => { if (home[g.slot]) run(`def-${g.slot}`, () => setHome(pet.id, g.slot, null)); }, `${HOME_DEFAULT_NAMES[g.slot]}, la de siempre`)}
+            {HOME_ORDER.filter((id) => HOME_ITEMS[id].slot === g.slot).map((id) => {
+              const st = homeItemState(id, pet, owned);
+              return tile(id, HOME_ITEMS[id].short, <RoomThumb home={withItem(home, id)} width={thumbW} />, foot(id), st === 'puesta', st === 'bloqueada', () => press(id),
+                `${HOME_ITEMS[id].name}. ${st === 'puesta' ? 'Puesto, toca para quitarlo' : st === 'tuya' ? 'Tuyo, toca para ponerlo' : st === 'bloqueada' ? `Nivel ${HOME_ITEMS[id].level}` : coinLabel(HOME_ITEMS[id].price, coin)}`);
+            })}
+          </View>
+        </View>
+      ))}
     </View>
   );
 }

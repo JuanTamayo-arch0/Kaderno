@@ -12,12 +12,15 @@ import { useEffect, useState } from 'react';
 import { supabase, currentUserId } from '../supabase';
 import { fetchPrefs, savePrefs } from '../db';
 import type { ItemId, Outfit, Slot, Species } from './art';
+import type { Home, HomeItemId } from './home';
 import type { PetEvent, TalkMode } from './brain';
 import { ACHIEVEMENTS, type AchievementRow } from './achievements';
 
 export type Pet = {
   id: string; species: Species; name: string; outfit: Outfit;
   coins: number; xp: number; active: boolean; created_at: string;
+  /** La casa (schema_v17). Puede faltar si la migración no se ha corrido. */
+  home?: Home;
 };
 export type PetPrefs = {
   /** Mostrar la mascota en pantalla. */
@@ -188,7 +191,7 @@ export async function adoptPet(species: Species, name: string): Promise<Pet> {
   return p;
 }
 
-export async function buyItem(item: ItemId): Promise<Pet> {
+export async function buyItem(item: ItemId | HomeItemId): Promise<Pet> {
   const p = await rpc('pet_buy', { p_item: item });
   set({ items: { ...state.items, [p.id]: [...(state.items[p.id] ?? []), item] } });
   replacePet(p);
@@ -201,6 +204,17 @@ export async function wearItem(petId: string, slot: Slot, item: ItemId | null): 
   const p = await rpc('pet_wear', { p_pet: petId, p_slot: slot, p_item: item });
   replacePet(p);
   return p;
+}
+
+/** Poner o quitar algo de la casa (schema_v17). */
+export async function setHome(petId: string, slot: 'papel' | 'piso' | 'vista' | 'mueble', item: HomeItemId | null, on = true): Promise<Pet> {
+  const { data, error } = await supabase.rpc('pet_home', { p_pet: petId, p_slot: slot, p_item: item, p_on: on });
+  if (error) {
+    if (isMissingTable(error)) throw new Error('Falta activar la casa en la base: hay que correr supabase/schema_v17.sql.');
+    throw error;
+  }
+  replacePet(data as Pet);
+  return data as Pet;
 }
 
 export async function activatePet(petId: string): Promise<Pet> {

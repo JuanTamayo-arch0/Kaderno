@@ -4,7 +4,7 @@ import { Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-na
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { C, SUBJECT_COLORS, SUBJECT_ICONS } from '../lib/theme';
+import { C, SUBJECT_COLORS, SUBJECT_ICONS, screenBg } from '../lib/theme';
 import { RequireAuth } from '../components/RequireAuth';
 import { Subject, getSubjects, addSubject, addTask } from '../lib/db';
 import { parseQuickAdd } from '../lib/quickAdd';
@@ -80,7 +80,7 @@ function Bienvenida() {
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
+    <View style={{ flex: 1, backgroundColor: screenBg() }}>
       <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 20, paddingTop: insets.top + 24, alignItems: 'center' }} keyboardShouldPersistTaps="handled">
         <View style={{ width: '100%', maxWidth: 560, flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 22 }}>

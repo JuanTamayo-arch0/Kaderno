@@ -22,7 +22,7 @@ export const ACHIEVEMENTS: Record<AchievementId, { title: string; desc: string; 
   sin_vencidas: { title: 'Una semana sin vencidas', desc: '7 días seguidos sin dejar vencer nada.', icon: 'shield-checkmark' },
   repaso_100: { title: 'Memoria de elefante', desc: 'Repasa 100 tarjetas.', icon: 'albums' },
   dia_5: { title: 'Días redondos', desc: 'Termina todo lo del día 5 veces.', icon: 'sunny' },
-  ropa_3: { title: 'Con estilo', desc: 'Compra 3 prendas.', icon: 'shirt' },
+  ropa_3: { title: 'Con estilo', desc: 'Compra 3 cosas en la tienda (ropa o casa).', icon: 'shirt' },
   familia: { title: 'Familia completa', desc: 'Adopta las cuatro mascotas.', icon: 'paw' },
   nivel_5: { title: 'Nivel 5', desc: 'Lleva una mascota al nivel 5.', icon: 'star-half' },
   nivel_10: { title: 'Nivel 10', desc: 'Lleva una mascota al nivel 10.', icon: 'star' },

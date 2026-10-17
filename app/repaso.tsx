@@ -10,7 +10,7 @@ import { nextLabel } from '../lib/srs';
 import { confirm, toast, friendlyError, notify } from '../lib/feedback';
 import { refreshNavCounts } from '../lib/navCounts';
 import { refreshCoinsSoon } from '../lib/pets/store';
-import { Screen, Button, Card, EmptyState, Field, FilterChip, IconButton, Segmented, Skeleton, Dot } from '../components/ds';
+import { Screen, Button, Card, ChipRow, EmptyState, Field, FilterChip, IconButton, Segmented, Skeleton, Dot } from '../components/ds';
 import { SubjectPicker } from '../components/SubjectPicker';
 import { Kbd } from '../components/SideNav';
 
@@ -98,10 +98,10 @@ function Review({ subjects, onManage }: { subjects: Subject[]; onManage: () => v
   return (
     <View>
       {usedSubjects.length > 1 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+        <ChipRow style={{ marginBottom: 12 }}>
           <FilterChip label="Todas" active={!filter} onPress={() => { setFilter(null); setI(0); }} />
           {usedSubjects.map((s) => <FilterChip key={s.id} label={s.name} color={s.color} active={filter === s.id} onPress={() => { setFilter(s.id); setI(0); }} />)}
-        </ScrollView>
+        </ChipRow>
       )}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
         <View style={{ flex: 1, height: 6, backgroundColor: C.surface2, borderRadius: 3, overflow: 'hidden' }}>
@@ -164,10 +164,10 @@ function Manage({ subjects }: { subjects: Subject[] }) {
         <Button label="Nueva tarjeta" icon="add" size="sm" onPress={() => setEdit('new')} />
       </View>
       {subjects.length > 1 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+        <ChipRow style={{ marginBottom: 12 }}>
           <FilterChip label="Todas" active={!filter} onPress={() => setFilter(null)} />
           {subjects.map((s) => <FilterChip key={s.id} label={s.name} color={s.color} active={filter === s.id} onPress={() => setFilter(s.id)} />)}
-        </ScrollView>
+        </ChipRow>
       )}
       {cards === null ? <Skeleton /> : list.length === 0 ? (
         <EmptyState icon="albums-outline" title="Sin tarjetas" text="Escribe una pregunta y su respuesta, o genéralas con IA desde una nota." compact />

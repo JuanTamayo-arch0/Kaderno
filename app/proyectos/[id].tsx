@@ -4,14 +4,14 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { C, R, shadow, uiScheme, SUBJECT_COLORS } from '../../lib/theme';
+import { C, R, shadow, uiScheme, SUBJECT_COLORS, screenBg } from '../../lib/theme';
 import { useResponsive, SIDEBAR_W } from '../../lib/responsive';
 import { confirm, notify } from '../../lib/confirm';
 import { ProgressBar } from '../../components/ProgressBar';
 import { StepSuggestions } from '../../components/StepSuggestions';
 import { loadHoyHidden, setProjectHidden } from '../../lib/hoyHidden';
 import { toast } from '../../lib/feedback';
-import { SideNav } from '../../components/SideNav';
+
 import { useAuth } from '../../lib/auth';
 import { ImportSheet } from '../../components/projects/ImportSheet';
 import { BoardCleanup } from '../../components/projects/BoardCleanup';
@@ -239,8 +239,7 @@ function ProyectoDetalle() {
 
   if (gone) {
     return (
-      <View style={{ flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', padding: 30, paddingLeft: isWide ? SIDEBAR_W : 30 }}>
-        {isWide && <SideNav active="proyectos" />}
+      <View style={{ flex: 1, backgroundColor: screenBg(), alignItems: 'center', justifyContent: 'center', padding: 30, paddingLeft: isWide ? SIDEBAR_W : 30 }}>
         <Ionicons name="lock-closed-outline" size={34} color={C.muted} style={{ marginBottom: 10 }} />
         <Text style={{ color: C.text, fontSize: 16, fontWeight: '700' }}>Este proyecto ya no está disponible</Text>
         <Text style={{ color: C.muted, fontSize: 13, marginTop: 6, textAlign: 'center', maxWidth: 340, lineHeight: 20 }}>
@@ -254,8 +253,7 @@ function ProyectoDetalle() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg, paddingLeft: isWide ? SIDEBAR_W : 0 }}>
-      {isWide && <SideNav active="proyectos" />}
+    <View style={{ flex: 1, backgroundColor: screenBg(), paddingLeft: isWide ? SIDEBAR_W : 0 }}>
 
       {/* ---------- Barra de arriba ---------- */}
       <View style={{ paddingTop: isWide ? 26 : 56, paddingHorizontal: isWide ? 32 : 16, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: C.line }}>

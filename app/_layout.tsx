@@ -28,6 +28,8 @@ import { SCHEDULE, applyRemoteSchedule, loadScheduleNative } from '../lib/schedu
 import { AppBackground } from '../components/AppBackground';
 import { FeedbackHost } from '../components/FeedbackHost';
 import { GlobalPanels } from '../components/GlobalPanels';
+import { AppSideNav } from '../components/SideNav';
+import { preloadScreens } from '../lib/preload';
 import { toast } from '../lib/feedback';
 import { beep, loadFocus, setFocusCompleteHandler } from '../lib/focusTimer';
 import { registerServiceWorker } from '../lib/push';
@@ -79,6 +81,7 @@ function Shell() {
   useEffect(() => {
     loadFocus();
     registerServiceWorker();
+    preloadScreens();
     if (Platform.OS === 'web') applyWebChrome();
     else {
       // En móvil no hay lectura síncrona: se traen las copias locales y se
@@ -150,6 +153,7 @@ function Shell() {
         <AppBackground />
         <ThemeProvider value={navTheme}>
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }} />
+          <AppSideNav />
           {session ? <GlobalPanels /> : null}
           {session ? <PetBuddy /> : null}
           <FeedbackHost />

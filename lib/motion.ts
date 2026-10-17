@@ -27,6 +27,8 @@ import { Platform } from 'react-native';
 const EASE = 'cubic-bezier(.2,.8,.2,1)';
 
 const CSS = `
+/* El anillo de foco solo con teclado: al hacer clic no aparece el recuadro. */
+:focus:not(:focus-visible) { outline: none !important; }
 @keyframes kd-enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes kd-page { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 @keyframes kd-sheet { from { opacity: 0; transform: translateY(18px) scale(.985); } to { opacity: 1; transform: none; } }

@@ -7,10 +7,11 @@ import { C } from '../../lib/theme';
 import { useResponsive } from '../../lib/responsive';
 import { Subject, getSubjects, askOracle, getOracleMessages, saveOracleMessage, clearOracleMessages, reindexNotes, addFlashcards } from '../../lib/db';
 import { confirm, toast, friendlyError } from '../../lib/feedback';
-import { Screen, FilterChip, IconButton, Dot } from '../../components/ds';
+import { Screen, ChipRow, FilterChip, IconButton, Dot } from '../../components/ds';
 import { copyText } from '../../lib/fileIO';
 import { activePet, usePets } from '../../lib/pets/store';
-import { PetImage, PetSprite } from '../../components/pets/PetArt';
+import { PetImage } from '../../components/pets/PetArt';
+import { PetRoom } from '../../components/pets/PetRoom';
 
 // ============================================================
 //  Oráculo: preguntas a la IA sobre tus apuntes.
@@ -93,19 +94,33 @@ export default function Oraculo() {
     <Screen title="Oráculo" subtitle={`Pregúntale a la IA sobre ${scopeLabel}`} scroll={false} padded={false} maxWidth={860} back={isWide ? undefined : '/estudiar'}
       right={<IconButton icon="trash-outline" label="Borrar conversación" onPress={clearAll} />}
       header={
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8, flexGrow: 0 }}>
+        <ChipRow style={{ marginBottom: 8 }}>
           {noteId && <FilterChip label={params.noteTitle || 'Nota abierta'} icon={<Ionicons name="document-text-outline" size={14} color={mode === 'note' ? C.onBrand : C.muted} />} active={mode === 'note'} onPress={() => setMode('note')} />}
           <FilterChip label="Todas mis notas" active={mode === 'all'} onPress={() => setMode('all')} />
           {subjects.map((s) => <FilterChip key={s.id} label={s.name} color={s.color} active={mode === 'subject' && subjectId === s.id} onPress={() => { setMode('subject'); setSubjectId(s.id); }} />)}
-        </ScrollView>
+        </ChipRow>
       }>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        {pet && (
+          <View style={{ paddingHorizontal: 16, maxWidth: 892, width: '100%', alignSelf: 'center' }}>
+            <PetRoom pet={pet} height={isWide ? 230 : 150} mood={sending ? 'concentrado' : messages[messages.length - 1]?.error ? 'preocupado' : 'normal'}>
+              <Pressable onPress={() => router.push({ pathname: '/mascota', params: { tab: 'casa' } } as any)} accessibilityRole="button" accessibilityLabel={`Decorar la casa de ${pet.name}`}
+                style={{ position: 'absolute', right: 10, top: 10, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(15,17,21,.72)', borderRadius: 99, paddingVertical: 6, paddingHorizontal: 12 }}>
+                <Ionicons name="color-palette-outline" size={15} color="#ffffff" />
+                <Text style={{ color: '#ffffff', fontSize: 12.5, fontWeight: '800' }}>Decorar</Text>
+              </Pressable>
+              {sending && (
+                <View style={{ position: 'absolute', left: 10, bottom: 10, backgroundColor: 'rgba(246,242,234,.95)', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 10 }}>
+                  <Text style={{ color: '#1f2433', fontSize: 12.5, fontWeight: '800' }}>{pet.name} está buscando en tus notas…</Text>
+                </View>
+              )}
+            </PetRoom>
+          </View>
+        )}
         <ScrollView ref={scroller} style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 20, maxWidth: 860, width: '100%', alignSelf: 'center' }}>
           {messages.length === 0 && (
-            <View style={{ alignItems: 'center', paddingTop: 30 }}>
-              {pet ? (
-                <View style={{ marginBottom: 6 }}><PetSprite species={pet.species} outfit={pet.outfit} size={96} label={pet.name} /></View>
-              ) : (
+            <View style={{ alignItems: 'center', paddingTop: pet ? 8 : 30 }}>
+              {!pet && (
                 <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: C.brand2 + '22', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
                   <Ionicons name="sparkles" size={28} color={C.brand2} />
                 </View>

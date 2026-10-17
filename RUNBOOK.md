@@ -855,3 +855,33 @@ Sin ese paso, el Oráculo ya muestra la cara y el nombre de la mascota, pero res
 ### 4. Pruebas
 
 `npm test` (arte, economía, frases, logros, cerebro y motor de movimiento) y `bash tests/run_sql.sh` (incluye `tests/sql/16_pruebas.sql`: pagos, tope diario, una sola vez por tarea, compras, adopciones, logros y aislamiento entre usuarios).
+
+## Versión 18: la casa de la mascota y arreglos
+
+### 1. Base de datos (una sola vez)
+
+Correr `supabase/schema_v17.sql` en Supabase → SQL Editor. Requiere schema_v16. Es seguro correrlo dos veces.
+
+Agrega `pets.home` (la casa de cada mascota), suma 16 cosas para la casa al catálogo de la tienda (`pet_buy` ahora vende ropa y casa) y crea `pet_home` para poner o quitar lo comprado. Sin la migración la app funciona igual; la pestaña Casa avisa que falta al intentar decorar.
+
+### 2. Qué cambió
+
+- **Casa de la mascota:** un cuarto en pixel art (pared, piso, ventana que cambia con la hora, escritorio y muebles). Sale arriba en el Oráculo y en **Mascota → Casa**, donde se compra y se decora: 4 papeles de pared, 3 pisos, 3 vistas y 6 muebles. Cada mascota tiene su casa y se paga con su moneda; al cambiar de mascota cambia la casa.
+- **Filtros de materias:** en el computador bajan a otra línea en vez de cortarse; en el celular se deslizan y se desvanecen en el borde.
+- **Recuadro al hacer clic:** el anillo de foco solo aparece al navegar con el teclado.
+- **Mascota:** ya no tiembla sobre las tarjetas (dos tarjetas podían quedar con la misma clave al volver de Mascota u Oráculo). Ahora se sube también a las tarjetas de materias, notas, proyectos, Ajustes y al panel derecho de Hoy. El globo aparece directamente junto a ella.
+- **Cambio de pantalla:** el velo oscuro sobre el fondo de pantalla y la barra lateral ya no desaparecen mientras carga la pantalla siguiente (hay una sola barra y un solo velo para toda la app). Además, las pantallas se descargan por detrás después de abrir la app.
+- **Ajustes → Conexión → Probar conexión:** mide cuánto tarda el servidor en responder desde donde estás.
+
+### 3. Si la conexión sale lenta: mudar Supabase de región
+
+Supabase no permite cambiar la región de un proyecto existente. El camino es crear uno nuevo en la región más cercana (desde Colombia suele ser East US, Virginia) y pasar todo, siguiendo la guía oficial "Migrating within Supabase":
+
+1. Crear el proyecto nuevo en la región elegida.
+2. Pasar la base con `pg_dump` y `psql` (esquema, datos y usuarios de Auth), como dice la guía.
+3. Copiar los archivos de Storage (buckets `wallpapers`, `project-files` y los demás).
+4. Volver a poner los secretos de las funciones (`ANTHROPIC_API_KEY`, `VAPID_PRIVATE_KEY`, etc.) y desplegar las funciones en el proyecto nuevo.
+5. En el droplet, cambiar `SUPABASE_URL` y `SUPABASE_ANON_KEY` en `/var/www/kaderno/kaderno-config.js` (no hace falta recompilar).
+6. Probar con "Probar conexión" y, cuando todo esté bien, pausar el proyecto viejo.
+
+Conviene hacerlo con calma un fin de semana: mientras dura la copia, lo que se guarde en el proyecto viejo no pasa al nuevo.

@@ -28,6 +28,48 @@ import { clearHoyHidden, resetHoyHiddenCache, saveHoyVista } from '../lib/hoyHid
 type Notif = { daily: boolean; daily_hour: number; weekly: boolean; tz: string };
 const DEFAULT_NOTIF: Notif = { daily: true, daily_hour: 7, weekly: true, tz: 'America/Bogota' };
 
+/** Mide cuánto tarda el servidor (Supabase) en responder desde aquí. */
+function ConnectionTest() {
+  const [res, setRes] = useState<{ ms: number; min: number; max: number } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  async function run() {
+    setBusy(true); setErr(null);
+    try {
+      const times: number[] = [];
+      for (let i = 0; i < 6; i++) {
+        const t0 = performance.now();
+        const { error } = await supabase.from('user_prefs').select('user_id').limit(1);
+        if (error) throw error;
+        if (i > 0) times.push(performance.now() - t0); // la primera abre la conexión
+      }
+      times.sort((a, b) => a - b);
+      setRes({ ms: Math.round(times[Math.floor(times.length / 2)]), min: Math.round(times[0]), max: Math.round(times[times.length - 1]) });
+    } catch (e) { setErr(friendlyError(e)); }
+    finally { setBusy(false); }
+  }
+  const verdict = !res ? null : res.ms < 150 ? { t: 'Rápida', c: C.goodText } : res.ms < 300 ? { t: 'Aceptable', c: C.warnText } : { t: 'Lenta', c: C.badText };
+  return (
+    <Card style={{ gap: 8 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <Ionicons name="pulse-outline" size={22} color={C.brand} />
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: C.text, fontSize: 15, fontWeight: '600' }}>Probar conexión</Text>
+          <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>Cuánto tarda el servidor en responder desde donde estás.</Text>
+        </View>
+        <Button label={res ? 'Repetir' : 'Probar'} size="sm" kind="secondary" busy={busy} onPress={run} />
+      </View>
+      {res && verdict && (
+        <Text style={{ color: C.text, fontSize: 14 }}>
+          <Text style={{ color: verdict.c, fontWeight: '800' }}>{verdict.t}: {res.ms} ms</Text>
+          <Text style={{ color: C.muted }}> por consulta (entre {res.min} y {res.max} ms en 5 pruebas).{res.ms >= 300 ? ' Conviene mudar la base a una región más cercana (ver RUNBOOK, versión 18).' : ''}</Text>
+        </Text>
+      )}
+      {err && <Text style={{ color: C.badText, fontSize: 13 }}>{err}</Text>}
+    </Card>
+  );
+}
+
 function Ajustes() {
   const router = useRouter();
   const { s: section } = useLocalSearchParams<{ s?: string }>();
@@ -187,6 +229,9 @@ function Ajustes() {
           Los recordatorios de cada tarea se eligen al crearla. Todos los avisos también quedan en la campana.{!hasV14() ? ' Requiere actualizar la base de datos (schema_v14).' : ''}
         </Text>
       </Card>
+
+      <SectionLabel text="Conexión" />
+      <ConnectionTest />
 
       <SectionLabel text="Calendario" />
       <CalendarCard />

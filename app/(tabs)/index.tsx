@@ -27,7 +27,7 @@ import { openAdd, openCommand, openInbox, openTask, onDataChanged } from '../../
 import { refreshNavCounts, useNavCounts } from '../../lib/navCounts';
 import { useFocusTimer, startFocus, pauseFocus } from '../../lib/focusTimer';
 import { useAuth } from '../../lib/auth';
-import { Screen, Button, Card, EmptyState, ErrorState, FilterChip, IconButton, SectionLabel, Skeleton, Dot } from '../../components/ds';
+import { Screen, Button, Card, ChipRow, EmptyState, ErrorState, FilterChip, IconButton, SectionLabel, Skeleton, Dot } from '../../components/ds';
 import { TaskRow } from '../../components/TaskRow';
 import { MiniCalendar } from '../../components/MiniCalendar';
 import { Avatar } from '../../components/SideNav';
@@ -327,12 +327,12 @@ export default function Hoy() {
           ]} />
       )}
       {chips.length > 1 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <ChipRow>
           <FilterChip label={vista === 'proyectos' ? 'Todos' : 'Todas'} active={!filter} onPress={() => setFilter(null)} />
           {chips.map((c) => (
             <FilterChip key={c.id} label={c.label} color={c.color} active={filter === c.id} onPress={() => setFilter(filter === c.id ? null : c.id)} />
           ))}
-        </ScrollView>
+        </ChipRow>
       )}
     </View>
   );

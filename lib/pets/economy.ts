@@ -4,6 +4,7 @@
 //  niveles y si algo alcanza, sin preguntarle al servidor.
 // ============================================================
 import type { ItemId, Slot, Species } from './art';
+import { HOME_ITEMS, homeHas, type Home, type HomeItemId } from './home';
 
 export const ITEM_RULES: Record<ItemId, { price: number; level: number; slot: Slot }> = {
   gorro: { price: 60, level: 1, slot: 'cabeza' },
@@ -50,6 +51,15 @@ export function levelProgress(xp: number): { level: number; into: number; span: 
 }
 
 export type ItemState = 'puesta' | 'tuya' | 'comprable' | 'cara' | 'bloqueada';
+
+/** Cómo se ve una cosa de la casa en la tienda. */
+export function homeItemState(id: HomeItemId, pet: { xp: number; coins: number; home?: Home }, owned: Set<string>): ItemState {
+  const r = HOME_ITEMS[id];
+  if (homeHas(pet.home ?? {}, id)) return 'puesta';
+  if (owned.has(id)) return 'tuya';
+  if (levelOf(pet.xp) < r.level) return 'bloqueada';
+  return pet.coins >= r.price ? 'comprable' : 'cara';
+}
 
 /** Cómo se ve una prenda en la tienda para una mascota. */
 export function itemState(id: ItemId, pet: { xp: number; coins: number; outfit: Partial<Record<Slot, ItemId | null>> }, owned: Set<string>): ItemState {

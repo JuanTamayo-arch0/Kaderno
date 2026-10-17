@@ -1,21 +1,23 @@
 import React from 'react';
 import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../lib/theme';
-import { SIDEBAR_W } from '../lib/responsive';
+import { SIDEBAR_W, useResponsive } from '../lib/responsive';
 import { useAuth } from '../lib/auth';
 import { useNavCounts } from '../lib/navCounts';
 import { useFocusTimer } from '../lib/focusTimer';
 import { openAdd, openCommand, openInbox } from '../lib/uiBus';
+import { navKeyOf } from '../lib/navKey';
+export { navKeyOf };
 
 // ============================================================
 //  Navegación de computador (barra lateral) y de celular (barra inferior).
 //
 //  Computador: Hoy, Materias, Horario y Proyectos arriba; la sección
 //  "Estudiar" (Enfoque, Repaso, Oráculo, Capturar); abajo la persona con
-//  Ajustes. Las pantallas que no son pestañas montan esta misma barra
-//  con <Screen nav="..."> (components/ds.tsx).
+//  Ajustes. Hay una sola barra para toda la app (AppSideNav, en el layout
+//  raíz): así no desaparece mientras carga la pantalla siguiente.
 //
 //  Celular: cinco botones (Hoy, Materias, +, Estudiar, Proyectos). Las
 //  pantallas que viven "dentro" de otra (Horario dentro de Materias,
@@ -23,10 +25,8 @@ import { openAdd, openCommand, openInbox } from '../lib/uiBus';
 //  el botón de su sección.
 // ============================================================
 
-export type NavKey =
-  | 'index' | 'materias' | 'horario' | 'proyectos' | 'estudiar'
-  | 'enfoque' | 'repaso' | 'oraculo' | 'capturar'
-  | 'buscar' | 'ajustes' | 'tipos' | 'personalizar' | 'papelera' | 'mascota';
+export type { NavKey } from '../lib/navKey';
+import type { NavKey } from '../lib/navKey';
 
 type Item = { key: NavKey; label: string; icon: any; iconOn: any; href: string };
 
@@ -151,6 +151,22 @@ export function SideNav({ active, onNavigate }: { active: NavKey | null; onNavig
       </ScrollView>
     </View>
   );
+}
+
+const NO_SIDEBAR = ['/login', '/bienvenida', '/visor'];
+
+/**
+ * La barra lateral de computador, montada una sola vez en el layout raíz.
+ * Las pestañas se abren con navigate (vuelve a la pestaña y conserva su estado).
+ */
+export function AppSideNav() {
+  const { isWide } = useResponsive();
+  const { session } = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
+  if (!isWide || !session || NO_SIDEBAR.some((x) => pathname.startsWith(x))) return null;
+  const go = (key: NavKey) => router.navigate((key === 'index' ? '/' : `/${key}`) as any);
+  return <SideNav active={navKeyOf(pathname)} onNavigate={go} />;
 }
 
 export function Kbd({ text }: { text: string }) {

@@ -18,6 +18,20 @@ const FRAMES: Frame[] = ['quieto', 'respira', 'parpadeo', 'paso1', 'paso2', 'pas
 export const PET_SIZE = 64;
 const IDLE_SLEEP_MS = 10 * 60_000;
 
+// Claves de las tarjetas que se pueden pisar. Son de todo el módulo (no de cada
+// mascota): antes cada mascota nueva volvía a contar desde 1 y, al volver de una
+// pantalla donde no aparece, dos tarjetas podían quedar con la misma clave. La
+// mascota "perdía" la tarjeta, caía un píxel, volvía a aterrizar... y temblaba.
+const perchKeys = new WeakMap<Element, string>();
+const perchEls = new Map<string, WeakRef<HTMLElement>>();
+let perchSeq = 0;
+function keyOf(el: HTMLElement): string {
+  let k = perchKeys.get(el);
+  if (!k) { k = `p${++perchSeq}`; perchKeys.set(el, k); }
+  perchEls.set(k, new WeakRef(el));
+  return k;
+}
+
 export type BubbleAction = { id: ActionId; label: string };
 export type PetLook = { species: Species; outfit: Outfit; name: string };
 export type ControllerOpts = PetLook & {
@@ -64,7 +78,6 @@ export class PetController {
   private bubbleTimer: ReturnType<typeof setTimeout> | null = null;
   private lastTouch = Date.now();
   private drag: null | { id: number; sx: number; sy: number; ox: number; oy: number; moved: boolean; hist: { x: number; y: number; t: number }[] } = null;
-  private keys = 0;
   private floor = 0;
   private reduce: boolean;
   private off: (() => void)[] = [];
@@ -194,17 +207,19 @@ export class PetController {
     const floor = this.motion.world.floor;
     document.querySelectorAll<HTMLElement>('[data-pet-perch]').forEach((n) => {
       const r = this.toLocal(n.getBoundingClientRect());
-      if (r.right - r.left < 90 || r.top < 30 || r.top > floor - PET_SIZE * 0.6) return;
-      let k = n.getAttribute('data-pet-key');
-      if (!k) { k = String(++this.keys); n.setAttribute('data-pet-key', k); }
+      if (r.right - r.left < 90 || r.bottom - r.top < 28 || r.top < 30 || r.top > floor - PET_SIZE * 0.6) return;
+      // Nada dentro de ventanas emergentes: quedan por encima de la mascota.
+      if (n.closest('[aria-modal="true"],[role="dialog"],[data-ghost]')) return;
+      const k = keyOf(n);
       out.push({ key: k, rect: r });
     });
     return out;
   }
   private rectOf(key: string): Rect | null {
-    const n = document.querySelector(`[data-pet-key="${key}"]`) as HTMLElement | null;
-    if (!n || !n.isConnected || n.offsetParent === null) return null;
+    const n = perchEls.get(key)?.deref();
+    if (!n || !n.isConnected) { perchEls.delete(key); return null; }
     const r = this.toLocal(n.getBoundingClientRect());
+    if (r.right - r.left < 1) return null; // pantalla oculta
     if (r.top < 0 || r.top > this.motion.world.floor - 10) return null;
     return r;
   }
@@ -343,11 +358,13 @@ export class PetController {
     this.bubble.style.display = 'flex';
     // Se detiene mientras habla, para que los botones del globo no se muevan.
     this.motion.hold = true;
-    if (!this.reduce) this.bubble.animate?.([{ transform: 'scale(.7)', opacity: 0 }, { transform: 'scale(1)', opacity: 1 }], { duration: 160, easing: 'steps(3)' });
     if (this.bubbleTimer) clearTimeout(this.bubbleTimer);
     this.bubbleTimer = setTimeout(() => this.hideBubble(), ms);
     this.start();
+    // Primero se coloca junto a la mascota y después aparece (antes la animación
+    // pisaba la posición y el globo se veía un instante arriba a la izquierda).
     this.placeBubble();
+    if (!this.reduce) this.bubble.animate?.([{ transform: 'scale(.7)', opacity: 0 }, { transform: 'scale(1)', opacity: 1 }], { duration: 160, easing: 'steps(3)' });
   }
   hideBubble() {
     this.bubble.style.display = 'none';
@@ -360,7 +377,9 @@ export class PetController {
     const cx = this.motion.center();
     const left = Math.max(w.minX + 8, Math.min(w.maxX - bw - 8, cx - bw / 2));
     const top = Math.max(8, this.motion.y + PET_SIZE * 0.12 - bh - 12);
-    this.bubble.style.transform = `translate(${left.toFixed(0)}px,${top.toFixed(0)}px)`;
+    this.bubble.style.left = `${left.toFixed(0)}px`;
+    this.bubble.style.top = `${top.toFixed(0)}px`;
+    this.bubble.style.transformOrigin = `${Math.max(16, Math.min(bw - 16, cx - left))}px 100%`;
     const tail = this.bubble.querySelector('[data-tail]') as HTMLElement | null;
     if (tail) tail.style.left = `${Math.max(16, Math.min(bw - 16, cx - left))}px`;
   }
