@@ -111,6 +111,25 @@ export class PetMotion {
     this.jump(Math.max(-300, Math.min(300, vx * 0.6)), Math.max(-500, Math.min(150, vy * 0.5)));
   }
 
+  /**
+   * Subirse sola de un salto a una tarjeta que esté a la vista (no muy alta).
+   * Devuelve false si no hay ninguna a su alcance.
+   */
+  climb(): boolean {
+    const feet = this.feet();
+    const options = this.world.perches().filter((p) => p.rect.top < feet - 60 && p.rect.top > feet - 460 && p.rect.right - p.rect.left > this.size * 1.6);
+    if (!options.length) return false;
+    const p = options[Math.floor(this.rand() * options.length) % options.length];
+    const r = p.rect;
+    const tx = Math.max(r.left, Math.min(r.right - this.size, r.left + this.rand() * (r.right - r.left - this.size)));
+    const over = 26;
+    const vy = -Math.sqrt(2 * GRAVITY * (feet - r.top + over));
+    const air = -vy / GRAVITY + Math.sqrt((2 * over) / GRAVITY);
+    this.ignore = null;
+    this.jump((tx - this.x) / air, vy);
+    return true;
+  }
+
   /** Mover a un lado (por ejemplo, para no tapar un campo de texto). */
   moveAwayFrom(left: number, right: number) {
     if (this.mode === 'held' || this.mode === 'air') return;
@@ -134,6 +153,8 @@ export class PetMotion {
       const s = W.rectOf(this.on);
       if (!s || r < 0.35) { this.hopDown(this.dir); return; }
       if (r < 0.8) { this.walkTo(s.left + this.rand() * Math.max(0, s.right - s.left - this.size)); return; }
+    } else if (r < 0.18 && this.climb()) {
+      return;
     } else if (r < 0.6) {
       let tx = W.minX + 4 + this.rand() * (W.maxX - W.minX - this.size - 8);
       const ob = W.obstacle();

@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
     }
 
     // ---------- ASK ----------
-    const { question, mode = 'all', subjectId = null, noteId = null, ability = null, history = [] } = body;
+    const { question, mode = 'all', subjectId = null, noteId = null, ability = null, history = [], pet = null } = body;
     if (!question) return json({ error: 'Falta question' }, 400);
 
     let contextNotes: { title: string; content: string; note_id: string }[] = [];
@@ -125,8 +125,20 @@ Deno.serve(async (req) => {
       ? contextNotes.map((n, i) => `[Nota ${i + 1}: "${n.title}"]\n${n.content}`).join('\n\n---\n\n')
       : '(No se encontraron notas del usuario relevantes.)';
 
+    // Tono de la mascota del estudiante (opcional): cambia la forma, no el contenido.
+    const PERSONA: Record<string, string> = {
+      pinguino: 'un pingüino ordenado y constante: frases claras y pasos numerados',
+      gato: 'un gato tranquilo con un toque de humor seco, nunca grosero',
+      perro: 'un perro entusiasta que anima y celebra los avances',
+      loro: 'un loro curioso que a veces repite la idea clave como pregunta para fijarla',
+    };
+    const petName = pet && typeof pet.name === 'string' ? pet.name.replace(/[^\p{L}\p{N} ._-]/gu, '').trim().slice(0, 24) : '';
+    const persona = pet && PERSONA[pet.species] && petName
+      ? `Hablas como ${petName}, la mascota de estudio del estudiante: ${PERSONA[pet.species]}. Ese tono va solo en la forma (una frase corta al inicio o al cierre); el contenido sigue siendo preciso y completo. Sin emojis. `
+      : '';
+
     const system =
-      'Eres el "Oráculo" de Kaderno, un tutor de estudio amable y claro que responde en español. ' +
+      'Eres el "Oráculo" de Kaderno, un tutor de estudio amable y claro que responde en español. ' + persona +
       'Respondes basándote PRINCIPALMENTE en las notas del estudiante que se te proporcionan abajo. ' +
       (ABILITY[ability] ? ability + ': ' + ABILITY[ability] + ' ' : '') +
       'Si las notas no contienen la respuesta, puedes usar tu conocimiento general PERO avisa claramente que eso no salió de sus apuntes. ' +

@@ -1,5 +1,5 @@
-import React, { useCallback, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Platform, Pressable, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../lib/theme';
@@ -8,7 +8,8 @@ import { Screen, Button, Card, Segmented, SectionLabel, Skeleton, IconButton } f
 import { useResponsive } from '../lib/responsive';
 import { ITEMS, SPECIES, type ItemId, type Species } from '../lib/pets/art';
 import { ITEM_RULES, ITEM_SHORT, SHOP_ORDER, adoptPrice, coinLabel, itemState, levelProgress, DEFAULT_NAMES, type ItemState } from '../lib/pets/economy';
-import { activePet, activatePet, adoptPet, buyItem, loadPets, renamePet, usePets, wearItem, type Pet } from '../lib/pets/store';
+import { activePet, activatePet, adoptPet, buyItem, checkAchievements, loadPets, renamePet, usePets, wearItem, type Pet } from '../lib/pets/store';
+import { ACHIEVEMENTS, sortAchievements, type AchievementRow } from '../lib/pets/achievements';
 import { confirm, friendlyError, notify, toast } from '../lib/feedback';
 import { PetChooser, PERSONALITY } from '../components/pets/PetChooser';
 import { PetSettings } from '../components/pets/PetSettings';
@@ -19,14 +20,16 @@ import { CoinIcon, PetImage, PetSprite } from '../components/pets/PetArt';
 //  adoptar y cambiar de mascota, cómo se gana y sus ajustes.
 // ============================================================
 
-type Tab = 'ropa' | 'mascotas' | 'ganar' | 'ajustes';
+type Tab = 'ropa' | 'mascotas' | 'logros' | 'ganar' | 'ajustes';
 const STATE_TEXT: Record<ItemState, string> = { puesta: 'Puesta', tuya: 'Tuya', comprable: '', cara: '', bloqueada: '' };
 
 function Mascota() {
   const s = usePets();
   const pet = activePet(s);
-  const [tab, setTab] = useState<Tab>('ropa');
-  useFocusEffect(useCallback(() => { loadPets(true).catch(() => {}); }, []));
+  const params = useLocalSearchParams<{ tab?: string }>();
+  const [tab, setTab] = useState<Tab>(params.tab === 'logros' ? 'logros' : 'ropa');
+  useEffect(() => { if (params.tab === 'logros') setTab('logros'); }, [params.tab]);
+  useFocusEffect(useCallback(() => { loadPets(true).then(() => checkAchievements()).catch(() => {}); }, []));
 
   if (!s.loaded) {
     return <Screen title="Mascota" back="/" nav="mascota" maxWidth={860}><Skeleton height={200} /><Skeleton height={300} style={{ marginTop: 12 }} /></Screen>;
@@ -55,11 +58,13 @@ function Mascota() {
       <Segmented<Tab> value={tab} onChange={setTab} style={{ marginTop: 18, marginBottom: 14 }} items={[
         { key: 'ropa', label: 'Ropa', icon: 'shirt-outline' },
         { key: 'mascotas', label: 'Mascotas', icon: 'paw-outline', count: s.pets.length },
+        { key: 'logros', label: 'Logros', icon: 'ribbon-outline', count: s.achievements?.filter((a) => a.unlocked_at).length ?? 0 },
         { key: 'ganar', label: 'Cómo se gana', icon: 'trophy-outline' },
         { key: 'ajustes', label: 'Ajustes', icon: 'options-outline' },
       ]} />
       {tab === 'ropa' && <Shop pet={pet} owned={new Set(s.items[pet.id] ?? [])} />}
       {tab === 'mascotas' && <Pets pets={s.pets} active={pet} />}
+      {tab === 'logros' && <Achievements rows={s.achievements} species={pet.species} />}
       {tab === 'ganar' && <HowToEarn pet={pet} />}
       {tab === 'ajustes' && <Card padded={false}><PetSettings /></Card>}
     </Screen>
@@ -241,6 +246,53 @@ function Pets({ pets, active }: { pets: Pet[]; active: Pet }) {
   );
 }
 
+const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+function Achievements({ rows, species }: { rows: AchievementRow[] | null; species: Species }) {
+  const { isWide } = useResponsive();
+  if (!rows) return <Skeleton height={220} />;
+  const done = rows.filter((r) => r.unlocked_at).length;
+  return (
+    <View style={{ gap: 10 }}>
+      <Text style={{ color: C.muted, fontSize: 13 }}>{done} de {rows.length} conseguidos. Cada logro paga una vez a la mascota activa, aparte del tope diario. Cuentan desde que adoptaste tu primera mascota.</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+        {sortAchievements(rows).map((r) => {
+          const a = ACHIEVEMENTS[r.id];
+          if (!a) return null;
+          const got = !!r.unlocked_at;
+          const d = got ? new Date(r.unlocked_at!) : null;
+          return (
+            <Card key={r.id} style={{ flexBasis: isWide ? '48%' : '100%', flexGrow: 1, flexDirection: 'row', alignItems: 'center', gap: 12, borderColor: got ? C.brand : C.line }}
+              accessibilityLabel={`${a.title}. ${a.desc} ${got ? 'Conseguido' : `${r.progress} de ${r.goal}`}`}>
+              <View style={{ width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: got ? C.brand : C.surface2 }}>
+                <Ionicons name={(got ? a.icon : `${a.icon}-outline`) as any} size={24} color={got ? C.onBrand : C.muted} />
+              </View>
+              <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+                <Text style={{ color: got ? C.text : C.text, fontSize: 15, fontWeight: '800' }} numberOfLines={1}>{a.title}</Text>
+                <Text style={{ color: C.muted, fontSize: 12.5 }}>{a.desc}</Text>
+                {got ? (
+                  <Text style={{ color: C.goodText, fontSize: 12, fontWeight: '700' }}>Conseguido el {d!.getDate()} de {MONTHS[d!.getMonth()]}</Text>
+                ) : (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 }}>
+                    <View style={{ flex: 1, height: 6, borderRadius: 99, backgroundColor: C.surface2, overflow: 'hidden' }}>
+                      <View style={{ width: `${Math.round((r.progress / r.goal) * 100)}%`, height: '100%', backgroundColor: C.brand }} />
+                    </View>
+                    <Text style={{ color: C.muted, fontSize: 12, fontVariant: ['tabular-nums'] }}>{r.progress} de {r.goal}{a.unit ? ` ${a.unit}` : ''}</Text>
+                  </View>
+                )}
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, opacity: got ? 0.6 : 1 }}>
+                <CoinIcon species={species} size={14} />
+                <Text style={{ color: C.warnText, fontWeight: '900', fontSize: 13, fontVariant: ['tabular-nums'] }}>{r.reward}</Text>
+              </View>
+            </Card>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 function HowToEarn({ pet }: { pet: Pet }) {
   const coin = SPECIES[pet.species].coin;
   const rows: [string, string][] = [
@@ -250,6 +302,7 @@ function HowToEarn({ pet }: { pet: Pet }) {
     ['10 tarjetas de repaso', '+3'],
     ['Todo lo de hoy listo', '+10'],
     ['Racha: primer logro del día', '+5 por día seguido, hasta +35'],
+    ['Logros (una vez cada uno, aparte del tope)', '+20 a +200'],
   ];
   return (
     <View style={{ gap: 12 }}>

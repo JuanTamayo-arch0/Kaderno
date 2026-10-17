@@ -146,7 +146,7 @@ function AddSheet({ visible, subjects }: { visible: boolean; subjects: Subject[]
     { icon: 'checkbox-outline', label: 'Tarea o examen', hint: 'Con todos los detalles', onPress: () => openTask(null, parsed ? { title: parsed.title, subjectId: parsed.subjectId, typeKey: parsed.typeKey, dueDate: parsed.dueDate, dueTime: parsed.dueTime } : null) },
     { icon: 'camera-outline', label: 'Digitalizar apunte', hint: 'Foto o imagen a texto', onPress: () => { closeAdd(); router.push('/capturar'); } },
     { icon: 'document-text-outline', label: 'Nota en blanco', hint: 'Escribe con formato', onPress: blankNote },
-    { icon: 'download-outline', label: 'Importar del sílabo', hint: 'Pega el cronograma', onPress: () => { closeAdd(); router.push('/importar'); } },
+    { icon: 'download-outline', label: 'Importar cronograma', hint: 'Todas las entregas del semestre', onPress: () => { closeAdd(); router.push('/importar'); } },
     { icon: 'people-outline', label: 'Proyecto en grupo', hint: 'Tablero y reparto', onPress: () => { closeAdd(); router.push({ pathname: '/proyectos', params: { nuevo: '1' } } as any); } },
     { icon: 'timer-outline', label: 'Sesión de enfoque', hint: 'Pomodoro de 25 min', onPress: () => { closeAdd(); startFocus(); router.push('/enfoque'); } },
   ];
@@ -240,7 +240,7 @@ function CommandPalette({ visible }: { visible: boolean }) {
     { id: 'rep', icon: 'albums-outline', label: 'Repasar flashcards', run: () => go('/repaso') },
     { id: 'ora', icon: 'sparkles-outline', label: 'Preguntar al Oráculo', run: () => go('/oraculo') },
     { id: 'cap', icon: 'camera-outline', label: 'Digitalizar apunte', run: () => go('/capturar') },
-    { id: 'imp', icon: 'download-outline', label: 'Importar entregas del sílabo', run: () => go('/importar') },
+    { id: 'imp', icon: 'download-outline', label: 'Importar cronograma', run: () => go('/importar') },
     { id: 'aju', icon: 'settings-outline', label: 'Ajustes y cuenta', run: () => go('/ajustes') },
     { id: 'per', icon: 'color-palette-outline', label: 'Cambiar tema y apariencia', run: () => go('/personalizar') },
     { id: 'pap', icon: 'trash-outline', label: 'Papelera', run: () => go('/papelera') },

@@ -209,7 +209,7 @@ function Ajustes() {
 
       <SectionLabel text="Datos" />
       <Card padded={false}>
-        <ListRow title="Importar entregas del sílabo" subtitle="Pega el cronograma o sube un archivo" left={<Ionicons name="download-outline" size={20} color={C.muted} />} onPress={() => router.push('/importar')} />
+        <ListRow title="Importar cronograma" subtitle="Todas las entregas del semestre: pega el cronograma o sube un archivo" left={<Ionicons name="download-outline" size={20} color={C.muted} />} onPress={() => router.push('/importar')} />
         <Divider />
         <ListRow title="Papelera" subtitle="Lo borrado se guarda 30 días" left={<Ionicons name="trash-outline" size={20} color={C.muted} />} onPress={() => router.push('/papelera')} />
         <Divider />

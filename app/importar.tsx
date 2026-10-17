@@ -19,7 +19,7 @@ import { Screen, Button, Card, Badge, Dot, SectionLabel, EmptyState } from '../c
 import { SubjectPicker } from '../components/SubjectPicker';
 
 // ============================================================
-//  Importar entregas del sílabo (tareas personales).
+//  Importar cronograma: las entregas del semestre (tareas personales).
 //  1. Elige la materia, pega el cronograma o sube un archivo. Si el
 //     sílabo está desordenado, copia el prompt y pásalo por una IA.
 //  2. Revisa la lista, quita lo que no sirva y confirma.
@@ -55,7 +55,7 @@ function Importar() {
   }
   async function copyPrompt() {
     const ok = await copyText(syllabusPrompt(subj?.name ?? null, new Date().getFullYear()));
-    if (ok) { setCopied(true); setTimeout(() => setCopied(false), 2500); toast('Prompt copiado. Pégalo en tu IA junto con el sílabo.'); }
+    if (ok) { setCopied(true); setTimeout(() => setCopied(false), 2500); toast('Prompt copiado. Pégalo en tu IA junto con el cronograma o el programa del curso.'); }
   }
   const chosen = useMemo(() => (rows ?? []).filter((r) => r.include), [rows]);
 
@@ -87,7 +87,7 @@ function Importar() {
   const setRow = (i: number, patch: Partial<SylRow>) => setRows((rs) => rs ? rs.map((r, k) => k === i ? { ...r, ...patch } : r) : rs);
 
   return (
-    <Screen title="Importar del sílabo" subtitle="Todas las entregas del semestre en un paso" back="/" nav="index" maxWidth={900}>
+    <Screen title="Importar cronograma" subtitle="Todas las entregas del semestre en un paso" back="/" nav="index" maxWidth={900}>
       {rows === null ? (
         <>
           <Card>
@@ -112,8 +112,8 @@ function Importar() {
           <Card style={{ marginTop: 12, flexDirection: isWide ? 'row' : 'column', gap: 12, alignItems: isWide ? 'center' : 'flex-start' }}>
             <Ionicons name="sparkles-outline" size={22} color={C.brand2} />
             <View style={{ flex: 1 }}>
-              <Text style={{ color: C.text, fontWeight: '700' }}>¿El sílabo está en PDF o desordenado?</Text>
-              <Text style={{ color: C.muted, fontSize: 13, marginTop: 3, lineHeight: 19 }}>Copia este prompt, pégalo en ChatGPT, Claude o Gemini junto con el sílabo, y pega aquí lo que te responda.</Text>
+              <Text style={{ color: C.text, fontWeight: '700' }}>¿El cronograma está en PDF o desordenado?</Text>
+              <Text style={{ color: C.muted, fontSize: 13, marginTop: 3, lineHeight: 19 }}>Copia este prompt, pégalo en ChatGPT, Claude o Gemini junto con el cronograma o el programa del curso, y pega aquí lo que te responda.</Text>
             </View>
             <Button label={copied ? 'Copiado' : 'Copiar prompt'} icon={copied ? 'checkmark' : 'copy-outline'} kind="secondary" onPress={copyPrompt} />
           </Card>

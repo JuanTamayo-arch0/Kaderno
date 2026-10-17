@@ -241,4 +241,32 @@ do $$ begin
   raise notice 'ok 18 niveles';
 end $$;
 
+
+-- 17. Logros: se pagan una vez, fuera del tope diario, y muestran avance
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'a1000000-0000-4000-8000-000000000001', false);
+do $$ declare c0 int; c1 int; e0 int; n int; r record; begin
+  select coins into c0 from public.pets where active;
+  select earned into e0 from public.pet_daily where day = (select hoy from d);
+  select count(*) into n from public.pet_achievements() where is_new;
+  if n < 3 then raise exception 'esperaba al menos 3 logros nuevos, hubo %', n; end if;
+  select * into r from public.pet_achievements() where id = 'primera_tarea';
+  if r.unlocked_at is null or r.is_new or r.progress <> 1 then raise exception 'primera_tarea mal: %', r; end if;
+  select * into r from public.pet_achievements() where id = 'enfoque_10h';
+  if r.unlocked_at is null or r.progress <> 600 then raise exception 'enfoque_10h mal: %', r; end if;
+  select * into r from public.pet_achievements() where id = 'ropa_3';
+  if r.unlocked_at is not null or r.progress <> 1 or r.goal <> 3 then raise exception 'ropa_3 mal: %', r; end if;
+  select coins into c1 from public.pets where active;
+  if c1 - c0 <> (select sum(delta) from public.pet_ledger where reason = 'logro') then raise exception 'los logros no sumaron lo que dice el libro'; end if;
+  if (select earned from public.pet_daily where day = (select hoy from d)) <> e0 then raise exception 'los logros contaron para el tope diario'; end if;
+  if (select count(*) from public.pet_achievements() where is_new) <> 0 then raise exception 'un logro se pagó dos veces'; end if;
+  raise notice 'ok 19 logros';
+end $$;
+select set_config('request.jwt.claim.sub', 'b2000000-0000-4000-8000-000000000002', false);
+do $$ begin
+  if exists (select 1 from public.pet_achievements() where id = 'primera_tarea' and unlocked_at is not null) then raise exception 'B tiene logros de A'; end if;
+  raise notice 'ok 20 logros por usuario';
+end $$;
+reset role;
+
 select 'TODAS LAS PRUEBAS DE V16 PASARON' as resultado;

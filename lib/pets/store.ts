@@ -13,6 +13,7 @@ import { supabase, currentUserId } from '../supabase';
 import { fetchPrefs, savePrefs } from '../db';
 import type { ItemId, Outfit, Slot, Species } from './art';
 import type { PetEvent, TalkMode } from './brain';
+import { ACHIEVEMENTS, type AchievementRow } from './achievements';
 
 export type Pet = {
   id: string; species: Species; name: string; outfit: Outfit;
@@ -37,9 +38,11 @@ export type PetsState = {
   items: Record<string, string[]>;
   earnedToday: number;
   prefs: PetPrefs;
+  /** null = todavía no se han pedido. */
+  achievements: AchievementRow[] | null;
 };
 
-let state: PetsState = { available: null, loaded: false, pets: [], items: {}, earnedToday: 0, prefs: DEFAULT_PET_PREFS };
+let state: PetsState = { available: null, loaded: false, pets: [], items: {}, earnedToday: 0, prefs: DEFAULT_PET_PREFS, achievements: null };
 const ls = new Set<(s: PetsState) => void>();
 function emit() { ls.forEach((l) => l(state)); }
 function set(patch: Partial<PetsState>) { state = { ...state, ...patch }; emit(); }
@@ -137,7 +140,32 @@ export function refreshCoinsSoon(delay = 900) {
     if (before && after && before.id === after.id && after.coins > before.coins) {
       emitPetEvent({ type: 'ganancia', amount: after.coins - before.coins });
     }
+    checkAchievements().catch(() => {});
   }, delay);
+}
+
+// ---------- Logros ----------
+let checking: Promise<AchievementRow[]> | null = null;
+/**
+ * Pide los logros a la base (que paga los nuevos) y avisa a la mascota de
+ * cada uno que se acaba de conseguir.
+ */
+export function checkAchievements(): Promise<AchievementRow[]> {
+  if (state.available !== true || !activePet()) return Promise.resolve(state.achievements ?? []);
+  if (checking) return checking;
+  checking = (async () => {
+    const { data, error } = await supabase.rpc('pet_achievements');
+    if (error) throw error;
+    const rows = (data ?? []) as AchievementRow[];
+    set({ achievements: rows });
+    const fresh = rows.filter((r) => r.is_new && ACHIEVEMENTS[r.id]);
+    if (fresh.length) {
+      await loadPets(true).catch(() => {});
+      fresh.forEach((r, i) => setTimeout(() => emitPetEvent({ type: 'logro', title: ACHIEVEMENTS[r.id].title, reward: r.reward }), i * 4500));
+    }
+    return rows;
+  })().finally(() => { checking = null; });
+  return checking;
 }
 
 // ---------- Acciones (funciones de la base) ----------
@@ -156,6 +184,7 @@ export async function adoptPet(species: Species, name: string): Promise<Pet> {
   const p = await rpc('pet_adopt', { p_species: species, p_name: name });
   await loadPets(true);
   emitPetEvent({ type: 'adoptada', name: p.name });
+  setTimeout(() => { checkAchievements().catch(() => {}); }, 6500);
   return p;
 }
 
@@ -164,6 +193,7 @@ export async function buyItem(item: ItemId): Promise<Pet> {
   set({ items: { ...state.items, [p.id]: [...(state.items[p.id] ?? []), item] } });
   replacePet(p);
   emitPetEvent({ type: 'compra' });
+  setTimeout(() => { checkAchievements().catch(() => {}); }, 3500);
   return p;
 }
 
@@ -187,6 +217,6 @@ export async function renamePet(petId: string, name: string): Promise<Pet> {
 
 /** Al cerrar sesión. */
 export function resetPets() {
-  state = { available: null, loaded: false, pets: [], items: {}, earnedToday: 0, prefs: DEFAULT_PET_PREFS };
+  state = { available: null, loaded: false, pets: [], items: {}, earnedToday: 0, prefs: DEFAULT_PET_PREFS, achievements: null };
   emit();
 }

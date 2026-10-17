@@ -253,7 +253,7 @@ test('quieta o en enfoque se va a su esquina; nunca sale de la pantalla', () => 
 });
 
 test('cuadros según el estado', () => {
-  const m = new PetMotion(world(), 64);
+  const m = new PetMotion(world(), 64, () => 0.99);
   m.placeOnFloor(50);
   m.jump(0, -300);
   assert.equal(m.frame(0), 'salto');
@@ -263,4 +263,45 @@ test('cuadros según el estado', () => {
   assert.ok(['sueno1', 'sueno2'].includes(m.frame(0)));
   m.wake();
   assert.equal(m.frame(0, true), 'quieto');
+});
+
+test('a veces se sube sola de un salto a una tarjeta a la vista', () => {
+  const w = world({ obstacle: () => null });
+  w.cards.c1 = { left: 40, right: 360, top: 380 };
+  let n = 0;
+  const m = new PetMotion(w, 64, () => [0.05, 0.5, 0.5][n++ % 3]);
+  m.placeOnFloor(200);
+  run(m, 4);
+  assert.equal(m.on, 'c1');
+  assert.equal(m.y, m.yOn(380));
+  // Una tarjeta demasiado alta no se alcanza.
+  const w2 = world({ obstacle: () => null });
+  w2.cards.c1 = { left: 40, right: 360, top: 20 };
+  const m2 = new PetMotion(w2, 64, () => 0.05);
+  m2.placeOnFloor(200);
+  assert.equal(m2.climb(), false);
+});
+
+// ---------- Logros ----------
+import { readFileSync } from 'node:fs';
+import { ACHIEVEMENTS, sortAchievements, type AchievementRow } from '../lib/pets/achievements';
+
+test('los logros de la app son los mismos que calcula la base', () => {
+  const sql = readFileSync('supabase/schema_v16.sql', 'utf8');
+  const ids = [...sql.matchAll(/\('([a-z_0-9]+)', (?:least\([^)]*\)|[a-z_]+), \d+, \d+\)/g)].map((m) => m[1]).filter((x) => !(x in ITEM_RULES));
+  assert.deepEqual(ids.sort(), Object.keys(ACHIEVEMENTS).sort());
+  for (const a of Object.values(ACHIEVEMENTS)) assert.ok(!a.title.includes('—') && !a.desc.includes('—'));
+});
+
+test('orden de logros: conseguidos recientes primero, luego por avance', () => {
+  const r = (id: any, p: number, g: number, at: string | null): AchievementRow => ({ id, progress: p, goal: g, reward: 10, unlocked_at: at, is_new: false });
+  const out = sortAchievements([r('tareas_25', 5, 25, null), r('primera_tarea', 1, 1, '2026-10-10T00:00:00Z'), r('dia_5', 4, 5, null), r('ropa_3', 3, 3, '2026-10-12T00:00:00Z')]);
+  assert.deepEqual(out.map((x) => x.id), ['ropa_3', 'primera_tarea', 'dia_5', 'tareas_25']);
+});
+
+test('un logro nuevo celebra y ofrece verlo; en enfoque solo cambia la cara', () => {
+  const r = react({ type: 'logro', title: 'Con estilo', reward: 30 }, initialBrain(), 'perro', T0, 0);
+  assert.equal(r?.say, '¡LOGRO NUEVO! Con estilo. +30');
+  assert.deepEqual(r?.actions, ['logros']);
+  assert.equal(react({ type: 'logro', title: 'X', reward: 1 }, { ...initialBrain(), focusing: true }, 'perro', T0, 0)?.say, undefined);
 });

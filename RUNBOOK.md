@@ -826,18 +826,32 @@ Crea las tablas `pets`, `pet_ledger`, `pet_items`, `pet_daily` y `pet_reviews`, 
 - al guardar una sesión de enfoque (1 por minuto, máximo 180 por sesión),
 - al repasar tarjetas (3 por cada 10 tarjetas distintas del día).
 
-El primer logro de cada día paga además la racha (5 por día seguido, hasta 35). Hay un tope de 300 por día. El navegador no puede escribir en esas tablas: solo leer lo propio. Si los disparadores fallan, la tarea, el enfoque o el repaso se guardan igual (el error queda como aviso en el registro de Postgres).
+El primer logro de cada día paga además la racha (5 por día seguido, hasta 35). Hay un tope de 300 por día. También crea `pet_achievements()`: calcula 14 logros con lo que ya hay en la base, paga cada uno una sola vez (aparte del tope diario) y devuelve el avance. Los logros cuentan desde que adoptas la primera mascota. El navegador no puede escribir en esas tablas: solo leer lo propio. Si los disparadores fallan, la tarea, el enfoque o el repaso se guardan igual (el error queda como aviso en el registro de Postgres).
 
 Sin la migración la app funciona igual: la pantalla Mascota dice que falta activarla y no aparece ninguna mascota.
 
-### 2. Qué cambió
+### 2. Oráculo con el tono de la mascota (opcional)
+
+Para que el Oráculo responda con el tono de la mascota, volver a desplegar su función desde la carpeta del proyecto en tu PC:
+
+```
+npx supabase functions deploy oracle
+```
+
+Sin ese paso, el Oráculo ya muestra la cara y el nombre de la mascota, pero responde con su tono de siempre.
+
+### 3. Qué cambió
 
 - **Mascota:** pixel art de pingüino, gato, perro o loro. Se elige en la bienvenida (paso nuevo, opcional), desde la tarjeta en Hoy o en **Estudiar → Mascota**. La primera es gratis.
 - **En pantalla (web):** camina por el borde de abajo (sobre la barra en el celular, al pie en el computador), se puede arrastrar y soltar encima de una tarea, celebra lo que terminas, muestra "+5" cuando gana y avisa de vencidas, parciales cercanos, racha en riesgo o paseos sin hacer nada. Durante un enfoque se va a su esquina y no habla. Se duerme tras 10 minutos sin uso.
-- **Pantalla Mascota:** nivel, monedas, tienda de 10 prendas, adoptar y cambiar de mascota, cómo se gana y ajustes.
+- **Se mueve sola:** además de caminar, de vez en cuando se sube de un salto a una tarea que esté a la vista, pasea por encima y luego se baja.
+- **Pantalla Mascota:** nivel, monedas, tienda de 10 prendas, adoptar y cambiar de mascota, logros, cómo se gana y ajustes.
+- **Logros:** 14 (primera tarea, 25 y 100 tareas, una hora de enfoque en un día, 10 horas, rachas de 7 y 30 días, una semana sin vencidas, 100 tarjetas, 5 días completos, 3 prendas, las cuatro mascotas, niveles 5 y 10). Cuando consigues uno, la mascota lo celebra y ofrece verlo.
+- **Oráculo:** la mascota aparece como quien responde (su cara junto a cada respuesta y "Pingu está pensando…") y, con la función al día, habla con su tono.
+- **Importar cronograma:** así se llama ahora lo que antes era "Importar del sílabo" (Agregar, Ajustes, buscador y la pantalla).
 - **Ajustes:** mostrar u ocultar, "Pasea" o "Quieta en su esquina", cuánto habla y silenciar por hoy.
 - **Enfoque:** saltar un pomodoro a mitad ahora guarda solo los minutos hechos (antes guardaba el pomodoro completo).
 
-### 3. Pruebas
+### 4. Pruebas
 
-`npm test` (arte, economía, frases, cerebro y motor de movimiento) y `bash tests/run_sql.sh` (incluye `tests/sql/16_pruebas.sql`: pagos, tope diario, una sola vez por tarea, compras, adopciones y aislamiento entre usuarios).
+`npm test` (arte, economía, frases, logros, cerebro y motor de movimiento) y `bash tests/run_sql.sh` (incluye `tests/sql/16_pruebas.sql`: pagos, tope diario, una sola vez por tarea, compras, adopciones, logros y aislamiento entre usuarios).

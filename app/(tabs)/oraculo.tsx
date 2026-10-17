@@ -9,6 +9,8 @@ import { Subject, getSubjects, askOracle, getOracleMessages, saveOracleMessage, 
 import { confirm, toast, friendlyError } from '../../lib/feedback';
 import { Screen, FilterChip, IconButton, Dot } from '../../components/ds';
 import { copyText } from '../../lib/fileIO';
+import { activePet, usePets } from '../../lib/pets/store';
+import { PetImage, PetSprite } from '../../components/pets/PetArt';
 
 // ============================================================
 //  Oráculo: preguntas a la IA sobre tus apuntes.
@@ -39,6 +41,9 @@ export default function Oraculo() {
   const [indexing, setIndexing] = useState(false);
   const scroller = useRef<ScrollView>(null);
   const sentQ = useRef<string | null>(null);
+  // Con mascota, el Oráculo tiene su cara y su tono.
+  const pets = usePets();
+  const pet = pets.prefs.enabled ? activePet(pets) : null;
 
   const scopeStr = mode === 'all' ? 'all' : mode === 'subject' ? `subject:${subjectId}` : `note:${noteId}`;
   const messages = all.filter((m) => (m.scope ?? 'all') === scopeStr);
@@ -60,13 +65,13 @@ export default function Oraculo() {
     saveOracleMessage('user', q, scopeStr).catch(() => {});
     setSending(true);
     try {
-      const res = await askOracle({ question: q, mode, subjectId, noteId, ability, history: hist });
+      const res = await askOracle({ question: q, mode, subjectId, noteId, ability, history: hist, pet: pet ? { name: pet.name, species: pet.species } : null });
       setAll((xs) => [...xs, { role: 'assistant', content: res.answer, sources: res.sources, scope: scopeStr }]);
       saveOracleMessage('assistant', res.answer, scopeStr).catch(() => {});
     } catch (e) {
       setAll((xs) => [...xs, { role: 'assistant', content: `No pude responder. ${friendlyError(e)}`, scope: scopeStr, error: true }]);
     } finally { setSending(false); }
-  }, [all, scopeStr, sending, mode, subjectId, noteId]);
+  }, [all, scopeStr, sending, mode, subjectId, noteId, pet?.id, pet?.name]);
 
   // Pregunta que llega desde Estudiar.
   useEffect(() => { if (params.q && sentQ.current !== params.q) { sentQ.current = params.q; send(params.q, null); router.setParams({ q: undefined } as any); } }, [params.q]);
@@ -98,10 +103,14 @@ export default function Oraculo() {
         <ScrollView ref={scroller} style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 20, maxWidth: 860, width: '100%', alignSelf: 'center' }}>
           {messages.length === 0 && (
             <View style={{ alignItems: 'center', paddingTop: 30 }}>
-              <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: C.brand2 + '22', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-                <Ionicons name="sparkles" size={28} color={C.brand2} />
-              </View>
-              <Text style={{ color: C.text, fontSize: 17, fontWeight: '700' }}>¿Qué quieres entender hoy?</Text>
+              {pet ? (
+                <View style={{ marginBottom: 6 }}><PetSprite species={pet.species} outfit={pet.outfit} size={96} label={pet.name} /></View>
+              ) : (
+                <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: C.brand2 + '22', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                  <Ionicons name="sparkles" size={28} color={C.brand2} />
+                </View>
+              )}
+              <Text style={{ color: C.text, fontSize: 17, fontWeight: '700' }}>{pet ? `${pet.name} te ayuda a entender` : '¿Qué quieres entender hoy?'}</Text>
               <Text style={{ color: C.muted, fontSize: 13.5, textAlign: 'center', marginTop: 6, lineHeight: 20, maxWidth: 380 }}>Responde con base en {scopeLabel}. Prueba un atajo:</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 16 }}>
                 {ABILITIES.map((a) => (
@@ -123,18 +132,22 @@ export default function Oraculo() {
               <Text style={{ color: C.onBrand, fontSize: 15, lineHeight: 21 }}>{m.content}</Text>
             </View>
           ) : (
-            <View key={i} style={{ alignSelf: 'flex-start', maxWidth: '94%', backgroundColor: m.error ? C.bad + '14' : C.surface, borderColor: m.error ? C.bad + '55' : C.line, borderWidth: 1, borderRadius: 16, borderBottomLeftRadius: 4, padding: 14, marginBottom: 12 }}>
+            <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6, alignSelf: 'flex-start', maxWidth: '94%', marginBottom: 12 }}>
+            {pet && <View style={{ marginBottom: -2 }}><PetImage species={pet.species} outfit={pet.outfit} mood={m.error ? 'preocupado' : 'normal'} size={32} /></View>}
+            <View style={{ flexShrink: 1, backgroundColor: m.error ? C.bad + '14' : C.surface, borderColor: m.error ? C.bad + '55' : C.line, borderWidth: 1, borderRadius: 16, borderBottomLeftRadius: 4, padding: 14 }}>
+              {pet && <Text style={{ color: C.muted, fontSize: 12, fontWeight: '800', marginBottom: 4 }}>{pet.name}</Text>}
               <Markdown style={mdStyle()}>{m.content}</Markdown>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6, flexWrap: 'wrap' }}>
                 {!!m.sources?.length && <Text style={{ color: C.muted, fontSize: 12, flex: 1 }}>Fuentes: {m.sources.slice(0, 4).map((s) => s.title).join(', ')}</Text>}
                 {!m.error && <IconButton icon="copy-outline" label="Copiar respuesta" size={16} onPress={async () => { const ok = await copyText(m.content); if (ok) toast('Respuesta copiada'); }} />}
               </View>
             </View>
+            </View>
           ))}
           {sending && (
             <View style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12 }}>
-              <ActivityIndicator color={C.brand} size="small" />
-              <Text style={{ color: C.muted, fontSize: 13 }}>Pensando…</Text>
+              {pet ? <PetImage species={pet.species} outfit={pet.outfit} mood="concentrado" size={32} /> : <ActivityIndicator color={C.brand} size="small" />}
+              <Text style={{ color: C.muted, fontSize: 13 }}>{pet ? `${pet.name} está pensando…` : 'Pensando…'}</Text>
             </View>
           )}
         </ScrollView>

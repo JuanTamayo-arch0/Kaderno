@@ -615,6 +615,8 @@ export type OracleMsg = { id: string; role: 'user' | 'assistant'; content: strin
 export async function askOracle(params: {
   question: string; mode: 'all' | 'subject' | 'note'; subjectId?: string | null; noteId?: string | null;
   ability?: string | null; history?: { role: string; content: string }[];
+  /** Mascota activa: el Oráculo responde con su tono (si la función está al día). */
+  pet?: { name: string; species: string } | null;
 }): Promise<{ answer: string; sources: { note_id: string; title: string }[]; usedSemantic: boolean }> {
   const { data, error } = await supabase.functions.invoke('oracle', { body: { action: 'ask', ...params } });
   if (error) throw error;
