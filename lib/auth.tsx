@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { clearSnaps } from './snapshot';
+import { resetPets } from './pets/store';
 
 type AuthState = { session: Session | null; loading: boolean };
 const AuthCtx = createContext<AuthState>({ session: null, loading: true });
@@ -16,7 +17,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
-      if (event === 'SIGNED_OUT') clearSnaps();
+      if (event === 'SIGNED_OUT') { clearSnaps(); resetPets(); }
       setSession(s);
     });
     return () => sub.subscription.unsubscribe();

@@ -37,7 +37,7 @@ export function TaskRow({
   const due = showDue ? fmtDue(task) : '';
 
   return (
-    <View style={{ backgroundColor: C.surface, borderColor: C.line, borderWidth: 1, borderRadius: 12, marginBottom: 8, opacity: done ? 0.75 : 1 }}>
+    <View dataSet={{ petPerch: '1' }} style={{ backgroundColor: C.surface, borderColor: C.line, borderWidth: 1, borderRadius: 12, marginBottom: 8, opacity: done ? 0.75 : 1 }}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
         <Pressable onPress={() => { play(done ? 'uncheck' : 'complete'); onToggle(task); }} accessibilityRole="checkbox" accessibilityState={{ checked: done }}
           accessibilityLabel={done ? `Marcar "${task.title}" como pendiente` : `Completar "${task.title}"`}

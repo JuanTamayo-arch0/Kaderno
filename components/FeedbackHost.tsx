@@ -66,7 +66,7 @@ function ToastStack({ toasts }: { toasts: ToastReq[] }) {
   const { isWide } = useResponsive();
   if (!toasts.length) return null;
   return (
-    <View pointerEvents="box-none" style={{ position: 'absolute', left: isWide ? SIDEBAR_W : 0, right: 0, bottom: (isWide ? 24 : 84) + insets.bottom, alignItems: 'center', paddingHorizontal: 16, gap: 8 }}>
+    <View pointerEvents="box-none" style={{ position: 'absolute', left: isWide ? SIDEBAR_W : 0, right: 0, bottom: (isWide ? 24 : 84) + insets.bottom, alignItems: 'center', paddingHorizontal: 16, gap: 8, zIndex: 1000 }}>
       {toasts.map((t) => <ToastView key={t.id} t={t} />)}
     </View>
   );

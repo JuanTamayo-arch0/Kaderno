@@ -1,6 +1,6 @@
 # PLAN v17: Mascotas de estudio
 
-Estado: diseño listo para revisar (canvas "Mascotas de Kaderno" y prototipo jugable "Mascotas pixel de Kaderno"). Arte en pixel art en `lib/pets/art.ts`. Falta aprobar para construir.
+Estado: fases 1 y 2 construidas (rama `v17-mascotas`). La fase 3 queda pendiente. Diseño en el canvas "Mascotas de Kaderno" y el prototipo "Mascotas pixel de Kaderno".
 
 ## 1. Decisiones tomadas
 
@@ -50,7 +50,7 @@ Habla por algo que pasó, nunca por un temporizador al azar. El contenido es el 
 | Muy tarde | "Ya es tarde. Mañana seguimos." | "Hasta yo tengo sueño." | "¡A dormir, campeón!" | "¿Dormir? Dormir." |
 
 Además:
-- Una frase del día al primer arranque (banco de unas 120 frases cortas, sin repetir en 30 días).
+- Una frase del día al primer arranque (banco de 60 frases cortas, sin repetir en 30 días).
 - Técnicas contra la procrastinación cuando se detecta el paseo sin acción: regla de los 2 minutos, empezar por lo más pequeño, pomodoro corto de 10 min.
 - "¿Qué hago ahora?" elige con reglas simples: vencidas primero, luego lo que vence hoy, luego lo de mayor peso; si hay parcial cerca, repaso.
 
@@ -76,6 +76,8 @@ Reglas para que no moleste:
 Contra trampas:
 - Tope de 300 por día.
 - Cada tarea paga una sola vez en la vida (desmarcar y marcar no vuelve a pagar).
+- Una tarea creada y marcada en menos de un minuto no paga.
+- Saltar un pomodoro a mitad guarda solo los minutos hechos.
 - Las ganancias las registra la base con funciones del servidor a partir de lo que ya guarda (sesiones de enfoque, `completed_at`, repasos); el navegador no puede sumarse monedas.
 
 ### Nivel

@@ -17,6 +17,7 @@ import { confirm, notify, toast, friendlyError, flushPendingDeletes } from '../l
 import { saveFile } from '../lib/fileIO';
 import { Screen, Button, Card, Field, IconButton, ListRow, SectionLabel, Toggle } from '../components/ds';
 import { Avatar } from '../components/SideNav';
+import { PetSettings } from '../components/pets/PetSettings';
 import { clearHoyHidden, resetHoyHiddenCache, saveHoyVista } from '../lib/hoyHidden';
 
 // ============================================================
@@ -145,6 +146,13 @@ function Ajustes() {
               right={<Button label="Mostrar todo" kind="secondary" size="sm" onPress={async () => { try { await clearHoyHidden(); setHiddenN(0); toast('Listo: vuelven a aparecer en Hoy'); } catch (e) { notify('No se pudo', friendlyError(e)); } }} />} />
           </>
         )}
+      </Card>
+
+      <SectionLabel text="Mascota" />
+      <Card padded={false}>
+        <ListRow title="Mascota y tienda" subtitle="Elegir, vestir, adoptar y ver su nivel" left={<Ionicons name="paw-outline" size={20} color={C.muted} />} onPress={() => router.push('/mascota')} />
+        <Divider />
+        <PetSettings />
       </Card>
 
       <SectionLabel text="Avisos" />

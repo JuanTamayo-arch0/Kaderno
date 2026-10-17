@@ -9,6 +9,7 @@ import { Flashcard, Subject, getDueFlashcards, getAllFlashcards, reviewFlashcard
 import { nextLabel } from '../lib/srs';
 import { confirm, toast, friendlyError, notify } from '../lib/feedback';
 import { refreshNavCounts } from '../lib/navCounts';
+import { refreshCoinsSoon } from '../lib/pets/store';
 import { Screen, Button, Card, EmptyState, Field, FilterChip, IconButton, Segmented, Skeleton, Dot } from '../components/ds';
 import { SubjectPicker } from '../components/SubjectPicker';
 import { Kbd } from '../components/SideNav';
@@ -63,7 +64,7 @@ function Review({ subjects, onManage }: { subjects: Subject[]; onManage: () => v
     // "Otra vez" la deja al final de la cola de hoy.
     if (g === 0) setCards((cs) => cs ? [...cs, card] : cs);
     setI((x) => x + 1);
-    try { await reviewFlashcard(card, g); refreshNavCounts(true); } catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
+    try { await reviewFlashcard(card, g); refreshNavCounts(true); refreshCoinsSoon(1500); } catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
   }, [card]);
 
   useEffect(() => {

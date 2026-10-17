@@ -16,9 +16,11 @@ import { notify, toast, friendlyError } from '../lib/feedback';
 import { dataChanged } from '../lib/uiBus';
 import { Button, Card, Dot } from '../components/ds';
 import { KadernoMark } from '../components/SideNav';
+import { PetChooser } from '../components/pets/PetChooser';
+import { loadPets, usePets } from '../lib/pets/store';
 
 // ============================================================
-//  Bienvenida en tres pasos: materias, primeras entregas y avisos.
+//  Bienvenida en cuatro pasos: materias, primeras entregas, mascota y avisos.
 //  Pide lo mínimo para que "Hoy" no aparezca vacío la primera vez.
 // ============================================================
 
@@ -35,7 +37,8 @@ function Bienvenida() {
   const [push, setPush] = useState<PushStatus>('unsupported');
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => { getSubjects().then(setSubjects).catch(() => {}); getPushStatus().then(setPush).catch(() => {}); }, []);
+  const pets = usePets();
+  useEffect(() => { getSubjects().then(setSubjects).catch(() => {}); getPushStatus().then(setPush).catch(() => {}); loadPets().catch(() => {}); }, []);
 
   async function addSub(n: string) {
     const nm = n.trim(); if (!nm || subjects.some((s) => s.name.toLowerCase() === nm.toLowerCase())) return;
@@ -65,7 +68,8 @@ function Bienvenida() {
     router.replace(to as any);
   }
 
-  const steps = ['Materias', 'Entregas', 'Avisos'];
+  const steps = ['Materias', 'Entregas', 'Compañero', 'Avisos'];
+  const LAST = steps.length - 1;
   const input = (value: string, set: (v: string) => void, ph: string, onSubmit: () => void, label: string) => (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.line, borderRadius: 12, paddingLeft: 12 }}>
       <Ionicons name="add" size={20} color={C.muted} />
@@ -84,7 +88,7 @@ function Bienvenida() {
             <Text style={{ color: C.text, fontSize: 20, fontWeight: '800', flex: 1 }}>Kaderno</Text>
             <Pressable onPress={() => finish()} accessibilityRole="button" style={{ padding: 8 }}><Text style={{ color: C.muted, fontWeight: '600' }}>Saltar</Text></Pressable>
           </View>
-          <View style={{ flexDirection: 'row', gap: 6, marginBottom: 22 }} accessibilityLabel={`Paso ${step + 1} de 3`}>
+          <View style={{ flexDirection: 'row', gap: 6, marginBottom: 22 }} accessibilityLabel={`Paso ${step + 1} de ${steps.length}`}>
             {steps.map((s, i) => (
               <View key={s} style={{ flex: 1 }}>
                 <View style={{ height: 4, borderRadius: 2, backgroundColor: i <= step ? C.brand : C.line }} />
@@ -130,6 +134,23 @@ function Bienvenida() {
 
           {step === 2 && (
             <>
+              <Text style={{ color: C.text, fontSize: 26, fontWeight: '800' }}>Elige tu compañero de estudio</Text>
+              <Text style={{ color: C.muted, fontSize: 14.5, marginTop: 6, marginBottom: 18, lineHeight: 21 }}>Una mascota pixel que camina por la app, celebra lo que terminas y te da un empujón cuando lo necesitas. Es opcional.</Text>
+              {pets.available === false ? (
+                <Card><Text style={{ color: C.muted }}>Las mascotas todavía no están activadas en este servidor. Puedes seguir.</Text></Card>
+              ) : pets.pets.length > 0 ? (
+                <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Ionicons name="checkmark-circle" size={20} color={C.goodText} />
+                  <Text style={{ color: C.text, fontWeight: '700' }}>Ya te acompaña {pets.pets.find((p) => p.active)?.name ?? pets.pets[0].name}.</Text>
+                </Card>
+              ) : (
+                <PetChooser onDone={() => setStep(LAST)} />
+              )}
+            </>
+          )}
+
+          {step === LAST && (
+            <>
               <Text style={{ color: C.text, fontSize: 26, fontWeight: '800' }}>Que no se te pase nada</Text>
               <Text style={{ color: C.muted, fontSize: 14.5, marginTop: 6, marginBottom: 18, lineHeight: 21 }}>Kaderno te avisa antes de cada entrega y cada mañana te dice qué tienes. También puedes cargar tu horario para ver la clase de ahora en Hoy.</Text>
               <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -155,8 +176,8 @@ function Bienvenida() {
           <View style={{ flex: 1, minHeight: 24 }} />
           <View style={{ flexDirection: 'row', gap: 10, paddingBottom: insets.bottom + 8 }}>
             {step > 0 && <Button label="Atrás" kind="secondary" onPress={() => setStep(step - 1)} style={{ flex: 1 }} />}
-            {step < 2
-              ? <Button label={step === 0 && !subjects.length ? 'Lo hago después' : 'Siguiente'} onPress={() => setStep(step + 1)} style={{ flex: 2 }} kind={step === 0 && !subjects.length ? 'secondary' : 'primary'} />
+            {step < LAST
+              ? <Button label={step === 0 && !subjects.length ? 'Lo hago después' : step === 2 && !pets.pets.length && pets.available !== false ? 'Ahora no' : 'Siguiente'} onPress={() => setStep(step + 1)} style={{ flex: 2 }} kind={(step === 0 && !subjects.length) || (step === 2 && !pets.pets.length) ? 'secondary' : 'primary'} />
               : <Button label="Ir a Hoy" icon="arrow-forward" onPress={() => { toast('Todo listo. ¡Buen semestre!', { tone: 'good' }); finish(); }} style={{ flex: 2 }} />}
           </View>
         </View>

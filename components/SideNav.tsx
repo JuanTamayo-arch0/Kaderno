@@ -26,7 +26,7 @@ import { openAdd, openCommand, openInbox } from '../lib/uiBus';
 export type NavKey =
   | 'index' | 'materias' | 'horario' | 'proyectos' | 'estudiar'
   | 'enfoque' | 'repaso' | 'oraculo' | 'capturar'
-  | 'buscar' | 'ajustes' | 'tipos' | 'personalizar' | 'papelera';
+  | 'buscar' | 'ajustes' | 'tipos' | 'personalizar' | 'papelera' | 'mascota';
 
 type Item = { key: NavKey; label: string; icon: any; iconOn: any; href: string };
 
@@ -41,6 +41,7 @@ export const STUDY_ITEMS: Item[] = [
   { key: 'repaso', label: 'Repaso', icon: 'albums-outline', iconOn: 'albums', href: '/repaso' },
   { key: 'oraculo', label: 'Oráculo', icon: 'sparkles-outline', iconOn: 'sparkles', href: '/oraculo' },
   { key: 'capturar', label: 'Capturar', icon: 'camera-outline', iconOn: 'camera', href: '/capturar' },
+  { key: 'mascota', label: 'Mascota', icon: 'paw-outline', iconOn: 'paw', href: '/mascota' },
 ];
 /** Rutas que son pestañas (se navega con el navegador de pestañas para no perder su estado). */
 export const TAB_KEYS: NavKey[] = ['index', 'materias', 'horario', 'proyectos', 'estudiar', 'enfoque', 'oraculo', 'capturar'];
@@ -99,7 +100,7 @@ export function SideNav({ active, onNavigate }: { active: NavKey | null; onNavig
     : null;
 
   return (
-    <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: SIDEBAR_W, backgroundColor: C.surface, borderRightWidth: 1, borderRightColor: C.line, zIndex: 10 }}>
+    <View dataSet={{ petSidebar: '1' }} style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: SIDEBAR_W, backgroundColor: C.surface, borderRightWidth: 1, borderRightColor: C.line, zIndex: 10 }}>
       <ScrollView contentContainerStyle={{ paddingTop: 22, paddingHorizontal: 12, paddingBottom: 12, flexGrow: 1 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 8, marginBottom: 16 }}>
           <KadernoMark size={28} />
@@ -135,6 +136,7 @@ export function SideNav({ active, onNavigate }: { active: NavKey | null; onNavig
         {row(STUDY_ITEMS[1], badge(counts.repaso))}
         {row(STUDY_ITEMS[2])}
         {row(STUDY_ITEMS[3])}
+        {row(STUDY_ITEMS[4])}
 
         <View style={{ flex: 1, minHeight: 16 }} />
         <Pressable onPress={() => router.push('/ajustes')} accessibilityRole="link" accessibilityLabel="Ajustes y cuenta"
@@ -196,11 +198,11 @@ export function BottomBar({ active, onNavigate, bottomInset }: { active: NavKey;
   };
   const timerLabel = focus.state.running ? focus.label : undefined;
   return (
-    <View style={{ flexDirection: 'row', backgroundColor: C.surface, borderTopWidth: 1, borderTopColor: C.line, paddingBottom: Math.max(bottomInset, 6) }}>
+    <View dataSet={{ petFloor: '1' }} style={{ flexDirection: 'row', backgroundColor: C.surface, borderTopWidth: 1, borderTopColor: C.line, paddingBottom: Math.max(bottomInset, 6) }}>
       {tab('index', 'Hoy', 'today-outline', 'today', counts.today)}
       {tab('materias', 'Materias', 'book-outline', 'book')}
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <Pressable onPress={openAdd} accessibilityRole="button" accessibilityLabel="Agregar"
+        <Pressable onPress={openAdd} accessibilityRole="button" accessibilityLabel="Agregar" dataSet={{ petObstacle: '1' }}
           style={({ pressed }) => ({ width: 50, height: 44, borderRadius: 15, backgroundColor: C.brand, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.85 : 1 })}>
           <Ionicons name="add" size={28} color={C.onBrand} />
         </Pressable>
