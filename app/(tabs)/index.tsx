@@ -11,6 +11,8 @@ import {
 } from '../../lib/db';
 import { getMyProjectTasks, type MyProjectTask } from '../../lib/projects';
 import { readSnap, writeSnap } from '../../lib/snapshot';
+import { emitPetEvent, refreshCoinsSoon } from '../../lib/pets/store';
+import { PetInvite } from '../../components/pets/PetInvite';
 import { celebrate } from '../../lib/celebrate';
 import { prefersReducedMotion } from '../../lib/motion';
 import { SCHEDULE } from '../../lib/schedule';
@@ -130,6 +132,7 @@ export default function Hoy() {
     try {
       await toggleTask(t.id, done);
       refreshNavCounts(true);
+      if (done) { emitPetEvent({ type: 'tarea_hecha', allDone }); refreshCoinsSoon(); }
       if (allDone) { setTimeout(() => celebrate(), 220); toast('¡Terminaste todo lo de hoy!', { tone: 'good', actionLabel: 'Deshacer', onAction: () => toggle({ ...t, status: 'done' }) }); }
       else if (done) toast(`Hecha: ${t.title}`, { tone: 'good', actionLabel: 'Deshacer', onAction: () => toggle({ ...t, status: 'done' }) });
     } catch (e) {
@@ -437,6 +440,7 @@ export default function Hoy() {
   const left = (
     <>
       {summaryLine}
+      <PetInvite />
       {(!isWide || width < 1100) && (focusCard ?? nowCard)}
       {week}
       {filters}

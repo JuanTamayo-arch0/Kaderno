@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C, R, S } from '../lib/theme';
 import { useResponsive, SIDEBAR_W } from '../lib/responsive';
+import { usePets } from '../lib/pets/store';
 import { SideNav, type NavKey } from './SideNav';
 
 // ============================================================
@@ -293,6 +294,10 @@ export function Screen({
   const { isWide } = useResponsive();
   const insets = useSafeAreaInsets();
   const goBack = useGoBack(typeof back === 'string' ? back : '/');
+  // Con la mascota en pantalla, un poco más de espacio al final para poder subir
+  // el contenido por encima de ella.
+  const pets = usePets();
+  const petRoom = Platform.OS === 'web' && pets.prefs.enabled && pets.pets.some((p) => p.active);
   const padX = isWide ? 40 : 16;
   const top = isWide ? 30 : Math.max(insets.top, 12) + 8;
 
@@ -314,7 +319,7 @@ export function Screen({
   ) : <View style={{ height: top }} />;
 
   const inner = (
-    <View dataSet={{ anim: 'page' }} style={[{ paddingHorizontal: padded ? padX : 0, paddingBottom: scroll ? 40 : 0, flex: scroll ? undefined : 1, width: '100%', maxWidth: maxWidth && isWide ? maxWidth + padX * 2 : undefined, alignSelf: maxWidth && isWide ? 'center' : 'auto' }, contentStyle]}>
+    <View dataSet={{ anim: 'page' }} style={[{ paddingHorizontal: padded ? padX : 0, paddingBottom: scroll ? (petRoom ? 112 : 40) : 0, flex: scroll ? undefined : 1, width: '100%', maxWidth: maxWidth && isWide ? maxWidth + padX * 2 : undefined, alignSelf: maxWidth && isWide ? 'center' : 'auto' }, contentStyle]}>
       {children}
     </View>
   );

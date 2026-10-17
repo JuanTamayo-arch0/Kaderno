@@ -69,6 +69,14 @@ export function loadFocus(): void {
   }
 }
 
+/** Para escuchar cambios fuera de React (la mascota). */
+export function subscribeFocus(fn: (s: FocusState) => void): () => void {
+  loadFocus();
+  const l = () => fn(state);
+  listeners.add(l); fn(state);
+  return () => { listeners.delete(l); };
+}
+
 /** Lo llama el layout para sonar / notificar al terminar. */
 export function setFocusCompleteHandler(fn: typeof onComplete) { onComplete = fn; }
 
@@ -90,11 +98,14 @@ function tick() {
   else emit();
 }
 
-function finish(silent: boolean) {
+function finish(silent: boolean, skipped = false) {
   const done = state.mode;
   if (done === 'work') {
     const s = state;
-    addFocusSession(Math.max(1, s.workMin), s.subjectId, s.taskId).catch(() => {});
+    // Saltar a mitad de un pomodoro guarda solo lo que se alcanzó a hacer
+    // (antes guardaba el pomodoro completo y regalaba minutos y monedas).
+    const minutes = skipped ? Math.floor((totalMs(s) - remainingMs(s)) / 60000) : Math.max(1, s.workMin);
+    if (minutes >= 1) addFocusSession(minutes, s.subjectId, s.taskId).catch(() => {});
     const cycle = (s.cycle + 1) % 4;
     const brk = cycle === 0 ? s.longBreakMin : s.breakMin;
     state = { ...state, mode: 'break', cycle, running: true, endsAt: Date.now() + Math.max(1, brk) * 60000, remainingMs: Math.max(1, brk) * 60000 };
@@ -112,7 +123,7 @@ export function startFocus(opts: Partial<Pick<FocusState, 'subjectId' | 'taskId'
 }
 export function pauseFocus() { set({ running: false, remainingMs: remainingMs(), endsAt: null }); }
 export function resetFocus() { set({ running: false, endsAt: null, mode: 'work', remainingMs: Math.max(1, state.workMin) * 60000 }); }
-export function skipFocus() { finish(true); }
+export function skipFocus() { finish(true, true); }
 export function configureFocus(patch: Partial<Pick<FocusState, 'workMin' | 'breakMin' | 'longBreakMin' | 'subjectId' | 'taskId' | 'taskTitle' | 'sound'>>) {
   const next = { ...state, ...patch };
   if (!state.running && (patch.workMin != null || patch.breakMin != null)) {

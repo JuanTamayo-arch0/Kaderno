@@ -813,3 +813,31 @@ No hay migración ni funciones nuevas. Se publica al fusionar en `main`.
 - Las fotos de materias se guardan a 160 x 160 (unos 8 KB en vez de cientos). Las que ya estaban grandes se achican solas una vez al abrir la app.
 - Google Fonts solo se pide si elegiste una fuente distinta de "Sistema".
 - El service worker responde al instante con `kaderno-config.js` guardado y lo actualiza por detrás. Si editas ese archivo en el servidor, el cambio se ve en la segunda apertura. Si la red tarda más de 1,5 s en entregar la página, se muestra la guardada.
+
+## Versión 17: mascotas de estudio
+
+### 1. Base de datos (una sola vez)
+
+Correr `supabase/schema_v16.sql` en Supabase → SQL Editor → New query → Run. Es seguro correrlo dos veces. Requiere las migraciones v2, v9 y v14 (ya corridas).
+
+Crea las tablas `pets`, `pet_ledger`, `pet_items`, `pet_daily` y `pet_reviews`, las funciones `pet_adopt`, `pet_buy`, `pet_wear`, `pet_activate` y `pet_rename`, y tres disparadores que pagan monedas:
+
+- al marcar una tarea como hecha por primera vez (5 a tiempo, 2 tarde, 10 extra al terminar lo de hoy),
+- al guardar una sesión de enfoque (1 por minuto, máximo 180 por sesión),
+- al repasar tarjetas (3 por cada 10 tarjetas distintas del día).
+
+El primer logro de cada día paga además la racha (5 por día seguido, hasta 35). Hay un tope de 300 por día. El navegador no puede escribir en esas tablas: solo leer lo propio. Si los disparadores fallan, la tarea, el enfoque o el repaso se guardan igual (el error queda como aviso en el registro de Postgres).
+
+Sin la migración la app funciona igual: la pantalla Mascota dice que falta activarla y no aparece ninguna mascota.
+
+### 2. Qué cambió
+
+- **Mascota:** pixel art de pingüino, gato, perro o loro. Se elige en la bienvenida (paso nuevo, opcional), desde la tarjeta en Hoy o en **Estudiar → Mascota**. La primera es gratis.
+- **En pantalla (web):** camina por el borde de abajo (sobre la barra en el celular, al pie en el computador), se puede arrastrar y soltar encima de una tarea, celebra lo que terminas, muestra "+5" cuando gana y avisa de vencidas, parciales cercanos, racha en riesgo o paseos sin hacer nada. Durante un enfoque se va a su esquina y no habla. Se duerme tras 10 minutos sin uso.
+- **Pantalla Mascota:** nivel, monedas, tienda de 10 prendas, adoptar y cambiar de mascota, cómo se gana y ajustes.
+- **Ajustes:** mostrar u ocultar, "Pasea" o "Quieta en su esquina", cuánto habla y silenciar por hoy.
+- **Enfoque:** saltar un pomodoro a mitad ahora guarda solo los minutos hechos (antes guardaba el pomodoro completo).
+
+### 3. Pruebas
+
+`npm test` (arte, economía, frases, cerebro y motor de movimiento) y `bash tests/run_sql.sh` (incluye `tests/sql/16_pruebas.sql`: pagos, tope diario, una sola vez por tarea, compras, adopciones y aislamiento entre usuarios).

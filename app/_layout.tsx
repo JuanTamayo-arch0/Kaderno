@@ -33,6 +33,8 @@ import { beep, loadFocus, setFocusCompleteHandler } from '../lib/focusTimer';
 import { registerServiceWorker } from '../lib/push';
 import { installMotion } from '../lib/motion';
 import { celebrate } from '../lib/celebrate';
+import { PetBuddy } from '../components/pets/PetBuddy';
+import { emitPetEvent, refreshCoinsSoon } from '../lib/pets/store';
 
 // Animaciones CSS (solo web): se inyectan una vez, antes del primer render.
 installMotion();
@@ -43,6 +45,7 @@ setFocusCompleteHandler((mode, s) => {
   const title = mode === 'work' ? 'Pomodoro terminado' : 'Fin del descanso';
   const body = mode === 'work' ? `Buen trabajo. Descanso de ${s.cycle === 0 ? s.longBreakMin : s.breakMin} min.` : 'Cuando quieras, empieza el siguiente pomodoro.';
   toast(`${title}. ${body}`, { tone: 'good', duration: 8000 });
+  if (mode === 'work') { emitPetEvent({ type: 'enfoque_fin', minutes: Math.max(1, s.workMin) }); refreshCoinsSoon(1500); }
   // Pomodoro completo con la pestaña a la vista: un poco de confeti.
   if (mode === 'work' && Platform.OS === 'web' && typeof document !== 'undefined' && !document.hidden) celebrate();
   if (Platform.OS === 'web' && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted' && document.hidden) {
@@ -148,6 +151,7 @@ function Shell() {
         <ThemeProvider value={navTheme}>
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }} />
           {session ? <GlobalPanels /> : null}
+          {session ? <PetBuddy /> : null}
           <FeedbackHost />
         </ThemeProvider>
       </View>

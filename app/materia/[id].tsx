@@ -17,6 +17,7 @@ import { openTask, onDataChanged } from '../../lib/uiBus';
 import { refreshNavCounts } from '../../lib/navCounts';
 import { Screen, Button, Card, EmptyState, IconButton, Segmented, SectionLabel, Skeleton } from '../../components/ds';
 import { TaskRow } from '../../components/TaskRow';
+import { emitPetEvent, refreshCoinsSoon } from '../../lib/pets/store';
 import { MiniCalendar } from '../../components/MiniCalendar';
 import { SubjectFiles } from '../../components/SubjectFiles';
 import { SubjectIcon, iconChar } from '../../components/SubjectIcon';
@@ -62,7 +63,7 @@ function MateriaDetalle() {
   async function toggle(t: Task) {
     const done = t.status !== 'done';
     setTasks((xs) => xs.map((x) => x.id === t.id ? { ...x, status: done ? 'done' : 'pending' } : x));
-    try { await toggleTask(t.id, done); refreshNavCounts(true); if (done) toast(`Hecha: ${t.title}`, { tone: 'good', actionLabel: 'Deshacer', onAction: () => toggle({ ...t, status: 'done' }) }); }
+    try { await toggleTask(t.id, done); refreshNavCounts(true); if (done) { emitPetEvent({ type: 'tarea_hecha', allDone: false }); refreshCoinsSoon(); } if (done) toast(`Hecha: ${t.title}`, { tone: 'good', actionLabel: 'Deshacer', onAction: () => toggle({ ...t, status: 'done' }) }); }
     catch (e) { setTasks((xs) => xs.map((x) => x.id === t.id ? t : x)); toast(friendlyError(e), { tone: 'bad' }); }
   }
   function remove(t: Task) {
