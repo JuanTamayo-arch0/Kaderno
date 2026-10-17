@@ -6,7 +6,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Screen, Button } from '../components/ds';
 import {
   C, R, THEMES, derive, inkOn, fontFamilyOf, DARK_THEMES, LIGHT_THEMES, BACKGROUNDS, FONTS, SIZES,
-  PSettings, PERSONALIZE, DEFAULTS, savePersonalize, loadWebFont,
+  PSettings, PERSONALIZE, DEFAULTS, savePersonalize, loadWebFont, NOTE_FONTS,
 } from '../lib/theme';
 import { fetchPrefs, savePrefs, uploadWallpaperFromUri, cleanOldWallpapers } from '../lib/db';
 import { notify } from '../lib/confirm';
@@ -169,6 +169,23 @@ function Personalizar() {
           })}
         </View>
         {Platform.OS !== 'web' && <Text style={{ color: C.muted, fontSize: 12, marginTop: 8 }}>Las fuentes se ven al 100% en la versión web; en móvil algunas usan la del sistema.</Text>}
+
+        {/* ---------------- LETRA DE LAS NOTAS ---------------- */}
+        <Section title="Letra de las notas" subtitle="Para leer y escribir tus apuntes" />
+        <View style={{ gap: 8 }}>
+          {NOTE_FONTS.map((f) => {
+            const active = (s.noteFontId ?? 'serif') === f.id;
+            return (
+              <Pressable key={f.id} onPress={() => set({ noteFontId: f.id })} accessibilityRole="radio" accessibilityState={{ checked: active }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 12, backgroundColor: active ? C.brand + '18' : C.surface, borderWidth: 1, borderColor: active ? C.brand : C.line }}>
+                <Text style={{ color: C.text, fontSize: 16, flex: 1, ...(f.family ? ({ fontFamily: f.family } as any) : {}) }}>
+                  {f.name} · El aire es un gas y se comprime
+                </Text>
+                {active && <Ionicons name="checkmark-circle" size={20} color={C.brand} />}
+              </Pressable>
+            );
+          })}
+        </View>
 
         {/* ---------------- TAMAÑO ---------------- */}
         <Section title="Tamaño de la interfaz" subtitle="Escala general de texto y espacios" />

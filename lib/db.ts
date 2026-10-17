@@ -2,7 +2,11 @@ import { supabase, currentUserId, dedupe } from './supabase';
 import { sm2, localISODate } from './srs';
 
 // ---------- Tipos ----------
-export type Subject = { id: string; name: string; color: string; icon: string; archived: boolean; credits: number | null };
+export type Subject = {
+  id: string; name: string; color: string; icon: string; archived: boolean; credits: number | null;
+  // schema_v18 (pueden faltar si la migración no se ha corrido)
+  teacher?: string | null; room?: string | null; link?: string | null;
+};
 export type Task = {
   id: string; subject_id: string | null; title: string; description: string | null;
   due_date: string | null; status: 'pending' | 'done'; remind_days: number | null; type: string | null;
@@ -14,6 +18,8 @@ export type Note = {
   id: string; subject_id: string | null; title: string | null; content: string | null;
   image_path: string | null; ocr_status: string; created_at: string; summary: string | null;
   deleted_at?: string | null;
+  // schema_v18
+  pinned?: boolean; updated_at?: string | null;
 };
 export type Slot = { id: string; day: number; slot: number; subject_id: string };
 // Microtarea (checklist dentro de una tarea)
@@ -56,6 +62,10 @@ async function v14<R extends { error: any }>(run: (on: boolean) => PromiseLike<R
   return r;
 }
 
+// ---------- Compatibilidad con schema_v18 (ficha de la materia, notas fijadas) ----------
+let V18 = true;
+export function hasV18(): boolean { return V18; }
+
 async function uid(): Promise<string> {
   const id = await currentUserId();
   if (!id) throw new Error('No hay sesión activa');
@@ -71,14 +81,36 @@ export async function getSubjects(): Promise<Subject[]> {
     return data as Subject[];
   });
 }
-export async function addSubject(name: string, color: string, icon: string, credits = 0): Promise<void> {
-  const { error } = await supabase.from('subjects').insert({ user_id: await uid(), name, color, icon, credits });
+export async function addSubject(name: string, color: string, icon: string, credits = 0,
+  extra: { teacher?: string | null; room?: string | null; link?: string | null } = {}): Promise<void> {
+  const base = { user_id: await uid(), name, color, icon, credits };
+  const clean = Object.fromEntries(Object.entries(extra).filter(([, v]) => v));
+  let { error } = await supabase.from('subjects').insert({ ...base, ...clean });
+  if (error && isMissingColumn(error) && Object.keys(clean).length) {
+    V18 = false;
+    ({ error } = await supabase.from('subjects').insert(base));
+  }
   if (error) throw error;
 }
-export async function updateSubject(id: string, patch: { name?: string; color?: string; icon?: string; credits?: number }): Promise<void> {
+export type SubjectPatch = { name?: string; color?: string; icon?: string; credits?: number; teacher?: string | null; room?: string | null; link?: string | null };
+const V18_SUBJECT = ['teacher', 'room', 'link'];
+export async function updateSubject(id: string, patch: SubjectPatch): Promise<void> {
   const { error } = await supabase.from('subjects').update(patch).eq('id', id);
+  if (error && isMissingColumn(error)) {
+    V18 = false;
+    const rest: Record<string, any> = { ...patch };
+    V18_SUBJECT.forEach((k) => delete rest[k]);
+    const had = Object.keys(patch).some((k) => V18_SUBJECT.includes(k) && (patch as any)[k]);
+    if (Object.keys(rest).length) {
+      const r = await supabase.from('subjects').update(rest).eq('id', id);
+      if (r.error) throw r.error;
+    }
+    if (had) throw new Error('Para guardar profesor, salón y enlace falta correr schema_v18.sql en Supabase.');
+    return;
+  }
   if (error) throw error;
 }
+export { cleanLink } from './linkCheck';
 // Archivar: la materia desaparece de las listas pero conserva sus tareas y
 // notas; se puede restaurar desde la Papelera.
 export async function deleteSubject(id: string): Promise<void> {
@@ -264,6 +296,11 @@ export async function getNote(id: string): Promise<Note | null> {
   const { data, error } = await supabase.from('notes').select('*').eq('id', id).single();
   if (error) throw error;
   return data as Note;
+}
+export async function setNotePinned(id: string, pinned: boolean): Promise<void> {
+  const { error } = await supabase.from('notes').update({ pinned }).eq('id', id);
+  if (error && isMissingColumn(error)) { V18 = false; throw new Error('Para fijar notas falta correr schema_v18.sql en Supabase.'); }
+  if (error) throw error;
 }
 export async function updateNote(id: string, patch: { title?: string; content?: string; summary?: string }): Promise<void> {
   const { error } = await supabase.from('notes').update(patch).eq('id', id);
@@ -514,6 +551,18 @@ export async function getFocusDetail(): Promise<{
   while ((minsByDay.get(d.getTime()) ?? 0) > 0) { streak++; d.setDate(d.getDate() - 1); }
 
   return { todayMin, weekMin, streak, byDay, recent: rows.slice(0, 6) };
+}
+
+/** Lo que muestra la ficha de una materia: enfoque de los últimos 7 días y tarjetas para hoy. */
+export async function getSubjectStudy(subjectId: string): Promise<{ weekMin: number; dueCards: number }> {
+  const since = new Date(); since.setDate(since.getDate() - 7);
+  const today = localISODate(new Date());
+  const [f, c] = await Promise.all([
+    supabase.from('focus_sessions').select('minutes').eq('subject_id', subjectId).gte('created_at', since.toISOString()),
+    supabase.from('flashcards').select('*', { count: 'exact', head: true }).eq('subject_id', subjectId).lte('due_date', today),
+  ]);
+  const weekMin = ((f.data as { minutes: number }[] | null) ?? []).reduce((a, r) => a + (r.minutes ?? 0), 0);
+  return { weekMin, dueCards: c.count ?? 0 };
 }
 
 // ---------- Flashcards (Leitner) ----------

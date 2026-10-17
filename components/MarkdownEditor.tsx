@@ -4,10 +4,13 @@ import { LazyMarkdown as Markdown } from './LazyMarkdown';
 import { C, R } from '../lib/theme';
 
 // Editor de notas en Markdown con barra de formato y vista de lectura renderizada (estilo Notion).
-export function MarkdownEditor({ value, onChange, minHeight = 220 }: {
+export function MarkdownEditor({ value, onChange, minHeight = 220, mode: modeProp }: {
   value: string; onChange: (t: string) => void; minHeight?: number;
+  /** Si se pasa, el modo lo controla quien lo usa y no se muestran los botones Ver / Editar. */
+  mode?: 'view' | 'edit';
 }) {
-  const [mode, setMode] = useState<'view' | 'edit'>(value && value.trim() ? 'view' : 'edit');
+  const [modeState, setMode] = useState<'view' | 'edit'>(value && value.trim() ? 'view' : 'edit');
+  const mode = modeProp ?? modeState;
   const [sel, setSel] = useState({ start: 0, end: 0 });
 
   function wrap(marker: string) {
@@ -44,10 +47,12 @@ export function MarkdownEditor({ value, onChange, minHeight = 220 }: {
 
   return (
     <View>
-      <View style={{ flexDirection: 'row', gap: 6, marginBottom: 10 }}>
-        <Seg label="Ver" active={mode === 'view'} onPress={() => setMode('view')} />
-        <Seg label="Editar" active={mode === 'edit'} onPress={() => setMode('edit')} />
-      </View>
+      {!modeProp && (
+        <View style={{ flexDirection: 'row', gap: 6, marginBottom: 10 }}>
+          <Seg label="Ver" active={mode === 'view'} onPress={() => setMode('view')} />
+          <Seg label="Editar" active={mode === 'edit'} onPress={() => setMode('edit')} />
+        </View>
+      )}
 
       {mode === 'edit' ? (
         <>
@@ -86,6 +91,7 @@ function Seg({ label, active, onPress }: { label: string; active: boolean; onPre
   );
 }
 
+// Getter: C cambia con el tema.
 const mdStyles: any = {
   body: { color: C.text, fontSize: 15, lineHeight: 25 },
   heading1: { color: C.text, fontSize: 24, fontWeight: '800', marginTop: 14, marginBottom: 6 },

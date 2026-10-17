@@ -36,3 +36,9 @@ for f in supabase/schema_v17.sql supabase/schema_v17.sql; do
   echo "== k16 $f"; $PSQL -d k16 -f $f 2>&1 | grep -v "NOTICE" | grep -v "^$" | head -20
 done
 $PSQL -d k16 -f tests/sql/17_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line|WARNING" | grep -v "^ *$"
+
+# ---------- schema_v18 (ficha de la materia y notas), sobre la base k16 ----------
+for f in supabase/schema_v18.sql supabase/schema_v18.sql; do
+  echo "== k16 $f"; $PSQL -d k16 -f $f 2>&1 | grep -v "NOTICE" | grep -v "^$" | head -20
+done
+$PSQL -d k16 -f tests/sql/18_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line|WARNING" | grep -v "^ *$"

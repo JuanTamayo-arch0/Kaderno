@@ -46,11 +46,29 @@ export const FONTS: FontOpt[] = [
   { id: 'lora', name: 'Lora (serif)', family: 'Lora' },
 ];
 export function fontFamilyOf(id: string): string | undefined { return FONTS.find((f) => f.id === id)?.family; }
+// Letra para LEER las notas (puede ser distinta a la de la app).
+export const NOTE_FONTS: FontOpt[] = [
+  { id: 'serif', name: 'Source Serif (lectura)', family: 'Source Serif 4' },
+  { id: 'app', name: 'La misma de la app', family: undefined },
+  { id: 'plex', name: 'IBM Plex Sans', family: 'IBM Plex Sans' },
+  { id: 'lora', name: 'Lora', family: 'Lora' },
+];
+/** Cadena CSS de la letra de las notas según los ajustes. */
+export function noteFontStack(s: { noteFontId?: string; fontId: string } = PERSONALIZE): string {
+  const fam = NOTE_FONTS.find((f) => f.id === (s.noteFontId ?? 'serif'))?.family ?? fontFamilyOf(s.fontId);
+  const serif = fam === 'Source Serif 4' || fam === 'Lora';
+  return fam ? `'${fam}', ${serif ? 'Georgia, serif' : 'system-ui, sans-serif'}` : 'system-ui, sans-serif';
+}
+export function noteFontFamily(s: { noteFontId?: string; fontId: string } = PERSONALIZE): string | undefined {
+  return NOTE_FONTS.find((f) => f.id === (s.noteFontId ?? 'serif'))?.family ?? fontFamilyOf(s.fontId);
+}
 // URL de Google Fonts para inyectar en web.
 const FONT_QUERY: Record<string, string> = {
   Inter: 'Inter:wght@400;500;600;700;800', Nunito: 'Nunito:wght@400;600;700;800',
   Poppins: 'Poppins:wght@400;500;600;700;800', 'Space Grotesk': 'Space+Grotesk:wght@400;500;600;700',
-  Lora: 'Lora:wght@400;500;600;700',
+  Lora: 'Lora:ital,wght@0,400;0,500;0,600;0,700;1,400',
+  'Source Serif 4': 'Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400',
+  'IBM Plex Sans': 'IBM+Plex+Sans:wght@400;600;700',
 };
 /**
  * Carga de Google Fonts SOLO la fuente elegida (o todas, para la vista previa
@@ -85,8 +103,8 @@ export function scaleOf(id: string): number { return SIZES.find((s) => s.id === 
 // ============================================================
 //  Ajustes de personalización (persistidos por dispositivo)
 // ============================================================
-export type PSettings = { themeId: string; bgId: string; bgCustom: string | null; fontId: string; sizeId: string };
-export const DEFAULTS: PSettings = { themeId: 'medianoche', bgId: 'none', bgCustom: null, fontId: 'system', sizeId: 'md' };
+export type PSettings = { themeId: string; bgId: string; bgCustom: string | null; fontId: string; sizeId: string; noteFontId?: string };
+export const DEFAULTS: PSettings = { themeId: 'medianoche', bgId: 'none', bgCustom: null, fontId: 'system', sizeId: 'md', noteFontId: 'serif' };
 export let PERSONALIZE: PSettings = { ...DEFAULTS };
 const STORE_KEY = 'kaderno.personalize';
 

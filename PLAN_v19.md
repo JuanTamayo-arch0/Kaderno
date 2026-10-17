@@ -1,6 +1,6 @@
 # PLAN v19: Materias y notas
 
-Estado: propuesta, sin construir. Diseño en el canvas "Materias y notas de Kaderno" (4 pantallas).
+Estado: construido (rama `v19-materias`). Diseño en el canvas "Materias y notas de Kaderno" (4 pantallas).
 
 ## 1. Qué está mal hoy
 
@@ -64,8 +64,9 @@ Estado: propuesta, sin construir. Diseño en el canvas "Materias y notas de Kade
 3. Editor en el mismo lugar: barra delgada, barra al seleccionar, menú "/", fórmulas, tablas, imágenes dentro del texto.
 4. Celular: ajustes de la ficha, lista de notas y barra encima del teclado.
 
-## 5. Por decidir
+## 5. Decisiones al construir
 
-- Nombre de la pestaña "Calificaciones": en Colombia "notas" también son calificaciones; se podría renombrar la pestaña de apuntes a "Apuntes" para evitar la confusión.
-- Letra de lectura por defecto: serif (Source Serif) o la misma de la app.
-- Si la columna derecha se queda también en Calificaciones y Archivos o solo en Tareas.
+- La pestaña se sigue llamando "Notas" (cambiarla a "Apuntes" queda a criterio del usuario).
+- Letra de lectura por defecto: Source Serif; se cambia en Personalizar.
+- La columna derecha se queda en Tareas, Calificaciones y Archivos; en Notas se oculta para dar espacio al texto.
+- Además de lo planeado: resumen del semestre en la lista de Materias, barra de calificaciones con lo que falta registrar y PDF con formato.
