@@ -46,12 +46,21 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
-  // Configuración: se responde al instante con la guardada y se actualiza por
-  // detrás (el cambio se ve en la siguiente apertura). Antes cada apertura
-  // esperaba una ida y vuelta al servidor antes de poder arrancar.
+  // Configuración: primero la red, sin caché del navegador, para que un cambio
+  // en el servidor (por ejemplo la llave de notificaciones) llegue en la
+  // siguiente apertura también en el iPhone. Si la red tarda más de 1,2 s o no
+  // hay conexión, se usa la guardada para no frenar el arranque.
   if (url.pathname === '/kaderno-config.js') {
-    const fresh = fetch(req).then((r) => { if (r.ok) { const copy = r.clone(); caches.open(VERSION).then((c) => c.put('/kaderno-config.js', copy)); } return r; });
-    e.respondWith(caches.match('/kaderno-config.js').then((hit) => hit || fresh).catch(() => fresh));
+    const fresh = fetch(req, { cache: 'no-store' }).then((r) => {
+      if (r.ok) { const copy = r.clone(); caches.open(VERSION).then((c) => c.put('/kaderno-config.js', copy)); }
+      return r;
+    });
+    const cached = () => caches.match('/kaderno-config.js');
+    const slow = new Promise((res) => setTimeout(res, 1200)).then(cached);
+    e.respondWith(
+      Promise.race([fresh.then((r) => (r.ok ? r : cached().then((h) => h || r))), slow.then((h) => h || fresh)])
+        .catch(() => cached().then((h) => h || fresh)),
+    );
     e.waitUntil(fresh.catch(() => {}));
     return;
   }
