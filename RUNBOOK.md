@@ -812,7 +812,7 @@ No hay migración ni funciones nuevas. Se publica al fusionar en `main`.
 - La lista de materias ya no descarga el texto de todas las notas (solo las cuenta).
 - Las fotos de materias se guardan a 160 x 160 (unos 8 KB en vez de cientos). Las que ya estaban grandes se achican solas una vez al abrir la app.
 - Google Fonts solo se pide si elegiste una fuente distinta de "Sistema".
-- El service worker responde al instante con `kaderno-config.js` guardado y lo actualiza por detrás. Si editas ese archivo en el servidor, el cambio se ve en la segunda apertura. Si la red tarda más de 1,5 s en entregar la página, se muestra la guardada.
+- El service worker pide `kaderno-config.js` a la red sin caché y, si tarda más de 1,2 s o no hay conexión, usa la copia guardada (desde la versión 18; antes respondía siempre con la guardada y un cambio en el servidor solo se veía en la segunda apertura). Si la red tarda más de 1,5 s en entregar la página, se muestra la guardada.
 
 ## Versión 17: mascotas de estudio
 
@@ -881,7 +881,7 @@ Supabase no permite cambiar la región de un proyecto existente. El camino es cr
 2. Pasar la base con `pg_dump` y `psql` (esquema, datos y usuarios de Auth), como dice la guía.
 3. Copiar los archivos de Storage (buckets `wallpapers`, `project-files` y los demás).
 4. Volver a poner los secretos de las funciones (`ANTHROPIC_API_KEY`, `VAPID_PRIVATE_KEY`, etc.) y desplegar las funciones en el proyecto nuevo.
-5. En el droplet, cambiar `SUPABASE_URL` y `SUPABASE_ANON_KEY` en `/var/www/kaderno/kaderno-config.js` (no hace falta recompilar).
+5. En el droplet, cambiar `SUPABASE_URL` y `SUPABASE_ANON_KEY` en `/var/www/kaderno-app/shared/kaderno-config.js` (no hace falta recompilar).
 6. Probar con "Probar conexión" y, cuando todo esté bien, pausar el proyecto viejo.
 
 Conviene hacerlo con calma un fin de semana: mientras dura la copia, lo que se guarde en el proyecto viejo no pasa al nuevo.
