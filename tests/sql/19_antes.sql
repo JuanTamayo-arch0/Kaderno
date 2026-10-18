@@ -6,6 +6,7 @@ create table if not exists realtime.messages (
 create or replace function realtime.topic() returns text language sql stable as $$
   select nullif(current_setting('realtime.topic', true), '');
 $$;
+alter table realtime.messages enable row level security; -- como en Supabase
 grant usage on schema realtime to authenticated;
 grant select, insert on realtime.messages to authenticated;
 grant usage on sequence realtime.messages_id_seq to authenticated;
