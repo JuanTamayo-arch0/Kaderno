@@ -940,3 +940,38 @@ Primera entrega del plan v20 (secciones B y C de `PLAN_v20.md`). No necesita mig
 ### 3. Pruebas
 
 `npm test` (incluye `tests/v20.test.ts`: ruidos sin saturar, bucle sin salto, mezcla y chips, qué suena según el reloj, mezclas guardadas, pausas sin repetir, anotar para después y la mascota en la pausa).
+
+## Versión 20 (parte 2): Enfocar juntos
+
+Sección L de `PLAN_v20.md`: salas de estudio con compañeros.
+
+### 1. Base de datos (una sola vez)
+
+Correr `supabase/schema_v19.sql` en Supabase → SQL Editor. Requiere schema.sql, schema_v2, schema_v12 y schema_v14. Es seguro correrlo dos veces. Sin la migración la app funciona igual; la tarjeta "Enfocar juntos" avisa que falta.
+
+Crea `study_rooms`, `study_room_members`, `study_room_join_tries` y la columna `focus_sessions.room_id`, las funciones `study_room_create`, `study_room_join`, `study_room_for_project`, `study_room_leave`, `study_room_update`, `study_room_new_code` y `study_room_people`, y las políticas de los canales de Realtime `sala:<id>` sobre `realtime.messages` (solo miembros escuchan y envían). Realtime no necesita otro ajuste: la app usa canales privados.
+
+### 2. Qué cambió
+
+- **Salas:** desde Enfoque, "Crear sala" (te da un código de 6 letras, sin I, O, 0 ni 1) o "Unirme con código". Desde un proyecto, Opciones → "Sala de estudio": entra cualquiera del equipo, sin código.
+- **Invitar:** "Copiar enlace" (o "Invitar" en el celular). Quien abre el enlace entra directo; si no había iniciado sesión, entra después de iniciarla.
+- **Quién está:** cada persona aparece como Enfocado (con los minutos que le quedan), Descanso, En la sala o Fuera. La sala activa sigue conectada mientras la app esté abierta, aunque cambies de pantalla.
+- **Empezar juntos:** propones un pomodoro con tu duración; a los demás les llega un aviso con "Me uno". Los relojes arrancan 10 s después y todos terminan a la misma hora (quien se une tarde tiene menos minutos).
+- **Meta del grupo:** "Juntos hoy: 6 de 8 pomodoros". Cuentan los pomodoros de 10 min o más terminados con la sala activa (máximo 24 por persona al día). Quien creó la sala cambia la meta.
+- **Privacidad:** nadie ve en qué tarea estás, salvo que actives "Mostrar en qué tarea estoy".
+- **Salir:** "Desconectarme" deja de mostrarte ahora; "Salir de la sala" te quita de la lista. Si sale quien la creó, la sala pasa a quien llegó primero; si sale la última persona, se borra.
+
+### 3. Seguridad
+
+- Nada se escribe directo en las tablas de salas: todo pasa por funciones `security definer` que revisan quién eres.
+- Un pomodoro con `room_id` de una sala ajena se guarda sin sala (disparador).
+- Unirse con código: 20 códigos equivocados por hora como máximo, 30 personas por sala, 10 salas propias.
+- Lo que llega por el canal (propuestas, estados) se valida antes de usarse.
+
+### 4. Notas técnicas
+
+- `metro.config.js` sigue cambiando `@supabase/realtime-js` por un sustituto vacío para que la app abra liviana. Las salas cargan el cliente real por la ruta del archivo (`lib/realtimeLazy.ts`), en un pedazo aparte de unos 65 KB que solo se descarga al entrar a una sala.
+
+### 5. Pruebas
+
+`npm test` (incluye las pruebas de `lib/roomsLogic.ts` en `tests/v20.test.ts`) y `bash tests/run_sql.sh` (incluye `tests/sql/19_pruebas.sql`: crear, unirse, acceso desde afuera, pomodoros solo en tus salas, meta, dueño, sala del proyecto, tope de códigos, canales privados y salir).

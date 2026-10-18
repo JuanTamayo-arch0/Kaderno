@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Stack, ThemeProvider, DarkTheme, DefaultTheme } from 'expo-router';
+import { Stack, ThemeProvider, DarkTheme, DefaultTheme, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Platform, UIManager, View } from 'react-native';
 import { enableScreens } from 'react-native-screens';
@@ -33,6 +33,7 @@ import { preloadScreens } from '../lib/preload';
 import { toast } from '../lib/feedback';
 import { beep, loadFocus, setFocusCompleteHandler, getFocus } from '../lib/focusTimer';
 import { duckAmbient, initAmbient } from '../lib/ambient';
+import { initRooms } from '../lib/rooms';
 import { tipById } from '../lib/breakTips';
 import { registerServiceWorker } from '../lib/push';
 import { installMotion } from '../lib/motion';
@@ -110,6 +111,16 @@ function Shell() {
   useEffect(() => {
     if (!userId) return;
     let cancel = false;
+
+    // Enfocar juntos: volver a la sala activa y, si se abrió un enlace de
+    // invitación sin sesión, terminar de entrar ahora.
+    initRooms();
+    if (Platform.OS === 'web') {
+      try {
+        const pend = window.localStorage.getItem('kd:sala:pendiente');
+        if (pend) { window.localStorage.removeItem('kd:sala:pendiente'); setTimeout(() => router.replace(`/sala/unirse?codigo=${encodeURIComponent(pend)}` as any), 300); }
+      } catch { /* noop */ }
+    }
 
     // Los tipos propios se cargan aparte: taskTypeMeta() los lee de memoria
     // durante el render, así que hay que repintar cuando lleguen.

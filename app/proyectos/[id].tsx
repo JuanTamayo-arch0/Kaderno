@@ -11,6 +11,8 @@ import { ProgressBar } from '../../components/ProgressBar';
 import { StepSuggestions } from '../../components/StepSuggestions';
 import { loadHoyHidden, setProjectHidden } from '../../lib/hoyHidden';
 import { toast } from '../../lib/feedback';
+import { roomForProject } from '../../lib/roomsDb';
+import { enterRoom } from '../../lib/rooms';
 
 import { useAuth } from '../../lib/auth';
 import { ImportSheet } from '../../components/projects/ImportSheet';
@@ -172,6 +174,15 @@ function ProyectoDetalle() {
   // Ocultar o mostrar las tareas de este proyecto en "Hoy" (solo para mí).
   const [hiddenInHoy, setHiddenInHoy] = useState(false);
   useEffect(() => { loadHoyHidden().then((h) => setHiddenInHoy(h.projects.includes(projectId))).catch(() => {}); }, [projectId]);
+  // Sala de estudio del proyecto (se crea la primera vez que alguien la abre).
+  async function openStudyRoom() {
+    try {
+      const r = await roomForProject(projectId);
+      void enterRoom({ id: r.id, name: r.name });
+      router.push(`/sala/${r.id}` as any);
+    } catch (e: any) { toast(String(e?.message ?? e), { tone: 'bad' }); }
+  }
+
   async function toggleHoy() {
     const next = !hiddenInHoy;
     setHiddenInHoy(next);
@@ -398,6 +409,10 @@ function ProyectoDetalle() {
               ...(editable ? [{ icon: 'cloud-upload-outline', label: 'Importar tareas', hint: 'Desde un CSV, un JSON o una IA', onPress: () => setImportOpen(true) }] : []),
               { icon: 'download-outline', label: 'Exportar tareas', hint: 'Para editarlas en Excel o pasarlas a una IA', onPress: () => setExportOpen(true) },
             ],
+          },
+          {
+            title: 'Estudiar',
+            items: [{ icon: 'people-outline', label: 'Sala de estudio', hint: 'Enfóquense juntos y vean quién está estudiando', onPress: openStudyRoom }],
           },
           {
             title: 'Tablero',

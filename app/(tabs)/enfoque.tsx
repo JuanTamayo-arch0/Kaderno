@@ -15,6 +15,7 @@ import { fmtMin } from '../../components/TaskRow';
 import { SoundRow, MixerSheet } from '../../components/focus/AmbientControls';
 import { BreakCoach, ParkButton, ParkedList, PomodoroSummary } from '../../components/focus/FocusParts';
 import { unlockAmbient } from '../../lib/ambient';
+import { RoomsCard } from '../../components/focus/RoomsCard';
 
 // ============================================================
 //  Enfoque (Pomodoro).
@@ -116,6 +117,7 @@ export default function Enfoque() {
     <View style={{ flex: 1, minWidth: 0, gap: 14, width: isWide ? undefined : '100%' }}>
       <PomodoroSummary s={s} todayMin={detail.todayMin} />
       {(s.mode === 'break' || !s.running) && <ParkedList parked={s.parked ?? []} />}
+      <RoomsCard />
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <Stat label="Hoy" value={fmtMin(detail.todayMin).replace(' min', 'm').replace(' h ', 'h ')} />
         <Stat label="7 días" value={fmtMin(detail.weekMin).replace(' min', 'm').replace(' h ', 'h ')} />

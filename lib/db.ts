@@ -490,10 +490,16 @@ export function gradeSummary(grades: Grade[], passMark: number) {
 }
 
 // ---------- Pomodoro ----------
-export async function addFocusSession(minutes: number, subjectId: string | null, assignmentId: string | null = null): Promise<void> {
+export async function addFocusSession(minutes: number, subjectId: string | null, assignmentId: string | null = null, roomId: string | null = null): Promise<void> {
   const u = await uid();
   const row: Record<string, any> = { user_id: u, minutes, subject_id: subjectId, assignment_id: assignmentId };
-  const { error } = await v14((on) => supabase.from('focus_sessions').insert(on ? row : stripV14(row)));
+  if (roomId) row.room_id = roomId;
+  let { error } = await v14((on) => supabase.from('focus_sessions').insert(on ? row : stripV14(row)));
+  // Sin schema_v19 no existe room_id: se guarda igual, sin sala.
+  if (error && roomId && isMissingColumn(error)) {
+    delete row.room_id;
+    ({ error } = await v14((on) => supabase.from('focus_sessions').insert(on ? row : stripV14(row))));
+  }
   if (error) throw error;
 }
 /** Minutos de enfoque acumulados por tarea. */
