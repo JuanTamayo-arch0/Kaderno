@@ -271,11 +271,12 @@ grant execute on function public.study_room_create(text), public.study_room_for_
 
 -- ---------------------------------------------------------------------
 --  Realtime: canales privados "sala:<id>" (presencia y "Empezar juntos").
---  Requiere que los canales privados estén permitidos (Realtime → Settings).
+--  La app usa canales privados: no hace falta ningún ajuste en Realtime.
 -- ---------------------------------------------------------------------
 do $$ begin
   if to_regclass('realtime.messages') is not null then
-    execute 'alter table realtime.messages enable row level security';
+    -- Supabase ya trae RLS activado en realtime.messages y la tabla no es del
+    -- usuario del SQL Editor, así que no se toca; solo se agregan las políticas.
     execute 'drop policy if exists "salas leer" on realtime.messages';
     execute $p$create policy "salas leer" on realtime.messages for select to authenticated
              using (realtime.messages.extension in ('presence', 'broadcast') and public.room_topic_ok(realtime.topic()))$p$;
