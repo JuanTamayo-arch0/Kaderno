@@ -31,7 +31,9 @@ import { GlobalPanels } from '../components/GlobalPanels';
 import { AppSideNav } from '../components/SideNav';
 import { preloadScreens } from '../lib/preload';
 import { toast } from '../lib/feedback';
-import { beep, loadFocus, setFocusCompleteHandler } from '../lib/focusTimer';
+import { beep, loadFocus, setFocusCompleteHandler, getFocus } from '../lib/focusTimer';
+import { duckAmbient, initAmbient } from '../lib/ambient';
+import { tipById } from '../lib/breakTips';
 import { registerServiceWorker } from '../lib/push';
 import { installMotion } from '../lib/motion';
 import { celebrate } from '../lib/celebrate';
@@ -43,11 +45,20 @@ installMotion();
 
 // Al terminar un pomodoro o un descanso: sonido, aviso del navegador y mensaje.
 setFocusCompleteHandler((mode, s) => {
-  if (s.sound) beep();
+  if (s.sound) { duckAmbient(); beep(); }
   const title = mode === 'work' ? 'Pomodoro terminado' : 'Fin del descanso';
   const body = mode === 'work' ? `Buen trabajo. Descanso de ${s.cycle === 0 ? s.longBreakMin : s.breakMin} min.` : 'Cuando quieras, empieza el siguiente pomodoro.';
   toast(`${title}. ${body}`, { tone: 'good', duration: 8000 });
-  if (mode === 'work') { emitPetEvent({ type: 'enfoque_fin', minutes: Math.max(1, s.workMin) }); refreshCoinsSoon(1500); }
+  if (mode === 'work') {
+    emitPetEvent({ type: 'enfoque_fin', minutes: Math.max(1, s.workMin) }); refreshCoinsSoon(1500);
+    // Después de felicitar, la mascota sugiere qué hacer en la pausa.
+    const tipId = s.tipId;
+    setTimeout(() => {
+      const f = getFocus();
+      const tip = tipById(f.tipId);
+      if (f.mode === 'break' && f.running && tip && f.tipId === tipId) emitPetEvent({ type: 'pausa', tip: tip.pet });
+    }, 5200);
+  }
   // Pomodoro completo con la pestaña a la vista: un poco de confeti.
   if (mode === 'work' && Platform.OS === 'web' && typeof document !== 'undefined' && !document.hidden) celebrate();
   if (Platform.OS === 'web' && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted' && document.hidden) {
@@ -80,6 +91,7 @@ function Shell() {
 
   useEffect(() => {
     loadFocus();
+    initAmbient();
     registerServiceWorker();
     preloadScreens();
     if (Platform.OS === 'web') applyWebChrome();

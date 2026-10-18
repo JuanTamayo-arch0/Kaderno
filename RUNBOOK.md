@@ -915,3 +915,28 @@ Agrega a `subjects` las columnas `teacher`, `room` y `link` (profesor, salón y 
 ### 4. Pruebas
 
 `npm test` (incluye `tests/v19.test.ts`: días y próxima clase, próxima evaluación, grupos de tareas, orden y búsqueda de notas, índice, enlaces y PDF) y `bash tests/run_sql.sh` (incluye `tests/sql/18_pruebas.sql`).
+
+## Versión 20 (parte 1): Enfoque con sonido de fondo y pausas guiadas
+
+Primera entrega del plan v20 (secciones B y C de `PLAN_v20.md`). No necesita migración: las preferencias se guardan en el dispositivo y en `user_prefs.settings.ambient`.
+
+### 1. Qué cambió
+
+- **Sonido de fondo:** en la tarjeta del reloj, chips Silencio, Lluvia, Mar, Bosque, Río, Fuego, Ruido rosa y Ruido café. Un toque deja ese sonido solo; otro toque lo apaga. Con el reloj quieto, cada cambio suena 6 segundos para probarlo; con el reloj andando suena todo el pomodoro, entra en 3 s y sale en 2 s. Al pausar el reloj se apaga.
+- **Mezclar:** hoja con un deslizador por sonido (incluye Viento), volumen general (35% por defecto), qué suena en el descanso (Silencio, Pájaros o Lo mismo) y hasta 3 mezclas guardadas con nombre.
+- **Barra lateral:** junto al reloj, una nota musical que silencia el fondo hasta el siguiente pomodoro.
+- **Mascota:** mientras suena el fondo, una nota musical flota sobre ella. Al empezar el descanso sugiere qué hacer (respeta "Silenciar por hoy").
+- **Pausa guiada:** en el descanso, una sugerencia (estirar, tomar agua, mirar lejos, respirar, caminar...) que no se repite en el día, con "Hecho" y "Otra idea". No da monedas.
+- **Anotar para después:** durante el enfoque, botón o tecla D. Enter guarda y vuelves a lo tuyo. En la pausa aparece "Anotaste N cosas para después", cada una con "Hacer tarea" (abre Agregar con el texto) o borrar.
+- **Resumen del pomodoro:** en el descanso, minutos enfocados, distracciones anotadas y total del día.
+
+### 2. Notas técnicas
+
+- Los sonidos se generan en el navegador con Web Audio (`lib/ambient.ts`, recetas de ruido filtrado y modulado; pájaros sintetizados). No hay archivos de audio, así que no hay licencias que cuidar y funcionan sin conexión. Si más adelante se quieren grabaciones reales, se pueden sumar como otra receta.
+- El volumen de cada sonido se igualó midiéndolo (entre -26 y -29 dBFS al 60% con volumen 35%) y hay un limitador al final para que no sature.
+- Los navegadores solo dejan sonar después de un toque. Si se recarga la página con el reloj andando, aparece "Toca para activar el sonido" (cualquier toque sirve).
+- En iPhone se pide `audioSession.type = 'playback'` para que suene con el interruptor de silencio activo. Si se bloquea la pantalla con la app instalada, el sonido puede pararse.
+
+### 3. Pruebas
+
+`npm test` (incluye `tests/v20.test.ts`: ruidos sin saturar, bucle sin salto, mezcla y chips, qué suena según el reloj, mezclas guardadas, pausas sin repetir, anotar para después y la mascota en la pausa).

@@ -7,6 +7,8 @@ import { SIDEBAR_W, useResponsive } from '../lib/responsive';
 import { useAuth } from '../lib/auth';
 import { useNavCounts } from '../lib/navCounts';
 import { useFocusTimer } from '../lib/focusTimer';
+import { updateAmbient } from '../lib/ambient';
+import { useAmbient } from './focus/AmbientControls';
 import { openAdd, openCommand, openInbox } from '../lib/uiBus';
 import { navKeyOf } from '../lib/navKey';
 export { navKeyOf };
@@ -67,6 +69,7 @@ export function SideNav({ active, onNavigate }: { active: NavKey | null; onNavig
   const { session } = useAuth();
   const counts = useNavCounts();
   const focus = useFocusTimer();
+  const amb = useAmbient();
   const me = displayName(session);
 
   const go = (it: { key: NavKey; href: string }) => {
@@ -95,8 +98,20 @@ export function SideNav({ active, onNavigate }: { active: NavKey | null; onNavig
       <Text style={{ color: tone ? C.onBrand : C.text, fontSize: 11.5, fontWeight: '800' }}>{n > 99 ? '99+' : n}</Text>
     </View>
   ) : null;
+  const showMute = focus.state.running && (amb.status.playing && !amb.status.preview || amb.prefs.muted);
   const timer = focus.state.running || focus.remaining < focus.total
-    ? <Text style={{ color: focus.state.mode === 'work' ? C.brand : C.goodText, fontSize: 12, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{focus.label}</Text>
+    ? (
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <Text style={{ color: focus.state.mode === 'work' ? C.brand : C.goodText, fontSize: 12, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{focus.label}</Text>
+        {showMute && (
+          <Pressable onPress={() => updateAmbient({ muted: !amb.prefs.muted })} hitSlop={6} accessibilityRole="button"
+            accessibilityLabel={amb.prefs.muted ? 'Activar el sonido de fondo' : `Silenciar el sonido de fondo (${amb.status.label})`}
+            style={({ hovered }: any) => ({ width: 24, height: 24, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: hovered ? C.surface2 : 'transparent' })}>
+            <Ionicons name={amb.prefs.muted ? 'volume-mute-outline' : 'musical-notes-outline'} size={14} color={C.muted} />
+          </Pressable>
+        )}
+      </View>
+    )
     : null;
 
   return (

@@ -12,18 +12,20 @@ export type TaskDraft = {
 };
 export type Panels = {
   add: boolean;
+  addText: string;            // texto inicial de "Agregar" (p. ej. desde "Anotar para después")
   task: { open: boolean; edit: Task | null; draft: TaskDraft | null };
   command: boolean;
   inbox: boolean;
 };
-let panels: Panels = { add: false, task: { open: false, edit: null, draft: null }, command: false, inbox: false };
+let panels: Panels = { add: false, addText: '', task: { open: false, edit: null, draft: null }, command: false, inbox: false };
 const ls = new Set<(p: Panels) => void>();
 const savedLs = new Set<() => void>();
 
 function emit() { ls.forEach((l) => l(panels)); }
 export function subscribePanels(fn: (p: Panels) => void) { ls.add(fn); fn(panels); return () => { ls.delete(fn); }; }
 
-export function openAdd() { panels = { ...panels, add: true }; emit(); }
+// Se usa como onPress={openAdd}: el evento del toque no es texto, se ignora.
+export function openAdd(text?: unknown) { panels = { ...panels, add: true, addText: typeof text === 'string' ? text : '' }; emit(); }
 export function closeAdd() { panels = { ...panels, add: false }; emit(); }
 export function openTask(edit: Task | null = null, draft: TaskDraft | null = null) {
   panels = { ...panels, add: false, task: { open: true, edit, draft } }; emit();
