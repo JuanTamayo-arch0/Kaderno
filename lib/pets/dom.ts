@@ -55,7 +55,53 @@ function sheetUrl(species: Species, mood: Mood, outfit: Outfit): string {
   return url;
 }
 
-function zoomOf(): number {
+// ---------- Mundo compartido (tu mascota y las de la sala pisan lo mismo) ----------
+export function toLocalRect(r: DOMRect) {
+  const z = zoomOf();
+  return { left: r.left / z, right: r.right / z, top: r.top / z, bottom: r.bottom / z };
+}
+/** Bordes útiles: a la derecha del menú lateral y encima de la barra de abajo. */
+export function domBounds(): { minX: number; maxX: number; floor: number } {
+  const z = zoomOf();
+  const W = window.innerWidth / z, H = window.innerHeight / z;
+  const side = document.querySelector('[data-pet-sidebar]') as HTMLElement | null;
+  const bar = document.querySelector('[data-pet-floor]') as HTMLElement | null;
+  const barTop = bar ? toLocalRect(bar.getBoundingClientRect()).top : H;
+  return { minX: side ? toLocalRect(side.getBoundingClientRect()).right : 0, maxX: W, floor: barTop > 40 ? barTop : H };
+}
+export function domPerches(size: number, floor: number): { key: string; rect: Rect }[] {
+  const out: { key: string; rect: Rect }[] = [];
+  document.querySelectorAll<HTMLElement>('[data-pet-perch]').forEach((n) => {
+    const r = toLocalRect(n.getBoundingClientRect());
+    if (r.right - r.left < 90 || r.bottom - r.top < 28 || r.top < 30 || r.top > floor - size * 0.6) return;
+    // Nada dentro de ventanas emergentes: quedan por encima de la mascota.
+    if (n.closest('[aria-modal="true"],[role="dialog"],[data-ghost]')) return;
+    out.push({ key: keyOf(n), rect: r });
+  });
+  return out;
+}
+export function domRectOf(key: string, floor: number): Rect | null {
+  const n = perchEls.get(key)?.deref();
+  if (!n || !n.isConnected) { perchEls.delete(key); return null; }
+  const r = toLocalRect(n.getBoundingClientRect());
+  if (r.right - r.left < 1) return null; // pantalla oculta
+  if (r.top < 0 || r.top > floor - 10) return null;
+  return r;
+}
+export function domObstacle(): Rect | null {
+  const n = document.querySelector('[data-pet-obstacle]') as HTMLElement | null;
+  return n ? toLocalRect(n.getBoundingClientRect()) : null;
+}
+
+// Tu mascota, para que las de la sala jueguen con ella (pelota, saludos).
+let ownController: PetController | null = null;
+export function ownPetBox(): { x: number; y: number; size: number } | null {
+  const m = ownController?.motionState;
+  return m ? { x: m.x, y: m.y, size: PET_SIZE } : null;
+}
+export function ownPetHop() { ownController?.celebrate(); }
+
+export function zoomOf(): number {
   const z = parseFloat((document.documentElement.style as any).zoom || '1');
   return z > 0 ? z : 1;
 }
@@ -195,53 +241,26 @@ export class PetController {
       () => document.removeEventListener('visibilitychange', onVis),
     );
     this.start();
+    ownController = this;
   }
 
+  get motionState(): PetMotion { return this.motion; }
+
   // ---------- Mundo ----------
-  private toLocal(r: DOMRect) {
-    const z = zoomOf();
-    return { left: r.left / z, right: r.right / z, top: r.top / z, bottom: r.bottom / z };
-  }
+  private toLocal(r: DOMRect) { return toLocalRect(r); }
   private measure() {
-    const z = zoomOf();
-    const W = window.innerWidth / z, H = window.innerHeight / z;
-    const side = document.querySelector('[data-pet-sidebar]') as HTMLElement | null;
-    const bar = document.querySelector('[data-pet-floor]') as HTMLElement | null;
+    const b = domBounds();
     const w = this.motion.world;
-    w.minX = side ? this.toLocal(side.getBoundingClientRect()).right : 0;
-    w.maxX = W;
-    const barTop = bar ? this.toLocal(bar.getBoundingClientRect()).top : H;
-    const floor = barTop > 40 ? barTop : H;
+    w.minX = b.minX; w.maxX = b.maxX;
+    const floor = b.floor;
     // Si el piso bajó (se fue la barra), cae; si subió, se acomoda.
     if (this.floor && floor > this.floor + 4 && !this.motion.on && this.motion.resting) { w.floor = floor; this.motion.jump(0, 0); }
     else w.floor = floor;
     this.floor = floor;
   }
-  private perches(): { key: string; rect: Rect }[] {
-    const out: { key: string; rect: Rect }[] = [];
-    const floor = this.motion.world.floor;
-    document.querySelectorAll<HTMLElement>('[data-pet-perch]').forEach((n) => {
-      const r = this.toLocal(n.getBoundingClientRect());
-      if (r.right - r.left < 90 || r.bottom - r.top < 28 || r.top < 30 || r.top > floor - PET_SIZE * 0.6) return;
-      // Nada dentro de ventanas emergentes: quedan por encima de la mascota.
-      if (n.closest('[aria-modal="true"],[role="dialog"],[data-ghost]')) return;
-      const k = keyOf(n);
-      out.push({ key: k, rect: r });
-    });
-    return out;
-  }
-  private rectOf(key: string): Rect | null {
-    const n = perchEls.get(key)?.deref();
-    if (!n || !n.isConnected) { perchEls.delete(key); return null; }
-    const r = this.toLocal(n.getBoundingClientRect());
-    if (r.right - r.left < 1) return null; // pantalla oculta
-    if (r.top < 0 || r.top > this.motion.world.floor - 10) return null;
-    return r;
-  }
-  private obstacle(): Rect | null {
-    const n = document.querySelector('[data-pet-obstacle]') as HTMLElement | null;
-    return n ? this.toLocal(n.getBoundingClientRect()) : null;
-  }
+  private perches(): { key: string; rect: Rect }[] { return domPerches(PET_SIZE, this.motion.world.floor); }
+  private rectOf(key: string): Rect | null { return domRectOf(key, this.motion.world.floor); }
+  private obstacle(): Rect | null { return domObstacle(); }
 
   // ---------- Bucle ----------
   private start() {
@@ -427,5 +446,6 @@ export class PetController {
     if (this.bubbleTimer) clearTimeout(this.bubbleTimer);
     this.off.forEach((f) => f());
     this.layer.remove();
+    if (ownController === this) ownController = null;
   }
 }

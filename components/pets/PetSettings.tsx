@@ -47,6 +47,10 @@ export function PetSettings() {
           <Divider />
           <Toggle label="Silenciar por hoy" hint="No habla sola hasta mañana. Si la tocas, sí responde." value={isMutedToday(prefs)}
             onChange={(v) => { muteToday(v).catch((e) => toast(friendlyError(e), { tone: 'bad' })); }} />
+          <Divider />
+          <Toggle label="Ver las mascotas de mi sala en toda la app"
+            hint="Si estás en una sala de estudio, las de tus compañeros también andan por las demás pantallas: máximo 3, sin hablar y sin tapar botones. Si te enfocas, se quedan quietas."
+            value={prefs.friendsEverywhere} onChange={(v) => save({ friendsEverywhere: v })} />
         </>
       )}
     </View>

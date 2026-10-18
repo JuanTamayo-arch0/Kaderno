@@ -47,6 +47,8 @@ export class PetMotion {
   /** Se queda quieta (por ejemplo, mientras muestra su globo). */
   hold = false;
   squash = 0;
+  /** Cuánto más a la izquierda queda su esquina (las de los compañeros se ponen al lado de la tuya). */
+  cornerShift = 0;
   /** Saltó un obstáculo caminando: al caer sigue hacia donde iba. */
   private resume = false;
   private t = 0;
@@ -60,7 +62,7 @@ export class PetMotion {
   yOn(top: number) { return top - this.size + this.unit; }
   feet() { return this.y + this.size - this.unit; }
   center() { return this.x + this.size / 2; }
-  corner() { return this.world.maxX - this.size - 6; }
+  corner() { return Math.max(this.world.minX, this.world.maxX - this.size - 6 - this.cornerShift); }
 
   surfaceTop(): number | null {
     if (!this.on) return this.world.floor;

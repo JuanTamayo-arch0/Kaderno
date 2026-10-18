@@ -106,7 +106,7 @@ export function RoomsCard() {
           </View>
           <Ionicons name="chevron-forward" size={18} color={C.muted} />
         </Pressable>
-        {patio.length > 1 && <View style={{ marginTop: 10 }}><PetPatio members={patio} height={88} compact greetings={live.greetings} /></View>}
+        {patio.length > 1 && !pets.prefs.friendsEverywhere && pets.prefs.enabled && <View style={{ marginTop: 10 }}><PetPatio members={patio} height={88} compact greetings={live.greetings} /></View>}
         {canJoin ? (
           <View style={{ marginTop: 10, padding: 12, borderRadius: 12, backgroundColor: '#142a22', borderWidth: 1, borderColor: '#22604a', gap: 8 }}>
             <Text style={{ color: C.text, fontSize: 13.5 }}>{proposalText(p!, now)}</Text>

@@ -190,3 +190,17 @@ export class PatioSim {
     });
   }
 }
+
+/**
+ * Qué mascotas de la sala se sueltan por la pantalla: primero las que juegan,
+ * luego las que pasean, las enfocadas y las dormidas. Devuelve hasta `max`,
+ * ordenadas por id para que cada una conserve su lugar en la esquina.
+ */
+export function pickFriends<T extends { uid: string; state: PatioState }>(list: T[], max: number, includeAway: boolean): T[] {
+  const order: Record<PatioState, number> = { break: 0, online: 1, work: 2, away: 3 };
+  return list
+    .filter((x) => includeAway || x.state !== 'away')
+    .sort((a, b) => order[a.state] - order[b.state] || a.uid.localeCompare(b.uid))
+    .slice(0, Math.max(0, max))
+    .sort((a, b) => a.uid.localeCompare(b.uid));
+}

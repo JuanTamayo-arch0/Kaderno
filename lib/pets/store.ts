@@ -30,8 +30,10 @@ export type PetPrefs = {
   talk: TalkMode;
   /** Día (AAAA-MM-DD) en que se silenció; ese día no habla sola. */
   mutedDay: string | null;
+  /** Ver las mascotas de los compañeros de sala también fuera de la pantalla de la sala. */
+  friendsEverywhere: boolean;
 };
-export const DEFAULT_PET_PREFS: PetPrefs = { enabled: true, move: 'pasea', talk: 'importa', mutedDay: null };
+export const DEFAULT_PET_PREFS: PetPrefs = { enabled: true, move: 'pasea', talk: 'importa', mutedDay: null, friendsEverywhere: false };
 
 export type PetsState = {
   /** null = todavía no se sabe; false = falta correr schema_v16.sql. */

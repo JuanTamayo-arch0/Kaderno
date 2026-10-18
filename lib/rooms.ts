@@ -298,3 +298,17 @@ function flushGreetings(f: FocusState) {
   pending = [];
   toast(names.length === 1 ? `${names[0]} te saludó mientras te enfocabas.` : `Te saludaron mientras te enfocabas: ${names.join(', ')}.`);
 }
+
+// ---------- Para las mascotas sueltas ----------
+let memberIds: string[] = [];
+/** La pantalla de la sala dice quiénes son miembros (para mostrar dormidas a las de quien está fuera). */
+export function setRoomMembers(ids: string[]) {
+  if (ids.join(',') === memberIds.join(',')) return;
+  memberIds = ids; emit();
+}
+export function roomMembers(): string[] { return memberIds; }
+
+type RoomFx = { type: 'celebrar'; big: boolean };
+const fxLs = new Set<(fx: RoomFx) => void>();
+export function onRoomFx(fn: (fx: RoomFx) => void): () => void { fxLs.add(fn); return () => { fxLs.delete(fn); }; }
+export function roomFx(fx: RoomFx) { fxLs.forEach((f) => { try { f(fx); } catch { /* noop */ } }); }

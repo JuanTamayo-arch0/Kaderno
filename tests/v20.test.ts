@@ -228,7 +228,7 @@ test('mi presencia solo muestra la tarea si lo permito', () => {
 });
 
 // ---------- Patio de mascotas ----------
-import { PatioSim, slotX, frameFor, moodFor, ballPos, type PatioMember } from '../lib/pets/patio';
+import { PatioSim, slotX, frameFor, moodFor, ballPos, pickFriends, type PatioMember } from '../lib/pets/patio';
 import { cleanOutfit, parseGreeting } from '../lib/roomsLogic';
 
 const M = (uid: string, state: PatioMember['state'], me = false): PatioMember => ({ uid, name: uid.toUpperCase(), species: 'gato', outfit: {}, state, left: 10, me });
@@ -287,4 +287,11 @@ test('ropa y saludos que llegan por el canal se validan', () => {
   const now = 1_000_000;
   assert.equal(parseGreeting({ id: 'g', from: 'a', fromName: 'A', to: 'b', at: now - 10 * 60000 }, now), null);
   assert.equal(parseGreeting({ id: 'g', from: 'a', fromName: 'A', to: 'b', at: now }, now)!.to, 'b');
+});
+
+test('mascotas sueltas: primero las que juegan, con tope y orden estable', () => {
+  const L = [{ uid: 'd', state: 'away' as const }, { uid: 'c', state: 'work' as const }, { uid: 'b', state: 'online' as const }, { uid: 'a', state: 'break' as const }, { uid: 'e', state: 'break' as const }];
+  assert.deepEqual(pickFriends(L, 3, false).map((x) => x.uid), ['a', 'b', 'e']);
+  assert.deepEqual(pickFriends(L, 6, true).map((x) => x.uid), ['a', 'b', 'c', 'd', 'e']);
+  assert.deepEqual(pickFriends(L, 6, false).map((x) => x.uid), ['a', 'b', 'c', 'e']);
 });
