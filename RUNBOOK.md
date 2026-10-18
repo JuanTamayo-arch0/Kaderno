@@ -987,3 +987,14 @@ No necesita migración: la especie y la ropa de la mascota viajan en la presenci
 - Tocar tu propia mascota la hace saltar y decir algo.
 - Con "reducir movimiento" activado (o fuera de la web), las mascotas se muestran quietas en fila.
 - Técnico: `lib/pets/patio.ts` (simulación pura, con pruebas) y `components/rooms/PetPatio.tsx` (anima con requestAnimationFrame escribiendo directo en el estilo, sin repintar React en cada cuadro; se pausa con la pestaña oculta).
+
+## Versión 20 (parte 4): las mascotas de la sala sueltas por la pantalla
+
+Reemplaza el patio de la pantalla de la sala. No necesita migración.
+
+- **En la pantalla de la sala:** las mascotas de los compañeros (hasta 6) andan por toda la pantalla con el mismo motor de tu mascota: caminan por el piso, se suben a las tarjetas y saltan. Encima llevan el nombre (y los minutos si su dueño está enfocado). Tocarlas las saluda.
+- **Según el estado del dueño:** enfocado, se va a la esquina de abajo, al lado de la tuya, y se queda quieta; descanso, juega: persigue a las otras que descansan, salta cerca y se pasan una pelota por encima de la pantalla (también con tu mascota si tú estás en descanso); en la sala pasea; fuera duerme.
+- **En el resto de la app:** solo tu mascota, salvo que se active **Ajustes → Mascota → "Ver las mascotas de mi sala en toda la app"** (apagado por defecto). Con eso se ven hasta 3, sin nombre, sin hablar y sin capturar clics (los toques pasan a lo que hay debajo). Si tú estás enfocado, se quedan quietas en su esquina.
+- Si apagas "Mostrar la mascota", tampoco aparecen las de la sala.
+- La versión pequeña del patio sigue en la tarjeta "Enfocar juntos" de Enfoque cuando el ajuste está apagado.
+- Técnico: `lib/pets/friends.ts` (controlador de varias mascotas en una capa propia, debajo de la tuya) reutiliza `PetMotion` y las funciones de mundo compartidas de `lib/pets/dom.ts` (piso, menú lateral, tarjetas y obstáculos). `components/pets/FriendPets.tsx` lo monta en el layout.

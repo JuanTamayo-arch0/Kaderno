@@ -34,6 +34,7 @@ import { toast } from '../lib/feedback';
 import { beep, loadFocus, setFocusCompleteHandler, getFocus } from '../lib/focusTimer';
 import { duckAmbient, initAmbient } from '../lib/ambient';
 import { initRooms } from '../lib/rooms';
+import { FriendPets } from '../components/pets/FriendPets';
 import { tipById } from '../lib/breakTips';
 import { registerServiceWorker } from '../lib/push';
 import { installMotion } from '../lib/motion';
@@ -179,6 +180,7 @@ function Shell() {
           <AppSideNav />
           {session ? <GlobalPanels /> : null}
           {session ? <PetBuddy /> : null}
+          {session ? <FriendPets /> : null}
           <FeedbackHost />
         </ThemeProvider>
       </View>

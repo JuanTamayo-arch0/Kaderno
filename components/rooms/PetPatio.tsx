@@ -216,10 +216,10 @@ export function patioMembers(
   return out.sort((a, b) => a.uid.localeCompare(b.uid));
 }
 
-export function PatioHint({ hasPet, count }: { hasPet: boolean; count: number }) {
-  return (
-    <Text style={{ color: C.muted, fontSize: 12, marginTop: 6 }}>
-      {!hasPet ? 'Adopta una mascota (en Mascota) para que aparezca aquí.' : count > 1 ? 'Toca la mascota de alguien para saludar. En el descanso juegan juntas.' : 'Cuando entren tus compañeros, sus mascotas aparecen aquí.'}
-    </Text>
-  );
+export function PatioHint({ hasPet, count, enabled = true }: { hasPet: boolean; count: number; enabled?: boolean }) {
+  const text = !enabled ? 'Las mascotas están apagadas (Ajustes → Mascota).'
+    : !hasPet ? 'Adopta una mascota (en Mascota) para que ande por la sala con las de tus compañeros.'
+    : count > 1 ? 'Las mascotas de la sala andan por la pantalla. Toca la de alguien para saludar; en el descanso juegan juntas.'
+    : 'Cuando entren tus compañeros, sus mascotas aparecen por la pantalla.';
+  return <Text style={{ color: C.muted, fontSize: 12.5, lineHeight: 17 }}>{text}</Text>;
 }

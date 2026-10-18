@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -13,9 +13,9 @@ import { copyText } from '../../lib/fileIO';
 import { Screen, Card, Button, Toggle, EmptyState, Skeleton } from '../../components/ds';
 import { Avatar, useNow } from '../../components/focus/RoomsCard';
 import { RequireAuth } from '../../components/RequireAuth';
-import { PetPatio, PatioHint, patioMembers } from '../../components/rooms/PetPatio';
+import { PatioHint, patioMembers } from '../../components/rooms/PetPatio';
 import { usePets, activePet } from '../../lib/pets/store';
-import { petsSeen, sendGreeting } from '../../lib/rooms';
+import { petsSeen, setRoomMembers, roomFx } from '../../lib/rooms';
 
 // ============================================================
 //  Sala de estudio: quién está, en qué estado y cuánto le queda,
@@ -58,6 +58,17 @@ function Sala() {
   const lastAt = f.state.last?.at ?? 0;
   const onlineSig = Object.values(live.online).map((o) => `${o.uid}:${o.state}`).join(',');
   useEffect(() => { const t = setTimeout(loadPeople, 2000); return () => clearTimeout(t); }, [lastAt, onlineSig, loadPeople]);
+  // Las mascotas sueltas necesitan saber quiénes son de la sala, y celebran cada pomodoro del grupo.
+  const peopleIds = people.map((p) => p.user_id).join(',');
+  useEffect(() => { setRoomMembers(peopleIds ? peopleIds.split(',') : []); }, [peopleIds]);
+  useEffect(() => () => setRoomMembers([]), []);
+  const doneNow = people.reduce((n, p) => n + (p.pomodoros || 0), 0);
+  const prevDone = useRef<number | null>(null);
+  useEffect(() => {
+    if (!people.length) return;
+    if (prevDone.current !== null && doneNow > prevDone.current) roomFx({ type: 'celebrar', big: !!room && doneNow >= room.goal && prevDone.current < room.goal });
+    prevDone.current = doneNow;
+  }, [doneNow]);
 
   if (room === undefined) return <Screen title="Sala" back="/enfoque"><Skeleton height={120} /><Skeleton height={220} /></Screen>;
   if (!room) {
@@ -204,15 +215,7 @@ function Sala() {
       <View style={{ flexDirection: isWide ? 'row' : 'column', gap: 16, alignItems: 'flex-start' }}>
         <View style={{ flex: isWide ? 3 : undefined, width: isWide ? undefined : '100%', gap: 16, minWidth: 0 }}>
           {together}
-          {patio.length > 0 || !myPet ? (
-            <Card>
-              {patio.length > 0 && (
-                <PetPatio members={patio} height={isWide ? 168 : 132} onTapPet={(uid) => { void sendGreeting(uid); }}
-                  celebrate={{ key: goal.done + 1, big: goal.done === goal.goal }} greetings={live.greetings} />
-              )}
-              <PatioHint hasPet={!!myPet} count={patio.length} />
-            </Card>
-          ) : null}
+          <PatioHint hasPet={!!myPet} count={patio.length} enabled={pets.prefs.enabled} />
           {list}
         </View>
         <View style={{ flex: isWide ? 2 : undefined, width: isWide ? undefined : '100%', gap: 16, minWidth: 0 }}>
