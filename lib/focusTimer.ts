@@ -37,6 +37,9 @@ export type FocusState = {
   distractions: number;       // anotaciones en el pomodoro en curso
   last: { minutes: number; distractions: number; at: number; n: number } | null; // resumen del último pomodoro
   doneToday: { day: string; n: number }; // pomodoros completos hoy (para "Pomodoro 3 terminado")
+  // v20: Enfocar juntos
+  roomId: string | null;      // sala activa: los pomodoros cuentan para su meta
+  startsAt: number | null;    // "Empezar juntos": hora a la que arranca el reloj
 };
 
 const KEY = 'kaderno.focus';
@@ -44,6 +47,7 @@ const DEFAULT: FocusState = {
   mode: 'work', running: false, endsAt: null, remainingMs: 25 * 60000,
   workMin: 25, breakMin: 5, longBreakMin: 15, subjectId: null, taskId: null, taskTitle: null, cycle: 0, sound: true,
   tipId: null, tipsDay: '', tipsUsed: [], parked: [], distractions: 0, last: null, doneToday: { day: '', n: 0 },
+  roomId: null, startsAt: null,
 };
 
 let state: FocusState = { ...DEFAULT };
@@ -70,6 +74,11 @@ export function loadFocus(): void {
     try { state = { ...DEFAULT, ...JSON.parse(raw) }; } catch { /* noop */ }
     // Si terminó mientras la app estaba cerrada, se cierra el ciclo.
     if (state.running && state.endsAt && state.endsAt <= Date.now()) finish(true);
+    // Un "Empezar juntos" que quedó programado antes de recargar.
+    if (!state.running && state.startsAt) {
+      if (state.startsAt > Date.now()) { const at = state.startsAt; scheduled = setTimeout(() => startFocusAt(at, state.workMin), at - Date.now()); }
+      else { const ok = state.startsAt + state.workMin * 60000 - Date.now() > 60000; const at = state.startsAt; state = { ...state, startsAt: null }; if (ok) startFocusAt(at, state.workMin); }
+    }
     emit(); syncTicker();
   };
   if (Platform.OS === 'web' && typeof localStorage !== 'undefined') apply(localStorage.getItem(KEY));
@@ -115,7 +124,7 @@ function finish(silent: boolean, skipped = false) {
     // Saltar a mitad de un pomodoro guarda solo lo que se alcanzó a hacer
     // (antes guardaba el pomodoro completo y regalaba minutos y monedas).
     const minutes = skipped ? Math.floor((totalMs(s) - remainingMs(s)) / 60000) : Math.max(1, s.workMin);
-    if (minutes >= 1) addFocusSession(minutes, s.subjectId, s.taskId).catch(() => {});
+    if (minutes >= 1) addFocusSession(minutes, s.subjectId, s.taskId, s.roomId).catch(() => {});
     const cycle = (s.cycle + 1) % 4;
     const brk = cycle === 0 ? s.longBreakMin : s.breakMin;
     // Sugerencia para el descanso, sin repetir las de hoy.
@@ -138,10 +147,11 @@ function finish(silent: boolean, skipped = false) {
 export function startFocus(opts: Partial<Pick<FocusState, 'subjectId' | 'taskId' | 'taskTitle'>> = {}) {
   loadFocus();
   const rem = state.remainingMs > 0 ? state.remainingMs : totalMs();
-  set({ ...opts, running: true, endsAt: Date.now() + rem });
+  cancelScheduled();
+  set({ ...opts, running: true, endsAt: Date.now() + rem, startsAt: null });
 }
-export function pauseFocus() { set({ running: false, remainingMs: remainingMs(), endsAt: null }); }
-export function resetFocus() { set({ running: false, endsAt: null, mode: 'work', remainingMs: Math.max(1, state.workMin) * 60000, distractions: 0, tipId: null }); }
+export function pauseFocus() { cancelScheduled(); set({ running: false, remainingMs: remainingMs(), endsAt: null, startsAt: null }); }
+export function resetFocus() { cancelScheduled(); set({ running: false, endsAt: null, mode: 'work', remainingMs: Math.max(1, state.workMin) * 60000, distractions: 0, tipId: null, startsAt: null }); }
 export function skipFocus() { finish(true, true); }
 export function configureFocus(patch: Partial<Pick<FocusState, 'workMin' | 'breakMin' | 'longBreakMin' | 'subjectId' | 'taskId' | 'taskTitle' | 'sound'>>) {
   const next = { ...state, ...patch };
@@ -149,6 +159,36 @@ export function configureFocus(patch: Partial<Pick<FocusState, 'workMin' | 'brea
     next.remainingMs = Math.max(1, next.mode === 'work' ? next.workMin : next.breakMin) * 60000;
   }
   state = next; save(); emit();
+}
+
+// ---------- Enfocar juntos ----------
+let scheduled: ReturnType<typeof setTimeout> | null = null;
+function cancelScheduled() { if (scheduled) { clearTimeout(scheduled); scheduled = null; } }
+
+/** La sala activa (los pomodoros que termines cuentan para ella). */
+export function setFocusRoom(roomId: string | null) { loadFocus(); if (state.roomId !== roomId) set({ roomId }); }
+
+/**
+ * "Empezar juntos": arranca un pomodoro de `workMin` a la hora `startAt`, de modo
+ * que todos terminen a la vez. Si ya pasó la hora, arranca con lo que queda.
+ * Si queda menos de un minuto no hace nada y devuelve false.
+ */
+export function startFocusAt(startAt: number, workMin: number): boolean {
+  loadFocus();
+  cancelScheduled();
+  const total = Math.max(1, workMin) * 60000;
+  const endsAt = startAt + total;
+  if (endsAt - Date.now() < 60000) return false;
+  const go = () => {
+    scheduled = null;
+    set({ mode: 'work', workMin, running: true, endsAt, remainingMs: Math.max(0, endsAt - Date.now()), startsAt: null, distractions: 0, tipId: null });
+  };
+  const wait = startAt - Date.now();
+  if (wait > 0) {
+    set({ mode: 'work', workMin, running: false, endsAt: null, remainingMs: total, startsAt: startAt, tipId: null });
+    scheduled = setTimeout(go, wait);
+  } else go();
+  return true;
 }
 
 /** "Otra idea": cambia la sugerencia del descanso por otra que no haya salido hoy. */

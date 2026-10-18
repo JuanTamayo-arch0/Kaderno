@@ -150,3 +150,79 @@ test('la mascota sugiere la pausa, salvo si está silenciada', () => {
   assert.equal(r?.say, 'Toma agua.');
   assert.equal(react({ type: 'pausa', tip: 'Toma agua.' }, { ...initialBrain(), mutedUntil: now + 1000 }, 'perro', now), null);
 });
+
+// ---------- Enfocar juntos ----------
+import {
+  normalizeCode, formatCode, joinLink, personState, mergePeople, groupProgress, makeProposal, proposalOpen, joinPlan,
+  parseProposal, parsePresence, myPresence, stateCounts, proposalText, type PresenceInfo,
+} from '../lib/roomsLogic';
+
+test('códigos de sala: se limpian y se rechazan los ambiguos', () => {
+  assert.equal(normalizeCode(' kd7-x4p '), 'KD7X4P');
+  assert.equal(normalizeCode('ABC12'), null);       // corto
+  assert.equal(normalizeCode('ABCDE1'), null);      // el 1 no existe en los códigos
+  assert.equal(normalizeCode('ABCDEO'), null);      // ni la O
+  assert.equal(formatCode('KD7X4P'), 'KD7-X4P');
+  assert.equal(joinLink('https://kaderno.app/', 'KD7X4P'), 'https://kaderno.app/sala/unirse?codigo=KD7X4P');
+});
+
+const P = (o: Partial<PresenceInfo>): PresenceInfo => ({ uid: 'u', name: 'X', pet: null, state: 'idle', endsAt: null, remainingMs: null, task: null, at: 0, ...o });
+
+test('estado de cada persona en la sala', () => {
+  const now = 1_000_000;
+  assert.deepEqual(personState(undefined, now), { state: 'away', label: 'Fuera', detail: '' });
+  assert.equal(personState(P({ state: 'work', endsAt: now + 12 * 60000 - 1 }), now).detail, 'quedan 12 min');
+  assert.equal(personState(P({ state: 'break', remainingMs: 90_000 }), now).detail, 'vuelve en 2 min');
+  assert.equal(personState(P({ state: 'idle' }), now).label, 'En la sala');
+});
+
+test('lista de la sala: tú primero, luego enfocados, descanso, en la sala y fuera', () => {
+  const now = 0;
+  const people = [
+    { user_id: 'a', name: 'Ana', pomodoros: 2, minutes: 50 },
+    { user_id: 'b', name: 'Beto', pomodoros: 1, minutes: 25 },
+    { user_id: 'c', name: 'Caro', pomodoros: 0, minutes: 0 },
+    { user_id: 'me', name: 'Yo', pomodoros: 1, minutes: 25 },
+  ];
+  const online = { b: P({ uid: 'b', state: 'break' }), c: P({ uid: 'c', state: 'work', endsAt: 60000 * 5 }), me: P({ uid: 'me' }), n: P({ uid: 'n', name: 'Nuevo' }) };
+  const rows = mergePeople(people, online, 'me', now);
+  assert.deepEqual(rows.map((r) => r.user_id), ['me', 'c', 'b', 'n', 'a']);
+  assert.equal(stateCounts(rows), '1 enfocado, 1 en descanso, 2 en la sala');
+  const g = groupProgress(people, 8);
+  assert.equal(g.label, 'Juntos hoy: 4 de 8 pomodoros');
+  assert.equal(groupProgress(people, 3).reached, true);
+});
+
+test('Empezar juntos: todos terminan a la misma hora', () => {
+  const now = 1_000_000;
+  const p = makeProposal('a', 'Ana', 25, now, 0.5);
+  assert.equal(p.startAt, now + 10_000);
+  assert.deepEqual(joinPlan(p, now + 4000), { waitMs: 6000, endsAt: now + 10_000 + 25 * 60000, lateMin: 0 });
+  // Unirse tarde: termina igual que los demás.
+  const late = joinPlan(p, now + 10_000 + 3 * 60000 + 5);
+  assert.equal(late.waitMs, 0); assert.equal(late.lateMin, 3); assert.equal(late.endsAt, now + 10_000 + 25 * 60000);
+  assert.equal(proposalOpen(p, now + 10_000 + 23 * 60000), true);
+  assert.equal(proposalOpen(p, now + 10_000 + 24 * 60000 + 1), false);
+  assert.match(proposalText(p, now), /^Ana propone un pomodoro de 25 min\. Empieza en 10 s\.$/);
+  assert.match(proposalText(p, now + 10_000 + 60000), /Quedan 24 min/);
+});
+
+test('lo que llega por el canal se valida', () => {
+  const now = 1_000_000;
+  assert.equal(parseProposal(null, now), null);
+  assert.equal(parseProposal({ id: 'x', by: 'a', name: 'A', workMin: 999, startAt: now }, now), null);
+  assert.equal(parseProposal({ id: 'x', by: 'a', name: 'A', workMin: 25, startAt: now + 10 * 60000 }, now), null); // muy en el futuro
+  assert.ok(parseProposal({ id: 'x', by: 'a', name: 'A'.repeat(99), workMin: 25, startAt: now + 5000 }, now)!.name.length <= 40);
+  const pr = parsePresence({ uid: 'u', name: 5, state: 'hackeando', endsAt: 'x', task: 'T' });
+  assert.equal(pr!.state, 'idle'); assert.equal(pr!.name, 'Alguien'); assert.equal(pr!.endsAt, null);
+});
+
+test('mi presencia solo muestra la tarea si lo permito', () => {
+  const meP = { uid: 'me', name: 'Yo', pet: 'gato' };
+  const f = { running: true, mode: 'work' as const, endsAt: 5000, remainingMs: 4000, taskTitle: 'Informe', startedPomodoro: false };
+  assert.equal(myPresence(meP, f, false, 0).task, null);
+  assert.equal(myPresence(meP, f, true, 0).task, 'Informe');
+  const paused = myPresence(meP, { ...f, running: false, startedPomodoro: true }, true, 0);
+  assert.equal(paused.state, 'work'); assert.equal(paused.endsAt, null); assert.equal(paused.remainingMs, 4000);
+  assert.equal(myPresence(meP, { ...f, running: false, startedPomodoro: false }, true, 0).state, 'idle');
+});
