@@ -67,6 +67,7 @@ export class PetController {
   private bText: HTMLDivElement;
   private bActs: HTMLDivElement;
   private bName: HTMLSpanElement;
+  private note: HTMLDivElement;      // nota musical flotando (enfoque con sonido de fondo)
   private motion: PetMotion;
   private raf = 0;
   private timer: ReturnType<typeof setTimeout> | null = null;
@@ -100,6 +101,20 @@ export class PetController {
     el.addEventListener('focus', () => { el.style.outline = `2px solid ${opts.palette.brand}`; el.style.outlineOffset = '2px'; el.style.borderRadius = '12px'; });
     el.addEventListener('blur', () => { el.style.outline = 'none'; });
 
+    // Nota musical: se muestra sobre la mascota mientras suena el fondo.
+    const note = (this.note = document.createElement('div'));
+    note.setAttribute('aria-hidden', 'true');
+    Object.assign(note.style, { position: 'absolute', left: '0', top: '0', width: '18px', height: '18px', display: 'none', pointerEvents: 'none' });
+    note.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="${opts.palette.brand}"><path d="M9 17.5a2.5 2.5 0 1 1-2-2.45V5l11-2v11.5a2.5 2.5 0 1 1-2-2.45V6.4L9 7.7z"/></svg>`;
+    const inner = note.firstElementChild as HTMLElement | null;
+    if (inner && !this.reduce && (inner as any).animate) {
+      inner.animate([
+        { transform: 'translateY(0) rotate(-8deg)', opacity: 0.9 },
+        { transform: 'translateY(-10px) rotate(8deg)', opacity: 1 },
+        { transform: 'translateY(0) rotate(-8deg)', opacity: 0.9 },
+      ], { duration: 2400, iterations: Infinity, easing: 'ease-in-out' });
+    }
+
     const b = (this.bubble = document.createElement('div'));
     b.setAttribute('role', 'status');
     b.setAttribute('aria-live', 'polite');
@@ -127,7 +142,7 @@ export class PetController {
     Object.assign(tail.style, { position: 'absolute', bottom: '-8px', left: '50%', width: '12px', height: '12px', marginLeft: '-6px', background: opts.palette.paper, boxShadow: `3px 3px 0 0 ${opts.palette.ink}`, transform: 'rotate(45deg)' });
     b.append(head, this.bText, this.bActs, tail);
 
-    L.append(b, el);
+    L.append(b, el, this.note);
     document.body.appendChild(L);
 
     const world: World = {
@@ -256,6 +271,7 @@ export class PetController {
     const rot = m.mode === 'held' ? Math.sin(now / 160) * 7 : 0;
     this.el.style.transformOrigin = m.mode === 'held' ? '50% 8%' : '50% 100%';
     this.el.style.transform = `translate(${m.x.toFixed(1)}px,${m.y.toFixed(1)}px) rotate(${rot.toFixed(1)}deg) scale(${sx * m.dir},${sy})`;
+    if (this.note.style.display !== 'none') this.note.style.transform = `translate(${(m.x + PET_SIZE - 14).toFixed(1)}px,${(m.y - 10).toFixed(1)}px)`;
     this.placeBubble();
     // En reposo y sin globo: ~8 cuadros por segundo alcanzan.
     if (m.resting && m.squash <= 0 && this.bubble.style.display === 'none') this.timer = setTimeout(() => this.tick(performance.now()), 120);
@@ -335,6 +351,13 @@ export class PetController {
     this.motion.focus = on;
     this.setMood(on ? 'concentrado' : 'normal');
     if (on) this.hideBubble();
+    this.start();
+  }
+  /** Nota musical sobre la mascota (enfoque con sonido de fondo). */
+  setMusic(on: boolean) {
+    const want = on ? 'block' : 'none';
+    if (this.note.style.display === want) return;
+    this.note.style.display = want;
     this.start();
   }
   celebrate() { if (!this.reduce) { this.motion.celebrate(2); this.start(); } }

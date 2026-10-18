@@ -59,7 +59,7 @@ export function GlobalPanels() {
   if (!p) return null;
   return (
     <>
-      <AddSheet visible={p.add} subjects={subjects} />
+      <AddSheet visible={p.add} initialText={p.addText} subjects={subjects} />
       <TaskModal
         visible={p.task.open} subjects={subjects} editTask={p.task.edit} draft={p.task.draft}
         onClose={closeTask}
@@ -98,11 +98,11 @@ function Panel({ visible, onClose, children, top, maxWidth = 560 }: { visible: b
 }
 
 // ---------- Agregar ----------
-function AddSheet({ visible, subjects }: { visible: boolean; subjects: Subject[] }) {
+function AddSheet({ visible, subjects, initialText = '' }: { visible: boolean; subjects: Subject[]; initialText?: string }) {
   const router = useRouter();
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
-  useEffect(() => { if (visible) { setText(''); loadTaskTypes().catch(() => {}); } }, [visible]);
+  useEffect(() => { if (visible) { setText(initialText); loadTaskTypes().catch(() => {}); } }, [visible, initialText]);
   const parsed: QuickResult | null = useMemo(
     () => (text.trim() ? parseQuickAdd(text, subjects, taskTypeList()) : null),
     [text, subjects],

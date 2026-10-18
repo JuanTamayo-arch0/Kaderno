@@ -19,6 +19,7 @@ import { lineFor } from '../../lib/pets/lines';
 import {
   activePet, checkAchievements, isMutedToday, loadPetPrefs, loadPets, onPetEvent, usePets, type PetSignal,
 } from '../../lib/pets/store';
+import { getAmbientStatus, subscribeAmbient } from '../../lib/ambient';
 import { subscribeFocus, startFocus } from '../../lib/focusTimer';
 import { getTasks, getSubjects, getFocusDetail, moveTaskDate, type Task } from '../../lib/db';
 import { bucketOf, dayDiff, dueDay, dueMoment, isoDate, startOfDay } from '../../lib/time';
@@ -179,6 +180,15 @@ export function PetBuddy() {
       if (on && !was) fns.current.handle({ type: 'enfoque_inicio' });
       was = on;
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [show, pet?.id]);
+
+  // Con sonido de fondo: una nota musical flota sobre la mascota.
+  useEffect(() => {
+    if (!show) return;
+    const sync = () => { const st = getAmbientStatus(); ctl.current?.setMusic(st.playing && !st.preview); };
+    sync();
+    return subscribeAmbient(sync);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show, pet?.id]);
 

@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { addFocusSession } from './db';
+import { pickTip, dayKey, addParked, removeParked as dropParked, type Parked } from './breakTips';
 
 export type FocusMode = 'work' | 'break';
 export type FocusState = {
@@ -28,12 +29,21 @@ export type FocusState = {
   taskTitle: string | null;
   cycle: number;              // pomodoros completados en la tanda (0..3)
   sound: boolean;
+  // v20: pausas guiadas y "Anotar para después"
+  tipId: string | null;       // sugerencia del descanso actual
+  tipsDay: string;            // día de `tipsUsed`
+  tipsUsed: string[];         // sugerencias ya mostradas hoy
+  parked: Parked[];           // lo anotado para después (queda hasta que lo resuelvas)
+  distractions: number;       // anotaciones en el pomodoro en curso
+  last: { minutes: number; distractions: number; at: number; n: number } | null; // resumen del último pomodoro
+  doneToday: { day: string; n: number }; // pomodoros completos hoy (para "Pomodoro 3 terminado")
 };
 
 const KEY = 'kaderno.focus';
 const DEFAULT: FocusState = {
   mode: 'work', running: false, endsAt: null, remainingMs: 25 * 60000,
   workMin: 25, breakMin: 5, longBreakMin: 15, subjectId: null, taskId: null, taskTitle: null, cycle: 0, sound: true,
+  tipId: null, tipsDay: '', tipsUsed: [], parked: [], distractions: 0, last: null, doneToday: { day: '', n: 0 },
 };
 
 let state: FocusState = { ...DEFAULT };
@@ -108,9 +118,18 @@ function finish(silent: boolean, skipped = false) {
     if (minutes >= 1) addFocusSession(minutes, s.subjectId, s.taskId).catch(() => {});
     const cycle = (s.cycle + 1) % 4;
     const brk = cycle === 0 ? s.longBreakMin : s.breakMin;
-    state = { ...state, mode: 'break', cycle, running: true, endsAt: Date.now() + Math.max(1, brk) * 60000, remainingMs: Math.max(1, brk) * 60000 };
+    // Sugerencia para el descanso, sin repetir las de hoy.
+    const today = dayKey();
+    const used = s.tipsDay === today ? s.tipsUsed : [];
+    const tip = pickTip(cycle === 0, used);
+    const n = (s.doneToday?.day === today ? s.doneToday.n : 0) + (minutes >= 1 ? 1 : 0);
+    state = {
+      ...state, mode: 'break', cycle, running: true, endsAt: Date.now() + Math.max(1, brk) * 60000, remainingMs: Math.max(1, brk) * 60000,
+      tipId: tip.id, tipsDay: today, tipsUsed: tip.used,
+      last: { minutes, distractions: s.distractions, at: Date.now(), n }, distractions: 0, doneToday: { day: today, n },
+    };
   } else {
-    state = { ...state, mode: 'work', running: false, endsAt: null, remainingMs: Math.max(1, state.workMin) * 60000 };
+    state = { ...state, mode: 'work', running: false, endsAt: null, remainingMs: Math.max(1, state.workMin) * 60000, tipId: null };
   }
   save(); emit(); syncTicker();
   if (!silent) onComplete?.(done, state);
@@ -122,7 +141,7 @@ export function startFocus(opts: Partial<Pick<FocusState, 'subjectId' | 'taskId'
   set({ ...opts, running: true, endsAt: Date.now() + rem });
 }
 export function pauseFocus() { set({ running: false, remainingMs: remainingMs(), endsAt: null }); }
-export function resetFocus() { set({ running: false, endsAt: null, mode: 'work', remainingMs: Math.max(1, state.workMin) * 60000 }); }
+export function resetFocus() { set({ running: false, endsAt: null, mode: 'work', remainingMs: Math.max(1, state.workMin) * 60000, distractions: 0, tipId: null }); }
 export function skipFocus() { finish(true, true); }
 export function configureFocus(patch: Partial<Pick<FocusState, 'workMin' | 'breakMin' | 'longBreakMin' | 'subjectId' | 'taskId' | 'taskTitle' | 'sound'>>) {
   const next = { ...state, ...patch };
@@ -131,6 +150,25 @@ export function configureFocus(patch: Partial<Pick<FocusState, 'workMin' | 'brea
   }
   state = next; save(); emit();
 }
+
+/** "Otra idea": cambia la sugerencia del descanso por otra que no haya salido hoy. */
+export function nextTip() {
+  if (state.mode !== 'break') return;
+  const today = dayKey();
+  const used = state.tipsDay === today ? state.tipsUsed : [];
+  const tip = pickTip(state.cycle === 0, used, Math.random(), state.tipId);
+  set({ tipId: tip.id, tipsDay: today, tipsUsed: tip.used });
+}
+
+/** Anotar para después: guarda la idea y cuenta una distracción del pomodoro en curso. */
+export function parkThought(text: string) {
+  loadFocus();
+  const next = addParked(state.parked ?? [], text);
+  if (next === state.parked) return;
+  set({ parked: next, distractions: state.mode === 'work' && (state.running || state.remainingMs < totalMs()) ? state.distractions + 1 : state.distractions });
+}
+export function removeParked(id: string) { set({ parked: dropParked(state.parked ?? [], id) }); }
+export function clearParked() { set({ parked: [] }); }
 
 /** Hook: se repinta cada medio segundo mientras corre. */
 export function useFocusTimer() {

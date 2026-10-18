@@ -32,6 +32,7 @@ export type PetEvent =
   | { type: 'paseo'; next: TaskHint | null }
   | { type: 'enfoque_inicio' }
   | { type: 'enfoque_fin'; minutes: number }
+  | { type: 'pausa'; tip: string }
   | { type: 'toque' }
   | { type: 'agarrar' }
   | { type: 'despierta' }
@@ -132,6 +133,9 @@ export function react(ev: PetEvent, s: BrainState, sp: Species, now: number, see
     case 'enfoque_fin':
       if (ev.minutes < 1) return { mood: 'normal', say: now < s.mutedUntil ? undefined : L('enfoque_corto'), ms: 3500 };
       return { mood: 'feliz', moodMs: 3500, celebrate: true, say: now < s.mutedUntil ? undefined : L('enfoque_fin', { min: ev.minutes }), ms: 4500 };
+    case 'pausa':
+      // Solo una sugerencia por descanso, y nunca si la silenciaste.
+      return now < s.mutedUntil ? null : { mood: 'feliz', moodMs: 3000, say: ev.tip, ms: 7000 };
     case 'toque':
       if (s.focusing) return { say: L('enfoque_activo'), actions: ['terminar_enfoque', 'seguir'], ms: 8000 };
       return { say: L('que_hacemos'), actions: ['que_hago', 'enfocar', 'tienda'], ms: 9000 };

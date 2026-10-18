@@ -1,6 +1,6 @@
 # PLAN v20: Estudiar mejor y crear el hábito
 
-Estado: plan, sin construir. Se implementa por fases desde el lunes 19 de octubre de 2026.
+Estado: B y C construidas (domingo 18 de octubre, rama v20-enfoque). El resto se implementa por fases.
 Diseño en el canvas "Estudio y hábitos de Kaderno". Base: la versión 19 (PR #12) ya fusionada.
 
 Este plan junta las 12 ideas que salieron de la investigación (sonidos, repaso espaciado, simulacros, rachas, planes "si-entonces", etc.) y una revisión completa de las tarjetas de Repaso: cómo entran, cómo se programan y cómo se ven.
@@ -439,3 +439,4 @@ Cada fase va en su propio PR, con su parte de `schema_v19.sql` (el archivo crece
 5. Límites de IA por día: 5 simulacros, 10 "Ponme a prueba", 30 creaciones de tarjetas.
 6. Las pausas guiadas no dan monedas.
 7. La racha principal es la semanal (meta de días); la diaria queda como dato secundario.
+8. (Cambio al construir B) Todos los sonidos se generan en el navegador en vez de usar grabaciones CC0: pesan cero, no dependen de licencias ni de descargas y el volumen quedó medido y parejo. Las grabaciones quedan como mejora opcional.

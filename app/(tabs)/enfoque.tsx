@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { Platform, Pressable, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -12,12 +12,18 @@ import { Screen, Button, Card, SectionLabel, Dot, Toggle } from '../../component
 import { SubjectPicker } from '../../components/SubjectPicker';
 import { ActionMenu } from '../../components/ActionMenu';
 import { fmtMin } from '../../components/TaskRow';
+import { SoundRow, MixerSheet } from '../../components/focus/AmbientControls';
+import { BreakCoach, ParkButton, ParkedList, PomodoroSummary } from '../../components/focus/FocusParts';
+import { unlockAmbient } from '../../lib/ambient';
 
 // ============================================================
 //  Enfoque (Pomodoro).
 //  El reloj vive en lib/focusTimer.ts: no se atrasa con la pestaña en
 //  segundo plano, sigue corriendo al cambiar de pantalla y suena al
 //  terminar. Se puede elegir una tarea para sumarle el tiempo.
+//
+//  v20: sonido de fondo con mezclador (lib/ambient.ts), pausa guiada en
+//  el descanso y "Anotar para después" (tecla D) durante el enfoque.
 // ============================================================
 
 const RAD = 100;
@@ -31,13 +37,22 @@ export default function Enfoque() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [detail, setDetail] = useState<{ todayMin: number; weekMin: number; streak: number; byDay: { label: string; min: number }[]; recent: FocusSession[] }>({ todayMin: 0, weekMin: 0, streak: 0, byDay: [], recent: [] });
   const [pickTask, setPickTask] = useState(false);
+  const [mixer, setMixer] = useState(false);
+  const [onScreen, setOnScreen] = useState(false);
 
   const load = useCallback(() => {
     getSubjects().then(setSubjects).catch(() => {});
     getTasks().then((t) => setTasks(t.filter((x) => x.status !== 'done').sort(compareDue))).catch(() => {});
     getFocusDetail().then(setDetail).catch(() => {});
   }, []);
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useFocusEffect(useCallback(() => { load(); setOnScreen(true); return () => setOnScreen(false); }, [load]));
+  // Al cerrar un pomodoro, refresca las cifras (el guardado tarda un instante).
+  const lastAt = s.last?.at ?? 0;
+  useEffect(() => {
+    if (!lastAt) return;
+    const t = setTimeout(() => getFocusDetail().then(setDetail).catch(() => {}), 1500);
+    return () => clearTimeout(t);
+  }, [lastAt]);
 
   const subjName = (sid: string | null) => subjects.find((x) => x.id === sid)?.name ?? 'Sin materia';
   const subjColor = (sid: string | null) => subjects.find((x) => x.id === sid)?.color ?? C.muted;
@@ -58,10 +73,14 @@ export default function Enfoque() {
       </View>
 
       <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
-        <Button label={s.running ? 'Pausar' : started ? 'Seguir' : 'Empezar'} icon={s.running ? 'pause' : 'play'} size="lg" onPress={() => s.running ? pauseFocus() : startFocus()} style={{ flex: 2 }} />
+        <Button label={s.running ? 'Pausar' : started ? 'Seguir' : 'Empezar'} icon={s.running ? 'pause' : 'play'} size="lg"
+          onPress={() => { if (s.running) pauseFocus(); else { unlockAmbient(); startFocus(); } }} style={{ flex: 2 }} />
         <Button label="Reiniciar" kind="secondary" size="lg" onPress={resetFocus} disabled={!started} style={{ flex: 1 }} />
       </View>
       {started && <Button label={s.mode === 'work' ? 'Terminar y descansar' : 'Saltar descanso'} kind="ghost" size="sm" onPress={skipFocus} />}
+
+      {s.mode === 'break' && s.running ? <BreakCoach s={s} /> : <ParkButton s={s} active={onScreen} />}
+      <SoundRow running={s.running} onMix={() => setMixer(true)} />
 
       <View style={{ width: '100%', gap: 10 }}>
         <View>
@@ -95,6 +114,8 @@ export default function Enfoque() {
   const maxMin = Math.max(30, ...detail.byDay.map((d) => d.min));
   const stats = (
     <View style={{ flex: 1, minWidth: 0, gap: 14, width: isWide ? undefined : '100%' }}>
+      <PomodoroSummary s={s} todayMin={detail.todayMin} />
+      {(s.mode === 'break' || !s.running) && <ParkedList parked={s.parked ?? []} />}
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <Stat label="Hoy" value={fmtMin(detail.todayMin).replace(' min', 'm').replace(' h ', 'h ')} />
         <Stat label="7 días" value={fmtMin(detail.weekMin).replace(' min', 'm').replace(' h ', 'h ')} />
@@ -133,6 +154,7 @@ export default function Enfoque() {
         {timer}
         {stats}
       </View>
+      <MixerSheet visible={mixer} onClose={() => setMixer(false)} running={s.running} />
       <ActionMenu visible={pickTask} title="Elegir tarea" onClose={() => setPickTask(false)}
         actions={tasks.slice(0, 12).map((t) => ({
           label: t.title, icon: 'ellipse-outline', hint: fmtDue(t),
