@@ -13,6 +13,9 @@ import { copyText } from '../../lib/fileIO';
 import { Screen, Card, Button, Toggle, EmptyState, Skeleton } from '../../components/ds';
 import { Avatar, useNow } from '../../components/focus/RoomsCard';
 import { RequireAuth } from '../../components/RequireAuth';
+import { PetPatio, PatioHint, patioMembers } from '../../components/rooms/PetPatio';
+import { usePets, activePet } from '../../lib/pets/store';
+import { petsSeen, sendGreeting } from '../../lib/rooms';
 
 // ============================================================
 //  Sala de estudio: quién está, en qué estado y cuánto le queda,
@@ -38,6 +41,7 @@ function Sala() {
   const [room, setRoom] = useState<StudyRoom | null | undefined>(undefined);
   const [people, setPeople] = useState<RoomPerson[]>([]);
   const [err, setErr] = useState<string | null>(null);
+  const pets = usePets();
 
   const loadPeople = useCallback(() => { if (id) roomPeople(id).then(setPeople).catch(() => {}); }, [id]);
   useFocusEffect(useCallback(() => {
@@ -69,6 +73,8 @@ function Sala() {
   const isOwner = room.owner_id === me;
   const rows = mergePeople(people, live.online, me, now);
   const goal = groupProgress(people, room.goal);
+  const myPet = pets.prefs.enabled ? activePet(pets) : null;
+  const patio = patioMembers(rows, petsSeen(room.id), myPet ? { species: myPet.species, outfit: myPet.outfit } : null, now);
   const p = live.proposal;
   const canJoin = p && proposalOpen(p, now) && live.joinedProposal !== p.id && p.by !== me;
   const waiting = f.state.startsAt && f.state.startsAt > now ? Math.ceil((f.state.startsAt - now) / 1000) : 0;
@@ -198,6 +204,15 @@ function Sala() {
       <View style={{ flexDirection: isWide ? 'row' : 'column', gap: 16, alignItems: 'flex-start' }}>
         <View style={{ flex: isWide ? 3 : undefined, width: isWide ? undefined : '100%', gap: 16, minWidth: 0 }}>
           {together}
+          {patio.length > 0 || !myPet ? (
+            <Card>
+              {patio.length > 0 && (
+                <PetPatio members={patio} height={isWide ? 168 : 132} onTapPet={(uid) => { void sendGreeting(uid); }}
+                  celebrate={{ key: goal.done + 1, big: goal.done === goal.goal }} greetings={live.greetings} />
+              )}
+              <PatioHint hasPet={!!myPet} count={patio.length} />
+            </Card>
+          ) : null}
           {list}
         </View>
         <View style={{ flex: isWide ? 2 : undefined, width: isWide ? undefined : '100%', gap: 16, minWidth: 0 }}>

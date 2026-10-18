@@ -166,7 +166,7 @@ test('códigos de sala: se limpian y se rechazan los ambiguos', () => {
   assert.equal(joinLink('https://kaderno.app/', 'KD7X4P'), 'https://kaderno.app/sala/unirse?codigo=KD7X4P');
 });
 
-const P = (o: Partial<PresenceInfo>): PresenceInfo => ({ uid: 'u', name: 'X', pet: null, state: 'idle', endsAt: null, remainingMs: null, task: null, at: 0, ...o });
+const P = (o: Partial<PresenceInfo>): PresenceInfo => ({ uid: 'u', name: 'X', pet: null, outfit: null, state: 'idle', endsAt: null, remainingMs: null, task: null, at: 0, ...o });
 
 test('estado de cada persona en la sala', () => {
   const now = 1_000_000;
@@ -225,4 +225,66 @@ test('mi presencia solo muestra la tarea si lo permito', () => {
   const paused = myPresence(meP, { ...f, running: false, startedPomodoro: true }, true, 0);
   assert.equal(paused.state, 'work'); assert.equal(paused.endsAt, null); assert.equal(paused.remainingMs, 4000);
   assert.equal(myPresence(meP, { ...f, running: false, startedPomodoro: false }, true, 0).state, 'idle');
+});
+
+// ---------- Patio de mascotas ----------
+import { PatioSim, slotX, frameFor, moodFor, ballPos, type PatioMember } from '../lib/pets/patio';
+import { cleanOutfit, parseGreeting } from '../lib/roomsLogic';
+
+const M = (uid: string, state: PatioMember['state'], me = false): PatioMember => ({ uid, name: uid.toUpperCase(), species: 'gato', outfit: {}, state, left: 10, me });
+const run = (sim: PatioSim, ms: PatioMember[], secs: number, t0 = 0) => { let now = t0; for (let i = 0; i < secs * 20; i++) { now += 50; sim.step(ms, 0.05, now); } return now; };
+const seq = () => { let x = 0.37; return () => (x = (x * 9301 + 49297) % 233280 / 233280); };
+
+test('patio: enfocada va a su puesto y se queda quieta; fuera duerme sin moverse', () => {
+  const sim = new PatioSim(120, seq());
+  const ms = [M('a', 'online'), M('b', 'online')];
+  run(sim, ms, 3);
+  const work = [M('a', 'work'), M('b', 'away')];
+  const bx = sim.actors.get('b')!.x;
+  const now = run(sim, work, 8);
+  assert.ok(Math.abs(sim.actors.get('a')!.x - slotX(0, 2, 120)) < 1, 'no llegó a su puesto');
+  assert.equal(sim.actors.get('b')!.x, bx, 'la que duerme se movió');
+  assert.equal(frameFor(sim.actors.get('a')!, 'work', now).startsWith('paso'), false);
+  assert.match(frameFor(sim.actors.get('b')!, 'away', now), /^sueno/);
+  assert.equal(moodFor('work'), 'concentrado');
+  assert.equal(moodFor('away'), 'dormido');
+});
+
+test('patio: en el descanso juegan con la pelota (solo si son dos o más)', () => {
+  const sim = new PatioSim(160, seq());
+  run(sim, [M('a', 'break')], 2);
+  assert.equal(sim.ball, null, 'pelota con una sola');
+  const ms = [M('a', 'break'), M('b', 'break'), M('c', 'work')];
+  const receivers = new Set<string>();
+  let now = 0;
+  for (let i = 0; i < 400; i++) { now += 50; sim.step(ms, 0.05, now); const bl: any = sim.ball; if (bl) { receivers.add(bl.to); const p = ballPos(bl); assert.ok(p.h >= 0 && p.h <= 16.01); } }
+  assert.ok(sim.ball, 'no hay pelota');
+  assert.ok(!receivers.has('c'), 'le pasaron la pelota a quien está enfocada');
+  assert.ok(receivers.has('a') && receivers.has('b'), 'no se la pasan entre las dos');
+  run(sim, [M('a', 'break'), M('b', 'work'), M('c', 'work')], 1, now);
+  assert.equal(sim.ball, null, 'la pelota siguió con una sola en descanso');
+});
+
+test('patio: saludo y celebración', () => {
+  const sim = new PatioSim(120, seq());
+  const ms = [M('a', 'online'), M('b', 'work')];
+  run(sim, ms, 1);
+  sim.greet('a', 'b', 'Ana', 'Beto', ms, 1000);
+  assert.equal(sim.actors.get('a')!.say, '¡Hola, Beto!');
+  assert.equal(sim.actors.get('b')!.say, '¡Hola, Ana!');
+  assert.ok(sim.actors.get('b')!.hopT >= 0);
+  sim.celebrate(5000, 2000);
+  sim.step(ms, 0.05, 5050);
+  assert.equal(moodFor('work', sim.actors.get('b')!, 5100), 'feliz');
+  // Quien se va de la sala desaparece del patio.
+  sim.step([M('a', 'online')], 0.05, 6000);
+  assert.equal(sim.actors.has('b'), false);
+});
+
+test('ropa y saludos que llegan por el canal se validan', () => {
+  assert.deepEqual(cleanOutfit({ cabeza: 'gorro', ojos: 'corona', cuello: 'x' }), { cabeza: 'gorro' });
+  assert.equal(cleanOutfit('nada'), null);
+  const now = 1_000_000;
+  assert.equal(parseGreeting({ id: 'g', from: 'a', fromName: 'A', to: 'b', at: now - 10 * 60000 }, now), null);
+  assert.equal(parseGreeting({ id: 'g', from: 'a', fromName: 'A', to: 'b', at: now }, now)!.to, 'b');
 });

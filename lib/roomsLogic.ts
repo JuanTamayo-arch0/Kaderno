@@ -1,6 +1,7 @@
 // ============================================================
 //  Enfocar juntos: lógica pura de las salas (sin red ni React).
 // ============================================================
+import { ITEMS, SPECIES, type Outfit } from './pets/art';
 
 export type RoomState = 'work' | 'break' | 'online' | 'away';
 
@@ -9,6 +10,7 @@ export type PresenceInfo = {
   uid: string;
   name: string;
   pet: string | null;          // especie de la mascota activa
+  outfit: Outfit | null;       // su ropa (para dibujarla en el patio)
   state: 'work' | 'break' | 'idle';
   endsAt: number | null;       // ms, si el reloj corre
   remainingMs: number | null;  // si está en pausa
@@ -19,6 +21,7 @@ export type PresenceInfo = {
 export type RoomPerson = { user_id: string; name: string; avatar?: string | null; is_owner?: boolean; pomodoros: number; minutes: number };
 
 export type Proposal = { id: string; by: string; name: string; workMin: number; startAt: number };
+export type Greeting = { id: string; from: string; fromName: string; to: string; at: number };
 
 // ---------- Código de la sala ----------
 export const CODE_RE = /^[A-HJ-NP-Z2-9]{6}$/;
@@ -129,21 +132,40 @@ export function parsePresence(x: any): PresenceInfo | null {
   const num = (v: any) => (typeof v === 'number' && isFinite(v) ? v : null);
   return {
     uid: x.uid.slice(0, 40), name: typeof x.name === 'string' ? x.name.slice(0, 40) : 'Alguien',
-    pet: typeof x.pet === 'string' ? x.pet.slice(0, 20) : null, state: st,
+    pet: typeof x.pet === 'string' && x.pet in SPECIES ? x.pet : null, outfit: cleanOutfit(x.outfit), state: st,
     endsAt: num(x.endsAt), remainingMs: num(x.remainingMs), task: typeof x.task === 'string' ? x.task.slice(0, 80) : null, at: num(x.at) ?? 0,
   };
 }
 
+/** Solo ropa que existe y en su lugar (lo que llega por el canal no es de fiar). */
+export function cleanOutfit(o: any): Outfit | null {
+  if (!o || typeof o !== 'object') return null;
+  const out: Outfit = {};
+  (['cabeza', 'ojos', 'cuello'] as const).forEach((slot) => {
+    const id = o[slot];
+    if (typeof id === 'string' && id in ITEMS && (ITEMS as any)[id].slot === slot) out[slot] = id as any;
+  });
+  return Object.keys(out).length ? out : null;
+}
+
+export function parseGreeting(x: any, now: number): Greeting | null {
+  if (!x || typeof x !== 'object') return null;
+  const { id, from, fromName, to, at } = x;
+  if ([id, from, fromName, to].some((v) => typeof v !== 'string') || typeof at !== 'number') return null;
+  if (Math.abs(now - at) > 2 * 60000) return null;
+  return { id: id.slice(0, 40), from: from.slice(0, 40), fromName: fromName.slice(0, 40), to: to.slice(0, 40), at };
+}
+
 /** Lo que publico según mi reloj. La tarea solo si lo permito. */
 export function myPresence(
-  me: { uid: string; name: string; pet: string | null },
+  me: { uid: string; name: string; pet: string | null; outfit?: Outfit | null },
   f: { running: boolean; mode: 'work' | 'break'; endsAt: number | null; remainingMs: number; taskTitle: string | null; startedPomodoro: boolean },
   shareTask: boolean, now: number,
 ): PresenceInfo {
   const active = f.running || f.startedPomodoro;
   const state = !active ? 'idle' : f.mode;
   return {
-    uid: me.uid, name: me.name, pet: me.pet, state,
+    uid: me.uid, name: me.name, pet: me.pet, outfit: me.outfit ?? null, state,
     endsAt: f.running ? f.endsAt : null, remainingMs: !f.running && active ? f.remainingMs : null,
     task: shareTask && state === 'work' ? f.taskTitle : null, at: now,
   };

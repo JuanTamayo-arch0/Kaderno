@@ -9,6 +9,8 @@ import { normalizeCode, proposalOpen, proposalText, stateCounts, mergePeople } f
 import { toast } from '../../lib/feedback';
 import { useFocusTimer } from '../../lib/focusTimer';
 import { Button, Card, focusRingStyle } from '../ds';
+import { PetPatio, patioMembers } from '../rooms/PetPatio';
+import { usePets, activePet } from '../../lib/pets/store';
 
 // ============================================================
 //  Tarjeta "Enfocar juntos" en la pantalla de Enfoque: la sala
@@ -41,6 +43,7 @@ export function RoomsCard() {
   const [mode, setMode] = useState<'none' | 'create' | 'join'>('none');
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
+  const pets = usePets();
 
   const load = useCallback(() => {
     listRooms().then((r) => { setRooms(r); setErr(null); }).catch((e) => setErr(String(e.message ?? e)));
@@ -82,6 +85,8 @@ export function RoomsCard() {
   // ---------- Sala activa ----------
   if (live.room) {
     const rows = mergePeople([], live.online, live.me ?? '', now);
+    const myPet = pets.prefs.enabled ? activePet(pets) : null;
+    const patio = patioMembers(rows, {}, myPet ? { species: myPet.species, outfit: myPet.outfit } : null, now);
     const p = live.proposal;
     const canJoin = p && proposalOpen(p, now) && live.joinedProposal !== p.id && p.by !== live.me;
     const waiting = f.state.startsAt && f.state.startsAt > now ? Math.ceil((f.state.startsAt - now) / 1000) : 0;
@@ -101,6 +106,7 @@ export function RoomsCard() {
           </View>
           <Ionicons name="chevron-forward" size={18} color={C.muted} />
         </Pressable>
+        {patio.length > 1 && <View style={{ marginTop: 10 }}><PetPatio members={patio} height={88} compact greetings={live.greetings} /></View>}
         {canJoin ? (
           <View style={{ marginTop: 10, padding: 12, borderRadius: 12, backgroundColor: '#142a22', borderWidth: 1, borderColor: '#22604a', gap: 8 }}>
             <Text style={{ color: C.text, fontSize: 13.5 }}>{proposalText(p!, now)}</Text>
