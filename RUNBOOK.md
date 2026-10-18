@@ -975,3 +975,15 @@ Crea `study_rooms`, `study_room_members`, `study_room_join_tries` y la columna `
 ### 5. Pruebas
 
 `npm test` (incluye las pruebas de `lib/roomsLogic.ts` en `tests/v20.test.ts`) y `bash tests/run_sql.sh` (incluye `tests/sql/19_pruebas.sql`: crear, unirse, acceso desde afuera, pomodoros solo en tus salas, meta, dueño, sala del proyecto, tope de códigos, canales privados y salir).
+
+## Versión 20 (parte 3): el patio de mascotas en la sala
+
+No necesita migración: la especie y la ropa de la mascota viajan en la presencia del canal de la sala.
+
+- **Patio:** arriba de la lista de la sala, un cuarto de estudio en pixel art con la mascota de cada quien (con su ropa) y su nombre. En la tarjeta "Enfocar juntos" de Enfoque sale en pequeño cuando hay dos o más mascotas.
+- **Según el estado del dueño:** enfocado, la mascota va a su puesto y se queda quieta y concentrada, con los minutos que le quedan encima; en descanso juega: persigue a las otras que también descansan, salta y se pasan una pelota (solo si hay dos o más en descanso); en la sala sin reloj pasea; fuera, duerme donde estaba (se recuerda la última mascota que se le vio).
+- **Saludar:** tocar la mascota de alguien la saluda: las dos saltan con un globo "¡Hola!". Si esa persona no está mirando la sala le llega un aviso, y si está enfocada se le muestra al terminar el enfoque. Máximo un saludo cada 10 s por persona.
+- **Celebrar:** cada pomodoro que suma a la meta hace saltar a todas; al cumplir la meta celebran más rato con "¡Meta!".
+- Tocar tu propia mascota la hace saltar y decir algo.
+- Con "reducir movimiento" activado (o fuera de la web), las mascotas se muestran quietas en fila.
+- Técnico: `lib/pets/patio.ts` (simulación pura, con pruebas) y `components/rooms/PetPatio.tsx` (anima con requestAnimationFrame escribiendo directo en el estilo, sin repintar React en cada cuadro; se pausa con la pestaña oculta).

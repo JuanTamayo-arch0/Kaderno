@@ -17,11 +17,12 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { realtimeClient } from './realtimeLazy';
 import { subscribeFocus, getFocus, startFocusAt, setFocusRoom, totalMs, remainingMs, type FocusState } from './focusTimer';
-import { activePet } from './pets/store';
+import { activePet, subscribePets } from './pets/store';
+import type { Outfit, Species } from './pets/art';
 import { toast } from './feedback';
 import { unlockAmbient } from './ambient';
 import {
-  type PresenceInfo, type Proposal, makeProposal, parseProposal, parsePresence, myPresence, proposalOpen,
+  type PresenceInfo, type Proposal, type Greeting, makeProposal, parseProposal, parsePresence, myPresence, proposalOpen, parseGreeting, cleanOutfit,
 } from './roomsLogic';
 
 export type LiveRoom = {
@@ -33,18 +34,20 @@ export type LiveRoom = {
   joinedProposal: string | null;
   shareTask: boolean;
   me: string | null;
+  greetings: Greeting[];   // saludos recientes de la sala (los últimos 10)
 };
 
 const KEY = 'kd:sala';
 const SHARE_KEY = 'kd:sala:tarea';
 const web = Platform.OS === 'web' && typeof window !== 'undefined';
 
-const live: LiveRoom = { room: null, status: 'off', error: null, online: {}, proposal: null, joinedProposal: null, shareTask: false, me: null };
+const live: LiveRoom = { room: null, status: 'off', error: null, online: {}, proposal: null, joinedProposal: null, shareTask: false, me: null, greetings: [] };
 const listeners = new Set<() => void>();
 function emit() { listeners.forEach((l) => l()); }
 
 let channel: RealtimeChannel | null = null;
-let me: { uid: string; name: string; pet: string | null } | null = null;
+let me: { uid: string; name: string; pet: string | null; outfit: Outfit | null } | null = null;
+let petsUnsub: (() => void) | null = null;
 let focusUnsub: (() => void) | null = null;
 let lastSent = '';
 let started = false;
@@ -111,6 +114,7 @@ export async function exitRoom(): Promise<void> {
 async function disconnect() {
   gen++;
   focusUnsub?.(); focusUnsub = null;
+  petsUnsub?.(); petsUnsub = null;
   const ch = channel; channel = null;
   lastSent = '';
   live.online = {}; live.status = 'off'; live.error = null;
@@ -134,7 +138,7 @@ async function connectInner() {
   if (my !== gen) return;
   if (!user) { live.status = 'off'; emit(); return; }
   const full = String(user.user_metadata?.full_name ?? '').trim();
-  me = { uid: user.id, name: (full || String(user.email ?? '').split('@')[0] || 'Alguien').slice(0, 40), pet: activePet()?.species ?? null };
+  me = { uid: user.id, name: (full || String(user.email ?? '').split('@')[0] || 'Alguien').slice(0, 40), pet: activePet()?.species ?? null, outfit: cleanOutfit(activePet()?.outfit) };
   live.me = user.id;
 
   const rt = await realtimeClient();
@@ -150,9 +154,11 @@ async function connectInner() {
       if (best) online[best.uid] = best;
     });
     live.online = online;
+    rememberPets(room.id, online);
     emit();
   });
   ch.on('broadcast', { event: 'propose' }, ({ payload }) => { if (my === gen) onProposal(parseProposal(payload, Date.now())); });
+  ch.on('broadcast', { event: 'saludo' }, ({ payload }) => { if (my === gen) onGreeting(parseGreeting(payload, Date.now())); });
   ch.subscribe((status, err) => {
     if (my !== gen) return;
     if (status === 'SUBSCRIBED') { live.status = 'on'; live.error = null; lastSent = ''; void track(true); }
@@ -162,7 +168,15 @@ async function connectInner() {
     } else if (status === 'CLOSED') live.status = 'off';
     emit();
   });
-  focusUnsub = subscribeFocus(() => { void track(false); });
+  focusUnsub = subscribeFocus((f) => { void track(false); flushGreetings(f); });
+  // Si cambias de mascota o de ropa, los demás lo ven.
+  petsUnsub?.();
+  petsUnsub = subscribePets(() => {
+    if (!me) return;
+    const p = activePet();
+    me = { ...me, pet: p?.species ?? null, outfit: cleanOutfit(p?.outfit) };
+    void track(false);
+  });
 }
 
 function presenceNow(f: FocusState = getFocus()): PresenceInfo | null {
@@ -176,7 +190,7 @@ async function track(force: boolean) {
   if (!channel || live.status !== 'on') return;
   const p = presenceNow();
   if (!p) return;
-  const sig = `${p.state}|${p.endsAt ? Math.round(p.endsAt / 5000) : ''}|${p.remainingMs ? Math.round(p.remainingMs / 60000) : ''}|${p.task ?? ''}|${p.pet ?? ''}`;
+  const sig = `${p.state}|${p.endsAt ? Math.round(p.endsAt / 5000) : ''}|${p.remainingMs ? Math.round(p.remainingMs / 60000) : ''}|${p.task ?? ''}|${p.pet ?? ''}|${JSON.stringify(p.outfit ?? {})}`;
   if (!force && sig === lastSent) return;
   lastSent = sig;
   try { await channel.track(p); } catch { /* se reintenta en el próximo cambio */ }
@@ -223,4 +237,64 @@ export async function proposeTogether(): Promise<boolean> {
   live.proposal = p;
   acceptProposal(p);
   return true;
+}
+
+// ---------- Mascotas vistas (para dibujar dormidas a quien está fuera) ----------
+export type SeenPet = { species: Species; outfit: Outfit | null; name: string };
+function seenKey(roomId: string) { return `kd:sala:mascotas:${roomId}`; }
+export function petsSeen(roomId: string): Record<string, SeenPet> {
+  try { return JSON.parse(read(seenKey(roomId)) ?? '{}') ?? {}; } catch { return {}; }
+}
+function rememberPets(roomId: string, online: Record<string, PresenceInfo>) {
+  const prev = petsSeen(roomId);
+  let changed = false;
+  Object.values(online).forEach((o) => {
+    if (!o.pet) return;
+    const next: SeenPet = { species: o.pet as Species, outfit: o.outfit, name: o.name };
+    if (JSON.stringify(prev[o.uid]) !== JSON.stringify(next)) { prev[o.uid] = next; changed = true; }
+  });
+  if (changed) store(seenKey(roomId), JSON.stringify(prev));
+}
+
+// ---------- Saludos entre mascotas ----------
+const sentAt = new Map<string, number>();   // a quién saludé y cuándo
+const gotAt = new Map<string, number>();    // quién me saludó y cuándo
+let pending: Greeting[] = [];               // los que llegaron mientras me enfocaba
+
+function pushGreeting(g: Greeting) {
+  if (live.greetings.some((x) => x.id === g.id)) return;
+  live.greetings = [...live.greetings, g].slice(-10);
+  emit();
+}
+
+/** Saludar a alguien de la sala (su mascota y la mía saltan en el patio). Máximo uno cada 10 s por persona. */
+export async function sendGreeting(to: string): Promise<boolean> {
+  if (!channel || live.status !== 'on' || !me || to === me.uid) return false;
+  const now = Date.now();
+  if (now - (sentAt.get(to) ?? 0) < 10_000) return false;
+  sentAt.set(to, now);
+  const g: Greeting = { id: `${now.toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`, from: me.uid, fromName: me.name, to, at: now };
+  pushGreeting(g);
+  const res = await channel.send({ type: 'broadcast', event: 'saludo', payload: g });
+  return res === 'ok';
+}
+
+function onGreeting(g: Greeting | null) {
+  if (!g || !me || g.from === me.uid) return;
+  const now = Date.now();
+  if (now - (gotAt.get(g.from) ?? 0) < 5_000) return; // nadie llena la sala de saludos
+  gotAt.set(g.from, now);
+  pushGreeting(g);
+  if (g.to !== me.uid || viewing === live.room?.id) return; // el patio ya lo muestra
+  const f = getFocus();
+  if (f.running && f.mode === 'work') { pending.push(g); return; } // no interrumpir el enfoque
+  toast(`${g.fromName} te saludó desde ${live.room?.name ?? 'la sala'}.`);
+}
+
+/** Al terminar el enfoque, los saludos que llegaron mientras tanto. */
+function flushGreetings(f: FocusState) {
+  if (!pending.length || (f.running && f.mode === 'work')) return;
+  const names = [...new Set(pending.map((g) => g.fromName))];
+  pending = [];
+  toast(names.length === 1 ? `${names[0]} te saludó mientras te enfocabas.` : `Te saludaron mientras te enfocabas: ${names.join(', ')}.`);
 }
