@@ -26,6 +26,10 @@ export type NoteEditorProps = {
   minHeight?: number;
   /** Ancho cómodo de lectura (px). */
   maxWidth?: number;
+  /** v21: buscar notas para enlazar con [[ . */
+  searchNotes?: (q: string) => Promise<{ id: string; title: string }[]>;
+  /** v21: abrir una nota enlazada (kd-note:<id>). */
+  onOpenNote?: (id: string) => void;
 };
 
 /** Prefijo de las imágenes guardadas dentro del texto: ![](kd-img:<ruta>). */

@@ -5,6 +5,7 @@ import { toDrafts, cardsWanted, headingBefore, type Draft } from '../../lib/card
 import { toast, notify, friendlyError } from '../../lib/feedback';
 import { refreshNavCounts } from '../../lib/navCounts';
 import { ReviewSheet } from './CardForms';
+import { saveNoteCards } from '../../lib/notesDb';
 
 // ============================================================
 //  Crear tarjetas con IA desde una nota o una selección:
@@ -12,7 +13,7 @@ import { ReviewSheet } from './CardForms';
 //  se guardan (como nuevas: entran poco a poco).
 // ============================================================
 
-type Ctx = { noteId: string | null; subjectId: string | null; title?: string; markdown?: string; from?: 'quiz' | 'recall' };
+type Ctx = { noteId: string | null; subjectId: string | null; title?: string; markdown?: string; from?: 'quiz' | 'recall' | 'note'; lines?: Record<string, string> };
 
 export function useCardMaker() {
   const router = useRouter();
@@ -67,7 +68,9 @@ export function useCardMaker() {
     if (!ctx) return;
     setSaving(true);
     try {
-      const n = await saveDrafts(keep, { noteId: ctx.noteId, subjectId: ctx.subjectId, heading: ctx.heading, from: ctx.from ?? (ctx.mode === 'selection' ? 'selection' : 'ai') });
+      const n = ctx.from === 'note' && ctx.noteId
+        ? await saveNoteCards(keep.map((d) => ({ kind: d.kind, front: d.front, back: d.back, line: ctx.lines?.[d.front] })), ctx.noteId, ctx.subjectId)
+        : await saveDrafts(keep, { noteId: ctx.noteId, subjectId: ctx.subjectId, heading: ctx.heading, from: ctx.from === 'note' ? 'manual' : ctx.from ?? (ctx.mode === 'selection' ? 'selection' : 'ai') });
       const prefs = await getStudyPrefs();
       setOpen(false); setDrafts([]);
       refreshNavCounts(true);

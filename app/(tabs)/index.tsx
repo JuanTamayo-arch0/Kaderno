@@ -57,6 +57,7 @@ import { getDayReview } from '../../lib/dayDb';
 import { shouldOfferClose, carryOver, localISO as dayISO } from '../../lib/day';
 import { skipRepeat, updateTask } from '../../lib/db';
 import { ruleText } from '../../lib/repeat';
+import { openClassNote } from '../../lib/notesDb';
 
 // ============================================================
 //  Hoy.
@@ -392,6 +393,12 @@ export default function Hoy() {
         <Text style={{ color: C.text, fontSize: 16, fontWeight: '700', marginTop: 2 }}>{(classNow ?? classNext)!.title}</Text>
         {classNow && classNext && <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>Después: {classNext.title}, {minToLabel(classNext.start)}</Text>}
       </View>
+      {classNow?.subjectId && (
+        <Button label="Apuntes de hoy" kind="secondary" size="sm" icon="create-outline" onPress={async () => {
+          try { const r = await openClassNote(classNow.subjectId!); router.push({ pathname: '/nota/[id]', params: { id: r.id, edit: '1' } } as any); }
+          catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
+        }} />
+      )}
       <Button label="Enfocar" kind="secondary" size="sm" icon="timer-outline" onPress={() => { startFocus({ subjectId: (classNow ?? classNext)!.subjectId ?? null }); router.push('/enfoque'); }} />
     </Card>
   ) : null;

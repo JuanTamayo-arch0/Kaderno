@@ -13,6 +13,12 @@
 --     para quien no quiere poner hora exacta.
 --   · day_reviews: el cierre del día (lo hecho, lo movido y una línea).
 --   · Aviso opcional a la hora del cierre (tipo "cierre").
+--
+-- Fase 2 · Notas conectadas
+--   · note_links: enlaces [[entre notas]], recalculados al guardar.
+--   · related_notes(): notas parecidas con los vectores del Oráculo.
+--   · note_templates y subjects.default_template: plantillas de notas.
+--   · flashcards.note_line y origen "note": tarjetas escritas con "::".
 -- =====================================================================
 
 
@@ -190,3 +196,109 @@ revoke all on function public.enqueue_day_close(timestamptz) from public, anon, 
 revoke all on function public.enqueue_all(timestamptz) from public, anon, authenticated;
 revoke all on function public.skip_repeat(uuid) from public, anon;
 grant execute on function public.skip_repeat(uuid) to authenticated;
+
+
+-- =====================================================================
+--  FASE 2 · Notas conectadas
+-- =====================================================================
+
+-- Enlaces entre notas ([Título](kd-note:<id>)), para "Mencionada en".
+create table if not exists public.note_links (
+  from_note uuid not null references public.notes on delete cascade,
+  to_note   uuid not null references public.notes on delete cascade,
+  user_id   uuid not null references auth.users on delete cascade,
+  primary key (from_note, to_note)
+);
+create index if not exists note_links_to_idx on public.note_links (to_note);
+alter table public.note_links enable row level security;
+drop policy if exists "own note links" on public.note_links;
+create policy "own note links" on public.note_links for select using (user_id = auth.uid());
+grant select on public.note_links to authenticated;
+revoke insert, update, delete on public.note_links from anon, authenticated;
+
+-- Se recalculan al guardar el contenido (solo enlaces a notas propias).
+create or replace function public._note_links_sync() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if tg_op = 'UPDATE' and new.content is not distinct from old.content then return new; end if;
+  begin
+    delete from note_links where from_note = new.id;
+    insert into note_links (from_note, to_note, user_id)
+    select distinct new.id, n.id, new.user_id
+      from regexp_matches(coalesce(new.content, ''), 'kd-note:([0-9a-fA-F-]{36})', 'g') m
+      join notes n on n.id = m[1]::uuid and n.user_id = new.user_id and n.id <> new.id
+    on conflict do nothing;
+  exception when others then raise warning 'enlaces de la nota %: %', new.id, sqlerrm;
+  end;
+  return new;
+end $$;
+drop trigger if exists notes_links_trg on public.notes;
+create trigger notes_links_trg after insert or update of content on public.notes
+  for each row execute function public._note_links_sync();
+
+-- Relleno: enlaces que ya existan en notas guardadas.
+insert into public.note_links (from_note, to_note, user_id)
+select distinct s.id, n.id, s.user_id
+  from public.notes s
+  cross join lateral regexp_matches(coalesce(s.content, ''), 'kd-note:([0-9a-fA-F-]{36})', 'g') m
+  join public.notes n on n.id = m[1]::uuid and n.user_id = s.user_id and n.id <> s.id
+on conflict do nothing;
+
+-- Notas parecidas por contenido, con los vectores del Oráculo (si existen).
+do $$ begin
+  if to_regclass('public.note_embeddings') is not null then
+    execute $f$
+      create or replace function public.related_notes(p_note uuid, p_count int default 5)
+      returns table (note_id uuid, title text, subject_id uuid, similarity float)
+      language sql stable security invoker set search_path = public as $b$
+        select e.note_id, n.title, n.subject_id, 1 - (e.embedding <=> src.embedding) as similarity
+          from note_embeddings src
+          join note_embeddings e on e.user_id = src.user_id and e.note_id <> src.note_id
+          join notes n on n.id = e.note_id and n.deleted_at is null
+         where src.note_id = p_note and src.user_id = auth.uid() and e.embedding is not null
+         order by e.embedding <=> src.embedding
+         limit least(greatest(p_count, 1), 10)
+      $b$;
+    $f$;
+    execute 'revoke all on function public.related_notes(uuid, int) from public, anon';
+    execute 'grant execute on function public.related_notes(uuid, int) to authenticated';
+  end if;
+end $$;
+
+-- Plantillas propias (las de fábrica viven en el código) y la de cada materia.
+create table if not exists public.note_templates (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null default auth.uid() references auth.users on delete cascade,
+  name       text not null check (char_length(name) between 1 and 60),
+  content    text not null check (char_length(content) <= 20000),
+  created_at timestamptz not null default now()
+);
+alter table public.note_templates enable row level security;
+drop policy if exists "own templates" on public.note_templates;
+create policy "own templates" on public.note_templates for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+grant select, insert, update, delete on public.note_templates to authenticated;
+
+-- 'cornell', 'lab', 'capitulo', 'ejercicio' o el id de una plantilla propia.
+alter table public.subjects add column if not exists default_template text;
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'subjects_default_template_chk') then
+    alter table public.subjects add constraint subjects_default_template_chk check (default_template is null or char_length(default_template) <= 40);
+  end if;
+end $$;
+
+-- Tarjetas escritas en la nota ("pregunta :: respuesta"): la línea de origen.
+alter table public.flashcards add column if not exists note_line text;
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'flashcards_note_line_chk') then
+    alter table public.flashcards add constraint flashcards_note_line_chk check (note_line is null or char_length(note_line) <= 2000);
+  end if;
+end $$;
+do $$ begin
+  -- "note" como origen de la tarjeta.
+  if exists (select 1 from pg_constraint where conname = 'flashcards_from_chk') then
+    alter table public.flashcards drop constraint flashcards_from_chk;
+  end if;
+  alter table public.flashcards add constraint flashcards_from_chk check (created_from in ('ai', 'selection', 'manual', 'quiz', 'recall', 'note'));
+end $$;
+
+revoke all on function public._note_links_sync() from public, anon, authenticated;
