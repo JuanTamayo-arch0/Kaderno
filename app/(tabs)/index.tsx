@@ -35,6 +35,12 @@ import { ActionMenu, type MenuAction } from '../../components/ActionMenu';
 import { type HoyHidden, type HoyVista, setTaskHidden, setProjectHidden, clearHoyHidden, pruneHiddenTasks, resetHoyHiddenCache, vistaFromPrefs, saveHoyVista } from '../../lib/hoyHidden';
 import { countToday } from '../../lib/cardsDb';
 import { estimateLabel } from '../../lib/cards';
+import { useStudyStreak, StreakMini, StreakNudge } from '../../components/streaks/Streak';
+import { StalledPlan } from '../../components/plan/StalledPlan';
+import { focusSince, forgetEstimateRatio } from '../../lib/studyDb';
+import { isStalled, placePhrase } from '../../lib/planSlots';
+import { tookText } from '../../lib/estimate';
+import { streakChanged } from '../../lib/uiBus';
 
 // ============================================================
 //  Hoy.
@@ -76,6 +82,9 @@ export default function Hoy() {
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [leaving, setLeaving] = useState<Set<string>>(new Set());   // filas que se están yendo (animación al completar)
   const [now, setNow] = useState(new Date());
+  const streak = useStudyStreak();
+  const [planFocus, setPlanFocus] = useState<Record<string, number>>({});
+  const [planDismissed, setPlanDismissed] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     try {
@@ -86,6 +95,12 @@ export default function Hoy() {
       const pending = t.filter((x) => x.status !== 'done').map((x) => x.id);
       getStepsFor(pending).then(setSteps).catch(() => {});
       getFocusByTask(pending).then(setFocusBy).catch(() => {});
+      // Planes de las últimas horas: ¿arrancaron? (enfoque en esa tarea desde 10 min antes del plan)
+      const planned = t.filter((x) => x.status !== 'done' && x.plan_at && Date.now() - new Date(x.plan_at).getTime() > 0 && Date.now() - new Date(x.plan_at).getTime() < 26 * 3600_000);
+      if (planned.length) {
+        const since = new Date(Math.min(...planned.map((x) => new Date(x.plan_at!).getTime())) - 10 * 60_000).toISOString();
+        focusSince(planned.map((x) => x.id), since).then(setPlanFocus).catch(() => {});
+      }
       resetHoyHiddenCache();
       const ho = (prefs as any)?.hoyOcultas ?? {};
       setHiddenH({ tasks: Array.isArray(ho.tasks) ? ho.tasks : [], projects: Array.isArray(ho.projects) ? ho.projects : [] });
@@ -135,9 +150,12 @@ export default function Hoy() {
     try {
       await toggleTask(t.id, done);
       refreshNavCounts(true);
-      if (done) { emitPetEvent({ type: 'tarea_hecha', allDone }); refreshCoinsSoon(); }
-      if (allDone) { setTimeout(() => celebrate(), 220); toast('¡Terminaste todo lo de hoy!', { tone: 'good', actionLabel: 'Deshacer', onAction: () => toggle({ ...t, status: 'done' }) }); }
-      else if (done) toast(`Hecha: ${t.title}`, { tone: 'good', actionLabel: 'Deshacer', onAction: () => toggle({ ...t, status: 'done' }) });
+      if (done) { emitPetEvent({ type: 'tarea_hecha', allDone }); refreshCoinsSoon(); forgetEstimateRatio(); }
+      streakChanged();
+      // Tu tiempo real: "Te tomó 50 min (calculaste 30)".
+      const took = done ? tookText(focusBy[t.id], t.estimate_min) : null;
+      if (allDone) { setTimeout(() => celebrate(), 220); toast(took ? `¡Terminaste todo lo de hoy! ${took}.` : '¡Terminaste todo lo de hoy!', { tone: 'good', actionLabel: 'Deshacer', onAction: () => toggle({ ...t, status: 'done' }) }); }
+      else if (done) toast(took ? `Hecha: ${t.title}. ${took}.` : `Hecha: ${t.title}`, { tone: 'good', actionLabel: 'Deshacer', onAction: () => toggle({ ...t, status: 'done' }) });
     } catch (e) {
       setTasks((xs) => xs?.map((x) => x.id === t.id ? t : x) ?? null);
       toast(friendlyError(e), { tone: 'bad' });
@@ -223,6 +241,10 @@ export default function Hoy() {
     ...pending,
     ...ptasks.map((p) => ({ ...p, kind: 'project' as const, color: p.project?.color, project: p.project?.name, subject_id: null, status: p.done ? 'done' : 'pending' })),
   ]);
+
+  const stalled = allPending.find((t) => !planDismissed.has(t.id) && isStalled(t.plan_at, now,
+    (planFocus[t.id] ?? 0) > 0 || (focus.state.taskId === t.id && (focus.state.running || focus.remaining < focus.total))));
+  const startTask = (t: Task) => { startFocus({ taskId: t.id, taskTitle: t.title, subjectId: t.subject_id }); router.push('/enfoque'); };
 
   const summary: React.ReactNode[] = [];
   summary.push(<Text key="t" style={{ color: C.text, fontWeight: '700' }}>{todayCount === 0 ? 'Nada para hoy' : todayCount === 1 ? '1 para hoy' : `${todayCount} para hoy`}</Text>);
@@ -418,7 +440,8 @@ export default function Hoy() {
         <Text style={{ color: C.muted, fontSize: 13 }}>Sin clases ni entregas con hora. {slots.length === 0 ? 'Carga tu horario para verlas aquí.' : ''}</Text>
       ) : (
         <>
-          {agenda.timed.map((it, i) => <AgendaRow key={i} it={it} now={now} isToday={!day || day === isoDate(now)} />)}
+          {agenda.timed.map((it, i) => <AgendaRow key={i} it={it} now={now} isToday={!day || day === isoDate(now)}
+            onPress={it.kind === 'plan' && it.taskId ? () => { const t = allPending.find((x) => x.id === it.taskId); if (t) startTask(t); } : undefined} />)}
           {agenda.allDay.length > 0 && (
             <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 6 }}>Durante el día: {agenda.allDay.map((t) => t.title).join(', ')}</Text>
           )}
@@ -433,16 +456,19 @@ export default function Hoy() {
       <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
         <View style={{ flex: 1 }}>
           <Text style={{ color: C.text, fontSize: 22, fontWeight: '800' }}>{focusToday.todayMin >= 60 ? `${Math.floor(focusToday.todayMin / 60)} h ${focusToday.todayMin % 60} min` : `${focusToday.todayMin} min`}</Text>
-          <Text style={{ color: C.muted, fontSize: 12.5 }}>hoy{focusToday.streak > 0 ? ` · racha de ${focusToday.streak} ${focusToday.streak === 1 ? 'día' : 'días'}` : ''}</Text>
+          <Text style={{ color: C.muted, fontSize: 12.5 }}>hoy{!streak.s && focusToday.streak > 0 ? ` · racha de ${focusToday.streak} ${focusToday.streak === 1 ? 'día' : 'días'}` : ''}</Text>
         </View>
         <Button label="Empezar" kind="secondary" size="sm" icon="play" onPress={() => { startFocus(); router.push('/enfoque'); }} />
       </View>
+      {streak.s && <View style={{ marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.line }}><StreakMini s={streak.s} onPress={() => router.push('/estudiar')} /></View>}
     </Card>
   );
 
   const left = (
     <>
       {summaryLine}
+      {streak.s && <StreakNudge s={streak.s} onFocus={() => { startFocus(); router.push('/enfoque'); }} />}
+      {stalled && <StalledPlan t={stalled} onChanged={load} onStart={() => startTask(stalled)} onDismiss={() => setPlanDismissed((x) => new Set(x).add(stalled.id))} />}
       <PetInvite />
       {(!isWide || width < 1100) && (focusCard ?? nowCard)}
       {week}
@@ -457,6 +483,7 @@ export default function Hoy() {
       )}
       {doneBlock}
       {(!isWide || width < 1100) && repasoCard}
+      {(!isWide || width < 1100) && streak.s && <Card style={{ marginTop: 12 }}><StreakMini s={streak.s} onPress={() => router.push('/estudiar')} /></Card>}
     </>
   );
 
@@ -480,10 +507,25 @@ export default function Hoy() {
   );
 }
 
-function AgendaRow({ it, now, isToday }: { it: AgendaItem; now: Date; isToday: boolean }) {
+function AgendaRow({ it, now, isToday, onPress }: { it: AgendaItem; now: Date; isToday: boolean; onPress?: () => void }) {
   const m = now.getHours() * 60 + now.getMinutes();
-  const live = isToday && it.kind === 'class' && it.start <= m && (it.end ?? 0) > m;
+  const live = isToday && it.kind !== 'due' && it.start <= m && (it.end ?? 0) > m;
   const past = isToday && (it.end ?? it.start) < m;
+  if (it.kind === 'plan') {
+    return (
+      <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`Plan: ${it.title}, ${minToLabel(it.start)}. Empezar enfoque`}
+        style={({ hovered }: any) => ({ flexDirection: 'row', gap: 10, paddingVertical: 6, opacity: past ? 0.55 : 1, borderRadius: 8, backgroundColor: hovered ? C.surface2 : 'transparent' })}>
+        <Text style={{ width: 66, color: C.muted, fontSize: 12.5, fontVariant: ['tabular-nums'] }}>{minToLabel(it.start)}</Text>
+        <View style={{ flex: 1, borderLeftWidth: 3, borderLeftColor: it.color, borderStyle: 'dashed', paddingLeft: 9 }}>
+          <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '600' }} numberOfLines={1}>Plan: {it.title}</Text>
+          <Text style={{ color: live ? C.brand : C.muted, fontSize: 12, fontWeight: live ? '700' : '400' }}>
+            {live ? 'Ahora · ' : ''}{it.place ? placePhrase(it.place).replace(/^en /, 'En ') + ' · ' : ''}toca para empezar
+          </Text>
+        </View>
+        <Ionicons name="play-circle-outline" size={18} color={C.brand} style={{ alignSelf: 'center' }} />
+      </Pressable>
+    );
+  }
   return (
     <View style={{ flexDirection: 'row', gap: 10, paddingVertical: 6, opacity: past ? 0.55 : 1 }}>
       <Text style={{ width: 66, color: C.muted, fontSize: 12.5, fontVariant: ['tabular-nums'] }}>{minToLabel(it.start)}</Text>

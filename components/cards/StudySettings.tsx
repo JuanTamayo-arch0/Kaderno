@@ -4,9 +4,10 @@ import { C } from '../../lib/theme';
 import { getStudyPrefs, saveStudyPrefs, DEFAULT_STUDY, type StudyPrefs } from '../../lib/cardsDb';
 import { toast, friendlyError } from '../../lib/feedback';
 import { Toggle } from '../ds';
+import { streakChanged } from '../../lib/uiBus';
 
-// Ajustes de Repaso: nuevas por día, retención deseada y escribir antes de ver.
-export function StudySettings({ onChange }: { onChange?: (p: StudyPrefs) => void }) {
+// Ajustes de estudio: nuevas por día, retención deseada, escribir antes de ver y meta semanal.
+export function StudySettings({ onChange, hideGoal }: { onChange?: (p: StudyPrefs) => void; hideGoal?: boolean }) {
   const [p, setP] = useState<StudyPrefs>(DEFAULT_STUDY);
   const [txt, setTxt] = useState(String(DEFAULT_STUDY.newPerDay));
   useEffect(() => { getStudyPrefs().then((x) => { setP(x); setTxt(String(x.newPerDay)); }).catch(() => {}); }, []);
@@ -48,6 +49,28 @@ export function StudySettings({ onChange }: { onChange?: (p: StudyPrefs) => void
       </View>
       <View style={{ height: 1, backgroundColor: C.line, marginLeft: 14 }} />
       <Toggle label="Escribir antes de ver" hint="Escribes tu respuesta y al voltear la ves al lado de la correcta." value={p.typeAnswer} onChange={(v) => save({ typeAnswer: v })} />
+      {!hideGoal && (
+        <>
+          <View style={{ height: 1, backgroundColor: C.line, marginLeft: 14 }} />
+          <View style={{ paddingVertical: 12, paddingHorizontal: 14, gap: 8 }}>
+            <View>
+              <Text style={{ color: C.text, fontSize: 15, fontWeight: '600' }}>Meta semanal</Text>
+              <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>Días por semana en que quieres estudiar algo. Tu racha principal cuenta las semanas que la cumples.</Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }} accessibilityRole="radiogroup" accessibilityLabel="Meta semanal">
+              {[2, 3, 4, 5, 6, 7].map((n) => {
+                const on = p.weeklyGoal === n;
+                return (
+                  <Pressable key={n} onPress={() => { save({ weeklyGoal: n }); streakChanged(0); }} accessibilityRole="radio" accessibilityState={{ checked: on }} accessibilityLabel={`${n} días`}
+                    style={{ minWidth: 44, minHeight: 36, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12, borderRadius: 99, borderWidth: 1, borderColor: on ? C.brand : C.line, backgroundColor: on ? C.brand : 'transparent' }}>
+                    <Text style={{ color: on ? C.onBrand : C.text, fontSize: 13.5, fontWeight: on ? '700' : '600' }}>{n}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        </>
+      )}
     </View>
   );
 }

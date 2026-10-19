@@ -2,12 +2,14 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { needsPlan } from '../lib/planSlots';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C } from '../lib/theme';
 import { useResponsive } from '../lib/responsive';
 import {
   Subject, Task, getSubjects, addTask, addNote, search, getNotifications, markNotificationsRead,
   type AppNotification, type ProjectTaskHit, type Note, type Flashcard,
+  hasPlanCols,
 } from '../lib/db';
 import { taskTypeList, taskTypeMeta, loadTaskTypes } from '../lib/taskTypes';
 import { parseQuickAdd, type QuickResult } from '../lib/quickAdd';
@@ -124,8 +126,10 @@ function AddSheet({ visible, subjects, initialText = '' }: { visible: boolean; s
       dataChanged(); refreshNavCounts(true);
       const when = fmtDue(row);
       play('add');
+      // Si vence mañana o después, la acción invita a decidir cuándo hacerla.
+      const askWhen = hasPlanCols() && needsPlan(row.due_date, new Date());
       toast(`Agregada: ${parsed.title}${when ? ' · ' + when : ''}`, {
-        actionLabel: 'Editar',
+        actionLabel: askWhen ? '¿Cuándo lo haces?' : 'Editar',
         onAction: () => openTask({ id, status: 'pending', description: null, ...row } as Task),
       });
     } catch (e) { notify('No se pudo agregar', friendlyError(e)); }
@@ -340,7 +344,7 @@ function InboxPanel({ visible }: { visible: boolean }) {
       if (xs.some((x) => !x.read_at)) setTimeout(() => { markNotificationsRead().then(() => setNavCounts({ unread: 0 })).catch(() => {}); }, 800);
     }).catch(() => setItems([]));
   }, [visible]);
-  const icon = (k: string): any => k === 'reminder' ? 'alarm-outline' : k === 'daily' ? 'sunny-outline' : k === 'weekly' ? 'stats-chart-outline' : k === 'assigned' ? 'person-add-outline' : 'people-outline';
+  const icon = (k: string): any => k === 'reminder' ? 'alarm-outline' : k === 'daily' ? 'sunny-outline' : k === 'weekly' ? 'stats-chart-outline' : k === 'assigned' ? 'person-add-outline' : k === 'plan' ? 'flag-outline' : 'people-outline';
   return (
     <Panel visible={visible} onClose={closeInbox} top maxWidth={480}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>

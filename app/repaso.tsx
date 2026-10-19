@@ -122,7 +122,7 @@ function Repaso() {
       {body}
       <Sheet visible={settings} onClose={() => setSettings(false)} title="Ajustes de repaso">
         <View style={{ marginHorizontal: -14 }}>
-          <StudySettings onChange={(p) => setData((d) => (d ? { ...d, prefs: p } : d))} />
+          <StudySettings hideGoal onChange={(p) => setData((d) => (d ? { ...d, prefs: p } : d))} />
         </View>
       </Sheet>
     </Screen>

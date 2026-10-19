@@ -1,5 +1,6 @@
 // ============================================================
-//  Agenda de un día: clases del horario + entregas con hora.
+//  Agenda de un día: clases del horario, entregas con hora y planes
+//  ("¿Cuándo lo haces?", 50 min).
 //  Pura (sin React ni Supabase) para poder probarla.
 // ============================================================
 import { dueDay, dueTimeHHMM, dayDiff, type DueLike } from './time';
@@ -7,10 +8,10 @@ import { dueDay, dueTimeHHMM, dayDiff, type DueLike } from './time';
 export type AgendaBlock = { id: string; start: string; end: string };
 export type AgendaSlot = { day: number; slot: number; subject_id: string };
 export type AgendaSubject = { id: string; name: string; color: string };
-export type AgendaTask = DueLike & { id: string; title: string; subject_id?: string | null; status?: string | null; kind?: 'task' | 'project'; color?: string; project?: string };
+export type AgendaTask = DueLike & { id: string; title: string; subject_id?: string | null; status?: string | null; kind?: 'task' | 'project'; color?: string; project?: string; plan_at?: string | null; plan_place?: string | null };
 
 export type AgendaItem = {
-  kind: 'class' | 'due';
+  kind: 'class' | 'due' | 'plan';
   start: number;         // minutos desde la medianoche
   end: number | null;
   title: string;
@@ -18,6 +19,7 @@ export type AgendaItem = {
   subjectId?: string | null;
   taskId?: string;
   project?: string;
+  place?: string | null;
 };
 
 const toMin = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + (m || 0); };
@@ -50,6 +52,14 @@ export function buildAgenda(day: Date, slots: AgendaSlot[], blocks: AgendaBlock[
   const allDay: AgendaTask[] = [];
   for (const t of tasks) {
     if (t.status === 'done') continue;
+    if (t.plan_at) {
+      const p = new Date(t.plan_at);
+      if (dayDiff(p, day) === 0) {
+        const sub = subjects.find((x) => x.id === t.subject_id);
+        const st = p.getHours() * 60 + p.getMinutes();
+        timed.push({ kind: 'plan', start: st, end: st + 50, title: t.title, color: t.color ?? sub?.color ?? '#9aa3b2', subjectId: t.subject_id ?? null, taskId: t.id, place: t.plan_place ?? null });
+      }
+    }
     const d = dueDay(t);
     if (!d || dayDiff(d, day) !== 0) continue;
     const hhmm = dueTimeHHMM(t);

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { slotLabel } from '../lib/planSlots';
 import { C, inkOn } from '../lib/theme';
 import type { Step, Subject, Task } from '../lib/db';
 import { taskTypeMeta } from '../lib/taskTypes';
@@ -77,6 +78,12 @@ export function TaskRow({
                 </Text>
               </View>
             ) : null}
+            {!!task.plan_at && task.status !== 'done' && new Date(task.plan_at).getTime() > Date.now() - 3600_000 && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }} accessibilityLabel={`Plan: ${slotLabel(new Date(task.plan_at), new Date())}`}>
+                <Ionicons name="flag-outline" size={12} color={C.brand} />
+                <Text style={{ color: C.brand, fontSize: 12, fontWeight: '600' }}>{slotLabel(new Date(task.plan_at), new Date())}</Text>
+              </View>
+            )}
             {!!task.description?.trim() && !compact && <Ionicons name="reader-outline" size={13} color={C.muted} accessibilityLabel="Tiene descripción" />}
           </View>
         </Pressable>

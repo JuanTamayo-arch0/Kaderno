@@ -4,6 +4,7 @@
 // ============================================================
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase, currentUserId, dedupe } from './supabase';
+import { cleanGoal } from './streaks';
 import { fetchPrefs, savePrefs, isMissingColumn, getTasks, reviewFlashcard, type Flashcard } from './db';
 import { schedule, stateOf, dueOf, DEFAULT_RETENTION, localISODate, type CardRating, type FsrsPatch } from './fsrs';
 import { buildQueue, secondsPerCard, type CardKind, type CardLike, type Draft, type ReviewStat } from './cards';
@@ -60,8 +61,8 @@ export function newDoneToday(reviews: ReviewStat[], now = new Date()): number {
 }
 
 // ---------- Ajustes de repaso (user_prefs.settings.study) ----------
-export type StudyPrefs = { newPerDay: number; retention: number; typeAnswer: boolean };
-export const DEFAULT_STUDY: StudyPrefs = { newPerDay: 15, retention: DEFAULT_RETENTION, typeAnswer: false };
+export type StudyPrefs = { newPerDay: number; retention: number; typeAnswer: boolean; weeklyGoal: number };
+export const DEFAULT_STUDY: StudyPrefs = { newPerDay: 15, retention: DEFAULT_RETENTION, typeAnswer: false, weeklyGoal: 4 };
 const STUDY_KEY = 'kd:study';
 let studyCache: StudyPrefs | null = null;
 function cleanStudy(x: any): StudyPrefs {
@@ -71,6 +72,7 @@ function cleanStudy(x: any): StudyPrefs {
     newPerDay: Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : DEFAULT_STUDY.newPerDay,
     retention: [0.85, 0.9, 0.95].includes(r) ? r : DEFAULT_STUDY.retention,
     typeAnswer: x?.typeAnswer === true,
+    weeklyGoal: cleanGoal(x?.weeklyGoal ?? DEFAULT_STUDY.weeklyGoal),
   };
 }
 export async function getStudyPrefs(): Promise<StudyPrefs> {

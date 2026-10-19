@@ -11,6 +11,8 @@ import { semesterAverage } from '../../lib/grades';
 import { useFocusTimer, startFocus, pauseFocus, resetFocus } from '../../lib/focusTimer';
 import { Screen, Button, Card, SectionLabel, Dot } from '../../components/ds';
 import { fmtMin } from '../../components/TaskRow';
+import { useStudyStreak, StreakCard } from '../../components/streaks/Streak';
+import { weeksLabel } from '../../lib/streaks';
 
 // ============================================================
 //  Estudiar: Enfoque, Repaso y Oráculo en un solo lugar, más el avance
@@ -27,6 +29,7 @@ export default function Estudiar() {
   const [detail, setDetail] = useState<{ todayMin: number; weekMin: number; streak: number; byDay: { label: string; min: number }[] }>({ todayMin: 0, weekMin: 0, streak: 0, byDay: [] });
   const [bySubject, setBySubject] = useState<{ subject_id: string | null; minutes: number }[]>([]);
   const [q, setQ] = useState('');
+  const streak = useStudyStreak();
 
   useFocusEffect(useCallback(() => {
     getSubjects().then(setSubjects).catch(() => {});
@@ -118,11 +121,14 @@ export default function Estudiar() {
 
       <SectionLabel text="Tu semana" style={{ marginTop: 24 }} />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+        {streak.s && <StreakCard s={streak.s} onChanged={streak.reload} style={col} />}
         <Card style={col}>
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <Stat label="Hoy" value={short(detail.todayMin)} />
             <Stat label="7 días" value={short(detail.weekMin)} />
-            <Stat label="Racha" value={`${detail.streak} ${detail.streak === 1 ? 'día' : 'días'}`} tone={detail.streak ? C.goodText : undefined} />
+            {streak.s
+              ? <Stat label="Racha semanal" value={weeksLabel(streak.s.weekly)} tone={streak.s.weekly ? C.goodText : undefined} />
+              : <Stat label="Racha" value={`${detail.streak} ${detail.streak === 1 ? 'día' : 'días'}`} tone={detail.streak ? C.goodText : undefined} />}
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, height: 90, marginTop: 16 }} accessibilityLabel="Minutos de enfoque por día">
             {detail.byDay.map((d, i) => (

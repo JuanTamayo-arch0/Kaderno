@@ -1031,3 +1031,31 @@ Redespliega la función: `supabase functions deploy ai`. Ahora pide tarjetas bá
 ### 4. Pruebas
 
 `npm test` (FSRS, completar, duplicados, cola, lectura de la respuesta de la IA) y `bash tests/run_sql.sh` (incluye `tests/sql/19b_pruebas.sql`: migración de tarjetas viejas, sincronía de fechas, registro de repasos y RLS, monedas y tope de IA).
+
+## Versión 20 (parte 6): rachas amables, "¿Cuándo lo haces?" y tu tiempo real
+
+### 1. Migración y funciones
+
+1. Vuelve a correr `supabase/schema_v19.sql` completo (es idempotente). La sección "FASE 2" agrega:
+   - `study_days`: un día de estudio por persona, llenado por disparadores al guardar un enfoque, completar una tarea o repasar una tarjeta, y rellenado hacia atrás con lo que ya había.
+   - `study_shields`, `study_streaks()` y `study_buy_shield()`: escudos (se ganan, se usan y se compran solo desde la base).
+   - El premio de racha de la mascota pasa a contar días de estudio.
+   - `assignments.plan_at` y `assignments.plan_place`, y `enqueue_plans()` dentro de `enqueue_all()` (aviso a la hora del plan).
+2. Redespliega la función de avisos: `supabase functions deploy notify` (el aviso del plan trae el botón "Empezar enfoque").
+
+Sin la migración la app sigue como antes: la racha vieja de Enfoque, sin "¿Cuándo lo haces?".
+
+### 2. Lo que cambia para el usuario
+
+- **Un solo día de estudio:** cuenta con 10 min de enfoque, 1 tarea hecha o 10 tarjetas. Funciona sin mascota.
+- **Meta semanal (racha principal):** "estudiar N días por semana", 4 por defecto, en **Ajustes → Estudio → Meta semanal**. Se ve en grande cuántas semanas seguidas la cumples, con los siete puntos L M M J V S D en Hoy, Estudiar y Enfoque. La racha diaria queda más pequeña.
+- **Escudos:** uno gratis cada 7 días seguidos (máximo 2) o por 80 monedas de la mascota. Se usan solos: si ayer faltaste y hoy estudias, ese día queda protegido.
+- **Reparar:** si la racha se rompió hace 1 o 2 días sin escudo, Hoy muestra "Te saltaste un día: no pasa nada…" y "Reparar racha: haz hoy el doble (50 min de enfoque o 30 tarjetas)". Al cumplirlo, el día perdido queda protegido.
+- **¿Cuándo lo haces?:** al crear o editar una tarea que vence mañana o después salen 3 horarios libres (fuera de clases y de otros planes, prefiriendo tus horas de enfoque), "Otro" y el lugar (Casa, Biblioteca, Universidad o uno tuyo). Se muestra como frase: "Si son las 4:00 pm del jueves, empiezo "Informe" en la biblioteca."
+- El plan aparece en la agenda de Hoy y en la fila de la tarea. A esa hora llega un aviso que abre Enfoque con la tarea elegida. Si pasan 30 min sin enfoque, Hoy pregunta "No arrancó… ¿Lo movemos?" con 3 horarios.
+- Al agregar rápido una tarea que vence mañana o después, el aviso ofrece "¿Cuándo lo haces?".
+- **Tu tiempo real:** con 5 o más tareas hechas con estimado y enfoque, al poner un estimado sale "Sueles tardar 1,6 veces lo que calculas. ¿Pongo 50 min?". Al completar en Hoy: "Te tomó 50 min (calculaste 30 min)".
+
+### 3. Pruebas
+
+`npm test` (rachas, escudos, reparar, meta semanal, huecos libres, frase del plan y tiempo real) y `bash tests/run_sql.sh` (incluye `tests/sql/19c_pruebas.sql` y `19c_despues.sql`: cada fuente del día de estudio, ganar, usar, comprar y tope de escudos, reparar, hueco de 3 días, RLS, aviso del plan y relleno idempotente).

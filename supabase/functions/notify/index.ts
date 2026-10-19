@@ -46,10 +46,12 @@ Deno.serve(async (req) => {
   if (pub && priv) {
     webpush.setVapidDetails(subject, pub, priv);
     for (const item of queue) {
-      const payload = JSON.stringify({ title: item.title, body: item.body ?? '', url: item.url ?? '/', tag: `${item.kind}-${item.id}` });
+      // Los avisos de plan traen el botón "Empezar enfoque" (abre Enfoque con la tarea elegida).
+      const actions = item.kind === 'plan' ? [{ action: 'focus', title: 'Empezar enfoque' }] : undefined;
+      const payload = JSON.stringify({ title: item.title, body: item.body ?? '', url: item.url ?? '/', tag: `${item.kind}-${item.id}`, actions });
       for (const s of subs.filter((x) => x.user_id === item.user_id)) {
         try {
-          await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 60 * 60 * 6, urgency: item.kind === 'reminder' ? 'high' : 'normal' });
+          await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 60 * 60 * 6, urgency: item.kind === 'reminder' || item.kind === 'plan' ? 'high' : 'normal' });
           sent++; ok.push(s.id);
         } catch (err: any) {
           failed++;

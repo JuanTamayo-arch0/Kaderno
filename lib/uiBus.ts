@@ -39,3 +39,8 @@ export function closeInbox() { panels = { ...panels, inbox: false }; emit(); }
 /** Las pantallas se suscriben para recargar cuando se guarda una tarea en un panel global. */
 export function onDataChanged(fn: () => void) { savedLs.add(fn); return () => { savedLs.delete(fn); }; }
 export function dataChanged() { savedLs.forEach((f) => f()); }
+
+/** Algo cambió la racha (enfoque guardado, tarea hecha, repaso): se vuelve a pedir. */
+const streakLs = new Set<() => void>();
+export function onStreakChanged(fn: () => void) { streakLs.add(fn); return () => { streakLs.delete(fn); }; }
+export function streakChanged(delay = 900) { setTimeout(() => streakLs.forEach((f) => { try { f(); } catch { /* noop */ } }), delay); }
