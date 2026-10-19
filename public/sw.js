@@ -96,6 +96,7 @@ self.addEventListener('push', (e) => {
     tag: data.tag || undefined,
     renotify: !!data.tag,
     data: { url: data.url || '/' },
+    actions: Array.isArray(data.actions) ? data.actions.slice(0, 2) : undefined,
   }));
 });
 

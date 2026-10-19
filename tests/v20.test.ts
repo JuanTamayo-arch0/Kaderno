@@ -460,3 +460,139 @@ test('completar dentro de una fórmula usa un recuadro de LaTeX', async () => {
   assert.equal(clozeText('Newton: $F = {{m \\cdot a}}$', true), 'Newton: $F = \\boxed{m \\cdot a}$');
   assert.equal(clozeText('Cuesta \\$20 y la {{FRL}} filtra', false), 'Cuesta \\$20 y la [ … ] filtra');
 });
+
+// ---------- Fase 2: días de estudio y rachas ----------
+const sd = (day: string, focus = 0, extra: Partial<{ tasks_done: number; cards: number; tests: number; protected: boolean }> = {}) =>
+  ({ day, focus_min: focus, tasks_done: 0, cards: 0, tests: 0, protected: false, ...extra });
+
+test('un día cuenta con 10 min, 1 tarea, 10 tarjetas o 1 prueba', async () => {
+  const { dayCounts } = await import('../lib/streaks');
+  assert.equal(dayCounts(sd('2026-10-19', 9)), false);
+  assert.equal(dayCounts(sd('2026-10-19', 10)), true);
+  assert.equal(dayCounts(sd('2026-10-19', 0, { tasks_done: 1 })), true);
+  assert.equal(dayCounts(sd('2026-10-19', 0, { cards: 9 })), false);
+  assert.equal(dayCounts(sd('2026-10-19', 0, { cards: 10 })), true);
+  assert.equal(dayCounts(sd('2026-10-19', 0, { tests: 1 })), true);
+});
+
+test('fechas: sumar días y lunes de la semana', async () => {
+  const { addDaysISO, weekStartISO } = await import('../lib/streaks');
+  assert.equal(addDaysISO('2026-10-31', 1), '2026-11-01');
+  assert.equal(addDaysISO('2026-03-01', -1), '2026-02-28');
+  assert.equal(weekStartISO('2026-10-19'), '2026-10-19'); // lunes
+  assert.equal(weekStartISO('2026-10-25'), '2026-10-19'); // domingo
+});
+
+test('racha diaria: cuenta desde ayer si hoy aún no, y los escudos la sostienen', async () => {
+  const { summarize } = await import('../lib/streaks');
+  const rows = [sd('2026-10-14', 20), sd('2026-10-15', 20), sd('2026-10-16', 0, { protected: true }), sd('2026-10-17', 0, { tasks_done: 1 }), sd('2026-10-18', 30)];
+  const s = summarize(rows, '2026-10-19', 4, 0);
+  assert.equal(s.daily, 5);
+  assert.equal(s.today.ok, false);
+  assert.equal(s.repair, null);
+  const s2 = summarize([...rows, sd('2026-10-19', 12)], '2026-10-19', 4, 0);
+  assert.equal(s2.daily, 6);
+});
+
+test('meta semanal: semanas seguidas, la actual no rompe si aún no se cumple', async () => {
+  const { summarize, addDaysISO } = await import('../lib/streaks');
+  const rows = [];
+  // Semanas del 28 sep, 5 oct y 12 oct con 4 días cada una; esta semana (19 oct) solo 1.
+  for (const mon of ['2026-09-28', '2026-10-05', '2026-10-12']) for (let k = 0; k < 4; k++) rows.push(sd(addDaysISO(mon, k), 25));
+  rows.push(sd('2026-10-19', 25));
+  const s = summarize(rows, '2026-10-21', 4, 0);
+  assert.equal(s.weekly, 3);
+  assert.equal(s.weekDone, 1);
+  assert.deepEqual(s.week.map((w) => w.state), ['done', 'missed', 'today', 'future', 'future', 'future', 'future']);
+  assert.equal(summarize(rows, '2026-10-21', 5, 0).weekly, 0);
+  // Cumplir la meta esta semana suma una más.
+  rows.push(sd('2026-10-20', 25), sd('2026-10-21', 25), sd('2026-10-22', 25));
+  assert.equal(summarize(rows, '2026-10-22', 4, 0).weekly, 4);
+});
+
+test('reparar y escudos: qué se ofrece cuando se rompe la racha', async () => {
+  const { summarize, brokeMessage, repairProgress } = await import('../lib/streaks');
+  const base = [sd('2026-10-15', 20), sd('2026-10-16', 20), sd('2026-10-17', 20)];
+  // Ayer faltó, sin escudos: reparar.
+  let s = summarize(base, '2026-10-19', 4, 0);
+  assert.deepEqual(s.repair && { missed: s.repair.missed, prev: s.repair.prev }, { missed: 1, prev: 3 });
+  assert.match(brokeMessage(s)!, /no saltarse dos/);
+  assert.equal(repairProgress(s)!.frac, 0);
+  // Con escudo: lo tapará al estudiar hoy, sin mensaje.
+  s = summarize(base, '2026-10-19', 4, 1);
+  assert.equal(s.shieldWillCover, 1);
+  assert.equal(s.repair, null);
+  // Hoy ya hizo 30 min sin escudo: sigue la oferta y el avance.
+  s = summarize([...base, sd('2026-10-19', 30)], '2026-10-19', 4, 0);
+  assert.equal(repairProgress(s)!.frac, 0.6);
+  // Dos días: mensaje distinto. Tres: ya no se repara.
+  assert.match(brokeMessage(summarize(base, '2026-10-20', 4, 0))!, /dos días/);
+  assert.equal(summarize(base, '2026-10-21', 4, 2).repair, null);
+});
+
+// ---------- Fase 2: ¿Cuándo lo haces? ----------
+test('huecos libres: fuera de clases, después de ahora y antes de la entrega', async () => {
+  const { freeSlots } = await import('../lib/planSlots');
+  const now = new Date(2026, 9, 19, 13, 10); // lunes 1:10 pm
+  const due = new Date(2026, 9, 22);          // jueves, sin hora
+  const classes = (d: Date) => d.getDay() === 2 ? [{ start: 14 * 60, end: 18 * 60 }] : [];
+  const out = freeSlots({ now, due, classesFor: classes, habit: [16] });
+  assert.equal(out.length, 3);
+  assert.deepEqual(out.map((d) => [d.getDate(), d.getHours(), d.getMinutes()]), [[19, 16, 0], [20, 10, 0], [21, 16, 0]]);
+  // Hoy tarde y con plan a las 4: busca otra hora.
+  const busy = [{ start: new Date(2026, 9, 19, 16).getTime(), end: new Date(2026, 9, 19, 16, 50).getTime() }];
+  const out2 = freeSlots({ now, due, busy, habit: [16] });
+  assert.notEqual(out2[0].getHours(), 16);
+  // Entrega mañana a las 9 am: hoy o mañana antes de las 8.
+  const out3 = freeSlots({ now, due: new Date(2026, 9, 20, 9, 0), dueHasTime: true });
+  assert.ok(out3.length >= 1);
+  assert.ok(out3.every((d) => d.getTime() + 50 * 60_000 <= new Date(2026, 9, 20, 8, 0).getTime()));
+  assert.ok(out3.every((d) => d.getTime() > now.getTime()));
+});
+
+test('horas habituales desde las sesiones de enfoque', async () => {
+  const { habitHours } = await import('../lib/planSlots');
+  const at = (h: number, m: number) => new Date(2026, 9, 10, h, m).toISOString();
+  assert.deepEqual(habitHours([
+    { created_at: at(16, 25), minutes: 25 }, { created_at: at(16, 30), minutes: 25 }, { created_at: at(16, 40), minutes: 25 },
+    { created_at: at(10, 50), minutes: 50 }, { created_at: at(10, 55), minutes: 50 }, { created_at: at(20, 0), minutes: 25 },
+  ]), [16, 10]);
+});
+
+test('frase del plan y etiquetas', async () => {
+  const { planPhrase, slotLabel, placePhrase, needsPlan, isStalled, mergePlaces } = await import('../lib/planSlots');
+  const now = new Date(2026, 9, 19, 9, 0);
+  assert.equal(planPhrase('Informe', new Date(2026, 9, 22, 16, 0), 'Biblioteca', now), 'Si son las 4:00 pm del jueves, empiezo "Informe" en la biblioteca.');
+  assert.equal(planPhrase('Taller', new Date(2026, 9, 19, 13, 0), 'Casa', now), 'Si es la 1:00 pm de hoy, empiezo "Taller" en casa.');
+  assert.equal(planPhrase('Taller', new Date(2026, 9, 20, 10, 30), null, now), 'Si son las 10:30 am de mañana, empiezo "Taller".');
+  assert.equal(slotLabel(new Date(2026, 9, 19, 16), now), 'Hoy 4:00 pm');
+  assert.equal(slotLabel(new Date(2026, 9, 20, 10), now), 'Mañana 10:00 am');
+  assert.equal(slotLabel(new Date(2026, 9, 22, 14), now), 'Jue 2:00 pm');
+  assert.equal(placePhrase('Café Juan Valdez'), 'en Café Juan Valdez');
+  assert.equal(needsPlan('2026-10-19', now), false);
+  assert.equal(needsPlan('2026-10-20', now), true);
+  assert.equal(isStalled(new Date(2026, 9, 19, 8, 20).toISOString(), now, false), true);
+  assert.equal(isStalled(new Date(2026, 9, 19, 8, 40).toISOString(), now, false), false);
+  assert.equal(isStalled(new Date(2026, 9, 19, 8, 20).toISOString(), now, true), false);
+  assert.deepEqual(mergePlaces(['biblioteca', 'Café', '', 'Café']), ['Casa', 'Biblioteca', 'Universidad', 'Café']);
+});
+
+// ---------- Fase 2: tu tiempo real ----------
+test('tiempo real: mediana con al menos 5 tareas y sugerencia redondeada', async () => {
+  const { estimateRatio, isMeaningful, estimateHint, tookText, planVsReal } = await import('../lib/estimate');
+  const rows = [
+    { estimate_min: 30, focus_min: 50 }, { estimate_min: 60, focus_min: 90 }, { estimate_min: 30, focus_min: 45 },
+    { estimate_min: 20, focus_min: 40 }, { estimate_min: 5, focus_min: 60 }, { estimate_min: 30, focus_min: 3 },
+  ];
+  assert.equal(estimateRatio(rows), null); // solo 4 válidas
+  const r = estimateRatio([...rows, { estimate_min: 40, focus_min: 64 }])!;
+  assert.equal(r, 1.6);
+  assert.equal(isMeaningful(1.1), false);
+  assert.equal(isMeaningful(0.7), true);
+  assert.deepEqual(estimateHint(30, r), { text: 'Sueles tardar 1,6 veces lo que calculas. ¿Pongo 50 min?', value: 50 });
+  assert.equal(estimateHint(30, 1.1), null);
+  assert.equal(tookText(50, 30), 'Te tomó 50 min (calculaste 30 min)');
+  assert.equal(tookText(80, 60), 'Te tomó 1 h 20 min (calculaste 1 h)');
+  assert.equal(tookText(3, 30), null);
+  assert.equal(planVsReal(360, 270), 'La semana pasada planeaste 6 h y estudiaste 4 h 30.');
+});

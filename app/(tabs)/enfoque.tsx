@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Platform, Pressable, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ProgressRing } from '../../components/Ring';
@@ -16,6 +16,8 @@ import { SoundRow, MixerSheet } from '../../components/focus/AmbientControls';
 import { BreakCoach, ParkButton, ParkedList, PomodoroSummary } from '../../components/focus/FocusParts';
 import { unlockAmbient } from '../../lib/ambient';
 import { RoomsCard } from '../../components/focus/RoomsCard';
+import { useStudyStreak, StreakMini } from '../../components/streaks/Streak';
+import { weeksLabel } from '../../lib/streaks';
 
 // ============================================================
 //  Enfoque (Pomodoro).
@@ -40,6 +42,8 @@ export default function Enfoque() {
   const [pickTask, setPickTask] = useState(false);
   const [mixer, setMixer] = useState(false);
   const [onScreen, setOnScreen] = useState(false);
+  const streak = useStudyStreak();
+  const router = useRouter();
 
   const load = useCallback(() => {
     getSubjects().then(setSubjects).catch(() => {});
@@ -54,6 +58,17 @@ export default function Enfoque() {
     const t = setTimeout(() => getFocusDetail().then(setDetail).catch(() => {}), 1500);
     return () => clearTimeout(t);
   }, [lastAt]);
+
+  // Desde el aviso del plan: /enfoque?tarea=<id> deja elegida esa tarea.
+  const params = useLocalSearchParams<{ tarea?: string }>();
+  useEffect(() => {
+    const id = params.tarea;
+    if (!id || s.running) return;
+    const t = tasks.find((x) => x.id === id);
+    if (!t) return;
+    configureFocus({ taskId: t.id, taskTitle: t.title, subjectId: t.subject_id });
+    router.setParams({ tarea: undefined } as any);
+  }, [params.tarea, tasks]);
 
   const subjName = (sid: string | null) => subjects.find((x) => x.id === sid)?.name ?? 'Sin materia';
   const subjColor = (sid: string | null) => subjects.find((x) => x.id === sid)?.color ?? C.muted;
@@ -121,8 +136,11 @@ export default function Enfoque() {
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <Stat label="Hoy" value={fmtMin(detail.todayMin).replace(' min', 'm').replace(' h ', 'h ')} />
         <Stat label="7 días" value={fmtMin(detail.weekMin).replace(' min', 'm').replace(' h ', 'h ')} />
-        <Stat label="Racha" value={`${detail.streak} ${detail.streak === 1 ? 'día' : 'días'}`} tone={detail.streak ? C.goodText : undefined} />
+        {streak.s
+          ? <Stat label="Racha semanal" value={weeksLabel(streak.s.weekly)} tone={streak.s.weekly ? C.goodText : undefined} />
+          : <Stat label="Racha" value={`${detail.streak} ${detail.streak === 1 ? 'día' : 'días'}`} tone={detail.streak ? C.goodText : undefined} />}
       </View>
+      {streak.s && <Card><StreakMini s={streak.s} onPress={() => router.push('/estudiar')} /></Card>}
       <Card>
         <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '700', marginBottom: 12 }}>Últimos 7 días</Text>
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 10, height: 110 }}>

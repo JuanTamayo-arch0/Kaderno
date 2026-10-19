@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { addFocusSession } from './db';
+import { streakChanged } from './uiBus';
 import { pickTip, dayKey, addParked, removeParked as dropParked, type Parked } from './breakTips';
 
 export type FocusMode = 'work' | 'break';
@@ -124,7 +125,7 @@ function finish(silent: boolean, skipped = false) {
     // Saltar a mitad de un pomodoro guarda solo lo que se alcanzó a hacer
     // (antes guardaba el pomodoro completo y regalaba minutos y monedas).
     const minutes = skipped ? Math.floor((totalMs(s) - remainingMs(s)) / 60000) : Math.max(1, s.workMin);
-    if (minutes >= 1) addFocusSession(minutes, s.subjectId, s.taskId, s.roomId).catch(() => {});
+    if (minutes >= 1) addFocusSession(minutes, s.subjectId, s.taskId, s.roomId).then(() => streakChanged(300)).catch(() => {});
     const cycle = (s.cycle + 1) % 4;
     const brk = cycle === 0 ? s.longBreakMin : s.breakMin;
     // Sugerencia para el descanso, sin repetir las de hoy.

@@ -13,6 +13,8 @@ export type Task = {
   // schema_v14 (pueden faltar si la migración no se ha corrido)
   due_at?: string | null; remind_at?: string | null; estimate_min?: number | null;
   completed_at?: string | null; deleted_at?: string | null; created_at?: string;
+  // schema_v19 fase 2
+  plan_at?: string | null; plan_place?: string | null;
 };
 export type Note = {
   id: string; subject_id: string | null; title: string | null; content: string | null;
@@ -58,7 +60,8 @@ function stripV14<T extends Record<string, any>>(o: T): T {
 async function v14<R extends { error: any }>(run: (on: boolean) => PromiseLike<R>): Promise<R> {
   if (!V14) return run(false);
   const r = await run(true);
-  if (r.error && isMissingColumn(r.error)) { V14 = false; return run(false); }
+  // Las columnas de la fase 2 (plan_at, plan_place) se manejan aparte: no apagan v14.
+  if (r.error && isMissingColumn(r.error) && !/plan_(at|place)/.test(String(r.error.message ?? ''))) { V14 = false; return run(false); }
   return r;
 }
 
@@ -146,12 +149,26 @@ export type TaskInput = {
   title: string; subject_id: string | null; due_date: string | null; remind_days: number | null;
   description?: string | null; type?: string;
   due_at?: string | null; remind_at?: string | null; estimate_min?: number | null;
+  plan_at?: string | null; plan_place?: string | null;
 };
+// Sin la fase 2 de schema_v19 no existen plan_at ni plan_place: se guarda sin ellos.
+let PLAN_COLS = true;
+export function hasPlanCols(): boolean { return PLAN_COLS; }
+const isPlanErr = (e: any) => isMissingColumn(e) && /plan_(at|place)/.test(String(e?.message ?? ''));
+function stripPlan<T extends Record<string, any>>(o: T): T { const c: Record<string, any> = { ...o }; delete c.plan_at; delete c.plan_place; return c as T; }
+async function withPlan<R extends { error: any }>(t: Record<string, any>, run: (t: any) => PromiseLike<R>): Promise<R> {
+  const hasPlan = 'plan_at' in t || 'plan_place' in t;
+  if (!hasPlan) return run(t);
+  if (!PLAN_COLS) return run(stripPlan(t));
+  const r = await run(t);
+  if (r.error && isPlanErr(r.error)) { PLAN_COLS = false; return run(stripPlan(t)); }
+  return r;
+}
 export async function addTask(t: TaskInput): Promise<string> {
   const u = await uid();
-  const { data, error } = await v14((on) => supabase.from('assignments')
-    .insert({ user_id: u, status: 'pending', ...(on ? t : stripV14(t)) })
-    .select('id').single());
+  const { data, error } = await withPlan(t, (tt) => v14((on) => supabase.from('assignments')
+    .insert({ user_id: u, status: 'pending', ...(on ? tt : stripV14(tt)) })
+    .select('id').single()));
   if (error) throw error;
   return (data as { id: string }).id;
 }
@@ -175,7 +192,7 @@ export async function purgeTask(id: string): Promise<void> {
   if (error) throw error;
 }
 export async function updateTask(id: string, patch: Partial<TaskInput>): Promise<void> {
-  const { error } = await v14((on) => supabase.from('assignments').update(on ? patch : stripV14(patch)).eq('id', id));
+  const { error } = await withPlan(patch, (pp) => v14((on) => supabase.from('assignments').update(on ? pp : stripV14(pp)).eq('id', id)));
   if (error) throw error;
 }
 /** Mueve varias tareas de fecha conservando la hora. */

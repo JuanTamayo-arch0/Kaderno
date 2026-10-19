@@ -17,6 +17,11 @@ import { removeTask } from '../lib/taskActions';
 import { StepSuggestions } from './StepSuggestions';
 import { startFocus } from '../lib/focusTimer';
 import type { TaskDraft } from '../lib/uiBus';
+import { WhenPicker, type PlanValue } from './plan/WhenPicker';
+import { needsPlan } from '../lib/planSlots';
+import { hasPlanCols } from '../lib/db';
+import { getEstimateRatio } from '../lib/studyDb';
+import { estimateHint, fmtMinutes } from '../lib/estimate';
 
 // ============================================================
 //  Crear / editar tarea personal.
@@ -47,6 +52,9 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
   const [newType, setNewType] = useState<{ label: string; icon: string } | null>(null);
   const [titleError, setTitleError] = useState<string | null>(null);
   const [more, setMore] = useState(false);
+  const [plan, setPlan] = useState<PlanValue>({ at: null, place: null });
+  const [ratio, setRatio] = useState<number | null>(null);
+  const [hintOff, setHintOff] = useState(false);
 
   useEffect(() => {
     if (!visible) return;
@@ -65,6 +73,9 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
     setNewType(null);
     setTitleError(null);
     setMore(!!(t?.description || t?.estimate_min));
+    setPlan({ at: t?.plan_at ?? null, place: t?.plan_place ?? null });
+    setHintOff(!!t?.estimate_min);
+    getEstimateRatio().then(setRatio).catch(() => setRatio(null));
     loadTaskTypes().then(() => setTypesRev((n) => n + 1)).catch(() => {});
     if (t) getSteps(t.id).then(setSteps).catch(() => {});
   }, [visible, editTask, draft, initialSubjectId]);
@@ -84,6 +95,8 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
         due_date: date, due_at: date && time ? combine(date, time) : null,
         remind_days: remindDays(remind), remind_at: at ? at.toISOString() : null,
         estimate_min: estimate,
+        // El plan solo se manda si hay uno (o había y se quitó): así no molesta sin la migración.
+        ...(plan.at || editTask?.plan_at ? { plan_at: plan.at, plan_place: plan.at ? plan.place : null } : {}),
       };
       let id = editTask?.id;
       if (editTask) {
@@ -96,7 +109,10 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
         }
       }
       if (at) scheduleLocalReminder(title.trim(), at).catch(() => {});
-      toast(editTask ? 'Cambios guardados' : 'Tarea creada', { tone: 'good' });
+      const planChanged = plan.at && plan.at !== editTask?.plan_at;
+      if (planChanged && new Date(plan.at!).getTime() > Date.now()) scheduleLocalReminder('Toca: ' + title.trim(), new Date(plan.at!)).catch(() => {});
+      if (planChanged && !hasPlanCols()) toast('Tarea guardada. Para guardar cuándo la haces falta correr schema_v19.sql.', { tone: 'bad' });
+      else toast(editTask ? 'Cambios guardados' : 'Tarea creada', { tone: 'good' });
       onSaved(id);
     } catch (e) { notify('No se pudo guardar', friendlyError(e)); }
     finally { setBusy(false); }
@@ -206,6 +222,10 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
         </>
       )}
 
+      {hasPlanCols() && (needsPlan(date, new Date()) || !!plan.at) && (
+        <WhenPicker title={title} dueDate={date} dueTime={time} value={plan} onChange={setPlan} excludeId={editTask?.id ?? null} />
+      )}
+
       {!more ? (
         <Pressable onPress={() => setMore(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 16, alignSelf: 'flex-start', paddingVertical: 6 }} accessibilityRole="button">
           <Ionicons name="add-circle-outline" size={17} color={C.brand} />
@@ -219,17 +239,29 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
             <>
               <Text style={[lbl(), { marginTop: 2 }]}>Tiempo estimado</Text>
               <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
-                {[null, ...ESTIMATES].map((m) => {
+                {[null, ...ESTIMATES, ...(estimate != null && !ESTIMATES.includes(estimate) ? [estimate] : [])].map((m) => {
                   const on = estimate === m;
-                  const label = m == null ? 'Sin estimar' : m < 60 ? `${m} min` : `${m / 60} h`;
+                  const label = m == null ? 'Sin estimar' : fmtMinutes(m);
                   return (
-                    <Pressable key={String(m)} onPress={() => setEstimate(m)} accessibilityRole="radio" accessibilityState={{ checked: on }}
+                    <Pressable key={String(m)} onPress={() => { setEstimate(m); setHintOff(false); }} accessibilityRole="radio" accessibilityState={{ checked: on }}
                       style={{ minHeight: 34, justifyContent: 'center', paddingHorizontal: 11, borderRadius: 99, borderWidth: 1, borderColor: on ? C.brand : C.line, backgroundColor: on ? C.brand : 'transparent' }}>
                       <Text style={{ color: on ? C.onBrand : C.text, fontSize: 12.5, fontWeight: on ? '700' : '500' }}>{label}</Text>
                     </Pressable>
                   );
                 })}
               </View>
+              {(() => {
+                const h = hintOff ? null : estimateHint(estimate, ratio);
+                if (!h) return null;
+                return (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, padding: 10, borderRadius: 10, backgroundColor: C.brand + '14', borderWidth: 1, borderColor: C.brand + '44', flexWrap: 'wrap' }}>
+                    <Ionicons name="hourglass-outline" size={15} color={C.brand} />
+                    <Text style={{ color: C.text, fontSize: 12.5, flex: 1, minWidth: 180 }}>{h.text}</Text>
+                    <Button label={`Poner ${fmtMinutes(h.value)}`} size="sm" onPress={() => { setEstimate(h.value); setHintOff(true); }} />
+                    <IconButton icon="close" label="No, gracias" onPress={() => setHintOff(true)} />
+                  </View>
+                );
+              })()}
             </>
           )}
         </>

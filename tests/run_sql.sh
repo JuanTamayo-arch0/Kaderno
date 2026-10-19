@@ -49,3 +49,5 @@ for f in tests/sql/19_antes.sql supabase/schema_v19.sql supabase/schema_v19.sql;
 done
 $PSQL -d k16 -f tests/sql/19_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line|WARNING" | grep -v "^ *$"
 $PSQL -d k16 -f tests/sql/19b_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line|WARNING" | grep -v "^ *$"
+$PSQL -d k16 -f tests/sql/19c_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line|WARNING" | grep -v "^ *$"
+$PSQL -d k16 -f supabase/schema_v19.sql 2>&1 | grep -E "ERROR" ; $PSQL -d k16 -f tests/sql/19c_despues.sql 2>&1 | grep -E "ok [0-9]+|ERROR|exception"

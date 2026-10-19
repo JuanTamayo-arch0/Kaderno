@@ -11,6 +11,7 @@ import { nextLabel } from '../../lib/srs';
 import { toast, friendlyError } from '../../lib/feedback';
 import { refreshNavCounts } from '../../lib/navCounts';
 import { refreshCoinsSoon, emitPetEvent } from '../../lib/pets/store';
+import { streakChanged } from '../../lib/uiBus';
 import { Button, Dot } from '../ds';
 import { Kbd } from '../SideNav';
 import { CardText } from './CardText';
@@ -101,7 +102,7 @@ export function ReviewSession({ queue, learning, mode, retention, typeAnswer, su
     const summary = { cards: stats.done, ms: Date.now() - started.current, recalled: stats.recalled, again: stats.again };
     if (stats.done) {
       emitPetEvent({ type: 'repaso_fin', cards: stats.done });
-      refreshNavCounts(true); refreshCoinsSoon(1500);
+      refreshNavCounts(true); refreshCoinsSoon(1500); streakChanged(600);
     }
     onFinish(summary, main.length + pending.length);
     // eslint-disable-next-line react-hooks/exhaustive-deps

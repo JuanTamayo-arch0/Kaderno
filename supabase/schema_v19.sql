@@ -12,6 +12,14 @@
 --   · Las tarjetas existentes se migran sin perder avance.
 --   · ai_usage y ai_take(): tope diario de usos de la IA por persona.
 --
+-- Fase 2 · Días de estudio, rachas y "¿Cuándo lo haces?"
+--   · study_days: un día de estudio por persona (enfoque, tareas, tarjetas,
+--     pruebas), llenado por disparadores y rellenado hacia atrás.
+--   · study_shields, study_streaks() y study_buy_shield(): racha diaria,
+--     racha semanal, escudos (ganar, usar, comprar) y reparar.
+--   · El premio de racha de la mascota usa los días de estudio.
+--   · assignments.plan_at y plan_place, y el aviso "plan" a esa hora.
+--
 -- Fase 5 · Enfocar juntos (salas de estudio)
 --   · study_rooms: una sala por proyecto (entran sus miembros) o una sala
 --     con código de 6 letras para amigos.
@@ -444,3 +452,373 @@ end;
 $$;
 revoke all on function public.ai_take(text, int) from public, anon;
 grant execute on function public.ai_take(text, int) to authenticated;
+
+
+-- =====================================================================
+--  FASE 2 · Días de estudio, rachas amables y "¿Cuándo lo haces?"
+-- =====================================================================
+
+-- Un día de estudio por persona y fecha (en su zona horaria). Lo llenan
+-- disparadores sobre lo que la app ya guarda; el navegador solo lee.
+create table if not exists public.study_days (
+  user_id    uuid not null references auth.users on delete cascade,
+  day        date not null,
+  focus_min  integer not null default 0,
+  tasks_done integer not null default 0,
+  cards      integer not null default 0,
+  tests      integer not null default 0,
+  protected  boolean not null default false,
+  primary key (user_id, day)
+);
+alter table public.study_days enable row level security;
+drop policy if exists "own study days" on public.study_days;
+create policy "own study days" on public.study_days for select using (user_id = auth.uid());
+grant select on public.study_days to authenticated;
+revoke insert, update, delete on public.study_days from anon, authenticated;
+
+-- Escudos guardados (máximo 2). earned_on evita ganar dos veces el mismo día.
+create table if not exists public.study_shields (
+  user_id    uuid primary key references auth.users on delete cascade,
+  count      integer not null default 0 check (count between 0 and 2),
+  earned_on  date,
+  updated_at timestamptz not null default now()
+);
+alter table public.study_shields enable row level security;
+drop policy if exists "own shields" on public.study_shields;
+create policy "own shields" on public.study_shields for select using (user_id = auth.uid());
+grant select on public.study_shields to authenticated;
+revoke insert, update, delete on public.study_shields from anon, authenticated;
+
+-- Un día cuenta con 10 min de enfoque, 1 tarea, 10 tarjetas o 1 prueba
+-- (las mismas reglas que lib/streaks.ts).
+create or replace function public._study_ok(p_focus int, p_tasks int, p_cards int, p_tests int)
+returns boolean language sql immutable as $$
+  select coalesce(p_focus, 0) >= 10 or coalesce(p_tasks, 0) >= 1 or coalesce(p_cards, 0) >= 10 or coalesce(p_tests, 0) >= 1;
+$$;
+
+-- ¿El día cuenta para la racha? (estudiado o protegido)
+create or replace function public._study_day_ok(p_user uuid, p_day date)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from study_days s
+     where s.user_id = p_user and s.day = p_day
+       and (s.protected or public._study_ok(s.focus_min, s.tasks_done, s.cards, s.tests))
+  );
+$$;
+
+-- Días seguidos que cuentan, terminando en p_day.
+create or replace function public._study_streak_at(p_user uuid, p_day date)
+returns integer language plpgsql stable security definer set search_path = public as $$
+declare n integer := 0;
+begin
+  while n < 1000 and public._study_day_ok(p_user, p_day - n) loop n := n + 1; end loop;
+  return n;
+end $$;
+
+-- Días seguidos sin estudio justo antes de p_day (hasta 3).
+create or replace function public._study_gap(p_user uuid, p_day date)
+returns integer language plpgsql stable security definer set search_path = public as $$
+declare k integer := 0;
+begin
+  while k < 3 and not public._study_day_ok(p_user, p_day - k - 1) loop k := k + 1; end loop;
+  return k;
+end $$;
+
+-- Protege los k días anteriores a p_day.
+create or replace function public._study_protect(p_user uuid, p_day date, k integer)
+returns void language plpgsql security definer set search_path = public as $$
+declare i integer;
+begin
+  for i in 1..k loop
+    insert into study_days (user_id, day, protected) values (p_user, p_day - i, true)
+      on conflict (user_id, day) do update set protected = true;
+  end loop;
+end $$;
+
+-- Un día acaba de empezar a contar: usa escudos para tapar el hueco de
+-- ayer (si alcanzan) y gana uno cada 7 días seguidos.
+create or replace function public._study_new_day(p_user uuid, p_day date)
+returns void language plpgsql security definer set search_path = public as $$
+declare k integer; s integer; st integer;
+begin
+  insert into study_shields (user_id) values (p_user) on conflict do nothing;
+  k := public._study_gap(p_user, p_day);
+  if k between 1 and 2 and public._study_day_ok(p_user, p_day - k - 1) then
+    select count into s from study_shields where user_id = p_user for update;
+    if s >= k then
+      perform public._study_protect(p_user, p_day, k);
+      update study_shields set count = count - k, updated_at = now() where user_id = p_user;
+    end if;
+  end if;
+  st := public._study_streak_at(p_user, p_day);
+  if st > 0 and st % 7 = 0 then
+    update study_shields set count = least(2, count + 1), earned_on = p_day, updated_at = now()
+     where user_id = p_user and earned_on is distinct from p_day;
+  end if;
+end $$;
+
+-- Reparar: hoy hiciste el doble (50 min o 30 tarjetas) y la racha se rompió
+-- hace 1 o 2 días sin escudo: el hueco queda protegido.
+create or replace function public._study_repair(p_user uuid, p_day date)
+returns void language plpgsql security definer set search_path = public as $$
+declare k integer;
+begin
+  k := public._study_gap(p_user, p_day);
+  if k between 1 and 2 and public._study_day_ok(p_user, p_day - k - 1) then
+    perform public._study_protect(p_user, p_day, k);
+  end if;
+end $$;
+
+-- Suma (o resta) al día de p_at. Lo llaman los disparadores.
+create or replace function public._study_touch(p_user uuid, p_at timestamptz, p_focus int, p_tasks int, p_cards int, p_tests int)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_tz text; v_day date; v_today date; o record; n record;
+begin
+  if p_user is null then return; end if;
+  perform pg_advisory_xact_lock(hashtext('study:' || p_user::text));
+  v_tz := public._kaderno_tz(p_user);
+  v_day := (coalesce(p_at, now()) at time zone v_tz)::date;
+  v_today := (now() at time zone v_tz)::date;
+  insert into study_days (user_id, day) values (p_user, v_day) on conflict do nothing;
+  select * into o from study_days where user_id = p_user and day = v_day;
+  update study_days set
+    focus_min = greatest(0, focus_min + coalesce(p_focus, 0)),
+    tasks_done = greatest(0, tasks_done + coalesce(p_tasks, 0)),
+    cards = greatest(0, cards + coalesce(p_cards, 0)),
+    tests = greatest(0, tests + coalesce(p_tests, 0))
+   where user_id = p_user and day = v_day
+   returning * into n;
+  if not public._study_ok(o.focus_min, o.tasks_done, o.cards, o.tests)
+     and public._study_ok(n.focus_min, n.tasks_done, n.cards, n.tests) then
+    perform public._study_new_day(p_user, v_day);
+  end if;
+  if v_day = v_today and (n.focus_min >= 50 or n.cards >= 30) then
+    perform public._study_repair(p_user, v_day);
+  end if;
+end $$;
+
+-- Disparadores. Si algo falla, lo del usuario se guarda igual.
+create or replace function public._study_on_focus() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  begin
+    perform public._study_touch(new.user_id, coalesce(new.created_at, now()), greatest(coalesce(new.minutes, 0), 0), 0, 0, 0);
+  exception when others then raise warning 'día de estudio (enfoque %): %', new.id, sqlerrm;
+  end;
+  return new;
+end $$;
+drop trigger if exists focus_sessions_study_trg on public.focus_sessions;
+create trigger focus_sessions_study_trg after insert on public.focus_sessions
+  for each row execute function public._study_on_focus();
+
+create or replace function public._study_on_task() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  begin
+    if new.status = 'done' and old.status is distinct from 'done' and new.deleted_at is null then
+      perform public._study_touch(new.user_id, coalesce(new.completed_at, now()), 0, 1, 0, 0);
+    elsif old.status = 'done' and new.status is distinct from 'done' then
+      perform public._study_touch(new.user_id, coalesce(old.completed_at, now()), 0, -1, 0, 0);
+    end if;
+  exception when others then raise warning 'día de estudio (tarea %): %', new.id, sqlerrm;
+  end;
+  return new;
+end $$;
+drop trigger if exists assignments_study_trg on public.assignments;
+create trigger assignments_study_trg after update of status on public.assignments
+  for each row execute function public._study_on_task();
+
+create or replace function public._study_on_review() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  begin
+    if tg_op = 'INSERT' then
+      perform public._study_touch(new.user_id, new.reviewed_at, 0, 0, 1, 0);
+    else
+      perform public._study_touch(old.user_id, old.reviewed_at, 0, 0, -1, 0);
+    end if;
+  exception when others then raise warning 'día de estudio (repaso): %', sqlerrm;
+  end;
+  return null;
+end $$;
+drop trigger if exists flashcard_reviews_study_trg on public.flashcard_reviews;
+create trigger flashcard_reviews_study_trg after insert or delete on public.flashcard_reviews
+  for each row execute function public._study_on_review();
+
+-- Relleno hacia atrás (idempotente: se queda con el mayor).
+insert into public.study_days (user_id, day, focus_min)
+select f.user_id, (f.created_at at time zone public._kaderno_tz(f.user_id))::date, sum(greatest(coalesce(f.minutes, 0), 0))::int
+  from public.focus_sessions f where f.created_at is not null group by 1, 2
+on conflict (user_id, day) do update set focus_min = greatest(public.study_days.focus_min, excluded.focus_min);
+insert into public.study_days (user_id, day, tasks_done)
+select a.user_id, (a.completed_at at time zone public._kaderno_tz(a.user_id))::date, count(*)::int
+  from public.assignments a where a.status = 'done' and a.completed_at is not null and a.deleted_at is null group by 1, 2
+on conflict (user_id, day) do update set tasks_done = greatest(public.study_days.tasks_done, excluded.tasks_done);
+insert into public.study_days (user_id, day, cards)
+select r.user_id, (r.reviewed_at at time zone public._kaderno_tz(r.user_id))::date, count(*)::int
+  from public.flashcard_reviews r group by 1, 2
+on conflict (user_id, day) do update set cards = greatest(public.study_days.cards, excluded.cards);
+do $$ begin
+  if to_regclass('public.pet_daily') is not null then
+    execute $q$
+      insert into public.study_days (user_id, day, cards)
+      select d.user_id, d.day, d.reviews from public.pet_daily d where d.reviews > 0
+      on conflict (user_id, day) do update set cards = greatest(public.study_days.cards, excluded.cards)
+    $q$;
+  end if;
+end $$;
+
+-- Rachas de quien llama: diaria, semanal (semanas seguidas cumpliendo la
+-- meta, de lunes a domingo), meta y escudos.
+create or replace function public.study_streaks()
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare
+  me uuid := auth.uid(); v_tz text; v_today date; v_goal int := 4; g text; d date; wk date;
+  v_daily int; v_weekly int := 0; n int; i int; v_shields int;
+begin
+  if me is null then return null; end if;
+  v_tz := public._kaderno_tz(me);
+  v_today := (now() at time zone v_tz)::date;
+  select settings -> 'study' ->> 'weeklyGoal' into g from user_prefs where user_id = me;
+  if g ~ '^[0-9]{1,2}$' then v_goal := least(7, greatest(2, g::int)); end if;
+  d := v_today;
+  if not public._study_day_ok(me, d) then d := d - 1; end if;
+  v_daily := public._study_streak_at(me, d);
+  wk := date_trunc('week', v_today)::date;
+  for i in 0..104 loop
+    select count(*) into n from generate_series(wk, wk + 6, interval '1 day') x where public._study_day_ok(me, x::date);
+    if n >= v_goal then v_weekly := v_weekly + 1;
+    elsif i > 0 then exit;
+    end if;
+    wk := wk - 7;
+  end loop;
+  select count into v_shields from study_shields where user_id = me;
+  return jsonb_build_object('daily', v_daily, 'weekly', v_weekly, 'goal', v_goal, 'shields', coalesce(v_shields, 0));
+end $$;
+
+-- Comprar un escudo con 80 monedas de la mascota activa (máximo 2 guardados).
+create or replace function public.study_buy_shield()
+returns integer language plpgsql security definer set search_path = public as $$
+declare me uuid := auth.uid(); v_pet record; s integer;
+begin
+  if me is null then raise exception 'Inicia sesión.' using errcode = '42501'; end if;
+  if to_regclass('public.pets') is null then raise exception 'Necesitas una mascota para comprar escudos.' using errcode = 'P0001'; end if;
+  perform pg_advisory_xact_lock(hashtext('study:' || me::text));
+  select id, coins into v_pet from pets where user_id = me and active for update;
+  if v_pet.id is null then raise exception 'Primero elige una mascota.' using errcode = 'P0001'; end if;
+  insert into study_shields (user_id) values (me) on conflict do nothing;
+  select count into s from study_shields where user_id = me for update;
+  if s >= 2 then raise exception 'Ya tienes 2 escudos, el máximo.' using errcode = 'P0001'; end if;
+  if v_pet.coins < 80 then raise exception 'Te faltan % monedas.', 80 - v_pet.coins using errcode = 'P0001'; end if;
+  update pets set coins = coins - 80 where id = v_pet.id;
+  insert into pet_ledger (user_id, pet_id, delta, reason, ref)
+    values (me, v_pet.id, -80, 'escudo', (extract(epoch from clock_timestamp()) * 1000)::bigint::text);
+  update study_shields set count = count + 1, updated_at = now() where user_id = me;
+  return s + 1;
+end $$;
+
+-- El premio de racha de la mascota ahora cuenta días de estudio (antes:
+-- días ganando monedas). Solo si ya existen las tablas de la mascota.
+do $$ begin
+  if to_regclass('public.pet_daily') is not null and to_regproc('public._pet_award') is not null then
+    execute $f$
+      create or replace function public._pet_award(p_user uuid, p_reason text, p_ref text, p_amount integer)
+      returns integer
+      language plpgsql security definer set search_path = public as $b$
+      declare
+        v_pet uuid; v_day date; v_earned integer; v_amt integer; v_first boolean; v_streak integer := 1; i integer;
+      begin
+        if p_user is null or p_amount is null or p_amount < 0 then return 0; end if;
+        select id into v_pet from pets where user_id = p_user and active;
+        if v_pet is null then return 0; end if;
+        v_day := (now() at time zone public._kaderno_tz(p_user))::date;
+        insert into pet_daily (user_id, day) values (p_user, v_day) on conflict do nothing;
+        select earned into v_earned from pet_daily where user_id = p_user and day = v_day for update;
+        v_first := v_earned = 0;
+        v_amt := greatest(0, least(p_amount, 300 - v_earned));
+        insert into pet_ledger (user_id, pet_id, delta, reason, ref) values (p_user, v_pet, v_amt, p_reason, p_ref)
+          on conflict (user_id, reason, ref) do nothing;
+        if not found then return 0; end if;
+        if v_amt > 0 then
+          update pets set coins = coins + v_amt, xp = xp + v_amt where id = v_pet;
+          update pet_daily set earned = earned + v_amt where user_id = p_user and day = v_day;
+          if v_first and p_reason <> 'racha' then
+            for i in 1..6 loop
+              exit when not public._study_day_ok(p_user, v_day - i);
+              v_streak := v_streak + 1;
+            end loop;
+            perform public._pet_award(p_user, 'racha', v_day::text, 5 * v_streak);
+          end if;
+        end if;
+        return v_amt;
+      end $b$;
+    $f$;
+    execute 'revoke all on function public._pet_award(uuid, text, text, integer) from public, anon, authenticated';
+  end if;
+end $$;
+
+-- ---------------------------------------------------------------------
+--  "¿Cuándo lo haces?": hora y lugar planeados para empezar una tarea.
+-- ---------------------------------------------------------------------
+alter table public.assignments add column if not exists plan_at timestamptz;
+alter table public.assignments add column if not exists plan_place text;
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'assignments_plan_place_chk') then
+    alter table public.assignments add constraint assignments_plan_place_chk check (plan_place is null or char_length(plan_place) <= 40);
+  end if;
+end $$;
+create index if not exists assignments_plan_idx on public.assignments (plan_at) where plan_at is not null and deleted_at is null;
+
+-- Aviso a la hora del plan (la función "notify" corre cada 10 minutos).
+create or replace function public.enqueue_plans(p_now timestamptz default now()) returns integer
+language plpgsql security definer set search_path = public as $$
+declare n integer;
+begin
+  insert into public.notification_queue (user_id, kind, ref, title, body, url)
+  select a.user_id, 'plan', a.id::text || ':' || extract(epoch from a.plan_at)::bigint::text,
+         'Son las ' || ltrim(to_char(a.plan_at at time zone public._kaderno_tz(a.user_id), 'HH12:MI am'), '0') || ': toca ' || left(a.title, 80),
+         case
+           when a.plan_place is null or btrim(a.plan_place) = '' then 'Toca para empezar el enfoque.'
+           when lower(a.plan_place) = 'casa' then 'En casa. Toca para empezar el enfoque.'
+           when lower(a.plan_place) in ('biblioteca', 'universidad', 'oficina', 'cafetería') then 'En la ' || lower(a.plan_place) || '. Toca para empezar el enfoque.'
+           else 'En ' || a.plan_place || '. Toca para empezar el enfoque.'
+         end,
+         '/enfoque?tarea=' || a.id::text
+    from public.assignments a
+   where a.plan_at <= p_now and a.plan_at > p_now - interval '20 minutes'
+     and a.deleted_at is null and coalesce(a.status, 'pending') <> 'done'
+  on conflict (user_id, kind, ref) do nothing;
+  get diagnostics n = row_count;
+  return n;
+end $$;
+
+create or replace function public.enqueue_all(p_now timestamptz default now()) returns jsonb
+language plpgsql security definer set search_path = public as $$
+begin
+  return jsonb_build_object(
+    'reminders', public.enqueue_reminders(p_now),
+    'project_due', public.enqueue_project_due(p_now),
+    'plans', public.enqueue_plans(p_now),
+    'digests', public.enqueue_digests(p_now),
+    'purged', public.purge_trash(p_now)
+  );
+end $$;
+
+-- ---------- Permisos de la fase 2 ----------
+revoke all on function public._study_ok(int, int, int, int) from public, anon;
+revoke all on function public._study_day_ok(uuid, date) from public, anon, authenticated;
+revoke all on function public._study_streak_at(uuid, date) from public, anon, authenticated;
+revoke all on function public._study_gap(uuid, date) from public, anon, authenticated;
+revoke all on function public._study_protect(uuid, date, integer) from public, anon, authenticated;
+revoke all on function public._study_new_day(uuid, date) from public, anon, authenticated;
+revoke all on function public._study_repair(uuid, date) from public, anon, authenticated;
+revoke all on function public._study_touch(uuid, timestamptz, int, int, int, int) from public, anon, authenticated;
+revoke all on function public._study_on_focus() from public, anon, authenticated;
+revoke all on function public._study_on_task() from public, anon, authenticated;
+revoke all on function public._study_on_review() from public, anon, authenticated;
+revoke all on function public.enqueue_plans(timestamptz) from public, anon, authenticated;
+revoke all on function public.enqueue_all(timestamptz) from public, anon, authenticated;
+revoke all on function public.study_streaks() from public, anon;
+revoke all on function public.study_buy_shield() from public, anon;
+grant execute on function public.study_streaks() to authenticated;
+grant execute on function public.study_buy_shield() to authenticated;
