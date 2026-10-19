@@ -1134,3 +1134,28 @@ Requiere la versión 20 completa (`schema_v19.sql` con sus cuatro fases).
 ### 3. Pruebas
 
 `npm test` (incluye `tests/v21.test.ts`: lector de repeticiones, siguiente fecha con fin de mes, hasta, atrasadas y "desde que la termino", agregar rápido, carriles de la línea de tiempo, horas libres, sobrecarga, cierre, cuenta regresiva y bandeja) y `bash tests/run_sql.sh` (incluye `tests/sql/20_pruebas.sql`: misma siguiente fecha que la app, una sola repetición aunque se marque dos veces, saltar, cierre privado y aviso del cierre).
+
+## Versión 21 (parte 2): notas conectadas
+
+### 1. Migración
+
+Vuelve a correr `supabase/schema_v20.sql` completo (es idempotente). La fase 2 agrega:
+
+- `note_links`: enlaces entre notas, recalculados por la base al guardar (solo a notas propias) y rellenados con lo que ya hubiera.
+- `related_notes()`: notas parecidas con los vectores del Oráculo (`note_embeddings`). Solo se crea si existe esa tabla (schema_v3).
+- `note_templates` y `subjects.default_template`: plantillas propias y la de cada materia.
+- `flashcards.note_line` y el origen `note`: tarjetas escritas en la nota.
+
+No hay funciones que desplegar.
+
+### 2. Lo que cambia para el usuario
+
+- **Enlaces entre notas:** en el editor, `[[` abre un buscador de notas; al elegir una queda un enlace con su título (se guarda como `[Título](kd-note:<id>)` y al abrir la nota se pone el título actual). Leyendo, un toque abre la nota; editando, Ctrl o Cmd + clic.
+- **Mencionada en** y **Notas relacionadas** en la columna de la nota (las relacionadas salen de los vectores del Oráculo, aunque no estén enlazadas).
+- **Plantillas:** "Nueva nota" en la materia ofrece En blanco, Apuntes de clase (Cornell), Laboratorio, Capítulo de libro, Ejercicio resuelto y las tuyas, con "Usar siempre en esta materia". Menú de la nota → "Guardar como plantilla".
+- **Nota de la clase:** durante una clase (según el horario), Hoy y la materia muestran "Apuntes de hoy": abre o crea la nota "Clase del 23 oct" con la plantilla de la materia.
+- **Tarjetas desde la nota:** una línea `pregunta :: respuesta` o con `{{completar}}` se marca como tarjeta (y leyendo se ve con una flecha). Al terminar de editar, si hay tarjetas nuevas se abre "Revisa tus tarjetas"; si cambias una línea ya guardada, la tarjeta se actualiza sola.
+
+### 3. Pruebas
+
+`npm test` (enlaces, títulos al día, líneas con `::` y `{{ }}`, nuevas y cambiadas, plantillas) y `bash tests/run_sql.sh` (incluye `tests/sql/20b_pruebas.sql`: enlaces solo a notas propias, se recalculan y se borran con la nota, plantillas privadas y origen `note`).

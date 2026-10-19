@@ -39,6 +39,8 @@ import { prepText } from '../../lib/quiz';
 import { planProgress } from '../../lib/examPlan';
 import { getGoal, type Goal } from '../../lib/ritualsDb';
 import { WoopSheet } from '../../components/goals/WoopSheet';
+import { TemplatePicker } from '../../components/notes/TemplatePicker';
+import { openClassNote } from '../../lib/notesDb';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 // ============================================================
@@ -80,6 +82,7 @@ function MateriaDetalle() {
   const [examSessions, setExamSessions] = useState<SessionTask[]>([]);
   const [goal, setGoal] = useState<Goal | null>(null);
   const [woop, setWoop] = useState(false);
+  const [picker, setPicker] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -132,14 +135,22 @@ function MateriaDetalle() {
     catch (e) { setTasks((xs) => xs.map((x) => x.id === t.id ? t : x)); toast(friendlyError(e), { tone: 'bad' }); }
   }
   function remove(t: Task) { removeTask(t, () => setHidden((h) => new Set(h).add(t.id))); }
-  async function newNote() {
+  function newNote() { if (!busyNew) setPicker(true); }
+  async function classNote() {
+    try {
+      const r = await openClassNote(id);
+      if (isWide) { setOpenNote(r.id); setTabState('notas'); router.setParams({ tab: 'notas', nota: r.id } as any); load(); }
+      else router.push({ pathname: '/nota/[id]', params: { id: r.id, edit: '1' } } as any);
+    } catch (e) { notify('No se pudo abrir', friendlyError(e)); }
+  }
+  async function createNote(content: string) {
     if (busyNew) return;
     setBusyNew(true);
     try {
-      const nid = await addNote({ subject_id: id, title: 'Nota sin título', content: '', image_path: null });
+      const nid = await addNote({ subject_id: id, title: 'Nota sin título', content, image_path: null });
       if (isWide) {
         const now = new Date().toISOString();
-        setNotes((xs) => [{ id: nid, subject_id: id, title: 'Nota sin título', content: '', image_path: null, ocr_status: 'done', created_at: now, updated_at: now, summary: null }, ...xs]);
+        setNotes((xs) => [{ id: nid, subject_id: id, title: 'Nota sin título', content, image_path: null, ocr_status: 'done', created_at: now, updated_at: now, summary: null }, ...xs]);
         setNewNoteId(nid); setOpenNote(nid); setTabState('notas');
         router.setParams({ tab: 'notas', nota: nid } as any);
       } else router.push({ pathname: '/nota/[id]', params: { id: nid, edit: '1' } } as any);
@@ -198,6 +209,7 @@ function MateriaDetalle() {
     <>
       <SubjectModal visible={!!editModal} editSubject={subject} focusField={editModal ? editModal.field : undefined} onClose={() => setEditModal(false)} onSaved={() => { setEditModal(false); load(); }}
         onArchived={() => { setEditModal(false); router.replace('/materias'); }} />
+      <TemplatePicker visible={picker} subjectId={subject.id} onClose={() => setPicker(false)} onPick={createNote} />
       <WoopSheet visible={woop} onClose={() => setWoop(false)} subjectId={subject.id} subject={subject.name} scale={scale} goal={goal} onSaved={setGoal} />
       <GradeModal visible={gradeModal} subjectId={subject.id} defaultScale={scale} editGrade={editGrade} onClose={() => { setGradeModal(false); setEditGrade(null); }} onSaved={() => { setGradeModal(false); setEditGrade(null); load(); }} />
       <ActionMenu visible={menu} title={subject.name} onClose={() => setMenu(false)} actions={[
@@ -271,6 +283,13 @@ function MateriaDetalle() {
         <SubjectStats d={stats} accent={subject.color} isWide={isWide}
           onGrades={() => setTab('cal')} onNext={openEval} onTasks={() => setTab('tareas')}
           onStudy={() => (study?.dueCards ? router.push('/repaso') : actions.onFocus())} />
+        {nextCls?.now && (
+          <Pressable onPress={classNote} accessibilityRole="button" style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 14, backgroundColor: hovered ? subject.color + '30' : subject.color + '1c', borderWidth: 1, borderColor: subject.color + '66' })}>
+            <Ionicons name="create-outline" size={18} color={subject.color} />
+            <Text style={{ color: C.text, fontSize: 14, fontWeight: '700', flex: 1 }}>Clase de {subject.name} ahora · Abrir apuntes de hoy</Text>
+            <Ionicons name="chevron-forward" size={16} color={C.muted} />
+          </Pressable>
+        )}
         <GoalRow goal={goal} accent={subject.color} onPress={() => setWoop(true)} />
         <PrepRow text={prepText(quizzes) ?? (notes.length ? 'Ponte a prueba antes del parcial: un simulacro con preguntas de tus notas.' : null)}
           plan={examSessions.length ? planProgress(examSessions).text : null} accent={subject.color}

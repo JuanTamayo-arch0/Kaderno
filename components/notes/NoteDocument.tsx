@@ -22,6 +22,9 @@ import { NoteEditor } from './NoteEditor';
 import type { HeadingItem, NoteEditorHandle, SelectionAction } from './editorTypes';
 import { RecallTest } from './RecallTest';
 import { recallLabel } from '../../lib/quiz';
+import { extractLinks, refreshLinkTitles } from '../../lib/noteLinks';
+import { noteTitles } from '../../lib/cardsDb';
+import { searchNoteTitles, getBacklinks, getRelated, syncNoteCards, saveTemplate, type NoteRef } from '../../lib/notesDb';
 
 // ============================================================
 //  Una nota abierta: título, texto (se lee y se edita en el mismo lugar),
@@ -70,14 +73,48 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
     getNote(noteId).then((n) => {
       if (!alive) return;
       if (!n || n.deleted_at) { setNote(null); return; }
-      setNote(n); setTitle(n.title ?? ''); setContent(n.content ?? ''); setSummary(n.summary ?? null);
-      saved.current = { title: n.title ?? '', content: n.content ?? '' };
-      latest.current = { ...saved.current };
-      if (!startEditing) setEditing(!(n.content ?? '').trim());
+      const finish = (content: string) => {
+        if (!alive) return;
+        setNote(n); setTitle(n.title ?? ''); setContent(content); setSummary(n.summary ?? null);
+        // Si un enlace cambió de título, la nota se guarda con el título actual.
+        saved.current = { title: n.title ?? '', content: n.content ?? '' };
+        latest.current = { title: n.title ?? '', content };
+        if (!startEditing) setEditing(!content.trim());
+      };
+      const ids = extractLinks(n.content ?? '');
+      if (ids.length) noteTitles(ids).then((m) => finish(refreshLinkTitles(n.content ?? '', m))).catch(() => finish(n.content ?? ''));
+      else finish(n.content ?? '');
       if (n.image_path) signedUrl(n.image_path).then((u) => { if (alive) setPhoto(u); }).catch(() => {});
     }).catch(() => { if (alive) setNote(null); });
     return () => { alive = false; };
   }, [noteId]);
+
+  // Notas conectadas: "Mencionada en" y relacionadas.
+  const [backlinks, setBacklinks] = useState<NoteRef[]>([]);
+  const [related, setRelated] = useState<NoteRef[]>([]);
+  useEffect(() => {
+    setBacklinks([]); setRelated([]);
+    getBacklinks(noteId).then(setBacklinks).catch(() => {});
+    getRelated(noteId).then(setRelated).catch(() => {});
+  }, [noteId]);
+
+  // Al salir de editar: tarjetas escritas con "::" o {{ }}.
+  const wasEditing = useRef(editing);
+  useEffect(() => {
+    if (wasEditing.current && !editing && note) {
+      const md = ed.current?.flush() ?? content;
+      syncNoteCards(noteId, md).then(({ create, updated }) => {
+        if (updated) toast(updated === 1 ? '1 tarjeta actualizada desde la nota' : `${updated} tarjetas actualizadas desde la nota`);
+        if (create.length) {
+          toast(`Encontré ${create.length} ${create.length === 1 ? 'tarjeta' : 'tarjetas'} en tu nota`);
+          maker.review(create.map((c) => ({ kind: c.kind, front: c.front, back: c.back })), {
+            noteId, subjectId: note.subject_id ?? null, title: title || 'Nota', from: 'note', lines: Object.fromEntries(create.map((c) => [c.front, c.line])),
+          });
+        }
+      }).catch(() => {});
+    }
+    wasEditing.current = editing;
+  }, [editing]);
 
   // "Ver en la nota": ir al título de donde salió la tarjeta (una vez por nota).
   const focused = useRef<string | null>(null);
@@ -220,7 +257,8 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
         onContentSizeChange={(e) => setTitleH(e.nativeEvent.contentSize.height)} blurOnSubmit
         style={[{ color: C.text, fontSize: scroll ? 36 : 28, fontWeight: '800', letterSpacing: -0.3, paddingVertical: 4, marginBottom: 14, height: Math.max(scroll ? 50 : 40, titleH) }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
       <NoteEditor key={noteId} ref={ed} value={content} onChange={setContent} editing={editing} onRequestEdit={() => setEditing(true)} onRequestRead={() => setEditing(false)}
-        onOutline={setHeads} onSelectionAction={onSelection} uploadImage={uploadImage} minHeight={scroll ? 420 : 300} />
+        onOutline={setHeads} onSelectionAction={onSelection} uploadImage={uploadImage} minHeight={scroll ? 420 : 300}
+        searchNotes={(q) => searchNoteTitles(q, noteId)} onOpenNote={(id) => router.push(`/nota/${id}`)} />
     </View>
   );
 
@@ -255,6 +293,23 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
         <Text style={{ color: C.muted, fontSize: 11.5, lineHeight: 16 }}>Resumir ayuda a ordenar; para recordar, ponte a prueba.</Text>
       </View>
 
+      {(backlinks.length > 0 || related.length > 0) && (
+        <View style={{ gap: 14 }}>
+          {backlinks.length > 0 && (
+            <View>
+              <Label text="Mencionada en" />
+              {backlinks.map((n) => <NoteLinkRow key={n.id} n={n} icon="return-up-back-outline" onPress={() => router.push(`/nota/${n.id}`)} />)}
+            </View>
+          )}
+          {related.length > 0 && (
+            <View>
+              <Label text="Notas relacionadas" />
+              {related.map((n) => <NoteLinkRow key={n.id} n={n} icon="git-network-outline" subject={subjects.find((s) => s.id === n.subject_id)?.name} onPress={() => router.push(`/nota/${n.id}`)} />)}
+            </View>
+          )}
+        </View>
+      )}
+
       <View>
         <Label text="Materia" />
         <SubjectPicker subjects={subjects} value={note.subject_id} onChange={changeSubject} placeholder="Sin materia" />
@@ -278,6 +333,10 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
       { label: note.pinned ? 'Quitar de fijadas' : 'Fijar arriba', icon: note.pinned ? 'pin-outline' : 'pin', onPress: togglePin },
       ...(photo ? [{ label: 'Ver foto original', icon: 'image-outline' as const, onPress: () => setZoom(true) }] : []),
       { label: 'Preguntar al Oráculo', icon: 'sparkles-outline', onPress: () => askOracle() },
+      { label: 'Guardar como plantilla', icon: 'copy-outline', onPress: async () => {
+        try { await saveTemplate(title || 'Mi plantilla', ed.current?.flush() ?? content); toast('Plantilla guardada: sale al crear una nota nueva', { tone: 'good' }); }
+        catch (e) { notify('No se pudo guardar', friendlyError(e)); }
+      } },
       { label: 'Borrar nota', icon: 'trash-outline', danger: true, onPress: remove },
     ]} />
   );
@@ -325,4 +384,17 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
 
 function Label({ text }: { text: string }) {
   return <Text style={{ color: C.muted, fontSize: 11.5, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8 }}>{text}</Text>;
+}
+
+function NoteLinkRow({ n, icon, subject, onPress }: { n: NoteRef; icon: React.ComponentProps<typeof Ionicons>['name']; subject?: string; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} accessibilityRole="link" accessibilityLabel={`Abrir nota ${n.title}`}
+      style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 7, paddingHorizontal: 8, borderRadius: 8, backgroundColor: hovered ? C.surface2 : 'transparent' })}>
+      <Ionicons name={icon} size={14} color={C.muted} />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={{ color: C.text, fontSize: 13, fontWeight: '600' }} numberOfLines={1}>{n.title}</Text>
+        {!!subject && <Text style={{ color: C.muted, fontSize: 11.5 }} numberOfLines={1}>{subject}</Text>}
+      </View>
+    </Pressable>
+  );
 }

@@ -127,3 +127,34 @@ test('cuenta regresiva y bandeja', async () => {
   assert.equal(goesToInbox({ dueDate: null, subjectId: null }), true);
   assert.equal(goesToInbox({ dueDate: null, subjectId: 'x' }), false);
 });
+
+// ---------- Notas conectadas ----------
+const A = '11111111-2222-4333-8444-555555555555', B = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
+test('enlaces entre notas', async () => {
+  const { extractLinks, refreshLinkTitles, linkMarkdown } = await import('../lib/noteLinks');
+  const md = `Ver [Bernoulli](kd-note:${A}) y [Venturi](kd-note:${B}), otra vez [B](kd-note:${A}). [web](https://x.co)`;
+  assert.deepEqual(extractLinks(md), [A, B]);
+  assert.equal(refreshLinkTitles(md, { [A]: 'Ecuación de Bernoulli' }), `Ver [Ecuación de Bernoulli](kd-note:${A}) y [Venturi](kd-note:${B}), otra vez [Ecuación de Bernoulli](kd-note:${A}). [web](https://x.co)`);
+  assert.equal(linkMarkdown(A, 'Leyes [1]'), `[Leyes 1](kd-note:${A})`);
+});
+
+test('tarjetas escritas en la nota', async () => {
+  const { parseCardLines, diffNoteCards } = await import('../lib/noteLinks');
+  const md = '# Tema\n- **Bernoulli** :: P + ½ρv² = constante\nTexto normal con ::raro\n```\na :: b\n```\nLa unidad {{FRL}} filtra el aire\n1. Caudal :: Q = A·v\n> cita :: no';
+  const lines = parseCardLines(md);
+  assert.deepEqual(lines.map((l) => [l.kind, l.front, l.back]), [['basic', 'Bernoulli', 'P + ½ρv² = constante'], ['cloze', 'La unidad {{FRL}} filtra el aire', ''], ['basic', 'Caudal', 'Q = A·v']]);
+  const d = diffNoteCards(lines, [
+    { id: 'c1', front: 'Bernoulli', back: 'P + ½ρv² = cte', note_line: '- **Bernoulli** :: P + ½ρv² = cte' },
+    { id: 'c2', front: 'Caudal', back: 'Q = A·v', note_line: '1. Caudal :: Q = A·v' },
+  ]);
+  assert.deepEqual(d.create.map((c) => c.front), ['La unidad {{FRL}} filtra el aire']);
+  assert.deepEqual(d.update.map((u) => [u.id, u.back]), [['c1', 'P + ½ρv² = constante']]);
+});
+
+test('plantillas y nota de clase', async () => {
+  const { TEMPLATES, builtinTemplate, classNoteTitle } = await import('../lib/noteLinks');
+  assert.deepEqual(TEMPLATES.map((t) => t.key), ['cornell', 'lab', 'capitulo', 'ejercicio']);
+  assert.match(builtinTemplate('lab')!.content, /## Conclusiones/);
+  assert.equal(builtinTemplate('x'), null);
+  assert.equal(classNoteTitle(new Date(2026, 9, 23)), 'Clase del 23 oct');
+});

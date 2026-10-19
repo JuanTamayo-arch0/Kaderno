@@ -24,6 +24,8 @@ import { TableKit } from '@tiptap/extension-table';
 import Image from '@tiptap/extension-image';
 import { BlockMath, InlineMath } from '@tiptap/extension-mathematics';
 import Suggestion, { type SuggestionProps, type SuggestionKeyDownProps } from '@tiptap/suggestion';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import katex from 'katex';
 import { C, noteFontStack, noteFontFamily, loadWebFont, fontFamilyOf, PERSONALIZE } from '../../lib/theme';
 import { signedUrl } from '../../lib/db';
@@ -58,6 +60,11 @@ function injectCss() {
   .kd-ed .ProseMirror > :first-child { margin-top: 0; }
   .kd-ed .ProseMirror strong { font-weight: 700; color: ${C.text}; }
   .kd-ed .ProseMirror a { color: ${C.brand}; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .kd-ed .ProseMirror a[href^="kd-note:"] { text-decoration-style: dotted; background: ${hexA(C.brand, 0.08)}; border-radius: 4px; padding: 0 2px; }
+  .kd-ed .ProseMirror .kd-card-line { border-left: 3px solid ${hexA(C.brand2, 0.7)}; padding-left: 10px; }
+  .kd-ed .ProseMirror .kd-card-line::after { content: 'tarjeta'; font: 700 10px var(--kd-ui-font); color: ${C.brand2}; background: ${hexA(C.brand2, 0.12)}; border-radius: 99px; padding: 1px 6px; margin-left: 8px; vertical-align: middle; }
+  .kd-ed .ProseMirror[contenteditable="false"] .kd-card-sep { font-size: 0; }
+  .kd-ed .ProseMirror[contenteditable="false"] .kd-card-sep::after { content: '→'; font-size: 17px; color: ${C.brand2}; margin: 0 8px; }
   .kd-ed .ProseMirror mark { background: ${hexA(C.warn, 0.32)}; color: inherit; border-radius: 3px; padding: 0 2px; }
   .kd-ed .ProseMirror code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.86em; background: ${C.surface2}; border: 1px solid ${C.line}; border-radius: 6px; padding: 1px 5px; }
   .kd-ed .ProseMirror pre { background: ${C.surface2}; border: 1px solid ${C.line}; border-radius: 12px; padding: 14px 16px; overflow-x: auto; }
@@ -218,6 +225,70 @@ const SlashCommand = Extension.create<{ getItems: () => SlashItem[]; onState: (s
   },
 });
 
+// ---------- v21: enlaces [[entre notas]] ----------
+type LinkItem = { id: string; title: string };
+type LinkState = { items: LinkItem[]; index: number; rect: DOMRect | null; command: (it: LinkItem) => void } | null;
+const NoteLinkSuggest = Extension.create<{ search: (q: string) => Promise<LinkItem[]>; onState: (s: LinkState) => void; onKey: (e: KeyboardEvent) => boolean }>({
+  name: 'kdNoteLink',
+  addOptions() { return { search: async () => [], onState: () => {}, onKey: () => false }; },
+  addProseMirrorPlugins() {
+    const opts = this.options;
+    return [Suggestion<LinkItem>({
+      editor: this.editor,
+      pluginKey: new PluginKey('kdNoteLink'),
+      char: '[[',
+      allowSpaces: true,
+      startOfLine: false,
+      allow: ({ editor }) => editor.isEditable && !editor.isActive('codeBlock'),
+      items: async ({ query }) => { try { return (await opts.search(query)).slice(0, 8); } catch { return []; } },
+      command: ({ editor, range, props }) => {
+        editor.chain().focus().deleteRange(range)
+          .insertContent([{ type: 'text', text: props.title, marks: [{ type: 'link', attrs: { href: 'kd-note:' + props.id } }] }, { type: 'text', text: ' ' }]).run();
+      },
+      render: () => ({
+        onStart: (p: SuggestionProps<LinkItem>) => opts.onState({ items: p.items, index: 0, rect: p.clientRect?.() ?? null, command: p.command }),
+        onUpdate: (p: SuggestionProps<LinkItem>) => opts.onState({ items: p.items, index: 0, rect: p.clientRect?.() ?? null, command: p.command }),
+        onKeyDown: (p: SuggestionKeyDownProps) => opts.onKey(p.event),
+        onExit: () => opts.onState(null),
+      }),
+    })];
+  },
+});
+
+// ---------- v21: líneas "pregunta :: respuesta" marcadas como tarjeta ----------
+const CARD_SEP = ' :: ';
+function cardDecorations(doc: any): DecorationSet {
+  const decos: Decoration[] = [];
+  doc.descendants((node: any, pos: number) => {
+    if (!node.isTextblock || node.type.name === 'codeBlock') return true;
+    const text: string = node.textContent;
+    const cloze = /\{\{[^{}]+\}\}/.test(text);
+    if (!text.includes(CARD_SEP) && !cloze) return false;
+    if (node.type.name === 'heading') return false;
+    decos.push(Decoration.node(pos, pos + node.nodeSize, { class: 'kd-card-line' }));
+    let off = 0;
+    node.forEach((child: any) => {
+      if (child.isText) {
+        const i = (child.text as string).indexOf(CARD_SEP);
+        if (i >= 0) decos.push(Decoration.inline(pos + 1 + off + i, pos + 1 + off + i + CARD_SEP.length, { class: 'kd-card-sep' }));
+      }
+      off += child.nodeSize;
+    });
+    return false;
+  });
+  return DecorationSet.create(doc, decos);
+}
+const CardLines = Extension.create({
+  name: 'kdCardLines',
+  addProseMirrorPlugins() {
+    return [new Plugin({
+      key: new PluginKey('kdCardLines'),
+      state: { init: (_, st) => cardDecorations(st.doc), apply: (tr, old) => (tr.docChanged ? cardDecorations(tr.doc) : old) },
+      props: { decorations(state) { return (this as any).getState(state); } },
+    })];
+  },
+});
+
 // ---------- Íconos (trazos simples) ----------
 const I = {
   list: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" /></svg>,
@@ -298,6 +369,8 @@ const RichEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(function RichEd
   const [slash, setSlash] = useState<SlashState>(null);
   const slashRef = useRef<SlashState>(null); slashRef.current = slash;
   const [math, setMath] = useState<MathEdit>(null);
+  const [linkS, setLinkS] = useState<LinkState>(null);
+  const linkRef = useRef<LinkState>(null); linkRef.current = linkS;
   const [blockMenu, setBlockMenu] = useState<{ top: number; left: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
@@ -357,10 +430,10 @@ const RichEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(function RichEd
     contentType: 'markdown',
     extensions: [
       StarterKit.configure({
-        link: { openOnClick: false, autolink: true, defaultProtocol: 'https', HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer' } },
+        link: { openOnClick: false, autolink: true, defaultProtocol: 'https', protocols: ['kd-note'], HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer' } },
       }),
       Markdown.configure({ markedOptions: { gfm: true, breaks: false } }),
-      Placeholder.configure({ placeholder: 'Escribe aquí. Usa / para insertar fórmulas, tablas, listas o imágenes.' }),
+      Placeholder.configure({ placeholder: 'Escribe aquí. Usa / para insertar fórmulas, tablas o imágenes, [[ para enlazar otra nota y "pregunta :: respuesta" para una tarjeta.' }),
       TaskList,
       TaskItem.configure({ nested: true, onReadOnlyChecked: () => true }),
       Highlight,
@@ -373,6 +446,20 @@ const RichEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(function RichEd
       SafeInlineMath.configure({
         katexOptions: { throwOnError: false },
         onClick: (node: any, pos: number) => { if (edRef.current?.isEditable) openMath('inline', pos, node.attrs.latex ?? ''); },
+      }),
+      CardLines,
+      NoteLinkSuggest.configure({
+        search: (q) => cb.current.searchNotes ? cb.current.searchNotes(q) : Promise.resolve([]),
+        onState: (s) => setLinkS(s),
+        onKey: (e) => {
+          const st = linkRef.current;
+          if (!st || !st.items.length) return false;
+          if (e.key === 'ArrowDown') { setLinkS({ ...st, index: (st.index + 1) % st.items.length }); return true; }
+          if (e.key === 'ArrowUp') { setLinkS({ ...st, index: (st.index + st.items.length - 1) % st.items.length }); return true; }
+          if (e.key === 'Enter' || e.key === 'Tab') { st.command(st.items[st.index]); return true; }
+          if (e.key === 'Escape') { setLinkS(null); return true; }
+          return false;
+        },
       }),
       SlashCommand.configure({
         getItems: () => itemsRef.current,
@@ -391,7 +478,7 @@ const RichEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(function RichEd
     editorProps: {
       attributes: { 'aria-label': 'Contenido de la nota', spellcheck: 'true' },
       handleKeyDown: (_view, event) => {
-        if (event.key === 'Escape' && !slashRef.current && cb.current.onRequestRead) { cb.current.onRequestRead(); return true; }
+        if (event.key === 'Escape' && !slashRef.current && !linkRef.current && cb.current.onRequestRead) { cb.current.onRequestRead(); return true; }
         return false;
       },
       handlePaste: (_view, event) => {
@@ -488,6 +575,16 @@ const RichEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(function RichEd
 
   return (
     <div ref={boxRef} className={`kd-ed${editing ? '' : ' kd-reading'}`} style={{ maxWidth: props.maxWidth ?? 720, width: '100%' }}
+      onClickCapture={(e) => {
+        // Enlaces a otras notas: se abren en Kaderno (leyendo, o con Ctrl/Cmd mientras se edita).
+        const a = (e.target as HTMLElement).closest('a');
+        const href = a?.getAttribute('href') ?? '';
+        if (!href.startsWith('kd-note:')) return;
+        e.preventDefault();
+        if (editing && !(e.ctrlKey || e.metaKey)) return;
+        e.stopPropagation();
+        cb.current.onOpenNote?.(href.slice('kd-note:'.length));
+      }}
       onMouseUp={(e) => {
         if (editing || !onRequestEdit) return;
         const t = e.target as HTMLElement;
@@ -579,6 +676,21 @@ const RichEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(function RichEd
                 <span className="kd-item-t">{it.title}</span>
                 <span className="kd-item-d">{it.hint}</span>
               </span>
+            </button>
+          ))}
+        </div>, document.body,
+      )}
+
+      {linkS && linkS.rect && createPortal(
+        <div className="kd-pop kd-menu" role="listbox" aria-label="Enlazar una nota"
+          style={{ position: 'fixed', zIndex: 1000, top: Math.min(linkS.rect.bottom + 6, window.innerHeight - 300), left: Math.max(8, Math.min(linkS.rect.left, window.innerWidth - 300)) }}>
+          <div className="kd-menu-h">ENLAZAR UNA NOTA</div>
+          {linkS.items.length === 0 && <div className="kd-item-d" style={{ padding: '8px 12px' }}>Escribe parte del título…</div>}
+          {linkS.items.map((it, i) => (
+            <button key={it.id} type="button" role="option" aria-selected={i === linkS.index ? 'true' : 'false'} className="kd-item"
+              onMouseDown={(e) => e.preventDefault()} onMouseEnter={() => setLinkS({ ...linkS, index: i })} onClick={() => linkS.command(it)}>
+              <span className="kd-item-ic">↗</span>
+              <span className="kd-item-t">{it.title}</span>
             </button>
           ))}
         </div>, document.body,
