@@ -5,7 +5,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { ProgressRing } from '../../components/Ring';
 import { C } from '../../lib/theme';
 import { useResponsive } from '../../lib/responsive';
-import { Subject, Grade, getSubjects, getAllGrades, countDueFlashcards, getFocusDetail, getFocusStats } from '../../lib/db';
+import { Subject, Grade, getSubjects, getAllGrades, getFocusDetail, getFocusStats } from '../../lib/db';
+import { countToday } from '../../lib/cardsDb';
 import { semesterAverage } from '../../lib/grades';
 import { useFocusTimer, startFocus, pauseFocus, resetFocus } from '../../lib/focusTimer';
 import { Screen, Button, Card, SectionLabel, Dot } from '../../components/ds';
@@ -30,7 +31,7 @@ export default function Estudiar() {
   useFocusEffect(useCallback(() => {
     getSubjects().then(setSubjects).catch(() => {});
     getAllGrades().then(setGrades).catch(() => {});
-    countDueFlashcards().then(setDue).catch(() => {});
+    countToday().then((c) => setDue(c.total)).catch(() => {});
     getFocusDetail().then(setDetail).catch(() => {});
     getFocusStats().then((s) => setBySubject(s.bySubject)).catch(() => {});
   }, []));

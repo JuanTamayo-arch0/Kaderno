@@ -1,237 +1,274 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { Pressable, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../lib/theme';
 import { useResponsive } from '../lib/responsive';
 import { RequireAuth } from '../components/RequireAuth';
-import { Flashcard, Subject, getDueFlashcards, getAllFlashcards, reviewFlashcard, addFlashcards, updateFlashcard, deleteFlashcard, getSubjects } from '../lib/db';
-import { nextLabel } from '../lib/srs';
-import { confirm, toast, friendlyError, notify } from '../lib/feedback';
-import { refreshNavCounts } from '../lib/navCounts';
-import { refreshCoinsSoon } from '../lib/pets/store';
-import { Screen, Button, Card, ChipRow, EmptyState, Field, FilterChip, IconButton, Segmented, Skeleton, Dot } from '../components/ds';
-import { SubjectPicker } from '../components/SubjectPicker';
-import { Kbd } from '../components/SideNav';
+import { Subject, getSubjects } from '../lib/db';
+import {
+  getCards, getReviews, getStudyPrefs, examInfo, noteTitles as fetchTitles, newDoneToday, hasFsrsDb, FSRS_MISSING,
+  type CardRow, type StudyPrefs,
+} from '../lib/cardsDb';
+import { buildQueue, cramQueue, interleave, forecast, secondsPerCard, estimateLabel, retentionPct, type ReviewStat } from '../lib/cards';
+import { friendlyError } from '../lib/feedback';
+import { Screen, Button, Card, Dot, EmptyState, IconButton, Segmented, Skeleton } from '../components/ds';
+import { ReviewSession, type SessionMode, type SessionSummary } from '../components/cards/ReviewSession';
+import { Decks, CardStats } from '../components/cards/Decks';
+import { Sheet } from '../components/cards/CardForms';
+import { StudySettings } from '../components/cards/StudySettings';
 
 // ============================================================
-//  Repaso con repetición espaciada (SM-2).
-//  Cuatro respuestas (Otra vez, Difícil, Bien, Fácil) que muestran cuándo
-//  vuelve la tarjeta. Atajos: espacio voltea, 1 a 4 responden.
-//  "Mis tarjetas": crear, corregir y borrar tarjetas a mano.
+//  Repaso (v20): FSRS, tarjetas nuevas poco a poco, sesión con pasos
+//  cortos, intensivo antes del examen, mazos y estadísticas.
 // ============================================================
 
-const GRADES: { g: 0 | 1 | 2 | 3; label: string; tone: 'bad' | 'warn' | 'brand' | 'good' }[] = [
-  { g: 0, label: 'Otra vez', tone: 'bad' }, { g: 1, label: 'Difícil', tone: 'warn' },
-  { g: 2, label: 'Bien', tone: 'brand' }, { g: 3, label: 'Fácil', tone: 'good' },
-];
+type Tab = 'repasar' | 'mazos' | 'stats';
+type Data = {
+  cards: CardRow[]; reviews: ReviewStat[]; prefs: StudyPrefs; exams: Record<string, { days: number; title: string }>;
+  titles: Record<string, string>; subjects: Subject[];
+};
+type Run = { mode: SessionMode; queue: CardRow[]; learning: CardRow[]; label: string } | null;
+
+const DAY = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
 function Repaso() {
-  const [tab, setTab] = useState<'repasar' | 'tarjetas'>('repasar');
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  useFocusEffect(useCallback(() => { getSubjects().then(setSubjects).catch(() => {}); }, []));
+  const router = useRouter();
+  const params = useLocalSearchParams<{ materia?: string; intensivo?: string }>();
+  const { isWide } = useResponsive();
+  const [tab, setTab] = useState<Tab>('repasar');
+  const [data, setData] = useState<Data | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [run, setRun] = useState<Run>(null);
+  const [result, setResult] = useState<(SessionSummary & { left: number }) | null>(null);
+  const [settings, setSettings] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const [cards, reviews, prefs, exams, subjects] = await Promise.all([getCards(), getReviews(90), getStudyPrefs(), examInfo().catch(() => ({})), getSubjects().catch(() => [])]);
+      const titles = await fetchTitles(cards.map((c) => c.note_id ?? '')).catch(() => ({}));
+      setData({ cards, reviews, prefs, exams, titles, subjects });
+      setErr(null);
+    } catch (e) { setErr(friendlyError(e)); setData((d) => d ?? null); }
+  }, []);
+  useFocusEffect(useCallback(() => { if (!run) load(); }, [load, run]));
+
+  const now = new Date();
+  const queue = useMemo(() => data ? buildQueue({
+    cards: data.cards, now, newPerDay: data.prefs.newPerDay, newDoneToday: newDoneToday(data.reviews),
+    examDays: Object.fromEntries(Object.entries(data.exams).map(([k, v]) => [k, v.days])),
+  }) : null, [data]);
+
+  const start = (mode: SessionMode, subjectId?: string) => {
+    if (!data || !queue) return;
+    setResult(null);
+    if (mode === 'cram' && subjectId) {
+      const q = cramQueue(data.cards, subjectId);
+      setRun({ mode, queue: q, learning: [], label: `Intensivo de ${data.subjects.find((s) => s.id === subjectId)?.name ?? 'la materia'}` });
+      return;
+    }
+    const q = subjectId ? buildQueue({ cards: data.cards, now: new Date(), newPerDay: data.prefs.newPerDay, newDoneToday: newDoneToday(data.reviews), subjectId }) : queue;
+    setRun({ mode, queue: interleave(q.due, q.fresh), learning: q.learning, label: subjectId ? (data.subjects.find((s) => s.id === subjectId)?.name ?? 'Mazo') : 'Repaso' });
+  };
+
+  // Abrir directo un intensivo (desde el plan del parcial, por ejemplo).
+  const autoStarted = React.useRef(false);
+  React.useEffect(() => {
+    if (!data || autoStarted.current || !params.materia) return;
+    autoStarted.current = true;
+    start(params.intensivo === '1' ? 'cram' : 'normal', params.materia);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
+
+  const header = (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <View style={{ flex: 1 }}>
+        <Segmented value={tab} onChange={(t) => { setTab(t); }} items={[
+          { key: 'repasar', label: 'Repasar', icon: 'flash-outline' },
+          { key: 'mazos', label: 'Mazos', icon: 'albums-outline' },
+          { key: 'stats', label: 'Estadísticas', icon: 'stats-chart-outline' },
+        ]} />
+      </View>
+      <IconButton icon="options-outline" label="Ajustes de repaso" onPress={() => setSettings(true)} />
+    </View>
+  );
+
+  let body: React.ReactNode;
+  if (!data) body = err ? <EmptyState icon="cloud-offline-outline" title="No se pudo cargar" text={err} action={{ label: 'Reintentar', onPress: load }} /> : <Skeleton height={280} />;
+  else if (tab === 'mazos') body = <Decks cards={data.cards} subjects={data.subjects} noteTitles={data.titles} retention={data.prefs.retention} onChanged={load} />;
+  else if (tab === 'stats') body = <CardStats cards={data.cards} reviews={data.reviews} />;
+  else if (run) {
+    body = (
+      <View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <Text style={{ color: C.text, fontSize: 15, fontWeight: '800', flex: 1 }}>{run.label}{run.mode === 'five' ? ' · 5 minutos' : ''}</Text>
+          <Button label="Terminar" kind="ghost" size="sm" onPress={() => { setRun(null); load(); }} />
+        </View>
+        <ReviewSession key={run.label + run.mode} queue={run.queue} learning={run.learning} mode={run.mode} retention={data.prefs.retention}
+          typeAnswer={data.prefs.typeAnswer} subjects={data.subjects} noteTitles={data.titles}
+          onFinish={(s, left) => { setRun(null); setResult({ ...s, left }); load(); }} />
+      </View>
+    );
+  } else body = <Home data={data} queue={queue!} result={result} onStart={start} onDismiss={() => setResult(null)} onCreate={() => router.push('/materias')} wide={isWide} />;
+
   return (
-    <Screen title="Repaso" back="/estudiar" nav="repaso" maxWidth={760}
-      header={<Segmented value={tab} onChange={setTab} items={[{ key: 'repasar', label: 'Repasar', icon: 'flash-outline' }, { key: 'tarjetas', label: 'Mis tarjetas', icon: 'albums-outline' }]} />}>
-      <View style={{ height: 16 }} />
-      {tab === 'repasar' ? <Review subjects={subjects} onManage={() => setTab('tarjetas')} /> : <Manage subjects={subjects} />}
+    <Screen title="Repaso" back="/estudiar" nav="repaso" maxWidth={820} header={header}>
+      <View style={{ height: 14 }} />
+      {!hasFsrsDb() && data && (
+        <View style={{ padding: 12, borderRadius: 12, backgroundColor: '#2a2416', borderWidth: 1, borderColor: '#4a3d1f', marginBottom: 12 }}>
+          <Text style={{ color: '#e2d2a8', fontSize: 13 }}>{FSRS_MISSING} Mientras tanto, el repaso funciona como antes.</Text>
+        </View>
+      )}
+      {body}
+      <Sheet visible={settings} onClose={() => setSettings(false)} title="Ajustes de repaso">
+        <View style={{ marginHorizontal: -14 }}>
+          <StudySettings onChange={(p) => setData((d) => (d ? { ...d, prefs: p } : d))} />
+        </View>
+      </Sheet>
     </Screen>
   );
 }
 
-function Review({ subjects, onManage }: { subjects: Subject[]; onManage: () => void }) {
-  const router = useRouter();
-  const { isWide } = useResponsive();
-  const [cards, setCards] = useState<Flashcard[] | null>(null);
-  const [i, setI] = useState(0);
-  const [flipped, setFlipped] = useState(false);
-  const [stats, setStats] = useState({ done: 0, again: 0 });
-  const [filter, setFilter] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    try { setCards(await getDueFlashcards()); setI(0); setFlipped(false); setStats({ done: 0, again: 0 }); }
-    catch (e) { setCards([]); notify('No se pudo cargar', friendlyError(e)); }
-  }, []);
-  useFocusEffect(useCallback(() => { load(); }, [load]));
-
-  const queue = useMemo(() => (cards ?? []).filter((c) => !filter || c.subject_id === filter), [cards, filter]);
-  const card = queue[i];
-
-  const answer = useCallback(async (g: 0 | 1 | 2 | 3) => {
-    if (!card) return;
-    setFlipped(false);
-    setStats((s) => ({ done: s.done + 1, again: s.again + (g === 0 ? 1 : 0) }));
-    // "Otra vez" la deja al final de la cola de hoy.
-    if (g === 0) setCards((cs) => cs ? [...cs, card] : cs);
-    setI((x) => x + 1);
-    try { await reviewFlashcard(card, g); refreshNavCounts(true); refreshCoinsSoon(1500); } catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
-  }, [card]);
-
-  useEffect(() => {
-    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-    const h = (e: KeyboardEvent) => {
-      const el = e.target as HTMLElement | null;
-      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) return;
-      if (e.key === ' ') { e.preventDefault(); setFlipped((f) => !f); }
-      if (flipped && ['1', '2', '3', '4'].includes(e.key)) { e.preventDefault(); answer((Number(e.key) - 1) as 0 | 1 | 2 | 3); }
+function Home({ data, queue, result, onStart, onDismiss, onCreate, wide }: {
+  data: Data; queue: ReturnType<typeof buildQueue>; result: (SessionSummary & { left: number }) | null;
+  onStart: (m: SessionMode, subjectId?: string) => void; onDismiss: () => void; onCreate: () => void; wide: boolean;
+}) {
+  const now = new Date();
+  const secs = secondsPerCard(data.reviews);
+  const total = queue.counts.due + queue.counts.fresh + queue.counts.learning;
+  const fc = forecast(data.cards, now, 8);
+  const tomorrow = fc[1]?.n ?? 0;
+  const maxF = Math.max(5, ...fc.slice(1).map((x) => x.n));
+  // Examen cercano con tarjetas: intensivo.
+  const exam = Object.entries(data.exams)
+    .filter(([sid, e]) => e.days <= 7 && data.cards.some((c) => c.subject_id === sid && !c.suspended))
+    .sort((a, b) => a[1].days - b[1].days)[0];
+  // Mazos por materia.
+  const decks = data.subjects.map((s) => {
+    const mine = data.cards.filter((c) => c.subject_id === s.id && !c.suspended);
+    if (!mine.length) return null;
+    const ids = new Set(mine.map((c) => c.id));
+    const ret = retentionPct(data.reviews.filter((r) => r.card_id && ids.has(r.card_id)), now.getTime() - 30 * 86_400_000);
+    return {
+      s, total: mine.length, ret,
+      fresh: queue.fresh.filter((c) => c.subject_id === s.id).length,
+      due: queue.due.filter((c) => c.subject_id === s.id).length + queue.learning.filter((c) => c.subject_id === s.id).length,
     };
-    window.addEventListener('keydown', h);
-    return () => window.removeEventListener('keydown', h);
-  }, [flipped, answer]);
+  }).filter(Boolean) as { s: Subject; total: number; ret: number | null; fresh: number; due: number }[];
+  const noSubject = data.cards.filter((c) => !c.subject_id && !c.suspended).length;
 
-  if (cards === null) return <Skeleton height={280} />;
-  const usedSubjects = subjects.filter((s) => (cards ?? []).some((c) => c.subject_id === s.id));
-
-  if (!queue.length && !stats.done) return (
-    <EmptyState icon="albums-outline" title="Nada para repasar hoy"
-      text="Crea tarjetas desde una nota (botón Flashcards) o a mano. Cuando les toque repaso aparecerán aquí."
-      action={{ label: 'Crear una tarjeta', icon: 'add', onPress: onManage }} />
-  );
-  if (!card) return (
-    <EmptyState icon="checkmark-done-outline" title="Repaso completado"
-      text={`Revisaste ${stats.done} ${stats.done === 1 ? 'tarjeta' : 'tarjetas'}${stats.again ? `, ${stats.again} para volver a ver` : ''}. Vuelve mañana para la siguiente ronda.`}
-      action={{ label: 'Volver a Estudiar', onPress: () => router.replace('/estudiar') }} />
-  );
-
-  const subj = subjects.find((s) => s.id === card.subject_id);
-  const total = queue.length;
   return (
-    <View>
-      {usedSubjects.length > 1 && (
-        <ChipRow style={{ marginBottom: 12 }}>
-          <FilterChip label="Todas" active={!filter} onPress={() => { setFilter(null); setI(0); }} />
-          {usedSubjects.map((s) => <FilterChip key={s.id} label={s.name} color={s.color} active={filter === s.id} onPress={() => { setFilter(s.id); setI(0); }} />)}
-        </ChipRow>
+    <View style={{ gap: 14 }}>
+      {result && (
+        <Card style={{ borderColor: '#22604a', backgroundColor: '#142a22' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Ionicons name="checkmark-done" size={22} color={C.goodText} />
+            <Text style={{ color: C.text, fontSize: 16, fontWeight: '800', flex: 1 }}>{result.cards ? 'Repaso terminado' : 'Sin tarjetas por ahora'}</Text>
+            <IconButton icon="close" label="Cerrar resumen" onPress={onDismiss} />
+          </View>
+          {result.cards > 0 && (
+            <Text style={{ color: '#b9dccb', fontSize: 13.5, marginTop: 6, lineHeight: 19 }}>
+              {result.cards} {result.cards === 1 ? 'tarjeta' : 'tarjetas'} en {Math.max(1, Math.round(result.ms / 60000))} min. Recordaste {Math.round((result.recalled / result.cards) * 100)}%.
+              {result.left ? ` Quedan ${result.left} para más tarde.` : ''} Mañana te tocan {tomorrow}.
+            </Text>
+          )}
+        </Card>
       )}
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-        <View style={{ flex: 1, height: 6, backgroundColor: C.surface2, borderRadius: 3, overflow: 'hidden' }}>
-          <View style={{ width: `${(i / total) * 100}%`, height: '100%', backgroundColor: C.brand }} />
-        </View>
-        <Text style={{ color: C.muted, fontSize: 12.5, fontVariant: ['tabular-nums'] }}>{i + 1} de {total}</Text>
-      </View>
 
-      <Pressable onPress={() => setFlipped((f) => !f)} accessibilityRole="button" accessibilityLabel={flipped ? 'Ver pregunta' : 'Ver respuesta'}
-        style={{ backgroundColor: C.surface, borderColor: flipped ? C.brand : C.line, borderWidth: 1.5, borderRadius: 20, padding: 28, minHeight: 280, justifyContent: 'center', alignItems: 'center' }}>
-        {subj && <View style={{ position: 'absolute', top: 16, left: 18, flexDirection: 'row', alignItems: 'center', gap: 6 }}><Dot color={subj.color} /><Text style={{ color: C.muted, fontSize: 12.5 }}>{subj.name}</Text></View>}
-        <Text style={{ color: flipped ? C.brand : C.muted, fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 14 }}>{flipped ? 'Respuesta' : 'Pregunta'}</Text>
-        <Text style={{ color: C.text, fontSize: 21, textAlign: 'center', lineHeight: 30 }}>{flipped ? card.back : card.front}</Text>
-        {!flipped && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 22 }}>
-            <Text style={{ color: C.muted, fontSize: 12.5 }}>Toca para ver la respuesta</Text>
-            {Platform.OS === 'web' && isWide && <Kbd text="Espacio" />}
+      {exam && (
+        <Card style={{ borderColor: '#4a3d1f', backgroundColor: '#2a2416' }}>
+          <View style={{ flexDirection: wide ? 'row' : 'column', alignItems: wide ? 'center' : 'flex-start', gap: 10 }}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={{ color: C.text, fontSize: 15, fontWeight: '800' }}>
+                {exam[1].title} de {data.subjects.find((s) => s.id === exam[0])?.name ?? 'una materia'} {exam[1].days === 0 ? 'hoy' : exam[1].days === 1 ? 'mañana' : `en ${exam[1].days} días`}
+              </Text>
+              <Text style={{ color: '#e2d2a8', fontSize: 13 }}>Repaso intensivo: todas las tarjetas de la materia, aunque no les toque. Solo las que falles cambian su programación.</Text>
+            </View>
+            <Button label="Repaso intensivo" icon="flame-outline" onPress={() => onStart('cram', exam[0])} />
+          </View>
+        </Card>
+      )}
+
+      <Card>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <Big n={queue.counts.fresh} label="Nuevas" color={C.brand} hint={`máx. ${data.prefs.newPerDay} al día`} />
+          <Big n={queue.counts.due} label="Para repasar" color={C.goodText} />
+          <Big n={queue.counts.learning} label="Aprendiendo" color={C.warnText} />
+        </View>
+        {total > 0 ? (
+          <>
+            <Text style={{ color: C.muted, fontSize: 13, marginTop: 12 }}>{total} {total === 1 ? 'tarjeta' : 'tarjetas'} hoy, {estimateLabel(total, secs)}.</Text>
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+              <Button label="Empezar" icon="play" size="lg" onPress={() => onStart('normal')} style={{ flex: 2, minWidth: 160 }} />
+              <Button label="Solo 5 minutos" kind="secondary" size="lg" onPress={() => onStart('five')} style={{ flex: 1, minWidth: 150 }} />
+            </View>
+          </>
+        ) : (
+          <View style={{ marginTop: 12, gap: 8 }}>
+            <Text style={{ color: C.text, fontSize: 15, fontWeight: '700' }}>{data.cards.length ? `Al día. Mañana te tocan ${tomorrow}.` : 'Todavía no tienes tarjetas.'}</Text>
+            <Text style={{ color: C.muted, fontSize: 13 }}>Crea tarjetas desde una nota con "Crear flashcards" o seleccionando un fragmento.</Text>
+            <Button label="Ir a mis notas" kind="secondary" icon="document-text-outline" onPress={onCreate} style={{ alignSelf: 'flex-start' }} />
           </View>
         )}
-      </Pressable>
+      </Card>
 
-      {flipped ? (
-        <View style={{ flexDirection: 'row', gap: 8, marginTop: 16 }}>
-          {GRADES.map((b, k) => {
-            const col = b.tone === 'bad' ? C.bad : b.tone === 'warn' ? C.warn : b.tone === 'good' ? C.good : C.brand;
-            const txt = b.tone === 'bad' ? C.badText : b.tone === 'warn' ? C.warnText : b.tone === 'good' ? C.goodText : C.brand;
-            return (
-              <Pressable key={b.g} onPress={() => answer(b.g)} accessibilityRole="button" accessibilityLabel={`${b.label}, vuelve en ${nextLabel(card, b.g)}`}
-                style={({ pressed }) => ({ flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: col + '66', backgroundColor: col + (pressed ? '33' : '1a'), minHeight: 56 })}>
-                <Text style={{ color: txt, fontWeight: '800', fontSize: 14 }}>{b.label}</Text>
-                <Text style={{ color: C.muted, fontSize: 11.5, marginTop: 2 }}>{nextLabel(card, b.g)}{Platform.OS === 'web' && isWide ? ` · ${k + 1}` : ''}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      ) : (
-        <Button label="Mostrar respuesta" onPress={() => setFlipped(true)} size="lg" style={{ marginTop: 16 }} full />
-      )}
-    </View>
-  );
-}
-
-function Manage({ subjects }: { subjects: Subject[] }) {
-  const [cards, setCards] = useState<Flashcard[] | null>(null);
-  const [edit, setEdit] = useState<Flashcard | 'new' | null>(null);
-  const [filter, setFilter] = useState<string | null>(null);
-  const load = useCallback(() => { getAllFlashcards().then(setCards).catch(() => setCards([])); }, []);
-  useEffect(() => { load(); }, [load]);
-
-  async function remove(c: Flashcard) {
-    if (!(await confirm('¿Borrar esta tarjeta?', c.front, 'Borrar'))) return;
-    try { await deleteFlashcard(c.id); setCards((xs) => xs?.filter((x) => x.id !== c.id) ?? null); toast('Tarjeta borrada'); }
-    catch (e) { notify('No se pudo borrar', friendlyError(e)); }
-  }
-  const list = (cards ?? []).filter((c) => !filter || c.subject_id === filter);
-  return (
-    <View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-        <Text style={{ color: C.muted, flex: 1 }}>{cards ? `${cards.length} ${cards.length === 1 ? 'tarjeta' : 'tarjetas'}` : ''}</Text>
-        <Button label="Nueva tarjeta" icon="add" size="sm" onPress={() => setEdit('new')} />
-      </View>
-      {subjects.length > 1 && (
-        <ChipRow style={{ marginBottom: 12 }}>
-          <FilterChip label="Todas" active={!filter} onPress={() => setFilter(null)} />
-          {subjects.map((s) => <FilterChip key={s.id} label={s.name} color={s.color} active={filter === s.id} onPress={() => setFilter(s.id)} />)}
-        </ChipRow>
-      )}
-      {cards === null ? <Skeleton /> : list.length === 0 ? (
-        <EmptyState icon="albums-outline" title="Sin tarjetas" text="Escribe una pregunta y su respuesta, o genéralas con IA desde una nota." compact />
-      ) : list.map((c) => {
-        const s = subjects.find((x) => x.id === c.subject_id);
-        return (
-          <Card key={c.id} style={{ marginBottom: 8, paddingVertical: 12 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
-              <Pressable style={{ flex: 1 }} onPress={() => setEdit(c)} accessibilityRole="button" accessibilityLabel={`Editar: ${c.front}`}>
-                <Text style={{ color: C.text, fontWeight: '700' }}>{c.front}</Text>
-                <Text style={{ color: C.muted, fontSize: 13, marginTop: 4 }} numberOfLines={2}>{c.back}</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6 }}>
-                  {s && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}><Dot color={s.color} /><Text style={{ color: C.muted, fontSize: 12 }}>{s.name}</Text></View>}
-                  <Text style={{ color: C.muted, fontSize: 12 }}>Próximo repaso: {c.due_date}</Text>
+      {decks.length > 0 && (
+        <Card padded={false}>
+          <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '800', padding: 14, paddingBottom: 6 }}>Mazos</Text>
+          {decks.map((d) => (
+            <Pressable key={d.s.id} onPress={() => (d.fresh + d.due ? onStart('normal', d.s.id) : undefined)} accessibilityRole="button"
+              accessibilityLabel={`${d.s.name}: ${d.fresh} nuevas, ${d.due} para repasar`}
+              style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 11, borderTopWidth: 1, borderTopColor: C.surface2, backgroundColor: hovered && d.fresh + d.due ? C.surface2 : 'transparent' })}>
+              <Dot color={d.s.color} size={10} />
+              <View style={{ flex: 1, minWidth: 0, gap: 5 }}>
+                <Text style={{ color: C.text, fontSize: 14, fontWeight: '700' }} numberOfLines={1}>{d.s.name}</Text>
+                <View style={{ height: 5, borderRadius: 3, backgroundColor: C.surface2, overflow: 'hidden' }}>
+                  <View style={{ width: `${d.ret ?? 0}%`, height: 5, backgroundColor: (d.ret ?? 0) >= 85 ? C.good : (d.ret ?? 0) >= 70 ? C.warn : C.bad }} />
                 </View>
-              </Pressable>
-              <IconButton icon="trash-outline" label="Borrar tarjeta" onPress={() => remove(c)} />
-            </View>
-          </Card>
-        );
-      })}
-      <CardEditor visible={!!edit} card={edit === 'new' ? null : edit} subjects={subjects} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); load(); refreshNavCounts(true); }} />
+              </View>
+              <Text style={{ color: C.brand, fontSize: 13, fontWeight: '800', width: 34, textAlign: 'right' }}>{d.fresh || ''}</Text>
+              <Text style={{ color: C.goodText, fontSize: 13, fontWeight: '800', width: 34, textAlign: 'right' }}>{d.due || ''}</Text>
+              <Text style={{ color: C.muted, fontSize: 12, width: 64, textAlign: 'right' }}>{d.ret === null ? `${d.total}` : `${d.ret}%`}</Text>
+            </Pressable>
+          ))}
+          <Text style={{ color: C.muted, fontSize: 11.5, paddingHorizontal: 14, paddingVertical: 10 }}>
+            Azul: nuevas de hoy · Verde: para repasar · La barra es cuánto recordaste en 30 días.{noSubject ? ` ${noSubject} sin materia.` : ''}
+          </Text>
+        </Card>
+      )}
+
+      {data.cards.length > 0 && (
+        <Card>
+          <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '800', marginBottom: 12 }}>Los próximos 7 días</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, height: 100 }}>
+            {fc.slice(1).map((x) => {
+              const d = new Date(x.day + 'T12:00:00');
+              return (
+                <View key={x.day} style={{ flex: 1, alignItems: 'center', gap: 6, height: '100%', justifyContent: 'flex-end' }} accessibilityLabel={`${DAY[d.getDay()]}: ${x.n} tarjetas`}>
+                  {x.n > 0 && <Text style={{ fontSize: 10.5, color: C.muted }}>{x.n}</Text>}
+                  <View style={{ width: '62%', height: `${Math.max(3, (x.n / maxF) * 70)}%`, backgroundColor: C.line, borderRadius: 5 }} />
+                  <Text style={{ fontSize: 11, color: C.muted }}>{DAY[d.getDay()]}</Text>
+                </View>
+              );
+            })}
+          </View>
+        </Card>
+      )}
     </View>
   );
 }
 
-function CardEditor({ visible, card, subjects, onClose, onSaved }: { visible: boolean; card: Flashcard | null; subjects: Subject[]; onClose: () => void; onSaved: () => void }) {
-  const [front, setFront] = useState('');
-  const [back, setBack] = useState('');
-  const [sid, setSid] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  useEffect(() => { if (visible) { setFront(card?.front ?? ''); setBack(card?.back ?? ''); setSid(card?.subject_id ?? null); setErr(null); } }, [visible, card]);
-  async function save(more = false) {
-    if (!front.trim() || !back.trim()) { setErr('Escribe la pregunta y la respuesta.'); return; }
-    setBusy(true);
-    try {
-      if (card) await updateFlashcard(card.id, { front: front.trim(), back: back.trim(), subject_id: sid });
-      else await addFlashcards([{ front: front.trim(), back: back.trim() }], null, sid);
-      toast(card ? 'Tarjeta guardada' : 'Tarjeta creada', { tone: 'good' });
-      if (more && !card) { setFront(''); setBack(''); } else onSaved();
-    } catch (e) { setErr(friendlyError(e)); }
-    finally { setBusy(false); }
-  }
+function Big({ n, label, color, hint }: { n: number; label: string; color: string; hint?: string }) {
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-        <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} style={{ width: '100%', maxWidth: 520, backgroundColor: C.surface, borderRadius: 18, borderWidth: 1, borderColor: C.line, padding: 18 }}>
-          <Text style={{ color: C.text, fontSize: 18, fontWeight: '700', marginBottom: 12 }}>{card ? 'Editar tarjeta' : 'Nueva tarjeta'}</Text>
-          <Field label="Pregunta" value={front} onChangeText={setFront} multiline autoFocus inputStyle={{ minHeight: 60, textAlignVertical: 'top' }} />
-          <Field label="Respuesta" value={back} onChangeText={setBack} multiline inputStyle={{ minHeight: 80, textAlignVertical: 'top' }} error={err} />
-          <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600', marginBottom: 6 }}>Materia</Text>
-          <SubjectPicker subjects={subjects} value={sid} onChange={setSid} />
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 18, flexWrap: 'wrap' }}>
-            <Button label="Cancelar" kind="secondary" onPress={onClose} style={{ flex: 1 }} />
-            {!card && <Button label="Guardar y otra" kind="secondary" onPress={() => save(true)} style={{ flex: 1 }} />}
-            <Button label="Guardar" onPress={() => save(false)} busy={busy} style={{ flex: 1 }} />
-          </View>
-        </Pressable>
-      </Pressable>
-    </Modal>
+    <View style={{ flex: 1, padding: 12, borderRadius: 12, backgroundColor: C.surface2 }}>
+      <Text style={{ color, fontSize: 26, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{n}</Text>
+      <Text style={{ color: C.text, fontSize: 12.5, fontWeight: '600' }}>{label}</Text>
+      {!!hint && <Text style={{ color: C.muted, fontSize: 11, marginTop: 1 }}>{hint}</Text>}
+    </View>
   );
 }
 
 export default function RepasoProtegida() {
   return <RequireAuth><Repaso /></RequireAuth>;
 }
+

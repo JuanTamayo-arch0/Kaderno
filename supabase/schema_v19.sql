@@ -5,6 +5,13 @@
 -- puede correr dos veces. El archivo crece por fases (ver PLAN_v20.md); cada
 -- fase se puede correr sobre la anterior.
 --
+-- Fase 1 · Repaso nuevo (al final del archivo)
+--   · flashcards: tipo (pregunta o completar), estado FSRS, estabilidad,
+--     dificultad, vencimiento con hora, suspendida y de dónde salió.
+--   · flashcard_reviews: cada respuesta (para estadísticas y monedas).
+--   · Las tarjetas existentes se migran sin perder avance.
+--   · ai_usage y ai_take(): tope diario de usos de la IA por persona.
+--
 -- Fase 5 · Enfocar juntos (salas de estudio)
 --   · study_rooms: una sala por proyecto (entran sus miembros) o una sala
 --     con código de 6 letras para amigos.
@@ -287,3 +294,153 @@ do $$ begin
     raise notice 'No hay realtime.messages: las políticas de los canales se crean al correr esto en Supabase.';
   end if;
 end $$;
+
+
+-- =====================================================================
+--  FASE 1 · Repaso nuevo (FSRS)
+-- =====================================================================
+alter table public.flashcards add column if not exists kind text not null default 'basic';
+alter table public.flashcards add column if not exists fsrs_state smallint;
+alter table public.flashcards add column if not exists stability real;
+alter table public.flashcards add column if not exists difficulty real;
+alter table public.flashcards add column if not exists due_at timestamptz;
+alter table public.flashcards add column if not exists suspended boolean not null default false;
+alter table public.flashcards add column if not exists source_heading text;
+alter table public.flashcards add column if not exists created_from text not null default 'manual';
+alter table public.flashcards add column if not exists learning_steps smallint not null default 0;
+alter table public.flashcards add column if not exists scheduled_days real;
+
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'flashcards_kind_chk') then
+    alter table public.flashcards add constraint flashcards_kind_chk check (kind in ('basic', 'cloze'));
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'flashcards_state_chk') then
+    alter table public.flashcards add constraint flashcards_state_chk check (fsrs_state is null or fsrs_state between 0 and 3);
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'flashcards_from_chk') then
+    alter table public.flashcards add constraint flashcards_from_chk check (created_from in ('ai', 'selection', 'manual', 'quiz', 'recall'));
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'flashcards_len_chk') then
+    alter table public.flashcards add constraint flashcards_len_chk check (char_length(front) <= 2000 and char_length(back) <= 2000);
+  end if;
+end $$;
+
+-- Migración (solo las que aún no tienen estado): sin repasos → nuevas; con
+-- repasos → "repaso" con su intervalo como estabilidad y su fecha de siempre.
+update public.flashcards set fsrs_state = 0
+ where fsrs_state is null and coalesce(reps, 0) = 0 and last_reviewed_at is null;
+update public.flashcards set
+  fsrs_state = 2,
+  stability = greatest(coalesce(interval_days, 1), 1),
+  difficulty = least(10, greatest(1, 5 + (2.5 - coalesce(ease, 2.5)) * 4)),
+  scheduled_days = greatest(coalesce(interval_days, 1), 1),
+  due_at = coalesce(due_at, (due_date::timestamp + time '04:00') at time zone public._kaderno_tz(user_id))
+ where fsrs_state is null;
+alter table public.flashcards alter column fsrs_state set default 0;
+alter table public.flashcards alter column fsrs_state set not null;
+
+create index if not exists flashcards_queue_idx on public.flashcards (user_id, suspended, fsrs_state, due_at);
+
+-- La versión vieja de la app (SM-2) solo cambia due_date: se refleja en due_at
+-- para que las dos versiones no se contradigan.
+create or replace function public._flashcard_sync_due()
+returns trigger language plpgsql as $$
+begin
+  if new.due_date is distinct from old.due_date and new.due_at is not distinct from old.due_at then
+    new.due_at := (new.due_date::timestamp + time '04:00') at time zone public._kaderno_tz(new.user_id);
+    if new.fsrs_state = 0 then
+      new.fsrs_state := 2;
+      new.stability := greatest(coalesce(new.interval_days, 1), 1);
+      new.difficulty := least(10, greatest(1, 5 + (2.5 - coalesce(new.ease, 2.5)) * 4));
+    end if;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists flashcards_sync_due_trg on public.flashcards;
+create trigger flashcards_sync_due_trg before update on public.flashcards
+  for each row execute function public._flashcard_sync_due();
+
+-- Cada respuesta de repaso.
+create table if not exists public.flashcard_reviews (
+  id             bigserial primary key,
+  user_id        uuid not null default auth.uid() references auth.users on delete cascade,
+  card_id        uuid not null references public.flashcards on delete cascade,
+  reviewed_at    timestamptz not null default now(),
+  rating         smallint not null check (rating between 1 and 4),
+  state_before   smallint check (state_before between 0 and 3),
+  elapsed_days   real,
+  scheduled_days real,
+  duration_ms    integer check (duration_ms is null or duration_ms between 0 and 3600000)
+);
+alter table public.flashcard_reviews enable row level security;
+create index if not exists flashcard_reviews_user_idx on public.flashcard_reviews (user_id, reviewed_at);
+drop policy if exists "own reviews" on public.flashcard_reviews;
+create policy "own reviews" on public.flashcard_reviews for all
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid() and exists (select 1 from public.flashcards f where f.id = card_id and f.user_id = auth.uid()));
+grant select, insert, delete on public.flashcard_reviews to authenticated;
+grant usage on sequence public.flashcard_reviews_id_seq to authenticated;
+
+-- Monedas de la mascota: ahora cuenta cada respuesta (una por tarjeta y día,
+-- igual que antes). El disparador viejo sigue para la versión anterior; la
+-- tabla pet_reviews evita contar dos veces.
+do $$ begin
+  if to_regclass('public.pet_reviews') is not null and to_regproc('public._pet_award') is not null then
+    execute $f$
+      create or replace function public._pet_on_card_review() returns trigger
+      language plpgsql security definer set search_path = public as $b$
+      declare v_day date; v_n integer;
+      begin
+        begin
+          v_day := (now() at time zone public._kaderno_tz(new.user_id))::date;
+          insert into pet_reviews (user_id, card_id, day) values (new.user_id, new.card_id, v_day) on conflict do nothing;
+          if found then
+            insert into pet_daily (user_id, day) values (new.user_id, v_day) on conflict do nothing;
+            update pet_daily set reviews = reviews + 1 where user_id = new.user_id and day = v_day returning reviews into v_n;
+            if v_n % 10 = 0 then
+              perform public._pet_award(new.user_id, 'repaso', v_day::text || ':' || (v_n / 10)::text, 3);
+            end if;
+          end if;
+        exception when others then
+          raise warning 'mascota: no se pudo contar el repaso %: %', new.card_id, sqlerrm;
+        end;
+        return new;
+      end $b$;
+    $f$;
+    execute 'drop trigger if exists flashcard_reviews_pet_trg on public.flashcard_reviews';
+    execute 'create trigger flashcard_reviews_pet_trg after insert on public.flashcard_reviews for each row execute function public._pet_on_card_review()';
+  end if;
+end $$;
+
+-- ---------------------------------------------------------------------
+--  Tope diario de la IA (lo usa la función "ai" con el token de quien llama).
+-- ---------------------------------------------------------------------
+create table if not exists public.ai_usage (
+  user_id uuid not null references auth.users on delete cascade,
+  day     date not null,
+  task    text not null,
+  n       integer not null default 0,
+  primary key (user_id, day, task)
+);
+alter table public.ai_usage enable row level security;
+drop policy if exists "own ai usage read" on public.ai_usage;
+create policy "own ai usage read" on public.ai_usage for select using (user_id = auth.uid());
+revoke insert, update, delete on public.ai_usage from anon, authenticated;
+
+-- Suma un uso si queda cupo hoy. Devuelve cuántos quedan (o -1 si ya no hay).
+create or replace function public.ai_take(p_task text, p_limit int)
+returns int language plpgsql security definer set search_path = public as $$
+declare me uuid := auth.uid(); v_day date; v_n int;
+begin
+  if me is null then return -1; end if;
+  if p_task !~ '^[a-z_]{1,20}$' or p_limit not between 1 and 500 then raise exception 'Uso de IA inválido'; end if;
+  v_day := (now() at time zone public._kaderno_tz(me))::date;
+  insert into public.ai_usage (user_id, day, task, n) values (me, v_day, p_task, 0) on conflict do nothing;
+  update public.ai_usage set n = n + 1 where user_id = me and day = v_day and task = p_task and n < p_limit returning n into v_n;
+  if v_n is null then return -1; end if;
+  return p_limit - v_n;
+end;
+$$;
+revoke all on function public.ai_take(text, int) from public, anon;
+grant execute on function public.ai_take(text, int) to authenticated;

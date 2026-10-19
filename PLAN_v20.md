@@ -1,6 +1,6 @@
 # PLAN v20: Estudiar mejor y crear el hábito
 
-Estado: B, C y L construidas (domingo 18 de octubre, ramas v20-enfoque y v20-juntos). El resto se implementa por fases.
+Estado: B, C y L construidas (domingo 18 de octubre). A construida (lunes 19 de octubre, rama v20-repaso). El resto se implementa por fases.
 Diseño en el canvas "Estudio y hábitos de Kaderno". Base: la versión 19 (PR #12) ya fusionada.
 
 Este plan junta las 12 ideas que salieron de la investigación (sonidos, repaso espaciado, simulacros, rachas, planes "si-entonces", etc.) y una revisión completa de las tarjetas de Repaso: cómo entran, cómo se programan y cómo se ven.

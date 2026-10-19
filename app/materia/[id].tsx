@@ -47,7 +47,7 @@ import { preloadNoteEditor } from '../../components/notes/NoteEditor';
 const TABS: TabKey[] = ['tareas', 'notas', 'cal', 'files'];
 
 function MateriaDetalle() {
-  const { id, tab: tabParam, nota } = useLocalSearchParams<{ id: string; tab?: string; nota?: string }>();
+  const { id, tab: tabParam, nota, titulo } = useLocalSearchParams<{ id: string; tab?: string; nota?: string; titulo?: string }>();
   const router = useRouter();
   const goBack = useGoBack('/materias');
   const { isWide, width } = useResponsive();
@@ -210,7 +210,7 @@ function MateriaDetalle() {
             </ScrollColumn>
           </View>
           {shownNote ? (
-            <NoteDocument key={shownNote} noteId={shownNote} subjects={allSubjects.length ? allSubjects : [subject]} scroll side={width >= 1600}
+            <NoteDocument key={shownNote} noteId={shownNote} subjects={allSubjects.length ? allSubjects : [subject]} scroll side={width >= 1600} focusHeading={shownNote === nota ? titulo ?? null : null}
               startEditing={shownNote === newNoteId} onNoteChange={patchNote}
               onDeleted={(n) => { setNotes((xs) => xs.filter((x) => x.id !== n.id)); setOpenNote(null); router.setParams({ nota: undefined } as any); }} />
           ) : (

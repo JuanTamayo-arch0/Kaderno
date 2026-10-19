@@ -5,8 +5,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../../lib/theme';
 import {
   Note, Subject, getNote, updateNote, deleteNote, restoreNote, signedUrl, setNotePinned, uploadPhoto,
-  aiSummary, aiFlashcards, addFlashcards, indexNote, hasV14,
+  aiSummary, indexNote, hasV14,
 } from '../../lib/db';
+import { useCardMaker } from '../cards/CardMaker';
 import { supabase } from '../../lib/supabase';
 import { readingStats } from '../../lib/subjectInfo';
 import { MONTH_LONG } from '../../lib/time';
@@ -32,8 +33,10 @@ import type { HeadingItem, NoteEditorHandle, SelectionAction } from './editorTyp
 
 type Status = 'idle' | 'saving' | 'saved' | 'error';
 
-export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onNoteChange, onDeleted }: {
+export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onNoteChange, onDeleted, focusHeading }: {
   noteId: string; subjects: Subject[]; scroll: boolean; side: boolean; startEditing?: boolean;
+  /** Llevar la vista a este título al abrir (desde "Ver en la nota" de una tarjeta). */
+  focusHeading?: string | null;
   onNoteChange?: (patch: Partial<Note> & { id: string }) => void;
   onDeleted?: (n: Note) => void;
 }) {
@@ -45,7 +48,8 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
   const [status, setStatus] = useState<Status>('idle');
   const [summary, setSummary] = useState<string | null>(null);
   const [genSum, setGenSum] = useState(false);
-  const [genCards, setGenCards] = useState(false);
+  const maker = useCardMaker();
+  const genCards = maker.busy;
   const [heads, setHeads] = useState<HeadingItem[]>([]);
   const [photo, setPhoto] = useState<string | null>(null);
   const [zoom, setZoom] = useState(false);
@@ -70,6 +74,17 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
     }).catch(() => { if (alive) setNote(null); });
     return () => { alive = false; };
   }, [noteId]);
+
+  // "Ver en la nota": ir al título de donde salió la tarjeta (una vez por nota).
+  const focused = useRef<string | null>(null);
+  useEffect(() => {
+    if (!focusHeading || !heads.length || focused.current === noteId + focusHeading) return;
+    const want = focusHeading.trim().toLowerCase();
+    const h = heads.find((x) => x.text.trim().toLowerCase() === want) ?? heads.find((x) => x.text.toLowerCase().includes(want));
+    if (!h) return;
+    focused.current = noteId + focusHeading;
+    setTimeout(() => ed.current?.scrollToHeading(h.index), 300);
+  }, [heads, focusHeading, noteId]);
 
   const save = useCallback(async (t: string, c: string, final = false) => {
     if (t === saved.current.title && c === saved.current.content) return;
@@ -125,17 +140,10 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
     try { const s = await aiSummary(c); setSummary(s); await updateNote(noteId, { summary: s }); }
     catch (e) { notify('No se pudo resumir', friendlyError(e)); } finally { setGenSum(false); }
   }
-  async function makeFlashcards(text?: string) {
-    const c = text ?? ed.current?.flush() ?? content;
-    if (!c.trim()) { notify('La nota está vacía', 'Escribe o digitaliza algo antes de crear tarjetas.'); return; }
-    setGenCards(true);
-    try {
-      const cards = await aiFlashcards(c);
-      if (!cards.length) throw new Error('La IA no devolvió tarjetas. Intenta con un texto más largo.');
-      await addFlashcards(cards, noteId, note?.subject_id ?? null);
-      refreshNavCounts(true);
-      toast(`${cards.length} ${cards.length === 1 ? 'flashcard creada' : 'flashcards creadas'}`, { tone: 'good', actionLabel: 'Repasar', onAction: () => router.push('/repaso') });
-    } catch (e) { notify('No se pudieron crear', friendlyError(e)); } finally { setGenCards(false); }
+  function makeFlashcards(text?: string) {
+    const md = ed.current?.flush() ?? content;
+    const c = text ?? md;
+    maker.start(c, text ? 'selection' : 'note', { noteId, subjectId: note?.subject_id ?? null, title: title || 'Nota', markdown: md });
   }
   function askOracle(q?: string) {
     router.push({ pathname: '/oraculo', params: { mode: 'note', noteId, subjectId: note?.subject_id ?? '', noteTitle: title || 'Nota', ...(q ? { q } : {}) } } as any);
@@ -264,7 +272,7 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
       <View>
         {doc}
         <View style={{ width: '100%', maxWidth: 720, alignSelf: 'center', marginTop: 28 }}>{study}</View>
-        {menuEl}{zoomEl}
+        {menuEl}{zoomEl}{maker.sheet}
       </View>
     );
   }
@@ -279,7 +287,7 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
           {study}
         </ScrollView>
       )}
-      {menuEl}{zoomEl}
+      {menuEl}{zoomEl}{maker.sheet}
     </View>
   );
 }

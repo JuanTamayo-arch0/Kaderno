@@ -7,7 +7,7 @@ import { C } from '../../lib/theme';
 import { useResponsive } from '../../lib/responsive';
 import {
   Subject, Task, Step, Slot, getSubjects, getTasks, getStepsFor, toggleTask, deleteTask, moveTaskDate,
-  getSchedule, countDueFlashcards, fetchPrefs, getFocusDetail, getFocusByTask, hasV14,
+  getSchedule, fetchPrefs, getFocusDetail, getFocusByTask, hasV14,
 } from '../../lib/db';
 import { getMyProjectTasks, type MyProjectTask } from '../../lib/projects';
 import { readSnap, writeSnap } from '../../lib/snapshot';
@@ -33,6 +33,8 @@ import { MiniCalendar } from '../../components/MiniCalendar';
 import { Avatar } from '../../components/SideNav';
 import { ActionMenu, type MenuAction } from '../../components/ActionMenu';
 import { type HoyHidden, type HoyVista, setTaskHidden, setProjectHidden, clearHoyHidden, pruneHiddenTasks, resetHoyHiddenCache, vistaFromPrefs, saveHoyVista } from '../../lib/hoyHidden';
+import { countToday } from '../../lib/cardsDb';
+import { estimateLabel } from '../../lib/cards';
 
 // ============================================================
 //  Hoy.
@@ -63,6 +65,7 @@ export default function Hoy() {
   const [hiddenH, setHiddenH] = useState<HoyHidden>(snap?.hiddenH ?? { tasks: [], projects: [] });
   const [slots, setSlots] = useState<Slot[]>(snap?.slots ?? []);
   const [repaso, setRepaso] = useState(snap?.repaso ?? 0);
+  const [repasoSecs, setRepasoSecs] = useState(10);
   const [focusToday, setFocusToday] = useState<{ todayMin: number; streak: number }>({ todayMin: 0, streak: 0 });
   const [focusBy, setFocusBy] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
@@ -89,7 +92,7 @@ export default function Hoy() {
       setVista(vistaFromPrefs(prefs));
       // Se traen siempre, aunque la vista sea "Materias", para cambiar de vista al instante.
       ptP.then((pt) => { if (!pt) return; setPtasks(pt); pruneHiddenTasks(pt.map((x) => x.id)).catch(() => {}); });
-      countDueFlashcards().then(setRepaso).catch(() => {});
+      countToday().then((c) => { setRepaso(c.total); setRepasoSecs(c.secs); }).catch(() => {});
       getFocusDetail().then((d) => setFocusToday({ todayMin: d.todayMin, streak: d.streak })).catch(() => {});
       refreshNavCounts();  // sin forzar: la barra ya los pidió al abrir; tras cambios se fuerzan solos
     } catch (e) { setError(friendlyError(e)); if (!tasks) setTasks([]); }
@@ -344,7 +347,7 @@ export default function Hoy() {
       </View>
       <View style={{ flex: 1 }}>
         <Text style={{ color: C.text, fontWeight: '700' }}>Repaso pendiente</Text>
-        <Text style={{ color: C.muted, fontSize: 12.5 }}>{repaso} {repaso === 1 ? 'tarjeta' : 'tarjetas'}, unos {Math.max(1, Math.round(repaso * 0.4))} min</Text>
+        <Text style={{ color: C.muted, fontSize: 12.5 }}>{repaso} {repaso === 1 ? 'tarjeta' : 'tarjetas'}, {estimateLabel(repaso, repasoSecs)}</Text>
       </View>
       <Ionicons name="chevron-forward" size={18} color={C.muted} />
     </Card>
