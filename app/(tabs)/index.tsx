@@ -44,6 +44,11 @@ import { streakChanged, openExamPlan } from '../../lib/uiBus';
 import { examsWithPlan } from '../../lib/quizDb';
 import { shouldOffer, daysUntil } from '../../lib/examPlan';
 import { examPlanAsked, markExamPlanAsked } from '../../components/plan/ExamPlanSheet';
+import { WeekRitual } from '../../components/ritual/WeekRitual';
+import { SemesterRitual } from '../../components/ritual/SemesterRitual';
+import { getWeekPlan, saveWeekPlan, getRitualPrefs, saveRitualPrefs, type RitualPrefs } from '../../lib/ritualsDb';
+import { ritualWeekStart, shouldOfferRitual, shouldOfferSemester, tomorrowISO, localISO, type WeekPlan, type Priority } from '../../lib/rituals';
+import { weekStartISO } from '../../lib/streaks';
 
 // ============================================================
 //  Hoy.
@@ -89,6 +94,11 @@ export default function Hoy() {
   const [planFocus, setPlanFocus] = useState<Record<string, number>>({});
   const [planDismissed, setPlanDismissed] = useState<Set<string>>(new Set());
   const [noOffer, setNoOffer] = useState<Set<string> | null>(null);   // exámenes con plan o ya preguntados
+  const [weekPlan, setWeekPlan] = useState<WeekPlan | null>(null);      // la semana en curso (prioridades arriba)
+  const [ritualPlan, setRitualPlan] = useState<WeekPlan | null | undefined>(undefined); // la semana que se planea
+  const [ritualPrefs, setRitualPrefs] = useState<RitualPrefs | null>(null);
+  const [ritualOpen, setRitualOpen] = useState(false);
+  const [semesterOpen, setSemesterOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -100,6 +110,7 @@ export default function Hoy() {
       getStepsFor(pending).then(setSteps).catch(() => {});
       getFocusByTask(pending).then(setFocusBy).catch(() => {});
       Promise.all([examsWithPlan(), examPlanAsked()]).then(([a, b]) => setNoOffer(new Set([...a, ...b]))).catch(() => {});
+      loadWeek();
       // Planes de las últimas horas: ¿arrancaron? (enfoque en esa tarea desde 10 min antes del plan)
       const planned = t.filter((x) => x.status !== 'done' && x.plan_at && Date.now() - new Date(x.plan_at).getTime() > 0 && Date.now() - new Date(x.plan_at).getTime() < 26 * 3600_000);
       if (planned.length) {
@@ -118,6 +129,13 @@ export default function Hoy() {
     } catch (e) { setError(friendlyError(e)); if (!tasks) setTasks([]); }
   }, []);
   useFocusEffect(useCallback(() => { load(); setNow(new Date()); }, [load]));
+  function loadWeek() {
+    const n = new Date();
+    const cur = weekStartISO(localISO(n)), rw = ritualWeekStart(n);
+    getWeekPlan(cur).then((p) => { setWeekPlan(p); if (rw === cur) setRitualPlan(p); }).catch(() => {});
+    if (rw !== cur) getWeekPlan(rw).then(setRitualPlan).catch(() => {}); 
+    getRitualPrefs().then(setRitualPrefs).catch(() => {});
+  }
   // Guarda la foto para la próxima vez (solo cuando ya hay datos reales).
   useEffect(() => {
     if (!tasks || !snapKey) return;
@@ -128,8 +146,10 @@ export default function Hoy() {
   useEffect(() => { const id = setInterval(() => setNow(new Date()), 60000); return () => clearInterval(id); }, []);
 
   // Atajo del ícono instalado: "Agregar tarea".
-  const params = useLocalSearchParams<{ agregar?: string }>();
+  const params = useLocalSearchParams<{ agregar?: string; semana?: string }>();
   useEffect(() => { if (params.agregar === '1') { openAdd(); router.setParams({ agregar: undefined } as any); } }, [params.agregar]);
+  // Desde el aviso del lunes.
+  useEffect(() => { if (params.semana === '1') { setRitualOpen(true); router.setParams({ semana: undefined } as any); } }, [params.semana]);
 
   // Primera vez: bienvenida en tres pasos.
   useEffect(() => {
@@ -259,6 +279,18 @@ export default function Hoy() {
   // Examen sin plan de repaso (por ejemplo, recién importado): se ofrece uno a la vez.
   const examOffer = noOffer ? allPending.filter((t) => shouldOffer(t.type, t.due_date, now) && !noOffer.has(t.id) && daysUntil(new Date(t.due_date + 'T12:00:00'), now) <= 21)
     .sort(compareDue)[0] : undefined;
+
+  // Rituales: planear la semana (lunes o domingo en la noche) y empezar el semestre.
+  const offerRitual = ritualPlan !== undefined && !!ritualPrefs && shouldOfferRitual(now, ritualPlan, ritualPrefs.monday);
+  const offerSemester = !!ritualPrefs && !offerRitual && shouldOfferSemester(subjects as any, now, !!ritualPrefs.semesterAt || ritualPrefs.semesterDismissed);
+  const priorities = weekPlan?.done_at ? weekPlan.priorities : [];
+  async function togglePriority(p: Priority, i: number) {
+    if (p.kind === 'task') { const t = (tasks ?? []).find((x) => x.id === p.taskId); if (t) toggle(t); return; }
+    if (!weekPlan) return;
+    const next = weekPlan.priorities.map((x, j) => (j === i && x.kind === 'text' ? { ...x, done: !x.done } : x));
+    setWeekPlan({ ...weekPlan, priorities: next });
+    saveWeekPlan(weekPlan.week_start, { priorities: next }).catch((e) => toast(friendlyError(e), { tone: 'bad' }));
+  }
 
   const summary: React.ReactNode[] = [];
   summary.push(<Text key="t" style={{ color: C.text, fontWeight: '700' }}>{todayCount === 0 ? 'Nada para hoy' : todayCount === 1 ? '1 para hoy' : `${todayCount} para hoy`}</Text>);
@@ -481,6 +513,49 @@ export default function Hoy() {
   const left = (
     <>
       {summaryLine}
+      {priorities.length > 0 && (
+        <Card style={{ marginBottom: 12, gap: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Ionicons name="star" size={15} color={C.warn} />
+            <Text style={{ color: C.text, fontWeight: '800', fontSize: 14, flex: 1 }}>Lo importante esta semana</Text>
+            <Pressable onPress={() => setRitualOpen(true)} accessibilityRole="button"><Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>Cambiar</Text></Pressable>
+          </View>
+          {priorities.map((p, i) => {
+            const t = p.kind === 'task' ? (tasks ?? []).find((x) => x.id === p.taskId) : null;
+            const done = p.kind === 'task' ? t?.status === 'done' : !!p.done;
+            const at = p.kind === 'task' ? t?.plan_at : p.at;
+            return (
+              <Pressable key={i} onPress={() => togglePriority(p, i)} accessibilityRole="checkbox" accessibilityState={{ checked: done }} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 34 }}>
+                <Ionicons name={done ? 'checkmark-circle' : 'ellipse-outline'} size={20} color={done ? C.good : C.muted} />
+                <Text style={{ color: done ? C.muted : C.text, fontSize: 14, flex: 1, textDecorationLine: done ? 'line-through' : 'none' }} numberOfLines={1}>{p.title}</Text>
+                {!!at && !done && <Text style={{ color: C.brand, fontSize: 12, fontWeight: '600' }}>{new Date(at).toLocaleDateString('es-CO', { weekday: 'short' })} {minToLabel(new Date(at).getHours() * 60 + new Date(at).getMinutes())}</Text>}
+              </Pressable>
+            );
+          })}
+        </Card>
+      )}
+      {offerRitual && (
+        <Card style={{ marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap', borderLeftWidth: 4, borderLeftColor: C.brand }}>
+          <Ionicons name="compass-outline" size={22} color={C.brand} />
+          <View style={{ flex: 1, minWidth: 180 }}>
+            <Text style={{ color: C.text, fontWeight: '700', fontSize: 14 }}>Planea tu semana</Text>
+            <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>3 minutos: lo importante y cuándo lo haces.</Text>
+          </View>
+          <Button label="Empezar" size="sm" onPress={() => setRitualOpen(true)} />
+          <Button label="Mañana" size="sm" kind="ghost" onPress={() => { const rw = ritualWeekStart(now); const until = tomorrowISO(now); setRitualPlan((p) => ({ ...(p ?? { week_start: rw, priorities: [], goal_days: null, done_at: null }), snoozed_until: until })); saveWeekPlan(rw, { snoozed_until: until }).catch(() => {}); }} />
+        </Card>
+      )}
+      {offerSemester && (
+        <Card style={{ marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <Ionicons name="flag-outline" size={22} color={C.brand2} />
+          <View style={{ flex: 1, minWidth: 180 }}>
+            <Text style={{ color: C.text, fontWeight: '700', fontSize: 14 }}>Empieza el semestre con metas</Text>
+            <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>La nota que quieres en cada materia y tu meta de días por semana.</Text>
+          </View>
+          <Button label="Empezar" size="sm" onPress={() => setSemesterOpen(true)} />
+          <Button label="Ahora no" size="sm" kind="ghost" onPress={() => { setRitualPrefs((r) => (r ? { ...r, semesterDismissed: true } : r)); saveRitualPrefs({ semesterDismissed: true }).catch(() => {}); }} />
+        </Card>
+      )}
       {streak.s && <StreakNudge s={streak.s} onFocus={() => { startFocus(); router.push('/enfoque'); }} />}
       {examOffer && !stalled && (
         <Card style={{ marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -528,6 +603,8 @@ export default function Hoy() {
           )}
         </View>
       ) : left}
+      <WeekRitual visible={ritualOpen} weekStart={ritualWeekStart(now)} onClose={() => setRitualOpen(false)} onDone={loadWeek} />
+      <SemesterRitual visible={semesterOpen} onClose={() => { setSemesterOpen(false); getRitualPrefs().then(setRitualPrefs).catch(() => {}); }} />
     </Screen>
   );
 }

@@ -18,6 +18,7 @@ import {
 import { toast, notify, friendlyError, confirm } from '../lib/feedback';
 import { streakChanged, dataChanged } from '../lib/uiBus';
 import { refreshNavCounts } from '../lib/navCounts';
+import { getGoal } from '../lib/ritualsDb';
 
 // ============================================================
 //  Simulacro (v20, sección H): preguntas de tus notas, mezcla de opción
@@ -47,6 +48,7 @@ function Simulacro() {
   const [scale, setScale] = useState(5);
   const [history, setHistory] = useState<QuizRow[]>([]);
   const [examId, setExamId] = useState<string | null>(params.examen || null);
+  const [target, setTarget] = useState<number | null>(null);
 
   const [phase, setPhase] = useState<Phase>('config');
   const [qs, setQs] = useState<QuizQuestion[]>([]);
@@ -71,6 +73,7 @@ function Simulacro() {
     getNotes(subjectId).then(setNotes).catch(() => setNotes([]));
     getGrades(subjectId).then((g) => setScale(g[0]?.max_score ?? 5)).catch(() => {});
     getQuizzes(subjectId, 5).then(setHistory).catch(() => {});
+    getGoal(subjectId).then((g) => setTarget(g?.target_grade != null ? Number(g.target_grade) : null)).catch(() => {});
     if (!params.examen) nextExamOf(subjectId).then((t) => setExamId(t?.id ?? null)).catch(() => {});
   }, [subjectId]);
 
@@ -257,6 +260,7 @@ function Simulacro() {
             <Text style={{ color: grade / scale >= 0.6 ? C.goodText : C.badText, fontSize: 44, fontWeight: '800' }} accessibilityLabel={`Nota ${fmtGrade(grade, scale)}`}>{fmtGrade(grade, scale)}</Text>
             <Text style={{ color: C.text, fontSize: 15, fontWeight: '600' }}>{pct}% · {qs.length - errs.length} de {qs.length} bien · {fmtClock(duration)}</Text>
             {prev && <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 6 }}>Antes: {fmtGrade(Number(prev.score), Number(prev.scale) || scale)}</Text>}
+            {target != null && <Text style={{ color: grade >= target ? C.goodText : C.muted, fontSize: 12.5, marginTop: 2 }}>Tu meta: {fmtGrade(target, scale).split(' / ')[0]}{grade >= target ? ' · ¡la alcanzaste!' : ''}</Text>}
           </Card>
           <Card style={{ flex: 1, gap: 10 }}>
             <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '700' }}>Por nota</Text>

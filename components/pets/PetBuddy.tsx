@@ -26,6 +26,8 @@ import { bucketOf, dayDiff, dueDay, dueMoment, isoDate, startOfDay } from '../..
 import { onDataChanged, dataChanged } from '../../lib/uiBus';
 import { toast, friendlyError } from '../../lib/feedback';
 import { useAuth } from '../../lib/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getGoals } from '../../lib/ritualsDb';
 
 const LABELS: Record<ActionId, string> = {
   enfocar: 'Enfocarme ya', mover_hoy: 'Mover a hoy', que_hago: '¿Qué hago ahora?', dos_min: 'Regla de 2 min',
@@ -209,7 +211,7 @@ export function PetBuddy() {
     ctx.current.opened = true;
     const id = setTimeout(async () => {
       try {
-        const [h, subs, focus] = await Promise.all([freshHints(), getSubjects().catch(() => []), getFocusDetail().catch(() => null)]);
+        const [h, subs, focus, goals] = await Promise.all([freshHints(), getSubjects().catch(() => []), getFocusDetail().catch(() => null), getGoals().catch(() => [])]);
         const now = new Date();
         const first = h.overdue[0] ? h.tasks.get(h.overdue[0].id) ?? null : null;
         ctx.current.task = first;
@@ -219,8 +221,16 @@ export function PetBuddy() {
           .map((t) => ({ t, dias: dayDiff(dueDay(t)!, now) }))
           .filter((x) => x.dias >= 0 && x.dias <= 3)
           .sort((a, b) => a.dias - b.dias)[0];
+        // Meta con plan: la de la materia del examen cercano, o una vez al mes cualquiera.
+        const withPlan = goals.filter((g) => g.plan);
+        let goal = exam ? withPlan.find((g) => g.subject_id === exam.t.subject_id) ?? null : null;
+        if (!goal && withPlan.length) {
+          const last = Number(await AsyncStorage.getItem('kd:goalNudge').catch(() => null)) || 0;
+          if (Date.now() - last > 30 * 86_400_000) { goal = withPlan[0]; AsyncStorage.setItem('kd:goalNudge', String(Date.now())).catch(() => {}); }
+        }
+        const goalHint = goal ? { materia: subs.find((x) => x.id === goal!.subject_id)?.name ?? 'el semestre', plan: String(goal.plan).slice(0, 140) } : null;
         fns.current.handle({
-          type: 'abrir', overdue: h.overdue, today: h.today, hour: now.getHours(),
+          type: 'abrir', overdue: h.overdue, today: h.today, hour: now.getHours(), goal: goalHint,
           exam: exam ? { materia: subs.find((x) => x.id === exam.t.subject_id)?.name ?? exam.t.title, dias: exam.dias } : null,
           streakAtRisk: !!focus && focus.streak > 0 && focus.todayMin === 0,
         });
