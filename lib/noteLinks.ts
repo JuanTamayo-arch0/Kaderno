@@ -89,3 +89,12 @@ export function builtinTemplate(key: string | null | undefined): Template | null
 const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 /** "Clase del 23 oct". */
 export function classNoteTitle(d: Date): string { return `Clase del ${d.getDate()} ${MONTHS[d.getMonth()]}`; }
+
+// ---------- Compartir ----------
+/** La nota como Markdown para fuera de Kaderno: sin imágenes privadas ni enlaces internos. */
+export function noteForExport(title: string, md: string): string {
+  const body = (md ?? '')
+    .replace(/!\[([^\]\n]*)\]\(kd-img:[^)\s]+\)/g, (_a, alt) => `*(imagen${alt ? `: ${alt}` : ''})*`)
+    .replace(/\[([^\]\n]*)\]\(kd-note:[0-9a-fA-F-]{36}\)/g, '$1');
+  return `# ${title || 'Nota'}\n\n${body.trim()}\n`;
+}

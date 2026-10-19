@@ -60,3 +60,4 @@ for f in supabase/schema_v20.sql supabase/schema_v20.sql; do
 done
 $PSQL -d k16 -f tests/sql/20_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line|WARNING" | grep -v "^ *$"
 $PSQL -d k16 -f tests/sql/20b_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line|WARNING" | grep -v "^ *$"
+$PSQL -d k16 -f tests/sql/20c_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line|WARNING" | grep -v "^ *$"

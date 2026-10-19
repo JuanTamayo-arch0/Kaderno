@@ -21,6 +21,7 @@ import { SubjectPicker } from '../SubjectPicker';
 import { NoteEditor } from './NoteEditor';
 import type { HeadingItem, NoteEditorHandle, SelectionAction } from './editorTypes';
 import { RecallTest } from './RecallTest';
+import { ShareNoteSheet } from './ShareNoteSheet';
 import { recallLabel } from '../../lib/quiz';
 import { extractLinks, refreshLinkTitles } from '../../lib/noteLinks';
 import { noteTitles } from '../../lib/cardsDb';
@@ -59,6 +60,7 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
   const [photo, setPhoto] = useState<string | null>(null);
   const [zoom, setZoom] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [share, setShare] = useState<'link' | 'project' | null>(null);
   const [titleH, setTitleH] = useState(0);
   const [recall, setRecall] = useState(false);
   const [recallMd, setRecallMd] = useState('');
@@ -333,12 +335,17 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
       { label: note.pinned ? 'Quitar de fijadas' : 'Fijar arriba', icon: note.pinned ? 'pin-outline' : 'pin', onPress: togglePin },
       ...(photo ? [{ label: 'Ver foto original', icon: 'image-outline' as const, onPress: () => setZoom(true) }] : []),
       { label: 'Preguntar al Oráculo', icon: 'sparkles-outline', onPress: () => askOracle() },
+      { label: 'Compartir con un enlace', icon: 'link-outline', onPress: () => setShare('link') },
+      { label: 'Copiar a un proyecto', icon: 'folder-open-outline', onPress: () => setShare('project') },
       { label: 'Guardar como plantilla', icon: 'copy-outline', onPress: async () => {
         try { await saveTemplate(title || 'Mi plantilla', ed.current?.flush() ?? content); toast('Plantilla guardada: sale al crear una nota nueva', { tone: 'good' }); }
         catch (e) { notify('No se pudo guardar', friendlyError(e)); }
       } },
       { label: 'Borrar nota', icon: 'trash-outline', danger: true, onPress: remove },
     ]} />
+  );
+  const shareEl = (
+    <ShareNoteSheet visible={!!share} mode={share ?? 'link'} noteId={noteId} title={title} getContent={() => ed.current?.flush() ?? content} onClose={() => setShare(null)} />
   );
   const zoomEl = (
     <Modal visible={zoom} transparent onRequestClose={() => setZoom(false)}>
@@ -362,7 +369,7 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
       <View>
         {doc}
         <View style={{ width: '100%', maxWidth: 720, alignSelf: 'center', marginTop: 28 }}>{study}</View>
-        {menuEl}{zoomEl}{maker.sheet}{recallEl}
+        {menuEl}{shareEl}{zoomEl}{maker.sheet}{recallEl}
       </View>
     );
   }
@@ -377,7 +384,7 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
           {study}
         </ScrollView>
       )}
-      {menuEl}{zoomEl}{maker.sheet}{recallEl}
+      {menuEl}{shareEl}{zoomEl}{maker.sheet}{recallEl}
     </View>
   );
 }

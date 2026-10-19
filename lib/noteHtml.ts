@@ -30,6 +30,14 @@ export async function noteToHtml(md: string, resolveImg: (path: string) => Promi
   // El HTML escrito a mano en la nota se muestra como texto, no se ejecuta.
   marked.use({ renderer: { html: (t: any) => esc(t.text ?? t.raw ?? '') } });
   let html = await marked.parse(text);
+  html = safeUrls(html);
   html = html.replace(/@@KDMATH(\d+)@@/g, (_m, i) => math[Number(i)] ?? '');
   return html;
+}
+
+/** Solo enlaces http(s), mailto o anclas; imágenes http(s) o blob. Lo demás (javascript:, data:…) se quita. */
+export function safeUrls(html: string): string {
+  return html
+    .replace(/<a\s+href="([^"]*)"/gi, (_m, u) => (/^(https?:|mailto:|#)/i.test(u.replace(/&amp;/g, '&').trim()) ? `<a rel="noopener noreferrer nofollow" target="_blank" href="${u}"` : '<a href="#"'))
+    .replace(/<img\s+src="([^"]*)"/gi, (_m, u) => (/^(https?:|blob:)/i.test(u.trim()) ? `<img src="${u}"` : '<img src=""'));
 }

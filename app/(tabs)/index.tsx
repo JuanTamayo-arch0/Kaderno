@@ -20,7 +20,7 @@ import {
   BUCKET_LABEL, BUCKET_ORDER, Bucket, bucketOf, compareDue, fmtLongDate, capitalize, isoDate, addDays,
   startOfDay, fmtDue, dueDay, dayDiff, DAY_SHORT,
 } from '../../lib/time';
-import { buildAgenda, nowAndNext, minToLabel, type AgendaItem } from '../../lib/agenda';
+import { buildAgenda, nowAndNext, minToLabel, type AgendaItem, type AgendaEvent } from '../../lib/agenda';
 import { toast, friendlyError } from '../../lib/feedback';
 import { removeTask } from '../../lib/taskActions';
 import { openAdd, openCommand, openInbox, openTask, onDataChanged } from '../../lib/uiBus';
@@ -51,6 +51,7 @@ import { ritualWeekStart, shouldOfferRitual, shouldOfferSemester, tomorrowISO, l
 import { weekStartISO } from '../../lib/streaks';
 import { Countdown } from '../../components/day/Countdown';
 import { DayPlanner } from '../../components/day/DayPlanner';
+import { getEvents } from '../../lib/calendarsDb';
 import { InboxSort } from '../../components/day/InboxSort';
 import { DayClose } from '../../components/day/DayClose';
 import { getDayReview } from '../../lib/dayDb';
@@ -95,6 +96,17 @@ export default function Hoy() {
   const [filter, setFilter] = useState<string | null>(null);
   const [vista, setVista] = useState<HoyVista>(snap?.vista ?? 'todo');
   const [day, setDay] = useState<string | null>(null);
+  // Eventos de los calendarios conectados (v21) para la agenda del día elegido.
+  const [extEvents, setExtEvents] = useState<AgendaEvent[]>([]);
+  const [evTick, setEvTick] = useState(0);
+  useEffect(() => onDataChanged(() => setEvTick((n) => n + 1)), []);
+  useEffect(() => {
+    const d0 = day ? new Date(day + 'T00:00:00') : new Date(); d0.setHours(0, 0, 0, 0);
+    const d1 = new Date(d0); d1.setDate(d1.getDate() + 1);
+    let live = true;
+    getEvents(d0, d1).then((ev) => { if (live) setExtEvents(ev); }).catch(() => {});
+    return () => { live = false; };
+  }, [day, evTick]);
   const [showDone, setShowDone] = useState(false);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [leaving, setLeaving] = useState<Set<string>>(new Set());   // filas que se están yendo (animación al completar)
@@ -298,7 +310,7 @@ export default function Hoy() {
   const agenda = buildAgenda(day ? new Date(day + 'T12:00:00') : now, slots, blocks, subjects, [
     ...pending,
     ...ptasks.map((p) => ({ ...p, kind: 'project' as const, color: p.project?.color, project: p.project?.name, subject_id: null, status: p.done ? 'done' : 'pending' })),
-  ]);
+  ], extEvents);
 
   const stalled = allPending.find((t) => !planDismissed.has(t.id) && isStalled(t.plan_at, now,
     (planFocus[t.id] ?? 0) > 0 || (focus.state.taskId === t.id && (focus.state.running || focus.remaining < focus.total))));
@@ -651,7 +663,7 @@ export default function Hoy() {
       {(!isWide || width < 1100) && (focusCard ?? nowCard)}
       <ModoSwitch value={modo} onChange={changeModo} />
       {modo === 'dia' ? (
-        <DayPlanner tasks={live} slots={slots} subjects={subjects} onChanged={load} onToggle={toggle} onFocusTask={startTask} />
+        <DayPlanner tasks={live} slots={slots} subjects={subjects} onChanged={load} onToggle={toggle} onFocusTask={startTask} loadEvents={getEvents} />
       ) : <>
       {week}
       {filters}
@@ -720,6 +732,7 @@ function AgendaRow({ it, now, isToday, onPress }: { it: AgendaItem; now: Date; i
         <Text style={{ color: C.text, fontSize: 13.5, fontWeight: it.kind === 'class' ? '700' : '500' }} numberOfLines={1}>
           {it.kind === 'due' ? 'Entrega: ' : ''}{it.title}
         </Text>
+        {it.kind === 'event' && <Text style={{ color: live ? C.brand : C.muted, fontSize: 12, fontWeight: live ? '700' : '400' }}>{live ? 'Ahora · ' : ''}{it.end != null && it.end < 24 * 60 ? `hasta ${minToLabel(it.end)}` : 'hasta mañana'}</Text>}
         {it.kind === 'class' && <Text style={{ color: live ? C.brand : C.muted, fontSize: 12, fontWeight: live ? '700' : '400' }}>{live ? 'Ahora · ' : ''}hasta {minToLabel(it.end!)}</Text>}
         {it.project && <Text style={{ color: C.muted, fontSize: 12 }}>{it.project}</Text>}
       </View>

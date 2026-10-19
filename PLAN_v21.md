@@ -1,6 +1,6 @@
 # PLAN v21: Organizar el día y notas conectadas
 
-Estado: fases 1 y 2 construidas (lunes 19 de octubre, ramas v21-dia y v21-notas). Se hace después de la versión 20 (`PLAN_v20.md`) y se apoya en ella: usa los planes con hora (`plan_at`), el ritual del lunes y la hoja "Revisa tus tarjetas".
+Estado: fases 1, 2 y 3 construidas (lunes 19 de octubre, ramas v21-dia, v21-notas y v21-afuera). La fase 4 (grabar la clase, anotar PDFs) espera decisión de costo, proveedor y espacio. Se hace después de la versión 20 (`PLAN_v20.md`) y se apoya en ella: usa los planes con hora (`plan_at`), el ritual del lunes y la hoja "Revisa tus tarjetas".
 
 Este plan sale de revisar apps de notas (Notion, Obsidian, Notability, Goodnotes, RemNote) y de organización del día (Todoist, TickTick, Things, Structured, Sunsama, Microsoft To Do), y de compararlas con lo que ya tiene Kaderno.
 
@@ -181,3 +181,7 @@ Requiere schema_v19 (v20). Idempotente, crece por fases.
 7. (Al construir 2) Compartir hacia Kaderno recibe texto, enlaces y fotos (las fotos van a Capturar).
 8. (Al construir 8) La tarjeta se reconoce por la línea de la nota guardada en `flashcards.note_line` (y si cambió, por el frente o la respuesta) en vez de un id oculto en el Markdown: el editor no conserva comentarios HTML al guardar.
 9. (Al construir 7) La plantilla de la materia se guarda como texto en `subjects.default_template` ('cornell', 'lab', 'capitulo', 'ejercicio' o el id de una propia), porque las de fábrica viven en el código.
+10. (Al construir 9) El lector de .ics es propio y sin dependencias (`supabase/functions/_shared/icsParse.ts`, con pruebas): eventos con zona horaria, de todo el día, repeticiones diarias, semanales y mensuales (INTERVAL, BYDAY, UNTIL, COUNT, EXDATE) y ediciones de una sola ocurrencia. Guarda de 2 días atrás a 45 adelante. Solo lee direcciones https (webcal se pasa a https), nunca direcciones internas, sigue hasta 3 redirecciones revisando cada una y corta a los 3 MB o 10 segundos. Máximo 5 calendarios por persona.
+11. (Al construir 9) La app no puede escribir eventos: solo la función del servidor. La dirección del calendario sí se puede editar desde la app, pero nunca se devuelve a nadie más.
+12. (Al construir 10) La página pública pasa por la función `shared-note` (sin sesión), que devuelve solo título, contenido y fecha, cambia las imágenes por direcciones firmadas de una hora y deja como texto los enlaces a otras notas. Los enlaces de la nota se limitan a http, https y mailto (se quitan `javascript:` y parecidos) porque la página vive en el dominio de Kaderno.
+13. (Al construir 10) "Copiar a un proyecto" guarda una copia `.md` en Archivos del proyecto (sin imágenes privadas ni enlaces internos); no se sincroniza sola.
