@@ -596,3 +596,107 @@ test('tiempo real: mediana con al menos 5 tareas y sugerencia redondeada', async
   assert.equal(tookText(3, 30), null);
   assert.equal(planVsReal(360, 270), 'La semana pasada planeaste 6 h y estudiaste 4 h 30.');
 });
+
+// ---------- Fase 3: plan del parcial ----------
+test('plan del parcial: sesiones a 14, 7, 4, 2 y 1 días y su tipo', async () => {
+  const { planSessions, shouldOffer, sessionTitle, planProgress } = await import('../lib/examPlan');
+  const now = new Date(2026, 9, 19, 9, 0);
+  const at = (n: number) => new Date(2026, 9, 19 + n);
+  const kinds = (d: number) => planSessions(at(d), now).map((s) => `${s.offset}:${s.kind}`);
+  assert.deepEqual(kinds(20), ['14:prep', '7:mix', '4:mix', '2:sim', '1:light']);
+  assert.deepEqual(kinds(10), ['7:prep', '4:mix', '2:sim', '1:light']);
+  assert.deepEqual(kinds(5), ['4:prep', '2:sim', '1:light']);
+  assert.deepEqual(kinds(3), ['2:sim', '1:light']);
+  assert.deepEqual(planSessions(at(2), now).map((s) => [s.title, s.day.getDate()]), [['Simulacro rápido', 19], ['Repaso ligero', 20]]);
+  assert.deepEqual(planSessions(at(1), now).map((s) => s.day.getDate()), [19, 19]);
+  assert.equal(planSessions(at(0), now).length, 0);
+  assert.deepEqual(planSessions(at(20), now).map((s) => s.minutes), [50, 50, 50, 50, 20]);
+  assert.equal(planSessions(at(20), now)[0].day.getDate(), 25);
+  assert.equal(shouldOffer('examen', '2026-10-22', now), true);
+  assert.equal(shouldOffer('examen', '2026-10-21', now), false);
+  assert.equal(shouldOffer('tarea', '2026-10-30', now), false);
+  assert.equal(sessionTitle('sim', 'Parcial 3'), 'Simulacro · Parcial 3');
+  assert.equal(planProgress([{ status: 'done' }, { status: 'pending' }, { status: 'done' }, {}]).text, 'Plan de repaso: 2 de 4 sesiones hechas');
+});
+
+test('plan del parcial: si cambia la fecha, se corren las sesiones que faltan', async () => {
+  const { shiftSessions } = await import('../lib/examPlan');
+  const now = new Date(2026, 9, 19, 9, 0);
+  const r = shiftSessions([
+    { id: 'a', status: 'done', due_date: '2026-10-18' },
+    { id: 'b', due_date: '2026-10-22', plan_at: new Date(2026, 9, 22, 16).toISOString() },
+    { id: 'c', due_date: '2026-10-28' },
+  ], 3, now, new Date(2026, 9, 31));
+  assert.deepEqual(r.move.map((m) => [m.id, m.due_date]), [['b', '2026-10-25'], ['c', '2026-10-31']].slice(0, 1));
+  assert.deepEqual(r.drop, ['c']);
+  assert.equal(new Date(r.move[0].plan_at!).getHours(), 16);
+  // Hacia atrás: la que cae en el pasado no se mueve.
+  assert.deepEqual(shiftSessions([{ id: 'x', due_date: '2026-10-20' }], -3, now, new Date(2026, 9, 25)).drop, ['x']);
+});
+
+test('huecos de un solo día para las sesiones del plan', async () => {
+  const { freeSlots } = await import('../lib/planSlots');
+  const now = new Date(2026, 9, 19, 9, 0);
+  const one = freeSlots({ now, day: new Date(2026, 9, 23), count: 1, duration: 20, habit: [18] });
+  assert.equal(one.length, 1);
+  assert.deepEqual([one[0].getDate(), one[0].getHours()], [23, 18]);
+  assert.equal(freeSlots({ now, day: new Date(2026, 9, 18), count: 1 }).length, 0);
+});
+
+// ---------- Fase 3: simulacro y ponme a prueba ----------
+test('IA del simulacro: lee preguntas válidas y descarta las malas', async () => {
+  const { parseQuiz, quizPrompt, notesBlock, parseGrades, parseRecall } = await import('../supabase/functions/_shared/quiz');
+  const txt = 'Aquí va:\n' + JSON.stringify([
+    { type: 'mc', q: '¿Unidad de fuerza?', options: ['N', 'J', 'W', 'Pa'], answer: 0, explain: 'Newton.', note: 1 },
+    { type: 'mc', q: 'Mala', options: ['a', 'b', 'c'], answer: 0 },
+    { type: 'mc', q: 'Repetidas', options: ['a', 'a', 'b', 'c'], answer: 1 },
+    { type: 'short', q: '¿Qué dice la primera ley?', answer: 'Inercia', explain: '', note: 7 },
+    { type: 'num', q: 'Calcula', answer: 12.5, explain: 'x', note: 2 },
+    { type: 'otro', q: 'x', answer: 'y' },
+  ]);
+  const qs = parseQuiz(txt, 20, 2);
+  assert.deepEqual(qs.map((q) => [q.type, q.note]), [['mc', 0], ['short', null], ['num', 1]]);
+  assert.equal(qs[2].answer, '12.5');
+  assert.equal(parseQuiz('nada', 5, 1).length, 0);
+  assert.match(quizPrompt([{ title: 'A', content: 'x' }], 10), /exactamente 10 preguntas/);
+  assert.ok(notesBlock([{ title: 'A', content: 'a'.repeat(9000) }, { title: 'B', content: 'b'.repeat(9000) }]).length <= 12000 + 60);
+  assert.deepEqual(parseGrades('[{"verdict":"ok","why":"bien"},{"verdict":"meh"}]', 3), [{ verdict: 'ok', why: 'bien' }, null, null]);
+  const r = parseRecall('{"recalled":["F = ma"],"missing":[{"point":"Tercera ley","heading":"leyes de newton"}],"wrong":[],"score":140}', ['Leyes de Newton']);
+  assert.deepEqual(r, { recalled: ['F = ma'], missing: [{ point: 'Tercera ley', heading: 'Leyes de Newton' }], wrong: [], score: 100 });
+  assert.equal(parseRecall('sin json'), null);
+});
+
+test('simulacro: corrección automática, nota en la escala y desglose', async () => {
+  const { autoGrade, numericClose, scoreQuiz, toScale, fmtGrade, byNote, errorDrafts, prepText, recallLabel, pickNotes, headingsOf, cycleVerdict } = await import('../lib/quiz');
+  const qs: any[] = [
+    { type: 'mc', q: 'A', options: ['1', '2', '3', '4'], answer: 2, explain: 'Porque sí', note: 0 },
+    { type: 'num', q: 'B', answer: '12,5 m/s', explain: '', note: 1 },
+    { type: 'short', q: 'C', answer: 'Inercia', explain: 'Primera ley', note: 1 },
+  ];
+  assert.equal(autoGrade(qs[0], 2), 'ok');
+  assert.equal(autoGrade(qs[0], 1), 'wrong');
+  assert.equal(autoGrade(qs[1], '12.4'), 'ok');
+  assert.equal(autoGrade(qs[1], '15'), null);
+  assert.equal(autoGrade(qs[2], 'inercia'), 'ok');
+  assert.equal(autoGrade(qs[2], 'la de inercia'), null);
+  assert.equal(autoGrade(qs[2], '  '), 'skip');
+  assert.equal(numericClose('1 200 N', '1200'), true);
+  const ans: any[] = [{ verdict: 'ok' }, { verdict: 'partial' }, { verdict: 'wrong' }];
+  const { pct } = scoreQuiz(ans, 3);
+  assert.equal(pct, 50);
+  assert.equal(fmtGrade(toScale(76, 5), 5), '3,8 / 5');
+  assert.equal(fmtGrade(toScale(76, 100), 100), '76 / 100');
+  const notes = [{ id: 'n1', title: 'Leyes' }, { id: 'n2', title: 'Cinemática' }];
+  assert.deepEqual(byNote(qs, ans, notes).map((r) => [r.title, r.points, r.total]), [['Cinemática', 0.5, 2], ['Leyes', 1, 1]]);
+  assert.deepEqual(errorDrafts(qs, ans).map((d) => d.back), ['12,5 m/s', 'Inercia. Primera ley']);
+  assert.equal(cycleVerdict('ok'), 'partial');
+  assert.equal(prepText([{ score: 3.1, scale: 5, created_at: '2026-10-01' }, { score: 3.8, scale: 5, created_at: '2026-10-10' }]), 'Preparación: último simulacro 3,8 (antes 3,1)');
+  assert.equal(recallLabel(new Date(2026, 9, 16, 20).toISOString(), 70, new Date(2026, 9, 19, 9)), 'Probada hace 3 días · 70%');
+  const picked = pickNotes([
+    { id: 'a', title: 'Vieja', content: 'x'.repeat(8000), created_at: '2026-09-01' },
+    { id: 'b', title: 'Nueva', content: 'y'.repeat(8000), created_at: '2026-10-01' },
+    { id: 'c', title: 'Corta', content: 'hola', created_at: '2026-10-05' },
+  ], null);
+  assert.deepEqual(picked.map((n) => [n.id, n.content.length]), [['b', 8000], ['a', 4000]]);
+  assert.deepEqual(headingsOf('# Tema\ntexto\n## Fuerza neta ##\n### Ruido'), ['Tema', 'Fuerza neta', 'Ruido']);
+});

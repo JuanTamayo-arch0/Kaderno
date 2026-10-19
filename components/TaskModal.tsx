@@ -22,6 +22,11 @@ import { needsPlan } from '../lib/planSlots';
 import { hasPlanCols } from '../lib/db';
 import { getEstimateRatio } from '../lib/studyDb';
 import { estimateHint, fmtMinutes } from '../lib/estimate';
+import { getSessions, removePlan, applyShift, trashTasks, type SessionTask } from '../lib/quizDb';
+import { shouldOffer, planProgress, shiftSessions, KIND_TEXT } from '../lib/examPlan';
+import { openExamPlan, dataChanged } from '../lib/uiBus';
+import { confirm } from '../lib/feedback';
+import { useRouter } from 'expo-router';
 
 // ============================================================
 //  Crear / editar tarea personal.
@@ -55,6 +60,8 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
   const [plan, setPlan] = useState<PlanValue>({ at: null, place: null });
   const [ratio, setRatio] = useState<number | null>(null);
   const [hintOff, setHintOff] = useState(false);
+  const [sessions, setSessions] = useState<SessionTask[]>([]);
+  const router = useRouter();
 
   useEffect(() => {
     if (!visible) return;
@@ -76,6 +83,8 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
     setPlan({ at: t?.plan_at ?? null, place: t?.plan_place ?? null });
     setHintOff(!!t?.estimate_min);
     getEstimateRatio().then(setRatio).catch(() => setRatio(null));
+    setSessions([]);
+    if (t && ['examen', 'quiz'].includes(String(t.type))) getSessions(t.id).then(setSessions).catch(() => {});
     loadTaskTypes().then(() => setTypesRev((n) => n + 1)).catch(() => {});
     if (t) getSteps(t.id).then(setSteps).catch(() => {});
   }, [visible, editTask, draft, initialSubjectId]);
@@ -114,6 +123,20 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
       if (planChanged && !hasPlanCols()) toast('Tarea guardada. Para guardar cuándo la haces falta correr schema_v19.sql.', { tone: 'bad' });
       else toast(editTask ? 'Cambios guardados' : 'Tarea creada', { tone: 'good' });
       onSaved(id);
+      // Plan de repaso del examen: ofrecerlo al crear (o al ponerle fecha) y mover las sesiones si cambia la fecha.
+      const isExam = ['examen', 'quiz'].includes(type);
+      const dateChanged = !!editTask && editTask.due_date !== date;
+      const pendingSessions = sessions.filter((x) => x.status !== 'done');
+      if (isExam && id && date && dateChanged && pendingSessions.length && editTask?.due_date) {
+        const delta = Math.round((new Date(date + 'T12:00:00').getTime() - new Date(editTask.due_date + 'T12:00:00').getTime()) / 86_400_000);
+        if (delta && await confirm('¿Muevo las sesiones que faltan?', `El examen se movió ${Math.abs(delta)} ${Math.abs(delta) === 1 ? 'día' : 'días'}. Las sesiones de repaso pendientes se corren igual.`, 'Moverlas')) {
+          const r = shiftSessions(pendingSessions, delta, new Date(), new Date(date + 'T12:00:00'));
+          try { await applyShift(r.move); await trashTasks(r.drop); dataChanged(); toast(`Sesiones movidas${r.drop.length ? `; ${r.drop.length} ya no cabían y se quitaron` : ''}`, { tone: 'good' }); }
+          catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
+        }
+      } else if (isExam && id && shouldOffer(type, date, new Date()) && (!editTask || dateChanged) && !sessions.length) {
+        openExamPlan({ ...(editTask ?? {}), ...payload, id, status: editTask?.status ?? 'pending' } as Task);
+      }
     } catch (e) { notify('No se pudo guardar', friendlyError(e)); }
     finally { setBusy(false); }
   }
@@ -224,6 +247,34 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
 
       {hasPlanCols() && (needsPlan(date, new Date()) || !!plan.at) && (
         <WhenPicker title={title} dueDate={date} dueTime={time} value={plan} onChange={setPlan} excludeId={editTask?.id ?? null} />
+      )}
+
+      {editTask && ['examen', 'quiz'].includes(type) && (sessions.length > 0 || shouldOffer(type, date, new Date())) && (
+        <View style={{ marginTop: 14, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: C.line, backgroundColor: C.surface2 + '66', gap: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="calendar-number-outline" size={15} color={C.brand} />
+            <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700', flex: 1 }}>{sessions.length ? planProgress(sessions).text : 'Plan de repaso'}</Text>
+          </View>
+          {sessions.map((x) => (
+            <Pressable key={x.id} accessibilityRole="button" accessibilityLabel={`${x.title}${x.status === 'done' ? ', hecha' : ''}`}
+              onPress={() => { if (x.session_kind === 'sim' && x.status !== 'done') { onClose(); router.push({ pathname: '/simulacro', params: { materia: x.subject_id ?? '', examen: editTask.id, sesion: x.id } } as any); } }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name={x.status === 'done' ? 'checkmark-circle' : 'ellipse-outline'} size={16} color={x.status === 'done' ? C.good : C.muted} />
+              <Text style={{ color: x.status === 'done' ? C.muted : C.text, fontSize: 13, flex: 1, textDecorationLine: x.status === 'done' ? 'line-through' : 'none' }} numberOfLines={1}>
+                {x.session_kind ? KIND_TEXT[x.session_kind].short : x.title.split(' · ')[0]}
+              </Text>
+              <Text style={{ color: C.muted, fontSize: 12 }}>{x.due_date ? x.due_date.slice(8, 10) + '/' + x.due_date.slice(5, 7) : ''}{x.plan_at ? ' · ' + new Date(x.plan_at).toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' }) : ''}</Text>
+            </Pressable>
+          ))}
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+            {sessions.length === 0
+              ? <Button label="Armar plan de repaso" icon="sparkles-outline" size="sm" onPress={() => { const ex = { ...editTask, due_date: date, type }; onClose(); openExamPlan(ex as Task); }} />
+              : <>
+                <Button label="Rehacer" size="sm" kind="secondary" onPress={async () => { try { await removePlan(editTask.id); const ex = { ...editTask, due_date: date, type }; onClose(); dataChanged(); openExamPlan(ex as Task); } catch (e) { toast(friendlyError(e), { tone: 'bad' }); } }} />
+                <Button label="Quitar" size="sm" kind="ghost" onPress={async () => { try { await removePlan(editTask.id); setSessions((xs) => xs.filter((x) => x.status === 'done')); dataChanged(); toast('Plan quitado (las sesiones hechas se quedan)'); } catch (e) { toast(friendlyError(e), { tone: 'bad' }); } }} />
+              </>}
+          </View>
+        </View>
       )}
 
       {!more ? (

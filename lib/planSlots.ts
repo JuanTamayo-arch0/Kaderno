@@ -51,11 +51,18 @@ export function freeSlots(o: {
   count?: number;
   duration?: number;
   days?: number;
+  /** Solo ese día (plan del parcial). */
+  day?: Date;
 }): Date[] {
   const count = o.count ?? 3;
   const dur = o.duration ?? PLAN_MIN;
-  const today = startOfDay(o.now);
+  let today = startOfDay(o.now);
   let last = addDays(today, (o.days ?? 7) - 1);
+  if (o.day) {
+    const d = startOfDay(o.day);
+    if (d < today) return [];
+    today = d; last = d;
+  }
   if (o.due) {
     const dd = startOfDay(o.due);
     const lim = o.dueHasTime ? dd : addDays(dd, -1);
