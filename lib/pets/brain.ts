@@ -27,7 +27,7 @@ export type BrainState = {
 export type TaskHint = { id: string; title: string; overdue?: boolean; today?: boolean; dueTs?: number | null; estimate?: number | null };
 
 export type PetEvent =
-  | { type: 'abrir'; overdue: TaskHint[]; today: TaskHint[]; hour: number; exam?: { materia: string; dias: number } | null; stale?: { title: string; dias: number } | null; streakAtRisk?: boolean }
+  | { type: 'abrir'; overdue: TaskHint[]; today: TaskHint[]; hour: number; exam?: { materia: string; dias: number } | null; stale?: { title: string; dias: number } | null; streakAtRisk?: boolean; goal?: { materia: string; plan: string } | null }
   | { type: 'tarea_hecha'; allDone: boolean }
   | { type: 'paseo'; next: TaskHint | null }
   | { type: 'enfoque_inicio' }
@@ -61,7 +61,7 @@ export const GAP: Record<TalkMode, number> = { importa: 45 * MIN, conversador: 2
 /** Espera propia de cada situación. */
 export const COOLDOWN: Record<string, number> = {
   vencidas: 3 * HOUR, paseo: HOUR, sin_tocar: 6 * HOUR, parcial: 6 * HOUR,
-  racha_riesgo: 2 * HOUR, tarde: 12 * HOUR, hola: 20 * HOUR, hecha: 10 * MIN,
+  racha_riesgo: 2 * HOUR, tarde: 12 * HOUR, hola: 20 * HOUR, hecha: 10 * MIN, meta: 20 * HOUR,
 };
 
 export function initialBrain(talk: TalkMode = 'importa'): BrainState {
@@ -101,6 +101,10 @@ export function react(ev: PetEvent, s: BrainState, sp: Species, now: number, see
       if (ev.overdue.length && canSpeak(s, 'vencidas', now)) {
         const t = nextTask(ev.overdue, [])!;
         return { mood: 'preocupado', moodMs: 6000, say: L('vencidas', { n: ev.overdue.length, tarea: t.title }), actions: ['enfocar', 'mover_hoy'], spontaneous: true, key: 'vencidas', ms: 10000 };
+      }
+      // Meta WOOP: con un examen cerca de esa materia (o una vez al mes) recuerda el "Si…, entonces…".
+      if (ev.goal && canSpeak(s, 'meta', now)) {
+        return { say: L('meta', ev.goal), spontaneous: true, key: 'meta', ms: 10000 };
       }
       if (ev.exam && ev.exam.dias <= 3 && canSpeak(s, 'parcial', now)) {
         return { mood: 'preocupado', moodMs: 5000, say: L('parcial', ev.exam), actions: ['enfocar'], spontaneous: true, key: 'parcial', ms: 9000 };

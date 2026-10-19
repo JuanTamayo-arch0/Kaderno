@@ -37,6 +37,8 @@ import { preloadNoteEditor } from '../../components/notes/NoteEditor';
 import { getQuizzes, getSessions, type QuizRow, type SessionTask } from '../../lib/quizDb';
 import { prepText } from '../../lib/quiz';
 import { planProgress } from '../../lib/examPlan';
+import { getGoal, type Goal } from '../../lib/ritualsDb';
+import { WoopSheet } from '../../components/goals/WoopSheet';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 // ============================================================
@@ -76,6 +78,8 @@ function MateriaDetalle() {
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [quizzes, setQuizzes] = useState<QuizRow[]>([]);
   const [examSessions, setExamSessions] = useState<SessionTask[]>([]);
+  const [goal, setGoal] = useState<Goal | null>(null);
+  const [woop, setWoop] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -88,6 +92,7 @@ function MateriaDetalle() {
       getSchedule().then(setSlots).catch(() => setSlots([]));
       getSubjectStudy(id).then(setStudy).catch(() => {});
       getQuizzes(id, 5).then(setQuizzes).catch(() => {});
+      getGoal(id).then(setGoal).catch(() => {});
       const today = new Date().toISOString().slice(0, 10);
       const exam = t.filter((x) => x.status !== 'done' && ['examen', 'quiz'].includes(String(x.type)) && x.due_date && x.due_date >= today).sort((a, b) => String(a.due_date).localeCompare(String(b.due_date)))[0];
       if (exam) getSessions(exam.id).then(setExamSessions).catch(() => {}); else setExamSessions([]);
@@ -193,6 +198,7 @@ function MateriaDetalle() {
     <>
       <SubjectModal visible={!!editModal} editSubject={subject} focusField={editModal ? editModal.field : undefined} onClose={() => setEditModal(false)} onSaved={() => { setEditModal(false); load(); }}
         onArchived={() => { setEditModal(false); router.replace('/materias'); }} />
+      <WoopSheet visible={woop} onClose={() => setWoop(false)} subjectId={subject.id} subject={subject.name} scale={scale} goal={goal} onSaved={setGoal} />
       <GradeModal visible={gradeModal} subjectId={subject.id} defaultScale={scale} editGrade={editGrade} onClose={() => { setGradeModal(false); setEditGrade(null); }} onSaved={() => { setGradeModal(false); setEditGrade(null); load(); }} />
       <ActionMenu visible={menu} title={subject.name} onClose={() => setMenu(false)} actions={[
         { label: 'Editar materia', icon: 'create-outline', onPress: () => setEditModal({}) },
@@ -250,7 +256,7 @@ function MateriaDetalle() {
           onScan={() => router.push({ pathname: '/capturar', params: { subjectId: id } } as any)} />
       )}
       {tab === 'cal' && (
-        <Grades subject={subject} grades={grades} avg={avg} doneWeight={doneWeight} scale={scale} passMark={passMark}
+        <Grades subject={subject} grades={grades} avg={avg} doneWeight={doneWeight} scale={scale} passMark={passMark} target={goal?.target_grade != null ? Number(goal.target_grade) : null}
           onAdd={() => { setEditGrade(null); setGradeModal(true); }} onEdit={(g) => { setEditGrade(g); setGradeModal(true); }} onRemove={removeGrade} />
       )}
       {tab === 'files' && <SubjectFiles subjectId={subject.id} />}
@@ -265,6 +271,7 @@ function MateriaDetalle() {
         <SubjectStats d={stats} accent={subject.color} isWide={isWide}
           onGrades={() => setTab('cal')} onNext={openEval} onTasks={() => setTab('tareas')}
           onStudy={() => (study?.dueCards ? router.push('/repaso') : actions.onFocus())} />
+        <GoalRow goal={goal} accent={subject.color} onPress={() => setWoop(true)} />
         <PrepRow text={prepText(quizzes) ?? (notes.length ? 'Ponte a prueba antes del parcial: un simulacro con preguntas de tus notas.' : null)}
           plan={examSessions.length ? planProgress(examSessions).text : null} accent={subject.color}
           onSim={() => router.push({ pathname: '/simulacro', params: { materia: subject.id } } as any)} />
@@ -282,6 +289,29 @@ function MateriaDetalle() {
       </View>
       {modals}
     </Screen>
+  );
+}
+
+// Meta WOOP de la materia (o la invitación a ponerse una).
+function GoalRow({ goal, accent, onPress }: { goal: Goal | null; accent: string; onPress: () => void }) {
+  if (!goal) {
+    return (
+      <Pressable onPress={onPress} accessibilityRole="button" style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', paddingHorizontal: 12, minHeight: 34, borderRadius: 99, borderWidth: 1, borderStyle: 'dashed', borderColor: C.line, backgroundColor: hovered ? C.surface2 : 'transparent' })}>
+        <Ionicons name="flag-outline" size={15} color={accent} />
+        <Text style={{ color: C.text, fontSize: 13, fontWeight: '600' }}>Ponerte una meta</Text>
+      </Pressable>
+    );
+  }
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`Meta: ${goal.wish}. Editar`}
+      style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 12, paddingHorizontal: 14, borderRadius: 14, borderWidth: 1, borderColor: accent + '55', backgroundColor: hovered ? C.surface2 : accent + '10' })}>
+      <Ionicons name="flag" size={18} color={accent} style={{ marginTop: 1 }} />
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={{ color: C.text, fontSize: 14, fontWeight: '700' }}>Meta: {goal.wish}</Text>
+        {!!goal.plan && <Text style={{ color: C.muted, fontSize: 12.5, fontStyle: 'italic' }}>{goal.plan}</Text>}
+      </View>
+      <Ionicons name="create-outline" size={16} color={C.muted} />
+    </Pressable>
   );
 }
 
@@ -308,8 +338,8 @@ function ScrollColumn({ children }: { children: React.ReactNode }) {
 }
 
 // ---------- Calificaciones ----------
-function Grades({ subject, grades, avg, doneWeight, scale, passMark, onAdd, onEdit, onRemove }: {
-  subject: Subject; grades: Grade[]; avg: number | null; doneWeight: number; scale: number; passMark: number;
+function Grades({ subject, grades, avg, doneWeight, scale, passMark, target, onAdd, onEdit, onRemove }: {
+  subject: Subject; grades: Grade[]; avg: number | null; doneWeight: number; scale: number; passMark: number; target?: number | null;
   onAdd: () => void; onEdit: (g: Grade) => void; onRemove: (g: Grade) => void;
 }) {
   const totalWeight = grades.reduce((a, g) => a + (g.weight || 0), 0);
@@ -337,7 +367,7 @@ function Grades({ subject, grades, avg, doneWeight, scale, passMark, onAdd, onEd
           {totalWeight - doneWeight > 0 && <Legend color={subject.color + '55'} text={`Por calificar ${totalWeight - doneWeight}%`} />}
           {missing > 0 && <Legend color={C.surface2} text={`Sin registrar ${missing}%`} />}
         </View>
-        <Simulator grades={grades} scale={scale} passMark={passMark} />
+        <Simulator key={String(target ?? '')} grades={grades} scale={scale} passMark={target ?? passMark} />
       </Card>
       {missing > 0 && grades.length > 0 && (
         <Text style={{ color: C.muted, fontSize: 13, marginBottom: 6, lineHeight: 18 }}>

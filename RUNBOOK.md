@@ -1082,3 +1082,27 @@ Sin la migración la app sigue como antes: la racha vieja de Enfoque, sin "¿Cu�
 ### 3. Pruebas
 
 `npm test` (plan del parcial, mover sesiones, huecos de un día, lectura de las respuestas de la IA, corrección, nota y desglose) y `bash tests/run_sql.sh` (incluye `tests/sql/19d_pruebas.sql`: sesiones solo de exámenes propios, hechas solas al cumplir el enfoque, borrado en cascada, simulacros y pruebas que cuentan para el día, RLS).
+
+## Versión 20 (parte 8): ritual del lunes, ritual del semestre y metas WOOP
+
+### 1. Migración
+
+Vuelve a correr `supabase/schema_v19.sql` completo (es idempotente). La sección "FASE 4" agrega:
+
+- `week_plans`: el plan de cada semana (hasta 3 prioridades, la meta de días, cuándo se terminó y hasta cuándo se pospuso). Solo semanas que empiezan en lunes.
+- `goals`: metas WOOP por materia o del semestre, con la nota que quieres. Una activa por materia (y una del semestre).
+- `enqueue_week_plans()` dentro de `enqueue_all()`: aviso opcional "Planea tu semana" el lunes a las 8 am, solo si aún no la planeaste.
+
+No hay que redesplegar funciones.
+
+### 2. Lo que cambia para el usuario
+
+- **Ritual del lunes:** el lunes (o el domingo desde las 6 pm, para la semana siguiente) Hoy muestra "Planea tu semana". Se puede posponer a mañana. Son cuatro pasos: tu semana (entregas y exámenes de esta semana y la siguiente, clases, cómo te fue la semana pasada y lo estimado contra lo real, y tus metas), lo importante (hasta 3, de tus tareas o escritas), ¿cuándo? (un horario libre para cada una) y la meta de días.
+- Las prioridades quedan arriba en Hoy toda la semana ("Lo importante esta semana"), con su hora y para marcarlas.
+- **Ajustes → Estudio:** "Ritual del lunes" (encendido) y "Empezar semestre". **Ajustes → Avisos:** "Aviso del lunes" (apagado).
+- **Ritual del semestre:** se ofrece en Hoy al crear 3 o más materias en 7 días (o desde Ajustes): la nota que quieres en cada materia, la meta semanal y una meta WOOP del semestre.
+- **Metas WOOP:** en la materia, "Ponerte una meta": deseo (y la nota que quieres), mejor resultado, obstáculo (con ejemplos) y plan "Si…, entonces…". La meta y el plan se ven en la materia y en el ritual del lunes. La nota que quieres reemplaza el valor de "Quiero sacar" y sale en el resultado del simulacro. La mascota recuerda el plan cuando hay un examen cerca de esa materia o una vez al mes.
+
+### 3. Pruebas
+
+`npm test` (cuándo se ofrece el ritual y qué semana, entregas de la semana, prioridades, la semana pasada, ritual del semestre y WOOP) y `bash tests/run_sql.sh` (incluye `tests/sql/19e_pruebas.sql`: límites del plan de la semana, una meta activa, RLS y el aviso del lunes).

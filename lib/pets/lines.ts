@@ -8,7 +8,7 @@ export type Situation =
   | 'vencidas' | 'paseo' | 'sin_tocar' | 'hecha' | 'dia_completo' | 'parcial'
   | 'racha_riesgo' | 'tarde' | 'enfoque_inicio' | 'enfoque_fin' | 'enfoque_corto'
   | 'despierta' | 'agarrar' | 'hola' | 'que_hacemos' | 'sugerencia' | 'nada_pendiente'
-  | 'dos_minutos' | 'adoptada' | 'compra' | 'enfoque_activo' | 'logro' | 'repaso_fin';
+  | 'dos_minutos' | 'adoptada' | 'compra' | 'enfoque_activo' | 'logro' | 'repaso_fin' | 'meta';
 
 type Lines = Record<Species, string[]>;
 
@@ -72,6 +72,12 @@ export const LINES: Record<Situation, Lines> = {
     gato: ['{min} minutos. Aceptable. Muy aceptable.'],
     perro: ['¡{min} minutos! ¡Qué máquina!'],
     loro: ['¡{min} minutos! ¡{min} minutos!'],
+  },
+  meta: {
+    pinguino: ['Tu plan para {materia}: {plan}', 'Recuerda lo que te propusiste: {plan}'],
+    gato: ['Te dejo esto, de ti para ti: {plan}'],
+    perro: ['¡Acuérdate de tu plan para {materia}! {plan}'],
+    loro: ['¿Te acuerdas? ¿Te acuerdas? {plan}'],
   },
   repaso_fin: {
     pinguino: ['{n} tarjetas repasadas. Así se queda en la cabeza.', 'Repaso listo: {n} tarjetas.'],

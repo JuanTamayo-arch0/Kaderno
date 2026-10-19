@@ -700,3 +700,61 @@ test('simulacro: corrección automática, nota en la escala y desglose', async (
   assert.deepEqual(picked.map((n) => [n.id, n.content.length]), [['b', 8000], ['a', 4000]]);
   assert.deepEqual(headingsOf('# Tema\ntexto\n## Fuerza neta ##\n### Ruido'), ['Tema', 'Fuerza neta', 'Ruido']);
 });
+
+// ---------- Fase 4: rituales y metas ----------
+test('ritual del lunes: cuándo se ofrece y qué semana se planea', async () => {
+  const { ritualWeekStart, shouldOfferRitual } = await import('../lib/rituals');
+  const mon = new Date(2026, 9, 19, 9), tue = new Date(2026, 9, 20, 9), sunNight = new Date(2026, 9, 25, 19), sunDay = new Date(2026, 9, 25, 11);
+  assert.equal(ritualWeekStart(mon), '2026-10-19');
+  assert.equal(ritualWeekStart(tue), '2026-10-19');
+  assert.equal(ritualWeekStart(sunNight), '2026-10-26');
+  assert.equal(ritualWeekStart(sunDay), '2026-10-19');
+  assert.equal(shouldOfferRitual(mon, null), true);
+  assert.equal(shouldOfferRitual(tue, null), false);
+  assert.equal(shouldOfferRitual(sunNight, null), true);
+  assert.equal(shouldOfferRitual(sunDay, null), false);
+  assert.equal(shouldOfferRitual(mon, { done_at: '2026-10-19T14:00:00Z', snoozed_until: null }), false);
+  assert.equal(shouldOfferRitual(mon, { done_at: null, snoozed_until: '2026-10-20' }), false);
+  assert.equal(shouldOfferRitual(tue, { done_at: null, snoozed_until: '2026-10-20' }), true);
+  assert.equal(shouldOfferRitual(mon, null, false), false);
+});
+
+test('ritual del lunes: entregas de la semana, prioridades y la semana pasada', async () => {
+  const { weekItems, suggestPriorities, cleanPriorities, lastWeekSummary } = await import('../lib/rituals');
+  const tasks = [
+    { id: 'a', title: 'Taller', due_date: '2026-10-21', status: 'pending', type: 'tarea' },
+    { id: 'b', title: 'Parcial', due_date: '2026-10-29', status: 'pending', type: 'examen' },
+    { id: 'c', title: 'Hecha', due_date: '2026-10-20', status: 'done' },
+    { id: 'd', title: 'Sesión', due_date: '2026-10-22', status: 'pending', parent_id: 'b' },
+    { id: 'e', title: 'Lejos', due_date: '2026-11-20', status: 'pending' },
+  ];
+  const w = weekItems(tasks, '2026-10-19');
+  assert.deepEqual([w.thisWeek.map((t) => t.id), w.nextWeek.map((t) => t.id)], [['a'], ['b']]);
+  assert.deepEqual(suggestPriorities(tasks, '2026-10-19').map((t) => t.id), ['b', 'a']);
+  const p = cleanPriorities([{ kind: 'task', taskId: 'a', title: ' Taller ' }, { kind: 'task', taskId: 'a', title: 'Taller' }, { kind: 'text', title: '' }, { kind: 'text', title: 'Leer' }, { kind: 'text', title: 'Uno' }, { kind: 'text', title: 'Dos' }]);
+  assert.deepEqual(p.map((x) => x.title), ['Taller', 'Leer', 'Uno']);
+  const rows = ['2026-10-12', '2026-10-14', '2026-10-15'].map((day) => ({ day, focus_min: 30, tasks_done: 0, cards: 0, tests: 0, protected: false }));
+  const s = lastWeekSummary(rows, '2026-10-19', 4, 270, 360);
+  assert.equal(s.text, 'No alcanzaste la meta: estudiaste 3 de 4 días, 4 h 30 min de enfoque.');
+  assert.equal(s.vs, 'La semana pasada planeaste 6 h y estudiaste 4 h 30.');
+});
+
+test('semestre y WOOP', async () => {
+  const { shouldOfferSemester, planTemplate, fullPlan, wishExample, goalError, gradeInWish, PLAN_HINTS, OBSTACLES } = await import('../lib/rituals');
+  const now = new Date(2026, 9, 19);
+  const recent = (d: number) => ({ created_at: new Date(2026, 9, 19 - d).toISOString() });
+  assert.equal(shouldOfferSemester([recent(1), recent(2), recent(3)], now, false), true);
+  assert.equal(shouldOfferSemester([recent(1), recent(2), recent(9)], now, false), false);
+  assert.equal(shouldOfferSemester([recent(1), recent(2), recent(3)], now, true), false);
+  assert.equal(planTemplate('me distraigo con el celular'), 'Si me distraigo con el celular, entonces ');
+  assert.equal(fullPlan('me distraigo con el celular', 'lo dejo en otra habitación.'), 'Si me distraigo con el celular, entonces lo dejo en otra habitación.');
+  assert.equal(fullPlan(null, 'Si llego cansado, entonces repaso 10 min'), 'Si llego cansado, entonces repaso 10 min.');
+  assert.equal(fullPlan(null, 'Si…, entonces lo dejo en otra habitación'), 'Lo dejo en otra habitación.');
+  assert.equal(fullPlan('me cuesta empezar', 'Si me cuesta empezar, entonces hago 2 minutos'), 'Si me cuesta empezar, entonces hago 2 minutos.');
+  assert.equal(wishExample('Física Moderna'), 'Pasar Física Moderna con 4.0');
+  assert.equal(goalError({ wish: ' ' }), 'Escribe tu meta.');
+  assert.equal(goalError({ wish: 'Pasar', target_grade: 6 }), 'La nota debe estar entre 0 y 5.');
+  assert.equal(gradeInWish('Pasar Física con 4,2'), 4.2);
+  assert.equal(gradeInWish('Pasar Física'), null);
+  assert.ok(OBSTACLES.every((o) => PLAN_HINTS[o]));
+});

@@ -1,6 +1,6 @@
 # PLAN v20: Estudiar mejor y crear el hábito
 
-Estado: B, C y L construidas (domingo 18 de octubre). A, D, E, F, G, H e I construidas (lunes 19 de octubre, ramas v20-repaso, v20-rachas y v20-parcial). El resto se implementa por fases.
+Estado: B, C y L construidas (domingo 18 de octubre). Todo construido (lunes 19 de octubre): A en v20-repaso, D, E y F en v20-rachas, G, H e I en v20-parcial, J y K en v20-rituales. El resto se implementa por fases.
 Diseño en el canvas "Estudio y hábitos de Kaderno". Base: la versión 19 (PR #12) ya fusionada.
 
 Este plan junta las 12 ideas que salieron de la investigación (sonidos, repaso espaciado, simulacros, rachas, planes "si-entonces", etc.) y una revisión completa de las tarjetas de Repaso: cómo entran, cómo se programan y cómo se ven.
@@ -445,3 +445,5 @@ Cada fase va en su propio PR, con su parte de `schema_v19.sql` (el archivo crece
 11. (Al construir E) El aviso del plan sale con la revisión de avisos de cada 10 minutos, así que puede llegar hasta 10 minutos tarde.
 12. (Al construir G) Las sesiones guardan su tipo en `assignments.session_kind` (preparar, mezclar, simulacro, ligero) para que la de simulacro abra el simulacro. Con solo 2 sesiones (examen a 3 días) son simulacro y repaso ligero.
 13. (Al construir H e I) "3 preguntas rápidas" cuenta en el tope de pruebas de notas (10), no en el de simulacros (5). Las correcciones con IA tienen su propio tope (25 al día).
+14. (Al construir J) Si se pospone el ritual, se vuelve a ofrecer el día elegido mientras dure la semana. Al reabrirlo ("Cambiar") parte de lo que ya se había elegido.
+15. (Al construir K) La nota que quieres en cada materia se guarda en su meta (`goals.target_grade`); el ritual del semestre crea una meta sencilla ("Sacar 4,2 en Física") si la materia no tenía.

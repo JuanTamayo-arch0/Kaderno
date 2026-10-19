@@ -19,6 +19,8 @@ import { Screen, Button, Card, Field, IconButton, ListRow, SectionLabel, Toggle 
 import { Avatar } from '../components/SideNav';
 import { PetSettings } from '../components/pets/PetSettings';
 import { StudySettings } from '../components/cards/StudySettings';
+import { SemesterRitual } from '../components/ritual/SemesterRitual';
+import { getRitualPrefs, saveRitualPrefs } from '../lib/ritualsDb';
 import { clearHoyHidden, resetHoyHiddenCache, saveHoyVista } from '../lib/hoyHidden';
 
 // ============================================================
@@ -26,8 +28,8 @@ import { clearHoyHidden, resetHoyHiddenCache, saveHoyVista } from '../lib/hoyHid
 //  datos y cerrar sesión.
 // ============================================================
 
-type Notif = { daily: boolean; daily_hour: number; weekly: boolean; tz: string };
-const DEFAULT_NOTIF: Notif = { daily: true, daily_hour: 7, weekly: true, tz: 'America/Bogota' };
+type Notif = { daily: boolean; daily_hour: number; weekly: boolean; tz: string; monday?: boolean };
+const DEFAULT_NOTIF: Notif = { daily: true, daily_hour: 7, weekly: true, tz: 'America/Bogota', monday: false };
 
 /** Mide cuánto tarda el servidor (Supabase) en responder desde aquí. */
 function ConnectionTest() {
@@ -87,6 +89,8 @@ function Ajustes() {
   const [pwModal, setPwModal] = useState(false);
   const [canInstall, setCanInstall] = useState(canPromptInstall());
   const scroller = React.useRef<any>(null);
+  const [mondayRitual, setMondayRitual] = useState(true);
+  const [semester, setSemester] = useState(false);
 
   useFocusEffect(useCallback(() => {
     resetHoyHiddenCache();
@@ -98,6 +102,7 @@ function Ajustes() {
       setNotif({ ...DEFAULT_NOTIF, ...(p.notif ?? {}) });
     }).catch(() => {});
     getPushStatus().then(setPush).catch(() => {});
+    getRitualPrefs().then((r) => setMondayRitual(r.monday)).catch(() => {});
   }, []));
   useEffect(() => onInstallChange(() => setCanInstall(canPromptInstall())), []);
 
@@ -194,7 +199,13 @@ function Ajustes() {
       <SectionLabel text="Estudio" />
       <Card padded={false}>
         <StudySettings />
+        <Divider />
+        <Toggle label="Ritual del lunes" hint={'El lunes (o el domingo en la noche), "Planea tu semana" en Hoy: lo importante y cuándo lo haces.'} value={mondayRitual}
+          onChange={(v) => { setMondayRitual(v); saveRitualPrefs({ monday: v }).then(() => toast('Preferencia guardada')).catch((e) => toast(friendlyError(e), { tone: 'bad' })); }} />
+        <Divider />
+        <ListRow title="Empezar semestre" subtitle="La nota que quieres en cada materia, tu meta semanal y una meta del semestre" left={<Ionicons name="flag-outline" size={20} color={C.muted} />} onPress={() => setSemester(true)} />
       </Card>
+      <SemesterRitual visible={semester} onClose={() => setSemester(false)} />
 
       <SectionLabel text="Mascota" />
       <Card padded={false}>
@@ -231,6 +242,8 @@ function Ajustes() {
         )}
         <Divider />
         <Toggle label="Resumen de la semana" hint="El domingo a las 7 pm: lo que hiciste y lo que viene." value={notif.weekly} onChange={(v) => saveNotif({ weekly: v })} />
+        <Divider />
+        <Toggle label="Aviso del lunes" hint="El lunes a las 8 am, si aún no has planeado la semana." value={!!notif.monday} onChange={(v) => saveNotif({ monday: v })} />
         <Text style={{ color: C.muted, fontSize: 12, paddingHorizontal: 14, paddingBottom: 12 }}>
           Los recordatorios de cada tarea se eligen al crearla. Todos los avisos también quedan en la campana.{!hasV14() ? ' Requiere actualizar la base de datos (schema_v14).' : ''}
         </Text>

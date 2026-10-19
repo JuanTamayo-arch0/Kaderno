@@ -26,6 +26,11 @@
 --   · quizzes: historial de simulacros. notes.last_recall_at y
 --     last_recall_score. Los dos hacen que el día de estudio cuente.
 --
+-- Fase 4 · Rituales y metas
+--   · week_plans: plan de la semana (hasta 3 prioridades y la meta de días).
+--   · goals: metas WOOP por materia o del semestre, con la nota que quieres.
+--   · Aviso opcional del lunes a las 8 am (tipo "semana").
+--
 -- Fase 5 · Enfocar juntos (salas de estudio)
 --   · study_rooms: una sala por proyecto (entran sus miembros) o una sala
 --     con código de 6 letras para amigos.
@@ -941,3 +946,84 @@ revoke all on function public._assignment_parent_check() from public, anon, auth
 revoke all on function public._session_on_focus() from public, anon, authenticated;
 revoke all on function public._study_on_quiz() from public, anon, authenticated;
 revoke all on function public._study_on_recall() from public, anon, authenticated;
+
+
+-- =====================================================================
+--  FASE 4 · Ritual del lunes, ritual del semestre y metas WOOP
+-- =====================================================================
+
+-- Plan de la semana: hasta 3 prioridades (tareas o texto) y la meta de días.
+create table if not exists public.week_plans (
+  user_id       uuid not null default auth.uid() references auth.users on delete cascade,
+  week_start    date not null,
+  priorities    jsonb not null default '[]'::jsonb,
+  goal_days     smallint check (goal_days is null or goal_days between 2 and 7),
+  done_at       timestamptz,
+  snoozed_until date,
+  primary key (user_id, week_start)
+);
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'week_plans_priorities_chk') then
+    alter table public.week_plans add constraint week_plans_priorities_chk check (jsonb_typeof(priorities) = 'array' and jsonb_array_length(priorities) <= 3);
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'week_plans_monday_chk') then
+    alter table public.week_plans add constraint week_plans_monday_chk check (extract(isodow from week_start) = 1);
+  end if;
+end $$;
+alter table public.week_plans enable row level security;
+drop policy if exists "own week plans" on public.week_plans;
+create policy "own week plans" on public.week_plans for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+grant select, insert, update, delete on public.week_plans to authenticated;
+
+-- Metas WOOP (por materia, o del semestre si subject_id es null).
+create table if not exists public.goals (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid not null default auth.uid() references auth.users on delete cascade,
+  subject_id   uuid references public.subjects on delete cascade,
+  wish         text not null check (char_length(wish) between 1 and 200),
+  outcome      text check (outcome is null or char_length(outcome) <= 300),
+  obstacle     text check (obstacle is null or char_length(obstacle) <= 200),
+  plan         text check (plan is null or char_length(plan) <= 300),
+  target_grade numeric check (target_grade is null or (target_grade >= 0 and target_grade <= 100)),
+  status       text not null default 'active' check (status in ('active', 'done', 'dropped')),
+  created_at   timestamptz not null default now()
+);
+create unique index if not exists goals_one_active_idx on public.goals (user_id, coalesce(subject_id, '00000000-0000-0000-0000-000000000000'::uuid)) where status = 'active';
+alter table public.goals enable row level security;
+drop policy if exists "own goals" on public.goals;
+create policy "own goals" on public.goals for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+grant select, insert, update, delete on public.goals to authenticated;
+
+-- Aviso opcional del lunes a las 8 am (Ajustes → Avisos → "Aviso del lunes").
+create or replace function public.enqueue_week_plans(p_now timestamptz default now()) returns integer
+language plpgsql security definer set search_path = public as $$
+declare r record; tz text; loc timestamp; wk date; n int := 0;
+begin
+  for r in select p.user_id from public.user_prefs p where coalesce((p.settings -> 'notif' ->> 'monday')::boolean, false) loop
+    tz := public._kaderno_tz(r.user_id);
+    loc := p_now at time zone tz;
+    if extract(isodow from loc) <> 1 or extract(hour from loc) <> 8 then continue; end if;
+    wk := loc::date;
+    if exists (select 1 from public.week_plans w where w.user_id = r.user_id and w.week_start = wk and w.done_at is not null) then continue; end if;
+    insert into public.notification_queue (user_id, kind, ref, title, body, url)
+    values (r.user_id, 'semana', wk::text, 'Planea tu semana', '3 minutos: lo importante de la semana y cuándo lo haces.', '/?semana=1')
+    on conflict (user_id, kind, ref) do nothing;
+    if found then n := n + 1; end if;
+  end loop;
+  return n;
+end $$;
+
+create or replace function public.enqueue_all(p_now timestamptz default now()) returns jsonb
+language plpgsql security definer set search_path = public as $$
+begin
+  return jsonb_build_object(
+    'reminders', public.enqueue_reminders(p_now),
+    'project_due', public.enqueue_project_due(p_now),
+    'plans', public.enqueue_plans(p_now),
+    'week', public.enqueue_week_plans(p_now),
+    'digests', public.enqueue_digests(p_now),
+    'purged', public.purge_trash(p_now)
+  );
+end $$;
+revoke all on function public.enqueue_week_plans(timestamptz) from public, anon, authenticated;
+revoke all on function public.enqueue_all(timestamptz) from public, anon, authenticated;
