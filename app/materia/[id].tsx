@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { Platform, ScrollView, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { C } from '../../lib/theme';
 import { useResponsive } from '../../lib/responsive';
 import { RequireAuth } from '../../components/RequireAuth';
@@ -34,6 +34,10 @@ import { QuickTaskInput, SubjectTaskList } from '../../components/subject/Subjec
 import { NotesList } from '../../components/notes/NotesList';
 import { NoteDocument } from '../../components/notes/NoteDocument';
 import { preloadNoteEditor } from '../../components/notes/NoteEditor';
+import { getQuizzes, getSessions, type QuizRow, type SessionTask } from '../../lib/quizDb';
+import { prepText } from '../../lib/quiz';
+import { planProgress } from '../../lib/examPlan';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 // ============================================================
 //  Página de una materia.
@@ -70,6 +74,8 @@ function MateriaDetalle() {
   const [editGrade, setEditGrade] = useState<Grade | null>(null);
   const [menu, setMenu] = useState(false);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
+  const [quizzes, setQuizzes] = useState<QuizRow[]>([]);
+  const [examSessions, setExamSessions] = useState<SessionTask[]>([]);
 
   const load = useCallback(async () => {
     try {
@@ -81,6 +87,10 @@ function MateriaDetalle() {
       getStepsFor(t.filter((x) => x.status !== 'done').map((x) => x.id)).then(setSteps).catch(() => {});
       getSchedule().then(setSlots).catch(() => setSlots([]));
       getSubjectStudy(id).then(setStudy).catch(() => {});
+      getQuizzes(id, 5).then(setQuizzes).catch(() => {});
+      const today = new Date().toISOString().slice(0, 10);
+      const exam = t.filter((x) => x.status !== 'done' && ['examen', 'quiz'].includes(String(x.type)) && x.due_date && x.due_date >= today).sort((a, b) => String(a.due_date).localeCompare(String(b.due_date)))[0];
+      if (exam) getSessions(exam.id).then(setExamSessions).catch(() => {}); else setExamSessions([]);
     } catch (e) { notify('No se pudo cargar', friendlyError(e)); setSubject((s) => s ?? null); }
   }, [id]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -255,6 +265,9 @@ function MateriaDetalle() {
         <SubjectStats d={stats} accent={subject.color} isWide={isWide}
           onGrades={() => setTab('cal')} onNext={openEval} onTasks={() => setTab('tareas')}
           onStudy={() => (study?.dueCards ? router.push('/repaso') : actions.onFocus())} />
+        <PrepRow text={prepText(quizzes) ?? (notes.length ? 'Ponte a prueba antes del parcial: un simulacro con preguntas de tus notas.' : null)}
+          plan={examSessions.length ? planProgress(examSessions).text : null} accent={subject.color}
+          onSim={() => router.push({ pathname: '/simulacro', params: { materia: subject.id } } as any)} />
         <SubjectTabs value={tab} onChange={setTab} counts={counts} accent={subject.color} pills={!isWide} short={!isWide} />
         <View style={{ flexDirection: 'row', gap: 24, alignItems: 'flex-start' }}>
           <View style={{ flex: 1, minWidth: 0 }}>{body}</View>
@@ -269,6 +282,24 @@ function MateriaDetalle() {
       </View>
       {modals}
     </Screen>
+  );
+}
+
+// Preparación para el parcial: último simulacro y avance del plan de repaso.
+function PrepRow({ text, plan, accent, onSim }: { text: string | null; plan: string | null; accent: string; onSim: () => void }) {
+  if (!text && !plan) return null;
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, paddingHorizontal: 14, borderRadius: 14, borderWidth: 1, borderColor: C.line, backgroundColor: C.surface, flexWrap: 'wrap' }}>
+      <Ionicons name="clipboard-outline" size={20} color={accent} />
+      <View style={{ flex: 1, minWidth: 200, gap: 2 }}>
+        {!!text && <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '600' }}>{text}</Text>}
+        {!!plan && <Text style={{ color: C.muted, fontSize: 12.5 }}>{plan}</Text>}
+      </View>
+      <Pressable onPress={onSim} accessibilityRole="button" style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, minHeight: 36, borderRadius: 10, borderWidth: 1, borderColor: C.line, backgroundColor: hovered ? C.surface2 : 'transparent' })}>
+        <Ionicons name="play-outline" size={15} color={C.brand} />
+        <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>Hacer simulacro</Text>
+      </Pressable>
+    </View>
   );
 }
 

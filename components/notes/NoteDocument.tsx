@@ -20,6 +20,8 @@ import { NoteAttachments } from '../NoteAttachments';
 import { SubjectPicker } from '../SubjectPicker';
 import { NoteEditor } from './NoteEditor';
 import type { HeadingItem, NoteEditorHandle, SelectionAction } from './editorTypes';
+import { RecallTest } from './RecallTest';
+import { recallLabel } from '../../lib/quiz';
 
 // ============================================================
 //  Una nota abierta: título, texto (se lee y se edita en el mismo lugar),
@@ -55,6 +57,8 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
   const [zoom, setZoom] = useState(false);
   const [menu, setMenu] = useState(false);
   const [titleH, setTitleH] = useState(0);
+  const [recall, setRecall] = useState(false);
+  const [recallMd, setRecallMd] = useState('');
   const saved = useRef({ title: '', content: '' });
   const latest = useRef({ title: '', content: '' });
   const ed = useRef<NoteEditorHandle>(null);
@@ -145,6 +149,18 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
     const c = text ?? md;
     maker.start(c, text ? 'selection' : 'note', { noteId, subjectId: note?.subject_id ?? null, title: title || 'Nota', markdown: md });
   }
+  function goHeading(text: string) {
+    const want = text.trim().toLowerCase();
+    const h = heads.find((x) => x.text.trim().toLowerCase() === want) ?? heads.find((x) => x.text.toLowerCase().includes(want));
+    if (h) setTimeout(() => ed.current?.scrollToHeading(h.index), 250);
+  }
+  function startRecall() {
+    const md = ed.current?.flush() ?? content;
+    if (md.trim().length < 80) { notify('La nota es muy corta', 'Escribe un poco más antes de ponerte a prueba.'); return; }
+    if (editing) setEditing(false);
+    setRecallMd(md);
+    setRecall(true);
+  }
   function askOracle(q?: string) {
     router.push({ pathname: '/oraculo', params: { mode: 'note', noteId, subjectId: note?.subject_id ?? '', noteTitle: title || 'Nota', ...(q ? { q } : {}) } } as any);
   }
@@ -224,12 +240,19 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
 
       <View dataSet={{ petPerch: '1' }} style={{ padding: 16, borderRadius: 14, backgroundColor: C.surface, borderWidth: 1, borderColor: C.line, gap: 10 }}>
         <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>Estudiar esta nota</Text>
-        {summary
-          ? <Text style={{ color: C.text, fontSize: 13.5, lineHeight: 20 }}>{summary}</Text>
-          : <Text style={{ color: C.muted, fontSize: 13, lineHeight: 18 }}>Haz un resumen, crea flashcards o pregúntale al Oráculo. También puedes seleccionar una parte del texto.</Text>}
-        <Button label={summary ? 'Rehacer resumen' : 'Resumir'} icon="reader-outline" kind="secondary" size="sm" busy={genSum} onPress={makeSummary} />
+        {(() => {
+          const lab = recallLabel(note.last_recall_at, note.last_recall_score, new Date());
+          return lab
+            ? <Text style={{ color: (note.last_recall_score ?? 0) >= 70 ? C.goodText : C.muted, fontSize: 12.5, fontWeight: '600' }}>{lab}</Text>
+            : <Text style={{ color: C.muted, fontSize: 13, lineHeight: 18 }}>Lo que más ayuda a recordar es ponerte a prueba. También puedes seleccionar una parte del texto.</Text>;
+        })()}
+        <Button label="Ponme a prueba" icon="bulb-outline" size="sm" onPress={startRecall} />
         <Button label="Crear flashcards" icon="albums-outline" kind="secondary" size="sm" busy={genCards} onPress={() => makeFlashcards()} />
         <Button label="Preguntar al Oráculo" icon="sparkles-outline" kind="secondary" size="sm" onPress={() => askOracle()} />
+        <View style={{ height: 1, backgroundColor: C.line, marginVertical: 2 }} />
+        {summary && <Text style={{ color: C.text, fontSize: 13.5, lineHeight: 20 }}>{summary}</Text>}
+        <Button label={summary ? 'Rehacer resumen' : 'Resumir'} icon="reader-outline" kind="ghost" size="sm" busy={genSum} onPress={makeSummary} />
+        <Text style={{ color: C.muted, fontSize: 11.5, lineHeight: 16 }}>Resumir ayuda a ordenar; para recordar, ponte a prueba.</Text>
       </View>
 
       <View>
@@ -267,12 +290,20 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
     </Modal>
   );
 
+
+  const recallEl = (
+    <RecallTest visible={recall} onClose={() => setRecall(false)} noteId={noteId} title={title || 'Nota'} markdown={recallMd}
+      onHeading={goHeading}
+      onCards={(txt) => maker.start(txt, 'selection', { noteId, subjectId: note.subject_id ?? null, title: title || 'Nota', from: 'recall' })}
+      onSaved={(score) => { const at = new Date().toISOString(); setNote((n) => (n ? { ...n, last_recall_at: at, last_recall_score: score } : n)); cbRef.current?.({ id: noteId, last_recall_at: at, last_recall_score: score } as any); }} />
+  );
+
   if (!scroll) {
     return (
       <View>
         {doc}
         <View style={{ width: '100%', maxWidth: 720, alignSelf: 'center', marginTop: 28 }}>{study}</View>
-        {menuEl}{zoomEl}{maker.sheet}
+        {menuEl}{zoomEl}{maker.sheet}{recallEl}
       </View>
     );
   }
@@ -287,7 +318,7 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
           {study}
         </ScrollView>
       )}
-      {menuEl}{zoomEl}{maker.sheet}
+      {menuEl}{zoomEl}{maker.sheet}{recallEl}
     </View>
   );
 }

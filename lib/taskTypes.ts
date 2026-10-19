@@ -4,7 +4,7 @@ import { C } from './theme';
 import { getTaskTypes, type TaskTypeRow } from './db';
 
 // ============================================================
-//  Tipos de tarea — cuatro por defecto + los que cree el usuario.
+//  Tipos de tarea: cinco por defecto (con Repaso, v20) + los que cree el usuario.
 //
 //  Restricción de diseño: taskTypeMeta() se llama DENTRO del render en varios
 //  archivos, así que no puede ser async. La solución es un registro en memoria:
@@ -34,6 +34,8 @@ const BUILTIN: { key: string; label: string; icon: string; tone: Tone }[] = [
   { key: 'examen', label: 'Examen', icon: '📕', tone: 'bad' },
   { key: 'quiz', label: 'Quiz', icon: '✍️', tone: 'warn' },
   { key: 'proyecto', label: 'Proyecto', icon: '📦', tone: 'brand2' },
+  // v20: sesiones del plan de repaso de un examen.
+  { key: 'repaso', label: 'Repaso', icon: '🔁', tone: 'good' },
 ];
 export const BUILTIN_KEYS = BUILTIN.map((b) => b.key);
 

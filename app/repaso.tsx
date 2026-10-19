@@ -212,6 +212,8 @@ function Home({ data, queue, result, onStart, onDismiss, onCreate, wide }: {
         )}
       </Card>
 
+      <SimulacroCard />
+
       {decks.length > 0 && (
         <Card padded={false}>
           <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '800', padding: 14, paddingBottom: 6 }}>Mazos</Text>
@@ -255,6 +257,23 @@ function Home({ data, queue, result, onStart, onDismiss, onCreate, wide }: {
         </Card>
       )}
     </View>
+  );
+}
+
+// Entrada al simulacro (v20, sección H).
+function SimulacroCard() {
+  const router = useRouter();
+  return (
+    <Card onPress={() => router.push('/simulacro')} accessibilityLabel="Hacer un simulacro" style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+      <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: C.brand + '1f', alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name="clipboard-outline" size={19} color={C.brand} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '700' }}>Hacer un simulacro</Text>
+        <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>Preguntas de tus notas, como en el parcial, con nota y errores para repasar.</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={C.muted} />
+    </Card>
   );
 }
 

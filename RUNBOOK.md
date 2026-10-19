@@ -1059,3 +1059,26 @@ Sin la migración la app sigue como antes: la racha vieja de Enfoque, sin "¿Cu�
 ### 3. Pruebas
 
 `npm test` (rachas, escudos, reparar, meta semanal, huecos libres, frase del plan y tiempo real) y `bash tests/run_sql.sh` (incluye `tests/sql/19c_pruebas.sql` y `19c_despues.sql`: cada fuente del día de estudio, ganar, usar, comprar y tope de escudos, reparar, hueco de 3 días, RLS, aviso del plan y relleno idempotente).
+
+## Versión 20 (parte 7): plan del parcial, simulacro y "Ponme a prueba"
+
+### 1. Migración y funciones
+
+1. Vuelve a correr `supabase/schema_v19.sql` completo (es idempotente). La sección "FASE 3" agrega:
+   - `assignments.parent_id` y `assignments.session_kind`: sesiones de repaso ligadas a su examen (solo de tareas propias). Una sesión que no es simulacro se marca hecha sola cuando el enfoque en ella llega a lo planeado.
+   - `quizzes`: historial de simulacros (RLS: cada quien lo suyo).
+   - `notes.last_recall_at` y `notes.last_recall_score`.
+   - Un simulacro o una prueba de la nota hacen que el día de estudio cuente.
+2. Redespliega la función `ai`: `supabase functions deploy ai`. Tareas nuevas `quiz`, `grade` y `recall`, con topes diarios: 5 simulacros, 10 pruebas de notas (incluye "3 preguntas rápidas") y 25 correcciones.
+
+### 2. Lo que cambia para el usuario
+
+- **Plan de repaso del parcial:** al crear un examen o quiz a 3 días o más (o desde Hoy, para los que ya estaban o se importaron) sale "¿Armo tu plan de repaso para…?". Propone sesiones a 14, 7, 4, 2 y 1 días (las que quepan): preparar, tarjetas y ejercicios, simulacro y repaso ligero de 20 min, cada una en un hueco libre de ese día. Se crean con un toque como tareas de tipo **Repaso** y salen en Hoy, el calendario y la materia.
+- En el examen (al editarlo): "Plan de repaso: 2 de 4 sesiones hechas" con Rehacer y Quitar. Si cambia la fecha del examen pregunta "¿Muevo las sesiones que faltan?".
+- **Simulacro** (desde Repaso, la materia o la sesión de simulacro): eliges notas, 5, 10 o 20 preguntas y si va con tiempo (1,5 min por pregunta). Mezcla opción múltiple, respuesta corta y problemas, con fórmulas. La opción múltiple y los números cercanos se corrigen al instante; lo escrito lo corrige la IA y puedes cambiar el veredicto. Resultado en la escala de la materia, desglose por nota, errores con explicación y "Ver en la nota", y "Convertir errores en tarjetas".
+- La materia muestra "Preparación: último simulacro 3,8 (antes 3,1)" y el avance del plan del próximo examen.
+- **Ponme a prueba** es el primer botón de "Estudiar esta nota": escribes lo que recuerdas (sugerencia de 3 min) y la IA te muestra lo que recordaste, lo que faltó (con enlace al título) y lo que quedó mal, con "Hacer tarjetas de lo que faltó". La lista de notas muestra "Probada hace 3 días · 70%". También están las "3 preguntas rápidas". "Resumir" pasa al final.
+
+### 3. Pruebas
+
+`npm test` (plan del parcial, mover sesiones, huecos de un día, lectura de las respuestas de la IA, corrección, nota y desglose) y `bash tests/run_sql.sh` (incluye `tests/sql/19d_pruebas.sql`: sesiones solo de exámenes propios, hechas solas al cumplir el enfoque, borrado en cascada, simulacros y pruebas que cuentan para el día, RLS).

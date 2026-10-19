@@ -20,6 +20,12 @@
 --   · El premio de racha de la mascota usa los días de estudio.
 --   · assignments.plan_at y plan_place, y el aviso "plan" a esa hora.
 --
+-- Fase 3 · Plan del parcial, simulacro y "Ponme a prueba"
+--   · assignments.parent_id y session_kind: sesiones de repaso de un examen
+--     (se marcan hechas solas al llegar al enfoque planeado).
+--   · quizzes: historial de simulacros. notes.last_recall_at y
+--     last_recall_score. Los dos hacen que el día de estudio cuente.
+--
 -- Fase 5 · Enfocar juntos (salas de estudio)
 --   · study_rooms: una sala por proyecto (entran sus miembros) o una sala
 --     con código de 6 letras para amigos.
@@ -822,3 +828,116 @@ revoke all on function public.study_streaks() from public, anon;
 revoke all on function public.study_buy_shield() from public, anon;
 grant execute on function public.study_streaks() to authenticated;
 grant execute on function public.study_buy_shield() to authenticated;
+
+
+-- =====================================================================
+--  FASE 3 · Plan de repaso del parcial, simulacro y "Ponme a prueba"
+-- =====================================================================
+
+-- Sesiones de repaso ligadas a su examen.
+alter table public.assignments add column if not exists parent_id uuid references public.assignments(id) on delete cascade;
+alter table public.assignments add column if not exists session_kind text;
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'assignments_session_kind_chk') then
+    alter table public.assignments add constraint assignments_session_kind_chk check (session_kind is null or session_kind in ('prep', 'mix', 'sim', 'light'));
+  end if;
+end $$;
+create index if not exists assignments_parent_idx on public.assignments (parent_id) where parent_id is not null;
+
+-- La sesión solo puede colgar de una tarea propia.
+create or replace function public._assignment_parent_check() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.parent_id is not null and not exists (select 1 from assignments a where a.id = new.parent_id and a.user_id = new.user_id) then
+    raise exception 'La sesión debe ser de un examen tuyo.' using errcode = '42501';
+  end if;
+  return new;
+end $$;
+drop trigger if exists assignments_parent_trg on public.assignments;
+create trigger assignments_parent_trg before insert or update of parent_id on public.assignments
+  for each row execute function public._assignment_parent_check();
+
+-- Una sesión de repaso (que no sea simulacro) se marca hecha sola cuando el
+-- enfoque en ella llega a lo planeado.
+create or replace function public._session_on_focus() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare a record; total int;
+begin
+  if new.assignment_id is null then return new; end if;
+  begin
+    select id, type, status, estimate_min, session_kind into a from assignments where id = new.assignment_id and user_id = new.user_id;
+    if a.id is not null and a.type = 'repaso' and coalesce(a.status, 'pending') <> 'done' and coalesce(a.session_kind, '') <> 'sim' then
+      select coalesce(sum(minutes), 0) into total from focus_sessions where assignment_id = a.id;
+      if total >= coalesce(a.estimate_min, 50) then
+        update assignments set status = 'done' where id = a.id;
+      end if;
+    end if;
+  exception when others then raise warning 'sesión de repaso %: %', new.assignment_id, sqlerrm;
+  end;
+  return new;
+end $$;
+drop trigger if exists focus_sessions_session_trg on public.focus_sessions;
+create trigger focus_sessions_session_trg after insert on public.focus_sessions
+  for each row execute function public._session_on_focus();
+
+-- "Ponme a prueba": última vez y porcentaje en la nota.
+alter table public.notes add column if not exists last_recall_at timestamptz;
+alter table public.notes add column if not exists last_recall_score smallint;
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'notes_recall_score_chk') then
+    alter table public.notes add constraint notes_recall_score_chk check (last_recall_score is null or last_recall_score between 0 and 100);
+  end if;
+end $$;
+
+-- Simulacros.
+create table if not exists public.quizzes (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid not null default auth.uid() references auth.users on delete cascade,
+  subject_id   uuid references public.subjects on delete set null,
+  exam_task_id uuid references public.assignments on delete set null,
+  created_at   timestamptz not null default now(),
+  note_ids     uuid[] not null default '{}',
+  questions    jsonb not null default '[]'::jsonb,
+  answers      jsonb not null default '[]'::jsonb,
+  score        numeric,
+  scale        numeric,
+  pct          smallint check (pct is null or pct between 0 and 100),
+  duration_sec integer check (duration_sec is null or duration_sec between 0 and 86400)
+);
+create index if not exists quizzes_user_idx on public.quizzes (user_id, subject_id, created_at desc);
+alter table public.quizzes enable row level security;
+drop policy if exists "own quizzes" on public.quizzes;
+create policy "own quizzes" on public.quizzes for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+grant select, insert, update, delete on public.quizzes to authenticated;
+
+-- Un simulacro o una prueba de la nota hacen que el día cuente.
+create or replace function public._study_on_quiz() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  begin perform public._study_touch(new.user_id, new.created_at, 0, 0, 0, 1);
+  exception when others then raise warning 'día de estudio (simulacro): %', sqlerrm;
+  end;
+  return new;
+end $$;
+drop trigger if exists quizzes_study_trg on public.quizzes;
+create trigger quizzes_study_trg after insert on public.quizzes
+  for each row execute function public._study_on_quiz();
+
+create or replace function public._study_on_recall() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.last_recall_at is not null and new.last_recall_at is distinct from old.last_recall_at then
+    begin perform public._study_touch(new.user_id, new.last_recall_at, 0, 0, 0, 1);
+    exception when others then raise warning 'día de estudio (prueba de nota): %', sqlerrm;
+    end;
+  end if;
+  return new;
+end $$;
+drop trigger if exists notes_recall_study_trg on public.notes;
+create trigger notes_recall_study_trg after update of last_recall_at on public.notes
+  for each row execute function public._study_on_recall();
+
+revoke all on function public._assignment_parent_check() from public, anon, authenticated;
+revoke all on function public._session_on_focus() from public, anon, authenticated;
+revoke all on function public._study_on_quiz() from public, anon, authenticated;
+revoke all on function public._study_on_recall() from public, anon, authenticated;

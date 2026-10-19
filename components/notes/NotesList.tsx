@@ -6,6 +6,7 @@ import { Note } from '../../lib/db';
 import { filterNotes, notePreview, readingStats, sortNotes } from '../../lib/subjectInfo';
 import { MONTH_SHORT } from '../../lib/time';
 import { Button, EmptyState, focusRingStyle, IconButton } from '../ds';
+import { recallLabel } from '../../lib/quiz';
 
 // ============================================================
 //  Lista de notas de una materia: buscador, fijadas arriba y recientes.
@@ -42,6 +43,12 @@ function Row({ n, active, onPress, roomy }: { n: Note; active: boolean; onPress:
       </View>
       {!!prev && <Text style={{ color: C.muted, fontSize: 12.5, lineHeight: 17 }} numberOfLines={roomy ? 2 : 1}>{prev}</Text>}
       {!roomy && <Text style={{ color: C.muted, fontSize: 11.5 }}>{when(n)} · {words} {words === 1 ? 'palabra' : 'palabras'}</Text>}
+      {(() => { const r = recallLabel(n.last_recall_at, n.last_recall_score, new Date()); return r ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Ionicons name="bulb-outline" size={11} color={(n.last_recall_score ?? 0) >= 70 ? C.goodText : C.muted} />
+          <Text style={{ color: (n.last_recall_score ?? 0) >= 70 ? C.goodText : C.muted, fontSize: 11.5 }}>{r}</Text>
+        </View>
+      ) : null; })()}
     </Pressable>
   );
 }

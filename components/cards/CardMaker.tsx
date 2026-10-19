@@ -12,7 +12,7 @@ import { ReviewSheet } from './CardForms';
 //  se guardan (como nuevas: entran poco a poco).
 // ============================================================
 
-type Ctx = { noteId: string | null; subjectId: string | null; title?: string; markdown?: string };
+type Ctx = { noteId: string | null; subjectId: string | null; title?: string; markdown?: string; from?: 'quiz' | 'recall' };
 
 export function useCardMaker() {
   const router = useRouter();
@@ -40,6 +40,16 @@ export function useCardMaker() {
     finally { setBusy(false); }
   }, []);
 
+  /** Abre la revisión con tarjetas ya armadas (errores del simulacro, lo que faltó en "Ponme a prueba"). */
+  const review = useCallback(async (proposed: { kind?: string; front: string; back?: string }[], c: Ctx) => {
+    if (!proposed.length) { toast('No hay nada que convertir en tarjetas.'); return; }
+    const all = await getCards().catch(() => []);
+    const existing = all.filter((x) => (c.subjectId ? x.subject_id === c.subjectId : !x.subject_id) || (c.noteId && x.note_id === c.noteId)).map((x) => ({ id: x.id, front: x.front }));
+    setCtx({ ...c, mode: 'note', text: proposed.map((p) => `${p.front}\n${p.back ?? ''}`).join('\n\n'), heading: null, existing });
+    setDrafts(toDrafts(proposed, existing));
+    setOpen(true);
+  }, []);
+
   const onRedo = useCallback(async (key: string) => {
     if (!ctx) return;
     setRedo(key);
@@ -57,7 +67,7 @@ export function useCardMaker() {
     if (!ctx) return;
     setSaving(true);
     try {
-      const n = await saveDrafts(keep, { noteId: ctx.noteId, subjectId: ctx.subjectId, heading: ctx.heading, from: ctx.mode === 'selection' ? 'selection' : 'ai' });
+      const n = await saveDrafts(keep, { noteId: ctx.noteId, subjectId: ctx.subjectId, heading: ctx.heading, from: ctx.from ?? (ctx.mode === 'selection' ? 'selection' : 'ai') });
       const prefs = await getStudyPrefs();
       setOpen(false); setDrafts([]);
       refreshNavCounts(true);
@@ -70,5 +80,5 @@ export function useCardMaker() {
     <ReviewSheet visible={open} drafts={drafts} onChange={setDrafts} onClose={() => setOpen(false)}
       onSave={onSave} onRedo={onRedo} busyKey={redo} saving={saving} source={ctx?.title} />
   );
-  return { start, busy, sheet };
+  return { start, review, busy, sheet };
 }

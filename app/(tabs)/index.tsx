@@ -40,7 +40,10 @@ import { StalledPlan } from '../../components/plan/StalledPlan';
 import { focusSince, forgetEstimateRatio } from '../../lib/studyDb';
 import { isStalled, placePhrase } from '../../lib/planSlots';
 import { tookText } from '../../lib/estimate';
-import { streakChanged } from '../../lib/uiBus';
+import { streakChanged, openExamPlan } from '../../lib/uiBus';
+import { examsWithPlan } from '../../lib/quizDb';
+import { shouldOffer, daysUntil } from '../../lib/examPlan';
+import { examPlanAsked, markExamPlanAsked } from '../../components/plan/ExamPlanSheet';
 
 // ============================================================
 //  Hoy.
@@ -85,6 +88,7 @@ export default function Hoy() {
   const streak = useStudyStreak();
   const [planFocus, setPlanFocus] = useState<Record<string, number>>({});
   const [planDismissed, setPlanDismissed] = useState<Set<string>>(new Set());
+  const [noOffer, setNoOffer] = useState<Set<string> | null>(null);   // exámenes con plan o ya preguntados
 
   const load = useCallback(async () => {
     try {
@@ -95,6 +99,7 @@ export default function Hoy() {
       const pending = t.filter((x) => x.status !== 'done').map((x) => x.id);
       getStepsFor(pending).then(setSteps).catch(() => {});
       getFocusByTask(pending).then(setFocusBy).catch(() => {});
+      Promise.all([examsWithPlan(), examPlanAsked()]).then(([a, b]) => setNoOffer(new Set([...a, ...b]))).catch(() => {});
       // Planes de las últimas horas: ¿arrancaron? (enfoque en esa tarea desde 10 min antes del plan)
       const planned = t.filter((x) => x.status !== 'done' && x.plan_at && Date.now() - new Date(x.plan_at).getTime() > 0 && Date.now() - new Date(x.plan_at).getTime() < 26 * 3600_000);
       if (planned.length) {
@@ -193,7 +198,10 @@ export default function Hoy() {
     const today = startOfDay(new Date());
     const list: MenuAction[] = [
       { label: 'Abrir y editar', icon: 'create-outline', onPress: () => openTask(t) },
-      { label: 'Enfocarme en esta tarea', icon: 'timer-outline', onPress: () => { startFocus({ taskId: t.id, taskTitle: t.title, subjectId: t.subject_id }); router.push('/enfoque'); } },
+      t.type === 'repaso' && t.session_kind === 'sim'
+        ? { label: 'Hacer el simulacro', icon: 'clipboard-outline', onPress: () => startTask(t) }
+        : { label: 'Enfocarme en esta tarea', icon: 'timer-outline', onPress: () => { startFocus({ taskId: t.id, taskTitle: t.title, subjectId: t.subject_id }); router.push('/enfoque'); } },
+      ...(['examen', 'quiz'].includes(String(t.type)) && t.status !== 'done' ? [{ label: 'Plan de repaso', icon: 'calendar-number-outline' as const, onPress: () => openTask(t) }] : []),
       { label: 'Mover a hoy', icon: 'today-outline', onPress: () => move(t, isoDate(today), 'hoy') },
       { label: 'Mover a mañana', icon: 'arrow-forward-outline', onPress: () => move(t, isoDate(addDays(today, 1)), 'mañana') },
       { label: 'Mover a la próxima semana', icon: 'play-skip-forward-outline', onPress: () => move(t, isoDate(addDays(today, 7 - ((today.getDay() + 6) % 7))), 'el lunes') },
@@ -244,7 +252,13 @@ export default function Hoy() {
 
   const stalled = allPending.find((t) => !planDismissed.has(t.id) && isStalled(t.plan_at, now,
     (planFocus[t.id] ?? 0) > 0 || (focus.state.taskId === t.id && (focus.state.running || focus.remaining < focus.total))));
-  const startTask = (t: Task) => { startFocus({ taskId: t.id, taskTitle: t.title, subjectId: t.subject_id }); router.push('/enfoque'); };
+  const startTask = (t: Task) => {
+    if (t.type === 'repaso' && t.session_kind === 'sim') { router.push({ pathname: '/simulacro', params: { materia: t.subject_id ?? '', examen: t.parent_id ?? '', sesion: t.id } } as any); return; }
+    startFocus({ taskId: t.id, taskTitle: t.title, subjectId: t.subject_id }); router.push('/enfoque');
+  };
+  // Examen sin plan de repaso (por ejemplo, recién importado): se ofrece uno a la vez.
+  const examOffer = noOffer ? allPending.filter((t) => shouldOffer(t.type, t.due_date, now) && !noOffer.has(t.id) && daysUntil(new Date(t.due_date + 'T12:00:00'), now) <= 21)
+    .sort(compareDue)[0] : undefined;
 
   const summary: React.ReactNode[] = [];
   summary.push(<Text key="t" style={{ color: C.text, fontWeight: '700' }}>{todayCount === 0 ? 'Nada para hoy' : todayCount === 1 ? '1 para hoy' : `${todayCount} para hoy`}</Text>);
@@ -468,6 +482,17 @@ export default function Hoy() {
     <>
       {summaryLine}
       {streak.s && <StreakNudge s={streak.s} onFocus={() => { startFocus(); router.push('/enfoque'); }} />}
+      {examOffer && !stalled && (
+        <Card style={{ marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <Ionicons name="calendar-number-outline" size={22} color={C.brand} />
+          <View style={{ flex: 1, minWidth: 180 }}>
+            <Text style={{ color: C.text, fontWeight: '700', fontSize: 14 }}>{examOffer.title}: faltan {daysUntil(new Date(examOffer.due_date + 'T12:00:00'), now)} días</Text>
+            <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>¿Armo tu plan de repaso? Sesiones cortas en tus horarios libres.</Text>
+          </View>
+          <Button label="Armar plan" size="sm" onPress={() => openExamPlan(examOffer)} />
+          <Button label="Ahora no" size="sm" kind="ghost" onPress={() => { markExamPlanAsked(examOffer.id); setNoOffer((x) => new Set([...(x ?? []), examOffer.id])); }} />
+        </Card>
+      )}
       {stalled && <StalledPlan t={stalled} onChanged={load} onStart={() => startTask(stalled)} onDismiss={() => setPlanDismissed((x) => new Set(x).add(stalled.id))} />}
       <PetInvite />
       {(!isWide || width < 1100) && (focusCard ?? nowCard)}

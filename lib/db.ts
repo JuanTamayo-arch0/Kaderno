@@ -15,6 +15,8 @@ export type Task = {
   completed_at?: string | null; deleted_at?: string | null; created_at?: string;
   // schema_v19 fase 2
   plan_at?: string | null; plan_place?: string | null;
+  // schema_v19 fase 3 (sesiones del plan de repaso de un examen)
+  parent_id?: string | null; session_kind?: 'prep' | 'mix' | 'sim' | 'light' | null;
 };
 export type Note = {
   id: string; subject_id: string | null; title: string | null; content: string | null;
@@ -22,6 +24,8 @@ export type Note = {
   deleted_at?: string | null;
   // schema_v18
   pinned?: boolean; updated_at?: string | null;
+  // schema_v19 fase 3
+  last_recall_at?: string | null; last_recall_score?: number | null;
 };
 export type Slot = { id: string; day: number; slot: number; subject_id: string };
 // Microtarea (checklist dentro de una tarea)

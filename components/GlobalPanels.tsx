@@ -3,6 +3,7 @@ import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, Text, TextIn
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { needsPlan } from '../lib/planSlots';
+import { ExamPlanSheet } from './plan/ExamPlanSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C } from '../lib/theme';
 import { useResponsive } from '../lib/responsive';
@@ -16,7 +17,7 @@ import { parseQuickAdd, type QuickResult } from '../lib/quickAdd';
 import { combine, fmtDue, fromISODate, fmtDay, fmtHHMM } from '../lib/time';
 import { remindAt, remindDays } from '../lib/reminders';
 import {
-  subscribePanels, closeAdd, openTask, closeTask, closeCommand, openCommand, closeInbox, openAdd,
+  subscribePanels, closeAdd, openTask, closeTask, closeCommand, openCommand, closeInbox, openAdd, closeExamPlan,
   dataChanged, type Panels,
 } from '../lib/uiBus';
 import { toast, notify, friendlyError } from '../lib/feedback';
@@ -70,6 +71,7 @@ export function GlobalPanels() {
       />
       <CommandPalette visible={p.command} />
       <InboxPanel visible={p.inbox} />
+      <ExamPlanSheet exam={p.examPlan} onClose={closeExamPlan} />
     </>
   );
 }

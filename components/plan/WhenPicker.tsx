@@ -2,10 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../../lib/theme';
-import { getSchedule, getTasks, type Slot } from '../../lib/db';
-import { SCHEDULE, toMinutes } from '../../lib/schedule';
-import { getHabitHours, getPlaces, addPlace } from '../../lib/studyDb';
-import { freeSlots, slotLabel, planPhrase, PLAN_MIN, DEFAULT_PLACES, type Range } from '../../lib/planSlots';
+import { getPlaces, addPlace } from '../../lib/studyDb';
+import { suggestSlots } from '../../lib/planHelpers';
+import { slotLabel, planPhrase, DEFAULT_PLACES } from '../../lib/planSlots';
 import { combine, isoDate, fromISODate } from '../../lib/time';
 import { DateField, TimeField } from '../DateTime';
 import { toast, friendlyError } from '../../lib/feedback';
@@ -17,25 +16,7 @@ import { toast, friendlyError } from '../../lib/feedback';
 
 export type PlanValue = { at: string | null; place: string | null };
 
-/** Clases de un día como rangos de minutos (para no sugerir encima). */
-export function classRanges(slots: Slot[]): (day: Date) => Range[] {
-  const blocks = SCHEDULE.blocks;
-  return (day: Date) => {
-    const dow = (day.getDay() + 6) % 7;
-    return slots.filter((s) => s.day === dow && blocks[s.slot])
-      .map((s) => ({ start: toMinutes(blocks[s.slot].start), end: toMinutes(blocks[s.slot].end) }));
-  };
-}
-
-/** Horarios sugeridos para una tarea (carga clases, otros planes y costumbre). */
-export async function suggestSlots(o: { due: Date | null; dueHasTime: boolean; excludeId?: string | null; count?: number }): Promise<Date[]> {
-  const [slots, tasks, habit] = await Promise.all([
-    getSchedule().catch(() => [] as Slot[]), getTasks().catch(() => []), getHabitHours().catch(() => [] as number[]),
-  ]);
-  const busy = tasks.filter((t) => t.plan_at && t.id !== o.excludeId && t.status !== 'done')
-    .map((t) => { const s = new Date(t.plan_at!).getTime(); return { start: s, end: s + PLAN_MIN * 60_000 }; });
-  return freeSlots({ now: new Date(), due: o.due, dueHasTime: o.dueHasTime, classesFor: classRanges(slots), busy, habit, count: o.count ?? 3 });
-}
+export { classRanges, suggestSlots } from '../../lib/planHelpers';
 
 export function WhenPicker({ title, dueDate, dueTime, value, onChange, excludeId }: {
   title: string; dueDate: string | null; dueTime: string | null; value: PlanValue; onChange: (v: PlanValue) => void; excludeId?: string | null;
