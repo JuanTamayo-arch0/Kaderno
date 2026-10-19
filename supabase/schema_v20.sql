@@ -19,6 +19,11 @@
 --   · related_notes(): notas parecidas con los vectores del Oráculo.
 --   · note_templates y subjects.default_template: plantillas de notas.
 --   · flashcards.note_line y origen "note": tarjetas escritas con "::".
+--
+-- Fase 3 · Afuera de Kaderno
+--   · external_calendars y external_events: tu Google Calendar (u Outlook) en
+--     Hoy, por su dirección iCal secreta. Los lee la función "ical-import".
+--   · notes.share_token y get_shared_note(): compartir una nota con un enlace.
 -- =====================================================================
 
 
@@ -302,3 +307,76 @@ do $$ begin
 end $$;
 
 revoke all on function public._note_links_sync() from public, anon, authenticated;
+
+
+-- =====================================================================
+--  FASE 3 · Afuera de Kaderno: tu calendario en Hoy y compartir una nota
+-- =====================================================================
+
+-- Calendarios externos por su dirección iCal secreta (solo lectura).
+create table if not exists public.external_calendars (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null default auth.uid() references auth.users on delete cascade,
+  name       text not null check (char_length(name) between 1 and 60),
+  color      text not null default '#8a93a6' check (color ~ '^#[0-9a-fA-F]{6}$'),
+  url        text not null check (char_length(url) between 10 and 2000 and url ~* '^(https|webcals?)://'),
+  last_sync  timestamptz,
+  last_error text,
+  created_at timestamptz not null default now()
+);
+create index if not exists external_calendars_sync_idx on public.external_calendars (last_sync nulls first);
+alter table public.external_calendars enable row level security;
+drop policy if exists "own calendars" on public.external_calendars;
+create policy "own calendars" on public.external_calendars for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+grant select, insert, update, delete on public.external_calendars to authenticated;
+-- La sincronización la escribe solo el servidor.
+revoke update on public.external_calendars from authenticated;
+grant update (name, color, url) on public.external_calendars to authenticated;
+
+-- Máximo 5 calendarios por persona.
+create or replace function public._external_calendars_cap() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if (select count(*) from external_calendars where user_id = new.user_id) >= 5 then
+    raise exception 'Máximo 5 calendarios.' using errcode = 'P0001';
+  end if;
+  return new;
+end $$;
+drop trigger if exists external_calendars_cap_trg on public.external_calendars;
+create trigger external_calendars_cap_trg before insert on public.external_calendars
+  for each row execute function public._external_calendars_cap();
+
+create table if not exists public.external_events (
+  calendar_id uuid not null references public.external_calendars on delete cascade,
+  user_id     uuid not null references auth.users on delete cascade,
+  uid         text not null,
+  start_at    timestamptz not null,
+  end_at      timestamptz not null,
+  title       text not null,
+  all_day     boolean not null default false,
+  primary key (calendar_id, uid)
+);
+create index if not exists external_events_user_idx on public.external_events (user_id, start_at);
+alter table public.external_events enable row level security;
+drop policy if exists "own events" on public.external_events;
+create policy "own events" on public.external_events for select using (user_id = auth.uid());
+grant select on public.external_events to authenticated;
+revoke insert, update, delete on public.external_events from anon, authenticated;
+
+-- Compartir una nota con un enlace de solo lectura.
+alter table public.notes add column if not exists share_token uuid;
+create unique index if not exists notes_share_token_idx on public.notes (share_token) where share_token is not null;
+
+-- Lo único que ve quien tiene el enlace: título, contenido y fecha. Nada del dueño.
+create or replace function public.get_shared_note(p_token uuid)
+returns table (title text, content text, updated_at timestamptz)
+language sql stable security definer set search_path = public as $$
+  select n.title, n.content, coalesce(n.updated_at, n.created_at)
+    from notes n
+   where p_token is not null and n.share_token = p_token and n.deleted_at is null
+   limit 1;
+$$;
+revoke all on function public.get_shared_note(uuid) from public;
+grant execute on function public.get_shared_note(uuid) to anon, authenticated;
+
+revoke all on function public._external_calendars_cap() from public, anon, authenticated;

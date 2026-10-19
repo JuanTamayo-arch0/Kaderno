@@ -11,7 +11,7 @@ export type AgendaSubject = { id: string; name: string; color: string };
 export type AgendaTask = DueLike & { id: string; title: string; subject_id?: string | null; status?: string | null; kind?: 'task' | 'project'; color?: string; project?: string; plan_at?: string | null; plan_place?: string | null };
 
 export type AgendaItem = {
-  kind: 'class' | 'due' | 'plan';
+  kind: 'class' | 'due' | 'plan' | 'event';
   start: number;         // minutos desde la medianoche
   end: number | null;
   title: string;
@@ -46,10 +46,28 @@ export function classesOf(day: Date, slots: AgendaSlot[], blocks: AgendaBlock[],
   return out;
 }
 
-/** Agenda completa del día: clases y entregas con hora, en orden. */
-export function buildAgenda(day: Date, slots: AgendaSlot[], blocks: AgendaBlock[], subjects: AgendaSubject[], tasks: AgendaTask[]): { timed: AgendaItem[]; allDay: AgendaTask[] } {
+/** Evento de un calendario externo (v21). */
+export type AgendaEvent = { id: string; title: string; start: string; end: string; all_day?: boolean; color?: string | null };
+
+/** Agenda completa del día: clases, entregas con hora, planes y eventos de otros calendarios, en orden. */
+export function buildAgenda(day: Date, slots: AgendaSlot[], blocks: AgendaBlock[], subjects: AgendaSubject[], tasks: AgendaTask[], events: AgendaEvent[] = []): { timed: AgendaItem[]; allDay: AgendaTask[] } {
   const timed = classesOf(day, slots, blocks, subjects);
   const allDay: AgendaTask[] = [];
+  const d0 = new Date(day); d0.setHours(0, 0, 0, 0);
+  const d1 = new Date(d0); d1.setDate(d1.getDate() + 1);
+  for (const e of events) {
+    const s = new Date(e.start), en = new Date(e.end);
+    if (e.all_day) {
+      // Los de todo el día vienen en UTC (medianoche): se comparan por fecha.
+      const sd = e.start.slice(0, 10), ed = e.end.slice(0, 10), iso = `${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}-${String(d0.getDate()).padStart(2, '0')}`;
+      if (sd <= iso && (ed > iso || ed === sd)) allDay.push({ id: e.id, title: e.title } as AgendaTask);
+      continue;
+    }
+    if (s >= d1 || en <= d0) continue;
+    const st = s < d0 ? 0 : s.getHours() * 60 + s.getMinutes();
+    const end = en >= d1 ? 24 * 60 : en.getHours() * 60 + en.getMinutes();
+    timed.push({ kind: 'event', start: st, end, title: e.title, color: e.color ?? '#8a93a6' });
+  }
   for (const t of tasks) {
     if (t.status === 'done') continue;
     if (t.plan_at) {

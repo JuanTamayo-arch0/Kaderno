@@ -158,3 +158,62 @@ test('plantillas y nota de clase', async () => {
   assert.equal(builtinTemplate('x'), null);
   assert.equal(classNoteTitle(new Date(2026, 9, 23)), 'Clase del 23 oct');
 });
+
+// ---------- Tu calendario en Hoy ----------
+test('leer un .ics: horas con zona, todo el día y repeticiones', async () => {
+  const { parseIcs, safeCalendarUrl, zonedToUtc } = await import('../supabase/functions/_shared/icsParse');
+  assert.equal(zonedToUtc(2026, 9, 19, 8, 0, 0, 'America/Bogota').toISOString(), '2026-10-19T13:00:00.000Z');
+  const ics = [
+    'BEGIN:VCALENDAR', 'X-WR-TIMEZONE:America/Bogota',
+    'BEGIN:VEVENT', 'UID:a', 'DTSTART;TZID=America/Bogota:20261019T070000', 'DTEND;TZID=America/Bogota:20261019T080000', 'SUMMARY:Gimnasio', 'END:VEVENT',
+    'BEGIN:VEVENT', 'UID:b', 'DTSTART:20261020T150000Z', 'DTEND:20261020T160000Z', 'SUMMARY:Turno\\, trabajo', 'END:VEVENT',
+    'BEGIN:VEVENT', 'UID:c', 'DTSTART;VALUE=DATE:20261021', 'DTEND;VALUE=DATE:20261022', 'SUMMARY:Cumpleaños', 'END:VEVENT',
+    'BEGIN:VEVENT', 'UID:d', 'DTSTART;TZID=America/Bogota:20261005T180000', 'DTEND;TZID=America/Bogota:20261005T190000',
+    'RRULE:FREQ=WEEKLY;BYDAY=MO,WE;UNTIL=20261231T000000Z', 'EXDATE;TZID=America/Bogota:20261021T180000', 'SUMMARY:Inglés', 'END:VEVENT',
+    'BEGIN:VEVENT', 'UID:e', 'DTSTART:20261019T200000Z', 'DTEND:20261019T210000Z', 'STATUS:CANCELLED', 'SUMMARY:No', 'END:VEVENT',
+    'BEGIN:VEVENT', 'UID:f', 'DTSTART;TZID=America/Bogota:20261019T120000', 'DURATION:PT2H', 'SUMMARY:Almuerzo largo con una descripción que', ' sigue en otra línea', 'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n');
+  const ev = parseIcs(ics, new Date('2026-10-19T00:00:00Z'), new Date('2026-10-27T00:00:00Z'));
+  assert.deepEqual(ev.map((e) => [e.title, e.start, e.allDay]), [
+    ['Gimnasio', '2026-10-19T12:00:00.000Z', false],
+    ['Almuerzo largo con una descripción quesigue en otra línea', '2026-10-19T17:00:00.000Z', false],
+    ['Inglés', '2026-10-19T23:00:00.000Z', false],
+    ['Turno, trabajo', '2026-10-20T15:00:00.000Z', false],
+    ['Cumpleaños', '2026-10-21T00:00:00.000Z', true],
+    ['Inglés', '2026-10-26T23:00:00.000Z', false],
+  ]);
+  assert.equal(safeCalendarUrl('webcal://calendar.google.com/calendar/ical/x/basic.ics'), 'https://calendar.google.com/calendar/ical/x/basic.ics');
+  assert.equal(safeCalendarUrl('http://example.com/a.ics'), null);
+  assert.equal(safeCalendarUrl('https://192.168.1.10/a.ics'), null);
+  assert.equal(safeCalendarUrl('https://localhost/a.ics'), null);
+});
+
+test('agenda con eventos de otros calendarios', async () => {
+  const { buildAgenda } = await import('../lib/agenda');
+  const day = new Date(2026, 9, 19, 12);
+  const at = (h: number, m = 0, d = 19) => new Date(2026, 9, d, h, m).toISOString();
+  const ev = [
+    { id: 'a', title: 'Turno', start: at(15), end: at(17, 30), color: '#e5484d' },
+    { id: 'b', title: 'Viaje', start: at(22, 0, 18), end: at(9) },
+    { id: 'c', title: 'Cumpleaños', start: '2026-10-19T00:00:00.000Z', end: '2026-10-20T00:00:00.000Z', all_day: true },
+    { id: 'd', title: 'Mañana', start: at(10, 0, 20), end: at(11, 0, 20) },
+  ];
+  const a = buildAgenda(day, [], [], [], [], ev);
+  assert.deepEqual(a.timed.map((t) => [t.kind, t.title, t.start, t.end]), [['event', 'Viaje', 0, 540], ['event', 'Turno', 900, 1050]]);
+  assert.equal(a.timed[1].color, '#e5484d');
+  assert.deepEqual(a.allDay.map((t) => t.title), ['Cumpleaños']);
+  assert.equal(buildAgenda(day, [], [], [], []).timed.length, 0);
+});
+
+test('compartir: copia sin imágenes privadas ni enlaces internos; enlaces seguros', async () => {
+  const { noteForExport } = await import('../lib/noteLinks');
+  const md = 'Ver [Derivadas](kd-note:11111111-2222-3333-4444-555555555555)\n\n![pizarra](kd-img:u/1.png)\n\n![](kd-img:u/2.png)';
+  assert.equal(noteForExport('Límites', md), '# Límites\n\nVer Derivadas\n\n*(imagen: pizarra)*\n\n*(imagen)*\n');
+  assert.equal(noteForExport('', ''), '# Nota\n\n\n');
+  const { safeUrls } = await import('../lib/noteHtml');
+  assert.equal(safeUrls('<a href="javascript:alert(1)">x</a>'), '<a href="#">x</a>');
+  assert.equal(safeUrls('<a href="https://ok.co">x</a>'), '<a rel="noopener noreferrer nofollow" target="_blank" href="https://ok.co">x</a>');
+  assert.equal(safeUrls('<img src="data:image/svg+xml,..." alt="">'), '<img src="" alt="">');
+  assert.equal(safeUrls('<img src="https://s.co/a.png">'), '<img src="https://s.co/a.png">');
+});

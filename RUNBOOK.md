@@ -1159,3 +1159,42 @@ No hay funciones que desplegar.
 ### 3. Pruebas
 
 `npm test` (enlaces, títulos al día, líneas con `::` y `{{ }}`, nuevas y cambiadas, plantillas) y `bash tests/run_sql.sh` (incluye `tests/sql/20b_pruebas.sql`: enlaces solo a notas propias, se recalculan y se borran con la nota, plantillas privadas y origen `note`).
+
+## Versión 21 (parte 3): tu calendario en Hoy y compartir una nota
+
+### 1. Migración y funciones
+
+1. Vuelve a correr `supabase/schema_v20.sql` completo (es idempotente). La fase 3 agrega:
+   - `external_calendars` (hasta 5 por persona, solo direcciones https o webcal) y `external_events` (la app solo los lee; los escribe la función).
+   - `notes.share_token` y `get_shared_note(token)`, que devuelve solo el título, el contenido y la fecha de esa nota.
+2. Despliega las dos funciones (ninguna pide secretos nuevos; `ical-import` usa el mismo `NOTIFY_CRON_SECRET` de `notify`):
+
+   ```bash
+   npx supabase functions deploy ical-import --no-verify-jwt
+   npx supabase functions deploy shared-note --no-verify-jwt
+   ```
+
+   `ical-import` revisa la sesión del usuario por su cuenta (solo lee calendarios propios) y `shared-note` es pública a propósito (solo responde con un enlace activo).
+3. Programa la lectura de calendarios cada 15 minutos (cambia `TU-PROYECTO` y el secreto):
+
+   ```sql
+   select cron.schedule('kaderno-calendars', '*/15 * * * *', $$
+     select net.http_post(
+       url := 'https://TU-PROYECTO.supabase.co/functions/v1/ical-import',
+       headers := jsonb_build_object('x-cron-secret', 'EL-MISMO-NOTIFY_CRON_SECRET')
+     );
+   $$);
+   ```
+
+No hay cambios en el droplet: la página `/compartida/<token>` es parte de la app.
+
+### 2. Lo que cambia para el usuario
+
+- **Tus otros calendarios** (Ajustes, Calendario): pegar la dirección iCal secreta de Google Calendar u Outlook, con nombre y color. Se lee al conectarlo, con "Actualizar" y cada 15 minutos. Si falla, el calendario se marca en rojo con el motivo. Los eventos salen en la agenda de Hoy (los de todo el día en "Durante el día") y en "Mi día", y cuentan para el aviso de sobrecarga.
+- **Compartir con un enlace** (menú de la nota): crea un enlace de solo lectura, sin cuenta, con fórmulas, tablas e imágenes. Se puede copiar, cambiar por uno nuevo o desactivar.
+- **Copiar a un proyecto** (menú de la nota): guarda la nota como `.md` en Archivos del proyecto elegido.
+
+### 3. Pruebas
+
+`npm test` (lector de .ics con zonas, todo el día, repeticiones y ediciones; direcciones permitidas; agenda con eventos; copia sin imágenes privadas; enlaces seguros) y `bash tests/run_sql.sh` (incluye `tests/sql/20c_pruebas.sql`: solo https y máximo 5, la app no escribe eventos, calendarios aislados por persona, la nota compartida solo con su enlace y sin datos del dueño, y al desactivarlo deja de funcionar).
+

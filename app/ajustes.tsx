@@ -9,6 +9,7 @@ import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 import { fetchPrefs, savePrefs, exportMyData, hasV14 } from '../lib/db';
 import { CalendarCard } from '../components/CalendarCard';
+import { ExternalCalendars } from '../components/ExternalCalendars';
 import { soundEnabled, setSoundEnabled } from '../lib/sound';
 import { updateMyProfile } from '../lib/projects';
 import { getPushStatus, enablePush, disablePush, testLocalNotification, isStandalone, type PushStatus } from '../lib/push';
@@ -267,6 +268,8 @@ function Ajustes() {
 
       <SectionLabel text="Calendario" />
       <CalendarCard />
+      <View style={{ height: 10 }} />
+      <ExternalCalendars />
 
       {Platform.OS === 'web' && !isStandalone() && (
         <>
