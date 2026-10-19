@@ -7,6 +7,7 @@
 //  en el título, así nunca se pierde nada de lo escrito.
 // ============================================================
 import { addDays, isoDate, startOfDay } from './time';
+import { parseRepeat, firstDate, nextDate, type RepeatRule } from './repeat';
 
 export type QuickSubject = { id: string; name: string };
 export type QuickType = { key: string; label: string };
@@ -16,6 +17,8 @@ export type QuickResult = {
   subjectId: string | null;
   dueDate: string | null;   // YYYY-MM-DD
   dueTime: string | null;   // HH:MM
+  /** v21: "cada martes", "cada! 3 días", "todos los días hasta el 5 dic". */
+  repeat?: RepeatRule | null;
 };
 
 export function norm(s: string): string {
@@ -41,6 +44,9 @@ const FILLER = new Set(['el', 'la', 'los', 'las', 'de', 'del', 'para', 'a', 'al'
 type Tok = { raw: string; n: string; used: boolean };
 
 export function parseQuickAdd(input: string, subjects: QuickSubject[], types: QuickType[], now = new Date()): QuickResult {
+  // Primero la repetición: lo que queda se lee como siempre.
+  const rp = parseRepeat(input, isoDate(startOfDay(now)));
+  if (rp) input = rp.rest || input;
   const toks: Tok[] = input.trim().split(/\s+/).filter(Boolean).map((raw) => ({ raw, n: norm(raw).replace(/^[(\["'¿¡]+|[)\]"',;.:!?]+$/g, ''), used: false }));
   let dueDate: Date | null = null;
   let hour: number | null = null, minute = 0, ampm: 'am' | 'pm' | null = null;
@@ -166,6 +172,14 @@ export function parseQuickAdd(input: string, subjects: QuickSubject[], types: Qu
     // "a las 6" sin am/pm: de 1 a 7 se entiende de la tarde.
     if (!ampm && h >= 1 && h <= 7) h += 12;
     dueTime = `${String(h).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+    if (!dueDate && rp) {
+      // Repetición con hora: la primera vez que toca y todavía no pasó.
+      let first = firstDate(rp.rule, isoDate(today));
+      const cand = new Date(first + 'T00:00:00'); cand.setHours(h, minute, 0, 0);
+      if (cand.getTime() <= now.getTime()) first = nextDate(rp.rule, first, first, isoDate(addDays(today, 1))) ?? first;
+      const [yy, mm, dd] = first.split('-').map(Number);
+      dueDate = new Date(yy, mm - 1, dd);
+    }
     if (!dueDate) {
       // Solo hora: hoy si todavía no pasó, si no mañana.
       const cand = new Date(today); cand.setHours(h, minute, 0, 0);
@@ -185,7 +199,8 @@ export function parseQuickAdd(input: string, subjects: QuickSubject[], types: Qu
   }
   title = title[0].toUpperCase() + title.slice(1);
 
-  return { title, typeKey, subjectId, dueDate: dueDate ? isoDate(dueDate) : null, dueTime };
+  if (rp && !dueDate) { const [yy, mm, dd] = firstDate(rp.rule, isoDate(today)).split('-').map(Number); dueDate = new Date(yy, mm - 1, dd); }
+  return { title, typeKey, subjectId, dueDate: dueDate ? isoDate(dueDate) : null, dueTime, ...(rp ? { repeat: rp.rule } : {}) };
 }
 
 /** Materia cuyo nombre contiene la palabra o alguna de sus palabras empieza por ella. */

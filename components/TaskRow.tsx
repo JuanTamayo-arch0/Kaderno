@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { slotLabel } from '../lib/planSlots';
+import { ruleText } from '../lib/repeat';
 import { C, inkOn } from '../lib/theme';
 import type { Step, Subject, Task } from '../lib/db';
 import { taskTypeMeta } from '../lib/taskTypes';
@@ -78,6 +79,12 @@ export function TaskRow({
                 </Text>
               </View>
             ) : null}
+            {!!task.repeat_rule && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }} accessibilityLabel={`Se repite ${ruleText(task.repeat_rule)}`}>
+                <Ionicons name="repeat" size={13} color={C.muted} />
+                <Text style={{ color: C.muted, fontSize: 12 }} numberOfLines={1}>{ruleText({ ...task.repeat_rule, until: null, fromDone: false })}</Text>
+              </View>
+            )}
             {!!task.plan_at && task.status !== 'done' && new Date(task.plan_at).getTime() > Date.now() - 3600_000 && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }} accessibilityLabel={`Plan: ${slotLabel(new Date(task.plan_at), new Date())}`}>
                 <Ionicons name="flag-outline" size={12} color={C.brand} />

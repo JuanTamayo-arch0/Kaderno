@@ -1,6 +1,6 @@
 # PLAN v21: Organizar el día y notas conectadas
 
-Estado: plan, sin construir. Se hace después de la versión 20 (`PLAN_v20.md`) y se apoya en ella: usa los planes con hora (`plan_at`), el ritual del lunes y la hoja "Revisa tus tarjetas".
+Estado: fase 1 construida (lunes 19 de octubre, rama v21-dia). Se hace después de la versión 20 (`PLAN_v20.md`) y se apoya en ella: usa los planes con hora (`plan_at`), el ritual del lunes y la hoja "Revisa tus tarjetas".
 
 Este plan sale de revisar apps de notas (Notion, Obsidian, Notability, Goodnotes, RemNote) y de organización del día (Todoist, TickTick, Things, Structured, Sunsama, Microsoft To Do), y de compararlas con lo que ya tiene Kaderno.
 
@@ -177,3 +177,5 @@ Requiere schema_v19 (v20). Idempotente, crece por fases.
 3. Calendario externo por dirección iCal secreta (sin pedir permisos de Google); solo lectura.
 4. Grabar la clase y anotar PDFs quedan como fase opcional hasta decidir costo y espacio.
 5. El cierre del día no da monedas ni cuenta para la racha por sí solo.
+6. (Al construir 3) Las franjas Mañana, Tarde y Noche se guardan en `assignments.plan_day` y `plan_band` (sin hora). Arrastrar desde la lista a la línea solo existe en computador; en celular se toca "Poner hora" y luego la hora.
+7. (Al construir 2) Compartir hacia Kaderno recibe texto, enlaces y fotos (las fotos van a Capturar).

@@ -53,3 +53,9 @@ $PSQL -d k16 -f tests/sql/19c_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARO
 $PSQL -d k16 -f supabase/schema_v19.sql 2>&1 | grep -E "ERROR" ; $PSQL -d k16 -f tests/sql/19c_despues.sql 2>&1 | grep -E "ok [0-9]+|ERROR|exception"
 $PSQL -d k16 -f tests/sql/19d_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line|WARNING" | grep -v "^ *$"
 $PSQL -d k16 -f tests/sql/19e_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line|WARNING" | grep -v "^ *$"
+
+# ---------- schema_v20 (versión 21), sobre la base k16 ----------
+for f in supabase/schema_v20.sql supabase/schema_v20.sql; do
+  echo "== k16 $f"; $PSQL -d k16 -f $f 2>&1 | grep -v "NOTICE" | grep -v "^$" | head -20
+done
+$PSQL -d k16 -f tests/sql/20_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line|WARNING" | grep -v "^ *$"

@@ -17,6 +17,9 @@ export type Task = {
   plan_at?: string | null; plan_place?: string | null;
   // schema_v19 fase 3 (sesiones del plan de repaso de un examen)
   parent_id?: string | null; session_kind?: 'prep' | 'mix' | 'sim' | 'light' | null;
+  // schema_v20 fase 1 (versión 21): repeticiones, bandeja y franjas
+  repeat_rule?: import('./repeat').RepeatRule | null; repeat_parent_id?: string | null; inbox?: boolean;
+  plan_day?: string | null; plan_band?: 'manana' | 'tarde' | 'noche' | null;
 };
 export type Note = {
   id: string; subject_id: string | null; title: string | null; content: string | null;
@@ -65,7 +68,7 @@ async function v14<R extends { error: any }>(run: (on: boolean) => PromiseLike<R
   if (!V14) return run(false);
   const r = await run(true);
   // Las columnas de la fase 2 (plan_at, plan_place) se manejan aparte: no apagan v14.
-  if (r.error && isMissingColumn(r.error) && !/plan_(at|place)/.test(String(r.error.message ?? ''))) { V14 = false; return run(false); }
+  if (r.error && isMissingColumn(r.error) && !OPT_RE.test(String(r.error.message ?? ''))) { V14 = false; return run(false); }
   return r;
 }
 
@@ -154,19 +157,31 @@ export type TaskInput = {
   description?: string | null; type?: string;
   due_at?: string | null; remind_at?: string | null; estimate_min?: number | null;
   plan_at?: string | null; plan_place?: string | null;
+  repeat_rule?: import('./repeat').RepeatRule | null; inbox?: boolean; plan_day?: string | null; plan_band?: 'manana' | 'tarde' | 'noche' | null;
 };
-// Sin la fase 2 de schema_v19 no existen plan_at ni plan_place: se guarda sin ellos.
-let PLAN_COLS = true;
-export function hasPlanCols(): boolean { return PLAN_COLS; }
-const isPlanErr = (e: any) => isMissingColumn(e) && /plan_(at|place)/.test(String(e?.message ?? ''));
-function stripPlan<T extends Record<string, any>>(o: T): T { const c: Record<string, any> = { ...o }; delete c.plan_at; delete c.plan_place; return c as T; }
+// Columnas de versiones nuevas (schema_v19 y v20). Si la base no las tiene, se
+// guarda sin ellas y se recuerda cuáles faltan (sin apagar lo de schema_v14).
+const OPT_COLS = ['plan_at', 'plan_place', 'plan_day', 'plan_band', 'repeat_rule', 'inbox'];
+const OPT_RE = /plan_(at|place|day|band)|repeat_rule|inbox/;
+const MISSING = new Set<string>();
+export function hasPlanCols(): boolean { return !MISSING.has('plan_at'); }
+export function hasV20Cols(): boolean { return !MISSING.has('repeat_rule') && !MISSING.has('inbox'); }
+function stripMissing<T extends Record<string, any>>(o: T): T { const c: Record<string, any> = { ...o }; MISSING.forEach((k) => delete c[k]); return c as T; }
 async function withPlan<R extends { error: any }>(t: Record<string, any>, run: (t: any) => PromiseLike<R>): Promise<R> {
-  const hasPlan = 'plan_at' in t || 'plan_place' in t;
-  if (!hasPlan) return run(t);
-  if (!PLAN_COLS) return run(stripPlan(t));
-  const r = await run(t);
-  if (r.error && isPlanErr(r.error)) { PLAN_COLS = false; return run(stripPlan(t)); }
-  return r;
+  if (!OPT_COLS.some((k) => k in t)) return run(t);
+  for (let i = 0; i < OPT_COLS.length + 1; i++) {
+    const r = await run(stripMissing(t));
+    const msg = String(r.error?.message ?? '');
+    const col = r.error && isMissingColumn(r.error) ? OPT_COLS.find((k) => msg.includes(k) && !MISSING.has(k)) : undefined;
+    if (!col) return r;
+    MISSING.add(col);
+  }
+  return run(stripMissing(t));
+}
+export async function skipRepeat(id: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc('skip_repeat', { p_id: id });
+  if (error) throw error;
+  return (data as string | null) ?? null;
 }
 export async function addTask(t: TaskInput): Promise<string> {
   const u = await uid();

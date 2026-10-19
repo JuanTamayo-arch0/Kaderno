@@ -85,6 +85,27 @@ self.addEventListener('fetch', (e) => {
   }
 });
 
+// Compartir hacia Kaderno (Android, Web Share Target): el texto o enlace cae en
+// la bandeja; una foto se guarda un momento en la caché y se abre en Capturar.
+self.addEventListener('fetch', (e) => {
+  const url = new URL(e.request.url);
+  if (e.request.method !== 'POST' || url.pathname !== '/compartir') return;
+  e.respondWith((async () => {
+    try {
+      const form = await e.request.formData();
+      const file = form.get('foto');
+      if (file && typeof file !== 'string' && file.size) {
+        const cache = await caches.open('kaderno-compartido');
+        await cache.put('/compartido-foto', new Response(file, { headers: { 'content-type': file.type || 'image/jpeg' } }));
+        return Response.redirect('/capturar?compartido=1', 303);
+      }
+      const q = new URLSearchParams();
+      ['title', 'text', 'url'].forEach((k) => { const v = form.get(k); if (typeof v === 'string' && v) q.set(k, v.slice(0, 2000)); });
+      return Response.redirect('/compartir?' + q.toString(), 303);
+    } catch (_) { return Response.redirect('/', 303); }
+  })());
+});
+
 self.addEventListener('push', (e) => {
   let data = {};
   try { data = e.data ? e.data.json() : {}; } catch (_) { data = { title: 'Kaderno', body: e.data ? e.data.text() : '' }; }

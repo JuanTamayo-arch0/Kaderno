@@ -28,7 +28,7 @@ import { clearHoyHidden, resetHoyHiddenCache, saveHoyVista } from '../lib/hoyHid
 //  datos y cerrar sesión.
 // ============================================================
 
-type Notif = { daily: boolean; daily_hour: number; weekly: boolean; tz: string; monday?: boolean };
+type Notif = { daily: boolean; daily_hour: number; weekly: boolean; tz: string; monday?: boolean; close?: boolean; close_hour?: number };
 const DEFAULT_NOTIF: Notif = { daily: true, daily_hour: 7, weekly: true, tz: 'America/Bogota', monday: false };
 
 /** Mide cuánto tarda el servidor (Supabase) en responder desde aquí. */
@@ -244,6 +244,19 @@ function Ajustes() {
         <Toggle label="Resumen de la semana" hint="El domingo a las 7 pm: lo que hiciste y lo que viene." value={notif.weekly} onChange={(v) => saveNotif({ weekly: v })} />
         <Divider />
         <Toggle label="Aviso del lunes" hint="El lunes a las 8 am, si aún no has planeado la semana." value={!!notif.monday} onChange={(v) => saveNotif({ monday: v })} />
+        <Divider />
+        <Toggle label="Cerrar el día" hint="Aviso para el cierre del día (1 minuto). En Hoy aparece desde esa hora." value={!!notif.close} onChange={(v) => saveNotif({ close: v })} />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingHorizontal: 14, paddingBottom: 12 }}>
+          {[18, 19, 20, 21, 22].map((h) => {
+            const on = (notif.close_hour ?? 18) === h;
+            return (
+              <Pressable key={h} onPress={() => saveNotif({ close_hour: h })} accessibilityRole="radio" accessibilityState={{ checked: on }}
+                style={{ minHeight: 34, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 99, borderWidth: 1, borderColor: on ? C.brand : C.line, backgroundColor: on ? C.brand : 'transparent' }}>
+                <Text style={{ color: on ? C.onBrand : C.text, fontSize: 13, fontWeight: on ? '700' : '500' }}>{h - 12}:00 pm</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
         <Text style={{ color: C.muted, fontSize: 12, paddingHorizontal: 14, paddingBottom: 12 }}>
           Los recordatorios de cada tarea se eligen al crearla. Todos los avisos también quedan en la campana.{!hasV14() ? ' Requiere actualizar la base de datos (schema_v14).' : ''}
         </Text>

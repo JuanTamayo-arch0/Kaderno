@@ -140,6 +140,14 @@ export function SideNav({ active, onNavigate }: { active: NavKey | null; onNavig
         </Pressable>
 
         {row(MAIN_ITEMS[0], badge(counts.today))}
+        {counts.inbox > 0 && (
+          <Pressable onPress={() => router.push({ pathname: '/', params: { bandeja: '1' } } as any)} accessibilityRole="link" accessibilityLabel={`Bandeja, ${counts.inbox} por ordenar`}
+            style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6, paddingLeft: 40, paddingRight: 10, borderRadius: 10, backgroundColor: hovered ? C.surface2 : 'transparent' })}>
+            <Ionicons name="file-tray-outline" size={15} color={C.muted} />
+            <Text style={{ color: C.muted, fontSize: 13, fontWeight: '600', flex: 1 }}>Bandeja</Text>
+            {badge(counts.inbox)}
+          </Pressable>
+        )}
         {row(MAIN_ITEMS[1])}
         {row(MAIN_ITEMS[2])}
         {row(MAIN_ITEMS[3])}

@@ -13,6 +13,8 @@ import { Screen, Button, Card, SectionLabel, Dot } from '../../components/ds';
 import { fmtMin } from '../../components/TaskRow';
 import { useStudyStreak, StreakCard } from '../../components/streaks/Streak';
 import { weeksLabel } from '../../lib/streaks';
+import { Countdown } from '../../components/day/Countdown';
+import { getTasks, type Task } from '../../lib/db';
 
 // ============================================================
 //  Estudiar: Enfoque, Repaso y Oráculo en un solo lugar, más el avance
@@ -30,6 +32,7 @@ export default function Estudiar() {
   const [bySubject, setBySubject] = useState<{ subject_id: string | null; minutes: number }[]>([]);
   const [q, setQ] = useState('');
   const streak = useStudyStreak();
+  const [tasks, setTasks] = useState<Task[]>([]);
 
   useFocusEffect(useCallback(() => {
     getSubjects().then(setSubjects).catch(() => {});
@@ -37,6 +40,7 @@ export default function Estudiar() {
     countToday().then((c) => setDue(c.total)).catch(() => {});
     getFocusDetail().then(setDetail).catch(() => {});
     getFocusStats().then((s) => setBySubject(s.bySubject)).catch(() => {});
+    getTasks().then(setTasks).catch(() => {});
   }, []));
 
   const sem = semesterAverage(subjects, grades);
@@ -47,6 +51,7 @@ export default function Estudiar() {
 
   return (
     <Screen title="Estudiar" subtitle="Enfoque, repaso y tu avance" maxWidth={1100}>
+      <Countdown tasks={tasks} />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
         {/* Enfoque */}
         <Card style={col}>
