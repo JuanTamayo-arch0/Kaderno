@@ -15,7 +15,7 @@ import { NoteDocument } from '../../components/notes/NoteDocument';
 // ============================================================
 
 function NotaDetalle() {
-  const { id, edit } = useLocalSearchParams<{ id: string; edit?: string }>();
+  const { id, edit, titulo } = useLocalSearchParams<{ id: string; edit?: string; titulo?: string }>();
   const router = useRouter();
   const { isWide, width } = useResponsive();
   const [note, setNote] = useState<Note | null | undefined>(undefined);
@@ -30,7 +30,7 @@ function NotaDetalle() {
       setSubjects(subs);
       if (!n || n.deleted_at) { setNote(null); return; }
       if (isWide && n.subject_id) {
-        router.replace({ pathname: '/materia/[id]', params: { id: n.subject_id, tab: 'notas', nota: n.id } } as any);
+        router.replace({ pathname: '/materia/[id]', params: { id: n.subject_id, tab: 'notas', nota: n.id, ...(titulo ? { titulo } : {}) } } as any);
         return;
       }
       setNote(n);
@@ -50,14 +50,14 @@ function NotaDetalle() {
     return (
       <Screen back={back} nav="materias" scroll={false} padded={false}>
         <View style={{ flex: 1, minHeight: 0 }}>
-          <NoteDocument noteId={id} subjects={subjects} scroll side={width >= 1300} startEditing={edit === '1'} onDeleted={onDeleted} />
+          <NoteDocument noteId={id} subjects={subjects} scroll side={width >= 1300} startEditing={edit === '1'} onDeleted={onDeleted} focusHeading={titulo ?? null} />
         </View>
       </Screen>
     );
   }
   return (
     <Screen back={back} nav="materias" maxWidth={760}>
-      <NoteDocument noteId={id} subjects={subjects} scroll={false} side={false} startEditing={edit === '1'} onDeleted={onDeleted} />
+      <NoteDocument noteId={id} subjects={subjects} scroll={false} side={false} startEditing={edit === '1'} onDeleted={onDeleted} focusHeading={titulo ?? null} />
     </Screen>
   );
 }

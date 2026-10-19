@@ -33,6 +33,7 @@ export type PetEvent =
   | { type: 'enfoque_inicio' }
   | { type: 'enfoque_fin'; minutes: number }
   | { type: 'pausa'; tip: string }
+  | { type: 'repaso_fin'; cards: number }
   | { type: 'toque' }
   | { type: 'agarrar' }
   | { type: 'despierta' }
@@ -133,6 +134,8 @@ export function react(ev: PetEvent, s: BrainState, sp: Species, now: number, see
     case 'enfoque_fin':
       if (ev.minutes < 1) return { mood: 'normal', say: now < s.mutedUntil ? undefined : L('enfoque_corto'), ms: 3500 };
       return { mood: 'feliz', moodMs: 3500, celebrate: true, say: now < s.mutedUntil ? undefined : L('enfoque_fin', { min: ev.minutes }), ms: 4500 };
+    case 'repaso_fin':
+      return { mood: 'feliz', moodMs: 3500, celebrate: ev.cards >= 10, say: now < s.mutedUntil ? undefined : L('repaso_fin', { n: ev.cards }), ms: 4500 };
     case 'pausa':
       // Solo una sugerencia por descanso, y nunca si la silenciaste.
       return now < s.mutedUntil ? null : { mood: 'feliz', moodMs: 3000, say: ev.tip, ms: 7000 };

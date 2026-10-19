@@ -295,3 +295,168 @@ test('mascotas sueltas: primero las que juegan, con tope y orden estable', () =>
   assert.deepEqual(pickFriends(L, 6, true).map((x) => x.uid), ['a', 'b', 'c', 'd', 'e']);
   assert.deepEqual(pickFriends(L, 6, false).map((x) => x.uid), ['a', 'b', 'c', 'e']);
 });
+
+// ---------- Repaso nuevo (FSRS) ----------
+import { schedule, preview, stateOf, dueOf, fromSm2, spanLabel, dueLabel, dateToDue } from '../lib/fsrs';
+import {
+  normalize, jaccard, similarCard, clozeParts, clozeText, cardError, convertKind, toDrafts, cardsWanted,
+  buildQueue, cramQueue, secondsPerCard, estimateLabel, retentionPct, forecast, type CardLike,
+} from '../lib/cards';
+
+test('FSRS: una nueva pasa por los pasos cortos y luego a repaso', () => {
+  const now = new Date(2026, 9, 19, 10, 0);
+  const nueva = { fsrs_state: 0 };
+  const again = schedule(nueva, 1, now);
+  assert.equal(again.patch.fsrs_state, 1);
+  assert.equal(Math.round((Date.parse(again.patch.due_at) - now.getTime()) / 60000), 1);
+  assert.equal(again.log.state_before, 0);
+  const good = schedule(nueva, 3, now);
+  assert.equal(good.patch.fsrs_state, 1);
+  assert.equal(Math.round((Date.parse(good.patch.due_at) - now.getTime()) / 60000), 10);
+  const easy = schedule(nueva, 4, now);
+  assert.equal(easy.patch.fsrs_state, 2);
+  assert.ok(easy.patch.scheduled_days >= 1);
+  // Después del paso de 10 min, "Bien" la gradúa a repaso.
+  const t2 = new Date(Date.parse(good.patch.due_at));
+  const grad = schedule(good.patch, 3, t2);
+  assert.equal(grad.patch.fsrs_state, 2);
+  assert.ok(grad.patch.scheduled_days >= 1);
+});
+
+test('FSRS: los botones dan intervalos crecientes y fallar manda a reaprender', () => {
+  const now = new Date(2026, 9, 19, 10, 0);
+  const row = { fsrs_state: 2, stability: 10, difficulty: 5, due_at: now.toISOString(), last_reviewed_at: new Date(now.getTime() - 10 * 86_400_000).toISOString(), reps: 4, scheduled_days: 10 };
+  const p = preview(row, now);
+  assert.ok(p[1].due < p[2].due && p[2].due < p[3].due && p[3].due < p[4].due);
+  const fail = schedule(row, 1, now);
+  assert.equal(fail.patch.fsrs_state, 3);
+  assert.equal(fail.patch.lapses, 1);
+  // Más retención = intervalos más cortos.
+  assert.ok(schedule(row, 3, now, 0.95).patch.scheduled_days < schedule(row, 3, now, 0.85).patch.scheduled_days);
+});
+
+test('FSRS: migración desde SM-2 sin perder el avance', () => {
+  assert.deepEqual(fromSm2(2.5, 12), { stability: 12, difficulty: 5 });
+  assert.equal(fromSm2(1.3, 0).difficulty, 9.8);
+  assert.equal(fromSm2(3.5, 30).difficulty, 1);
+  const vieja = { reps: 3, interval_days: 6, ease: 2.5, due_date: '2026-10-25' };
+  assert.equal(stateOf(vieja), 2);
+  assert.equal(dueOf(vieja)!.getDate(), 25);
+  assert.equal(stateOf({ reps: 0 }), 0);
+  assert.equal(dueOf({ fsrs_state: 0 }), null);
+  const s = schedule(vieja, 3, dateToDue('2026-10-25'));
+  assert.ok(s.patch.scheduled_days > 6, 'no respetó la estabilidad heredada');
+});
+
+test('etiquetas de tiempo', () => {
+  assert.equal(spanLabel(60_000), '1 min');
+  assert.equal(spanLabel(10 * 60_000), '10 min');
+  assert.equal(spanLabel(86_400_000), '1 día');
+  assert.equal(spanLabel(6 * 86_400_000), '6 días');
+  assert.equal(spanLabel(61 * 86_400_000), '2 meses');
+  const now = new Date(2026, 9, 19, 10);
+  assert.equal(dueLabel({ fsrs_state: 0 }, now), 'Nueva');
+  assert.equal(dueLabel({ fsrs_state: 2, due_at: new Date(2026, 9, 20, 9).toISOString() }, now), 'Mañana');
+  assert.equal(dueLabel({ fsrs_state: 2, due_at: new Date(2026, 9, 25, 9).toISOString() }, now), 'En 6 días');
+  assert.equal(dueLabel({ fsrs_state: 2, due_at: new Date(2026, 9, 18).toISOString() }, now), 'Para hoy');
+});
+
+test('duplicados: sin tildes ni signos, por palabras', () => {
+  assert.equal(normalize('¿Qué es la FRL?'), 'que es la frl');
+  assert.ok(jaccard('¿Qué hace la unidad FRL?', 'que hace la unidad frl') === 1);
+  const ex = [{ id: '1', front: '¿Qué hace la unidad FRL?' }, { id: '2', front: 'Ley de Ohm' }];
+  assert.equal(similarCard('Qué hace la unidad FRL', ex)?.id, '1');
+  assert.equal(similarCard('¿Qué mide un manómetro?', ex), null);
+});
+
+test('completar: un solo espacio, se oculta y se revela', () => {
+  assert.deepEqual(clozeParts('La unidad {{FRL}} filtra el aire'), { before: 'La unidad ', answer: 'FRL', after: ' filtra el aire' });
+  assert.equal(clozeParts('sin espacio'), null);
+  assert.equal(clozeParts('{{a}} y {{b}}'), null);
+  assert.equal(clozeText('La unidad {{FRL}} filtra', false), 'La unidad [ … ] filtra');
+  assert.equal(clozeText('La unidad {{FRL}} filtra', true), 'La unidad **FRL** filtra');
+  assert.equal(cardError({ kind: 'cloze', front: 'sin marca', back: '' }), 'Marca la palabra que se oculta con {{ }}.');
+  assert.equal(cardError({ kind: 'basic', front: 'P', back: '' }), 'Falta la respuesta.');
+  assert.equal(cardError({ kind: 'basic', front: 'P', back: 'R' }), null);
+  assert.deepEqual(convertKind({ kind: 'basic', front: 'La unidad FRL filtra el aire', back: 'FRL' }, 'cloze'), { kind: 'cloze', front: 'La unidad {{FRL}} filtra el aire', back: '' });
+  assert.deepEqual(convertKind({ kind: 'cloze', front: 'La unidad {{FRL}} filtra', back: '' }, 'basic'), { kind: 'basic', front: 'La unidad ___ filtra', back: 'FRL' });
+});
+
+test('borradores de la IA: repetidas desmarcadas y cuántas pedir', () => {
+  const d = toDrafts([
+    { kind: 'basic', front: '¿Qué hace la unidad FRL?', back: 'Filtra' },
+    { kind: 'cloze', front: 'La presión es {{fuerza sobre área}}', back: '' },
+    { kind: 'basic', front: '¿Qué hace la unidad FRL?', back: 'Otra' },
+    { kind: 'cloze', front: 'mal formada', back: '' },
+  ], [{ id: 'x', front: 'Ley de Ohm' }]);
+  assert.deepEqual(d.map((x) => x.keep), [true, true, false, false]);
+  assert.equal(d[2].similarTo?.id, 'nueva-0');
+  assert.equal(cardsWanted('palabra '.repeat(100)), 4);
+  assert.equal(cardsWanted('palabra '.repeat(2000)), 12);
+  assert.equal(cardsWanted('palabra '.repeat(10), true), 1);
+});
+
+test('cola del día: tope de nuevas, examen primero, suspendidas fuera', () => {
+  const now = new Date(2026, 9, 19, 10);
+  const C = (id: string, o: Partial<CardLike>): CardLike => ({ id, front: id, back: '', subject_id: 'a', ...o });
+  const cards = [
+    C('n1', { fsrs_state: 0, created_at: '2026-10-01', subject_id: 'a' }),
+    C('n2', { fsrs_state: 0, created_at: '2026-10-02', subject_id: 'fis' }),
+    C('n3', { fsrs_state: 0, created_at: '2026-10-03', subject_id: 'a' }),
+    C('r1', { fsrs_state: 2, due_at: new Date(2026, 9, 18).toISOString() }),
+    C('r2', { fsrs_state: 2, due_at: new Date(2026, 9, 15).toISOString() }),
+    C('r3', { fsrs_state: 2, due_at: new Date(2026, 9, 25).toISOString() }),
+    C('l1', { fsrs_state: 1, due_at: new Date(2026, 9, 19, 10, 5).toISOString() }),
+    C('s1', { fsrs_state: 2, due_at: new Date(2026, 9, 10).toISOString(), suspended: true }),
+  ];
+  const q = buildQueue({ cards, now, newPerDay: 2, newDoneToday: 0, examDays: { fis: 4 } });
+  assert.deepEqual(q.due.map((c) => c.id), ['r2', 'r1']);
+  assert.deepEqual(q.fresh.map((c) => c.id), ['n2', 'n1']);
+  assert.deepEqual(q.learning.map((c) => c.id), ['l1']);
+  assert.equal(buildQueue({ cards, now, newPerDay: 2, newDoneToday: 5 }).fresh.length, 0);
+  assert.deepEqual(buildQueue({ cards, now, newPerDay: 10, newDoneToday: 0, subjectId: 'fis' }).fresh.map((c) => c.id), ['n2']);
+  assert.deepEqual(cramQueue(cards, 'a').map((c) => c.id).slice(-2), ['n1', 'n3']);
+});
+
+test('estadísticas: tiempo estimado, retención y pronóstico', () => {
+  assert.equal(secondsPerCard([]), 10);
+  const rs = Array.from({ length: 10 }, (_, i) => ({ reviewed_at: new Date(2026, 9, 18).toISOString(), rating: i < 8 ? 3 : 1, duration_ms: 8000, state_before: 2 }));
+  assert.equal(secondsPerCard(rs), 8);
+  assert.equal(estimateLabel(30, 8), 'unos 4 min');
+  assert.equal(retentionPct(rs, 0), 80);
+  const now = new Date(2026, 9, 19, 10);
+  const f = forecast([
+    { id: 'a', front: '', back: '', subject_id: null, fsrs_state: 2, due_at: new Date(2026, 9, 10).toISOString() },
+    { id: 'b', front: '', back: '', subject_id: null, fsrs_state: 2, due_at: new Date(2026, 9, 20, 9).toISOString() },
+    { id: 'c', front: '', back: '', subject_id: null, fsrs_state: 0 },
+  ], now, 7);
+  assert.deepEqual(f.slice(0, 2).map((x) => x.n), [1, 1]);
+});
+
+test('IA de tarjetas: instrucciones y validación de lo que devuelve', async () => {
+  const { flashcardPrompt, parseCards } = await import('../supabase/functions/_shared/cards');
+  const p = flashcardPrompt('El aire comprimido...', 3, ['¿Qué es la FRL?'], 'note');
+  assert.match(p, /exactamente 3 tarjetas/);
+  assert.match(p, /NO repitas[\s\S]*¿Qué es la FRL\?/);
+  const got = parseCards('Aquí van: [{"kind":"basic","front":"¿P?","back":"R"},{"kind":"cloze","front":"La {{FRL}} filtra","back":"x"},{"kind":"cloze","front":"sin espacio","back":""},{"kind":"basic","front":"sin respuesta","back":""},{"kind":"raro","front":"a","back":"b"}] listo');
+  assert.deepEqual(got, [{ kind: 'basic', front: '¿P?', back: 'R' }, { kind: 'cloze', front: 'La {{FRL}} filtra', back: '' }]);
+  assert.deepEqual(parseCards('no es json'), []);
+  assert.equal(parseCards(JSON.stringify(Array.from({ length: 20 }, () => ({ front: 'a', back: 'b' })))).length, 12);
+});
+
+test('sesión: una nueva cada 3 repasos y titulo del fragmento', async () => {
+  const { interleave, headingBefore } = await import('../lib/cards');
+  assert.deepEqual(interleave(['r1', 'r2', 'r3', 'r4'], ['n1', 'n2']), ['r1', 'r2', 'r3', 'n1', 'r4', 'n2']);
+  assert.deepEqual(interleave([], ['n1']), ['n1']);
+  const md = '# Tema\n\nintro\n\n## Fuerza limitada\n\nLa fuerza depende del **área**.\n\n## Ruido\n\n85 dB';
+  assert.equal(headingBefore(md, 'La fuerza depende del área'), 'Fuerza limitada');
+  assert.equal(headingBefore(md, '85 dB'), 'Ruido');
+  assert.equal(headingBefore(md, 'no está'), null);
+});
+
+test('completar dentro de una fórmula usa un recuadro de LaTeX', async () => {
+  const { clozeText } = await import('../lib/cards');
+  assert.equal(clozeText('Newton: $F = {{m \\cdot a}}$', false), 'Newton: $F = \\boxed{\\;?\\;}$');
+  assert.equal(clozeText('Newton: $F = {{m \\cdot a}}$', true), 'Newton: $F = \\boxed{m \\cdot a}$');
+  assert.equal(clozeText('Cuesta \\$20 y la {{FRL}} filtra', false), 'Cuesta \\$20 y la [ … ] filtra');
+});

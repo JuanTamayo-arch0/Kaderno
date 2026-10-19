@@ -998,3 +998,36 @@ Reemplaza el patio de la pantalla de la sala. No necesita migración.
 - Si apagas "Mostrar la mascota", tampoco aparecen las de la sala.
 - La versión pequeña del patio sigue en la tarjeta "Enfocar juntos" de Enfoque cuando el ajuste está apagado.
 - Técnico: `lib/pets/friends.ts` (controlador de varias mascotas en una capa propia, debajo de la tuya) reutiliza `PetMotion` y las funciones de mundo compartidas de `lib/pets/dom.ts` (piso, menú lateral, tarjetas y obstáculos). `components/pets/FriendPets.tsx` lo monta en el layout.
+
+## Versión 20 (parte 5): Repaso nuevo
+
+### 1. Migración
+
+Vuelve a correr `supabase/schema_v19.sql` completo en el SQL Editor (es idempotente). La sección "FASE 1" agrega:
+
+- Columnas nuevas en `flashcards`: `kind` (basic o cloze), `fsrs_state`, `stability`, `difficulty`, `due_at`, `suspended`, `source_heading`, `created_from`, `learning_steps`, `scheduled_days`.
+- Migración de las tarjetas que ya existen: las que nunca se repasaron quedan como nuevas; las demás pasan a "repaso" con estabilidad y dificultad sacadas del SM-2 y vencen el mismo día que antes. Nadie pierde su avance ni recibe una avalancha.
+- Tabla `flashcard_reviews` (un registro por respuesta, con RLS).
+- Trigger que da monedas a la mascota por cada repaso (solo si ya existen las tablas de la mascota).
+- Tabla `ai_usage` y función `ai_take`: tope diario de usos de IA por persona (30 generaciones de tarjetas al día).
+
+La app vieja sigue funcionando: si alguien aún no tiene las columnas, Repaso usa el SM-2 de antes y muestra un aviso.
+
+### 2. Función `ai`
+
+Redespliega la función: `supabase functions deploy ai`. Ahora pide tarjetas básicas y de completar, evita repetir las que ya hay en la nota, valida lo que responde el modelo y aplica el tope diario (responde 429 con un mensaje claro al pasarlo). Usa `AI_MODEL` si existe; si no, `OCR_MODEL`.
+
+### 3. Lo que cambia para el usuario
+
+- **Repaso con FSRS:** cuatro botones (Otra vez, Difícil, Bien, Fácil) con el intervalo que da cada uno. Pasos cortos dentro de la sesión, nuevas por día (15 por defecto) y retención objetivo (85, 90 o 95 %) en **Ajustes → Estudio** o en el ícono de ajustes de Repaso.
+- **Sesión:** deshacer (Z), editar (E), no mostrar más, saltar, escribir la respuesta antes de voltear (opcional), "Solo 5 minutos" y "Ver en la nota" (abre la nota en el título de donde salió la tarjeta).
+- **Tarjetas de completar:** `{{respuesta}}` dentro del texto; también dentro de fórmulas.
+- **Crear con IA:** antes de guardar se revisan en "Revisa tus tarjetas": se marcan las parecidas a otras que ya tienes, se puede rehacer una, quitarla o agregar a mano. Las nuevas entran poco a poco.
+- **Mazos:** búsqueda, filtros (nuevas, difíciles, suspendidas), agrupadas por materia y nota, selección para mover, suspender o borrar.
+- **Estadísticas:** retención de 30 días, repasos por día (12 semanas) y lo que viene en 30 días.
+- **Parcial cerca:** con un parcial en 7 días o menos sale "Repaso intensivo" de esa materia.
+- Hoy muestra cuánto tiempo toma el repaso del día.
+
+### 4. Pruebas
+
+`npm test` (FSRS, completar, duplicados, cola, lectura de la respuesta de la IA) y `bash tests/run_sql.sh` (incluye `tests/sql/19b_pruebas.sql`: migración de tarjetas viejas, sincronía de fechas, registro de repasos y RLS, monedas y tope de IA).
