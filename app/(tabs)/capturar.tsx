@@ -38,7 +38,7 @@ async function fileToBase64(file: File): Promise<{ uri: string; base64: string }
 
 export default function Capturar() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ subjectId?: string }>();
+  const params = useLocalSearchParams<{ subjectId?: string; compartido?: string }>();
   const { isWide } = useResponsive();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [pages, setPages] = useState<Page[]>([]);
@@ -63,6 +63,21 @@ export default function Capturar() {
       setPages((ps) => ps.map((p) => p.uri === img.uri ? { ...p, status: 'fail' } : p));
     }
   }, []);
+
+  // Foto compartida desde otra app (la dejó el service worker en la caché).
+  useEffect(() => {
+    if (params.compartido !== '1' || Platform.OS !== 'web' || typeof caches === 'undefined') return;
+    (async () => {
+      try {
+        const cache = await caches.open('kaderno-compartido');
+        const res = await cache.match('/compartido-foto');
+        if (!res) return;
+        const blob = await res.blob();
+        await cache.delete('/compartido-foto');
+        addPage(await fileToBase64(new File([blob], 'compartida.jpg', { type: blob.type || 'image/jpeg' })));
+      } catch { /* sin foto: se sigue normal */ }
+    })();
+  }, [params.compartido]);
 
   async function pick(fromCamera: boolean) {
     const perm = fromCamera ? await (await loadPicker()).requestCameraPermissionsAsync() : await (await loadPicker()).requestMediaLibraryPermissionsAsync();

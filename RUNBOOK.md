@@ -1106,3 +1106,31 @@ No hay que redesplegar funciones.
 ### 3. Pruebas
 
 `npm test` (cuándo se ofrece el ritual y qué semana, entregas de la semana, prioridades, la semana pasada, ritual del semestre y WOOP) y `bash tests/run_sql.sh` (incluye `tests/sql/19e_pruebas.sql`: límites del plan de la semana, una meta activa, RLS y el aviso del lunes).
+
+## Versión 21 (parte 1): organizar el día
+
+Requiere la versión 20 completa (`schema_v19.sql` con sus cuatro fases).
+
+### 1. Migración y funciones
+
+1. Corre `supabase/schema_v20.sql` en el SQL Editor (es idempotente). La fase 1 agrega:
+   - `assignments.repeat_rule` y `repeat_parent_id`: tareas que se repiten. Al marcar una como hecha, la base crea la siguiente con la misma materia, tipo, pasos (sin marcar), estimado y hora planeada; nunca nace vencida y no se duplica aunque se marque dos veces. `skip_repeat()` salta una vez.
+   - `assignments.inbox`: la bandeja. `assignments.plan_day` y `plan_band`: mañana, tarde o noche de un día.
+   - `day_reviews`: el cierre del día.
+   - `enqueue_day_close()` dentro de `enqueue_all()`: aviso opcional a la hora del cierre.
+2. No hay funciones nuevas que desplegar. El `manifest.webmanifest` y el `sw.js` cambian (accesos directos y compartir hacia Kaderno): salen con el despliegue normal de la web.
+
+### 2. Lo que cambia para el usuario
+
+- **Tareas que se repiten:** en Agregar se escribe "lab de física cada martes", "quiz de inglés cada viernes 8am", "leer 20 páginas cada día", "cada día hábil", "cada 2 semanas", "cada mes el 15", "cada lunes y miércoles hasta el 5 dic" o "cada! 3 días" (contar desde que la terminas). En el formulario de la tarea: "Repetir" (cada día, días hábiles, cada semana con sus días, cada 2 semanas, cada mes), "hasta" y "Contar desde que la termino". La fila muestra "cada martes" y el menú tiene "Saltar esta vez".
+- **Bandeja:** lo que agregas sin fecha ni materia cae ahí y no ensucia Hoy. Hoy muestra "Bandeja: 4 por ordenar" (también en la barra lateral) y se ordena una por una: hoy, mañana, otro día, materia, convertir en nota, algún día o borrar (atajos H, M, N, A, Supr).
+- **Dictar:** botón de micrófono en Agregar donde el navegador lo permite.
+- **Accesos directos** del ícono instalado: Agregar tarea, Enfoque, Repaso y Capturar apunte. **Compartir hacia Kaderno** (Android, app instalada): un texto o enlace cae en la bandeja; una foto se abre en Capturar para digitalizarla. En iPhone no aparece (Safari no lo permite).
+- **Mi día** (en Hoy, junto a "Lista"): línea de tiempo de 6 am a 11 pm con clases, planes con hora y enfoque hecho, la línea de "ahora" y franjas Mañana, Tarde y Noche. Lo pendiente sin hora sale al lado: se pone con "Poner hora" y tocando la hora (o arrastrándolo en el computador). Los bloques se mueven arrastrando y se estiran para cambiar la duración; tocarlos da Empezar enfoque, Marcar hecha, Mover a mañana y Quitar la hora. En el computador también la semana.
+- **Aviso de sobrecarga:** "Planeaste 7 h y te quedan 4 h libres hoy" (con "tu tiempo real") y la sugerencia de pasar a mañana lo que vence más lejos.
+- **Cerrar el día:** desde las 6 pm (o la hora elegida en Ajustes → Avisos), en 3 pasos: lo que hiciste, lo que quedó (mañana, otro día o a la bandeja) y "¿Qué aprendiste hoy?", que sale en el ritual del lunes. Lo planeado ayer que no se hizo ni se movió aparece arriba como "Quedó de ayer". Cerrar el día no cuenta para la racha.
+- **Cuenta regresiva** de exámenes en Hoy y en Estudiar ("Parcial 3 de Física · 13 días"); tocarla abre el examen con su plan de repaso.
+
+### 3. Pruebas
+
+`npm test` (incluye `tests/v21.test.ts`: lector de repeticiones, siguiente fecha con fin de mes, hasta, atrasadas y "desde que la termino", agregar rápido, carriles de la línea de tiempo, horas libres, sobrecarga, cierre, cuenta regresiva y bandeja) y `bash tests/run_sql.sh` (incluye `tests/sql/20_pruebas.sql`: misma siguiente fecha que la app, una sola repetición aunque se marque dos veces, saltar, cierre privado y aviso del cierre).

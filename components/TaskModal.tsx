@@ -27,6 +27,8 @@ import { shouldOffer, planProgress, shiftSessions, KIND_TEXT } from '../lib/exam
 import { openExamPlan, dataChanged } from '../lib/uiBus';
 import { confirm } from '../lib/feedback';
 import { useRouter } from 'expo-router';
+import { cleanRule, ruleText, type RepeatRule } from '../lib/repeat';
+import { hasV20Cols } from '../lib/db';
 
 // ============================================================
 //  Crear / editar tarea personal.
@@ -61,6 +63,7 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
   const [ratio, setRatio] = useState<number | null>(null);
   const [hintOff, setHintOff] = useState(false);
   const [sessions, setSessions] = useState<SessionTask[]>([]);
+  const [repeat, setRepeat] = useState<RepeatRule | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -84,6 +87,7 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
     setHintOff(!!t?.estimate_min);
     getEstimateRatio().then(setRatio).catch(() => setRatio(null));
     setSessions([]);
+    setRepeat(cleanRule(t?.repeat_rule));
     if (t && ['examen', 'quiz'].includes(String(t.type))) getSessions(t.id).then(setSessions).catch(() => {});
     loadTaskTypes().then(() => setTypesRev((n) => n + 1)).catch(() => {});
     if (t) getSteps(t.id).then(setSteps).catch(() => {});
@@ -106,6 +110,9 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
         estimate_min: estimate,
         // El plan solo se manda si hay uno (o había y se quitó): así no molesta sin la migración.
         ...(plan.at || editTask?.plan_at ? { plan_at: plan.at, plan_place: plan.at ? plan.place : null } : {}),
+        ...(repeat || editTask?.repeat_rule ? { repeat_rule: date ? repeat : null } : {}),
+        // Con fecha o materia sale de la bandeja.
+        ...(editTask?.inbox && (date || subjectId) ? { inbox: false } : {}),
       };
       let id = editTask?.id;
       if (editTask) {
@@ -245,6 +252,8 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
         </>
       )}
 
+      {date && hasV20Cols() && <RepeatPicker value={repeat} onChange={setRepeat} date={date} />}
+
       {hasPlanCols() && (needsPlan(date, new Date()) || !!plan.at) && (
         <WhenPicker title={title} dueDate={date} dueTime={time} value={plan} onChange={setPlan} excludeId={editTask?.id ?? null} />
       )}
@@ -356,3 +365,59 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
 }
 
 function lbl() { return { color: C.muted, fontSize: 12.5, fontWeight: '600' as const, marginTop: 14, marginBottom: 8 }; }
+
+// ---------- Repetir (v21) ----------
+const LETTERS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];
+function RepeatPicker({ value, onChange, date }: { value: RepeatRule | null; onChange: (r: RepeatRule | null) => void; date: string }) {
+  const d = new Date(date + 'T12:00:00');
+  const kind = !value ? 'none' : value.freq === 'day' ? 'day' : value.freq === 'month' ? 'month'
+    : value.days?.join() === '1,2,3,4,5' && value.interval === 1 ? 'weekdays' : value.interval === 2 ? 'week2' : 'week';
+  const keep = (r: RepeatRule) => ({ ...r, ...(value?.until ? { until: value.until } : {}), ...(value?.fromDone ? { fromDone: true } : {}) });
+  const opts: { k: string; label: string; make: () => RepeatRule | null }[] = [
+    { k: 'none', label: 'No se repite', make: () => null },
+    { k: 'day', label: 'Cada día', make: () => keep({ freq: 'day', interval: 1 }) },
+    { k: 'weekdays', label: 'Días hábiles', make: () => keep({ freq: 'week', interval: 1, days: [1, 2, 3, 4, 5] }) },
+    { k: 'week', label: 'Cada semana', make: () => keep({ freq: 'week', interval: 1, days: [d.getDay()] }) },
+    { k: 'week2', label: 'Cada 2 semanas', make: () => keep({ freq: 'week', interval: 2, days: [d.getDay()] }) },
+    { k: 'month', label: 'Cada mes', make: () => keep({ freq: 'month', interval: 1, monthDay: d.getDate() }) },
+  ];
+  const chip = (key: string, label: string, on: boolean, onPress: () => void, small = false) => (
+    <Pressable key={key} onPress={onPress} accessibilityRole="radio" accessibilityState={{ checked: on }}
+      style={{ minHeight: small ? 32 : 34, minWidth: small ? 32 : undefined, alignItems: 'center', justifyContent: 'center', paddingHorizontal: small ? 0 : 11, borderRadius: 99, borderWidth: 1, borderColor: on ? C.brand : C.line, backgroundColor: on ? C.brand : 'transparent' }}>
+      <Text style={{ color: on ? C.onBrand : C.text, fontSize: 12.5, fontWeight: on ? '700' : '500' }}>{label}</Text>
+    </Pressable>
+  );
+  return (
+    <View>
+      <Text style={lbl()}>Repetir</Text>
+      <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }} accessibilityRole="radiogroup" accessibilityLabel="Repetir">
+        {opts.map((o) => chip(o.k, o.label, kind === o.k, () => onChange(o.make())))}
+      </View>
+      {value && value.freq === 'week' && kind !== 'weekdays' && (
+        <View style={{ flexDirection: 'row', gap: 6, marginTop: 8 }} accessibilityLabel="Días de la semana">
+          {WEEK_ORDER.map((n) => {
+            const on = !!value.days?.includes(n);
+            return chip('d' + n, LETTERS[n], on, () => {
+              const days = on ? (value.days ?? []).filter((x) => x !== n) : [...(value.days ?? []), n];
+              if (days.length) onChange({ ...value, days: days.sort() });
+            }, true);
+          })}
+        </View>
+      )}
+      {value && (
+        <View style={{ marginTop: 10, gap: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <DateField label="Hasta (opcional)" value={value.until ?? null} onChange={(v) => onChange({ ...value, until: v })} />
+          </View>
+          <Pressable onPress={() => onChange({ ...value, fromDone: !value.fromDone })} accessibilityRole="checkbox" accessibilityState={{ checked: !!value.fromDone }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 }}>
+            <Ionicons name={value.fromDone ? 'checkbox' : 'square-outline'} size={18} color={value.fromDone ? C.brand : C.muted} />
+            <Text style={{ color: C.text, fontSize: 13 }}>Contar desde que la termino</Text>
+          </Pressable>
+          <Text style={{ color: C.muted, fontSize: 12 }}>Se repite {ruleText(value)}. Al marcarla hecha aparece la siguiente.</Text>
+        </View>
+      )}
+    </View>
+  );
+}

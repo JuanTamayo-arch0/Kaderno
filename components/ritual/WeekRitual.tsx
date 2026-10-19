@@ -10,6 +10,7 @@ import { lastWeekData, saveWeekPlan, getGoals, getWeekPlan, type Goal } from '..
 import { suggestSlots } from '../../lib/planHelpers';
 import { weekItems, suggestPriorities, lastWeekSummary, cleanPriorities, type Priority } from '../../lib/rituals';
 import { addDaysISO } from '../../lib/streaks';
+import { getDiary } from '../../lib/dayDb';
 import { slotLabel } from '../../lib/planSlots';
 import { toast, notify, friendlyError } from '../../lib/feedback';
 import { dataChanged, streakChanged } from '../../lib/uiBus';
@@ -35,10 +36,12 @@ export function WeekRitual({ visible, weekStart, onClose, onDone }: { visible: b
   const [opts, setOpts] = useState<Record<number, Date[]>>({});
   const [goal, setGoal] = useState(4);
   const [busy, setBusy] = useState(false);
+  const [diary, setDiary] = useState<{ day: string; note: string }[]>([]);
 
   useEffect(() => {
     if (!visible) return;
     setStep(0); setPrio([]); setTimes({}); setOpts({}); setText(''); setTasks(null);
+    getDiary(addDaysISO(weekStart, -7), weekStart).then(setDiary).catch(() => setDiary([]));
     Promise.all([getTasks(), getSchedule().catch(() => []), getStudyPrefs(), lastWeekData(weekStart).catch(() => null), getGoals().catch(() => []), getWeekPlan(weekStart).catch(() => null)])
       .then(([t, sc, prefs, lw, g, prev]) => {
         setTasks(t); setClasses(sc.length); setGoal(prev?.goal_days ?? prefs.weeklyGoal); setGoals(g);
@@ -106,6 +109,12 @@ export function WeekRitual({ visible, weekStart, onClose, onDone }: { visible: b
           <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>La semana pasada</Text>
           <Text style={{ color: C.text, fontSize: 13.5 }}>{summary.text}</Text>
           {!!summary.vs && <Text style={{ color: C.muted, fontSize: 13 }}>{summary.vs}</Text>}
+        </View>
+      )}
+      {diary.length > 0 && (
+        <View style={{ gap: 4 }}>
+          <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>Lo que aprendiste</Text>
+          {diary.slice(-5).map((d) => <Text key={d.day} style={{ color: C.muted, fontSize: 13 }}>{dayLabel(d.day)}: <Text style={{ color: C.text }}>{d.note}</Text></Text>)}
         </View>
       )}
       <Group title={`Esta semana${classes ? ` · ${classes} ${classes === 1 ? 'clase' : 'clases'}` : ''}`} rows={items.thisWeek} empty="Nada con fecha esta semana." />

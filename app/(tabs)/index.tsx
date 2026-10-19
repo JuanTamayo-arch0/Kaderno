@@ -49,6 +49,14 @@ import { SemesterRitual } from '../../components/ritual/SemesterRitual';
 import { getWeekPlan, saveWeekPlan, getRitualPrefs, saveRitualPrefs, type RitualPrefs } from '../../lib/ritualsDb';
 import { ritualWeekStart, shouldOfferRitual, shouldOfferSemester, tomorrowISO, localISO, type WeekPlan, type Priority } from '../../lib/rituals';
 import { weekStartISO } from '../../lib/streaks';
+import { Countdown } from '../../components/day/Countdown';
+import { DayPlanner } from '../../components/day/DayPlanner';
+import { InboxSort } from '../../components/day/InboxSort';
+import { DayClose } from '../../components/day/DayClose';
+import { getDayReview } from '../../lib/dayDb';
+import { shouldOfferClose, carryOver, localISO as dayISO } from '../../lib/day';
+import { skipRepeat, updateTask } from '../../lib/db';
+import { ruleText } from '../../lib/repeat';
 
 // ============================================================
 //  Hoy.
@@ -99,6 +107,12 @@ export default function Hoy() {
   const [ritualPrefs, setRitualPrefs] = useState<RitualPrefs | null>(null);
   const [ritualOpen, setRitualOpen] = useState(false);
   const [semesterOpen, setSemesterOpen] = useState(false);
+  const [modo, setModo] = useState<'lista' | 'dia'>('lista');
+  const [inboxOpen, setInboxOpen] = useState(false);
+  const [closeOpen, setCloseOpen] = useState(false);
+  const [reviewed, setReviewed] = useState(true);
+  const [closeHour, setCloseHour] = useState(18);
+  const [carryHidden, setCarryHidden] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -121,6 +135,8 @@ export default function Hoy() {
       const ho = (prefs as any)?.hoyOcultas ?? {};
       setHiddenH({ tasks: Array.isArray(ho.tasks) ? ho.tasks : [], projects: Array.isArray(ho.projects) ? ho.projects : [] });
       setVista(vistaFromPrefs(prefs));
+      setCloseHour(Number((prefs as any)?.notif?.close_hour) || 18);
+      getDayReview(dayISO(new Date())).then((r) => setReviewed(!!r)).catch(() => setReviewed(true));
       // Se traen siempre, aunque la vista sea "Materias", para cambiar de vista al instante.
       ptP.then((pt) => { if (!pt) return; setPtasks(pt); pruneHiddenTasks(pt.map((x) => x.id)).catch(() => {}); });
       countToday().then((c) => { setRepaso(c.total); setRepasoSecs(c.secs); }).catch(() => {});
@@ -148,6 +164,12 @@ export default function Hoy() {
   // Atajo del ícono instalado: "Agregar tarea".
   const params = useLocalSearchParams<{ agregar?: string; semana?: string }>();
   useEffect(() => { if (params.agregar === '1') { openAdd(); router.setParams({ agregar: undefined } as any); } }, [params.agregar]);
+  useEffect(() => { AsyncStorage.getItem('kd:hoyModo').then((v) => { if (v === 'dia') setModo('dia'); }).catch(() => {}); }, []);
+  const changeModo = (m: 'lista' | 'dia') => { setModo(m); AsyncStorage.setItem('kd:hoyModo', m).catch(() => {}); };
+  // Desde los avisos: cerrar el día y ordenar la bandeja.
+  const p2 = useLocalSearchParams<{ cierre?: string; bandeja?: string }>();
+  useEffect(() => { if (p2.cierre === '1') { setCloseOpen(true); router.setParams({ cierre: undefined } as any); } }, [p2.cierre]);
+  useEffect(() => { if (p2.bandeja === '1') { setInboxOpen(true); router.setParams({ bandeja: undefined } as any); } }, [p2.bandeja]);
   // Desde el aviso del lunes.
   useEffect(() => { if (params.semana === '1') { setRitualOpen(true); router.setParams({ semana: undefined } as any); } }, [params.semana]);
 
@@ -176,6 +198,8 @@ export default function Hoy() {
       await toggleTask(t.id, done);
       refreshNavCounts(true);
       if (done) { emitPetEvent({ type: 'tarea_hecha', allDone }); refreshCoinsSoon(); forgetEstimateRatio(); }
+      // La siguiente repetición la crea la base: se vuelve a cargar para verla.
+      if (done && t.repeat_rule) setTimeout(load, 700);
       streakChanged();
       // Tu tiempo real: "Te tomó 50 min (calculaste 30)".
       const took = done ? tookText(focusBy[t.id], t.estimate_min) : null;
@@ -222,6 +246,10 @@ export default function Hoy() {
         ? { label: 'Hacer el simulacro', icon: 'clipboard-outline', onPress: () => startTask(t) }
         : { label: 'Enfocarme en esta tarea', icon: 'timer-outline', onPress: () => { startFocus({ taskId: t.id, taskTitle: t.title, subjectId: t.subject_id }); router.push('/enfoque'); } },
       ...(['examen', 'quiz'].includes(String(t.type)) && t.status !== 'done' ? [{ label: 'Plan de repaso', icon: 'calendar-number-outline' as const, onPress: () => openTask(t) }] : []),
+      ...(t.repeat_rule && t.status !== 'done' ? [{ label: 'Saltar esta vez', icon: 'play-skip-forward-outline' as const, onPress: async () => {
+        try { await skipRepeat(t.id); toast(`Saltada. Sigue ${ruleText(t.repeat_rule)}.`, { actionLabel: 'Ver', onAction: load }); load(); refreshNavCounts(true); }
+        catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
+      } }] : []),
       { label: 'Mover a hoy', icon: 'today-outline', onPress: () => move(t, isoDate(today), 'hoy') },
       { label: 'Mover a mañana', icon: 'arrow-forward-outline', onPress: () => move(t, isoDate(addDays(today, 1)), 'mañana') },
       { label: 'Mover a la próxima semana', icon: 'play-skip-forward-outline', onPress: () => move(t, isoDate(addDays(today, 7 - ((today.getDay() + 6) % 7))), 'el lunes') },
@@ -232,7 +260,8 @@ export default function Hoy() {
   };
 
   // ---------- Datos derivados ----------
-  const live = (tasks ?? []).filter((t) => !hidden.has(t.id) && (!t.subject_id || !subjects.length || subjects.some((s) => s.id === t.subject_id)));
+  const inboxTasks = (tasks ?? []).filter((t) => t.inbox && t.status !== 'done' && !hidden.has(t.id));
+  const live = (tasks ?? []).filter((t) => !t.inbox && !hidden.has(t.id) && (!t.subject_id || !subjects.length || subjects.some((s) => s.id === t.subject_id)));
   const allPending = live.filter((t) => t.status !== 'done');
   // Tareas de proyecto que no se ocultaron de Hoy (por tarea o por proyecto).
   const notHidden = allPtasks.filter((p) => !hiddenH.tasks.includes(p.id) && !hiddenH.projects.includes(p.project_id));
@@ -284,6 +313,18 @@ export default function Hoy() {
   const offerRitual = ritualPlan !== undefined && !!ritualPrefs && shouldOfferRitual(now, ritualPlan, ritualPrefs.monday);
   const offerSemester = !!ritualPrefs && !offerRitual && shouldOfferSemester(subjects as any, now, !!ritualPrefs.semesterAt || ritualPrefs.semesterDismissed);
   const priorities = weekPlan?.done_at ? weekPlan.priorities : [];
+  const offerClose = shouldOfferClose(now, reviewed, closeHour);
+  const yesterday = (() => { const d = new Date(now); d.setDate(d.getDate() - 1); return dayISO(d); })();
+  const carry = carryHidden ? [] : carryOver(allPending, dayISO(now), yesterday);
+  async function bringToday(list: Task[]) {
+    try {
+      for (const t of list) {
+        if (t.plan_at) { const d = new Date(t.plan_at); d.setFullYear(now.getFullYear(), now.getMonth(), now.getDate()); await updateTask(t.id, { plan_at: d.toISOString() }); }
+        else await updateTask(t.id, { plan_day: dayISO(now) });
+      }
+      toast(list.length === 1 ? 'Quedó para hoy' : `${list.length} quedaron para hoy`, { tone: 'good' }); load();
+    } catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
+  }
   async function togglePriority(p: Priority, i: number) {
     if (p.kind === 'task') { const t = (tasks ?? []).find((x) => x.id === p.taskId); if (t) toggle(t); return; }
     if (!weekPlan) return;
@@ -513,6 +554,36 @@ export default function Hoy() {
   const left = (
     <>
       {summaryLine}
+      <Countdown tasks={allPending} />
+      {offerClose && (
+        <Card style={{ marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap', borderLeftWidth: 4, borderLeftColor: C.brand2 }}>
+          <Ionicons name="moon-outline" size={22} color={C.brand2} />
+          <View style={{ flex: 1, minWidth: 180 }}>
+            <Text style={{ color: C.text, fontWeight: '700', fontSize: 14 }}>Cerrar el día</Text>
+            <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>1 minuto: lo que hiciste y qué pasa con lo que quedó.</Text>
+          </View>
+          <Button label="Cerrar el día" size="sm" onPress={() => setCloseOpen(true)} />
+        </Card>
+      )}
+      {carry.length > 0 && (
+        <Card style={{ marginBottom: 12, gap: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Ionicons name="return-down-forward-outline" size={16} color={C.brand} />
+            <Text style={{ color: C.text, fontWeight: '700', fontSize: 14, flex: 1 }}>Quedó de ayer</Text>
+            <IconButton icon="close" label="Ocultar" onPress={() => setCarryHidden(true)} />
+          </View>
+          {carry.slice(0, 4).map((t) => <Text key={t.id} style={{ color: C.text, fontSize: 13.5 }} numberOfLines={1}>· {t.title}</Text>)}
+          <Button label={carry.length === 1 ? 'Ponerla hoy' : 'Ponerlas hoy'} size="sm" kind="secondary" onPress={() => bringToday(carry)} style={{ alignSelf: 'flex-start' }} />
+        </Card>
+      )}
+      {inboxTasks.length > 0 && (
+        <Pressable onPress={() => setInboxOpen(true)} accessibilityRole="button" accessibilityLabel={`Bandeja: ${inboxTasks.length} por ordenar`}
+          style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: C.line, backgroundColor: hovered ? C.surface2 : C.surface, marginBottom: 12 })}>
+          <Ionicons name="file-tray-outline" size={19} color={C.brand} />
+          <Text style={{ color: C.text, fontSize: 14, fontWeight: '700', flex: 1 }}>Bandeja: {inboxTasks.length} por ordenar</Text>
+          <Text style={{ color: C.brand, fontSize: 13, fontWeight: '700' }}>Ordenar</Text>
+        </Pressable>
+      )}
       {priorities.length > 0 && (
         <Card style={{ marginBottom: 12, gap: 8 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -571,9 +642,14 @@ export default function Hoy() {
       {stalled && <StalledPlan t={stalled} onChanged={load} onStart={() => startTask(stalled)} onDismiss={() => setPlanDismissed((x) => new Set(x).add(stalled.id))} />}
       <PetInvite />
       {(!isWide || width < 1100) && (focusCard ?? nowCard)}
+      <ModoSwitch value={modo} onChange={changeModo} />
+      {modo === 'dia' ? (
+        <DayPlanner tasks={live} slots={slots} subjects={subjects} onChanged={load} onToggle={toggle} onFocusTask={startTask} />
+      ) : <>
       {week}
       {filters}
       {list}
+      </>}
       {hiddenCount > 0 && !filter && vista !== 'materias' && (
         <Pressable onPress={showHidden} accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10 }}>
           <Ionicons name="eye-off-outline" size={16} color={C.muted} />
@@ -603,6 +679,8 @@ export default function Hoy() {
           )}
         </View>
       ) : left}
+      <InboxSort visible={inboxOpen} items={inboxTasks} subjects={subjects} onClose={() => { setInboxOpen(false); load(); }} />
+      <DayClose visible={closeOpen} tasks={live} onClose={() => setCloseOpen(false)} onDone={() => { setReviewed(true); load(); }} />
       <WeekRitual visible={ritualOpen} weekStart={ritualWeekStart(now)} onClose={() => setRitualOpen(false)} onDone={loadWeek} />
       <SemesterRitual visible={semesterOpen} onClose={() => { setSemesterOpen(false); getRitualPrefs().then(setRitualPrefs).catch(() => {}); }} />
     </Screen>
@@ -670,6 +748,27 @@ function ProjectRow({ p, onOpen, actions }: { p: MyProjectTask; onOpen: () => vo
     </Pressable>
     <ActionMenu visible={menu} title={p.title} actions={actions} onClose={() => setMenu(false)} />
     </>
+  );
+}
+
+// Lista de siempre o "Mi día" (línea de tiempo). Se recuerda en el dispositivo.
+function ModoSwitch({ value, onChange }: { value: 'lista' | 'dia'; onChange: (v: 'lista' | 'dia') => void }) {
+  const items: { k: 'lista' | 'dia'; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
+    { k: 'lista', label: 'Lista', icon: 'list-outline' }, { k: 'dia', label: 'Mi día', icon: 'time-outline' },
+  ];
+  return (
+    <View accessibilityRole="radiogroup" accessibilityLabel="Cómo ver Hoy" style={{ flexDirection: 'row', alignSelf: 'flex-start', padding: 3, borderRadius: 12, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.line, marginBottom: 10 }}>
+      {items.map((it) => {
+        const on = it.k === value;
+        return (
+          <Pressable key={it.k} onPress={() => onChange(it.k)} accessibilityRole="radio" accessibilityState={{ checked: on }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 7, paddingHorizontal: 12, borderRadius: 9, minHeight: 34, backgroundColor: on ? C.surface : 'transparent', borderWidth: 1, borderColor: on ? C.line : 'transparent' }}>
+            <Ionicons name={it.icon} size={14} color={on ? C.brand : C.muted} />
+            <Text style={{ color: on ? C.text : C.muted, fontSize: 13, fontWeight: on ? '700' : '600' }}>{it.label}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
 

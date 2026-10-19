@@ -4,6 +4,8 @@ import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { needsPlan } from '../lib/planSlots';
 import { ExamPlanSheet } from './plan/ExamPlanSheet';
+import { ruleText } from '../lib/repeat';
+import { goesToInbox } from '../lib/day';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C } from '../lib/theme';
 import { useResponsive } from '../lib/responsive';
@@ -122,6 +124,9 @@ function AddSheet({ visible, subjects, initialText = '' }: { visible: boolean; s
         title: parsed.title, subject_id: parsed.subjectId, type: parsed.typeKey ?? 'tarea',
         due_date: parsed.dueDate, due_at: parsed.dueDate && parsed.dueTime ? combine(parsed.dueDate, parsed.dueTime) : null,
         remind_days: remindDays(choice), remind_at: at ? at.toISOString() : null,
+        ...(parsed.repeat ? { repeat_rule: parsed.repeat } : {}),
+        // Sin fecha ni materia: a la bandeja (no ensucia Hoy).
+        ...(goesToInbox(parsed) ? { inbox: true } : {}),
       };
       const id = await addTask(row);
       closeAdd();
@@ -130,6 +135,10 @@ function AddSheet({ visible, subjects, initialText = '' }: { visible: boolean; s
       play('add');
       // Si vence mañana o después, la acción invita a decidir cuándo hacerla.
       const askWhen = hasPlanCols() && needsPlan(row.due_date, new Date());
+      if ((row as any).inbox) {
+        toast(`A la bandeja: ${parsed.title}`, { actionLabel: 'Ordenar', onAction: () => router.push({ pathname: '/', params: { bandeja: '1' } } as any) });
+        return;
+      }
       toast(`Agregada: ${parsed.title}${when ? ' · ' + when : ''}`, {
         actionLabel: askWhen ? '¿Cuándo lo haces?' : 'Editar',
         onAction: () => openTask({ id, status: 'pending', description: null, ...row } as Task),
@@ -168,6 +177,7 @@ function AddSheet({ visible, subjects, initialText = '' }: { visible: boolean; s
         <TextInput value={text} onChangeText={setText} autoFocus placeholder='Ej: "parcial cálculo viernes 10am"' placeholderTextColor={C.muted}
           onSubmitEditing={quickCreate} returnKeyType="done" accessibilityLabel="Escribe una tarea"
           style={[{ flex: 1, minWidth: 0, color: C.text, fontSize: 15, paddingVertical: 12, minHeight: 46 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
+        {!text.trim() && <MicButton onText={(t) => setText(t)} />}
         {!!text.trim() && <Button label="Agregar" size="sm" onPress={quickCreate} busy={busy} style={{ marginRight: 6 }} />}
       </View>
       {parsed ? (
@@ -177,7 +187,8 @@ function AddSheet({ visible, subjects, initialText = '' }: { visible: boolean; s
           {tmeta && <Chip text={tmeta.label} color={tmeta.color} />}
           {subj && <Chip text={subj.name} color={subj.color} dot />}
           {parsed.dueDate && <Chip text={fmtDay(fromISODate(parsed.dueDate)) + (parsed.dueTime ? ', ' + fmtHHMM(parsed.dueTime) : '')} icon="calendar-outline" />}
-          {!parsed.dueDate && <Chip text="Sin fecha" icon="calendar-outline" />}
+          {parsed.repeat && <Chip text={ruleText(parsed.repeat)} icon="repeat" />}
+          {!parsed.dueDate && (goesToInbox(parsed) ? <Chip text="A la bandeja" icon="file-tray-outline" /> : <Chip text="Sin fecha" icon="calendar-outline" />)}
         </View>
       ) : (
         <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 8 }}>Escribe la tarea con su materia, día y hora; Kaderno entiende el resto. Enter para agregar.</Text>
@@ -200,6 +211,27 @@ function AddSheet({ visible, subjects, initialText = '' }: { visible: boolean; s
       </ScrollView>
     </Panel>
   );
+}
+
+// Dictar la tarea (reconocimiento de voz del navegador). Si no existe, no aparece.
+function MicButton({ onText }: { onText: (t: string) => void }) {
+  const [on, setOn] = useState(false);
+  const recRef = React.useRef<any>(null);
+  const SR = Platform.OS === 'web' && typeof window !== 'undefined' ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition) : null;
+  useEffect(() => () => { try { recRef.current?.stop(); } catch { /* noop */ } }, []);
+  if (!SR) return null;
+  const toggle = () => {
+    if (on) { try { recRef.current?.stop(); } catch { /* noop */ } return; }
+    try {
+      const rec = new SR();
+      rec.lang = 'es-CO'; rec.interimResults = true; rec.maxAlternatives = 1;
+      rec.onresult = (e: any) => { const t = Array.from(e.results).map((r: any) => r[0].transcript).join(' '); onText(t.trim()); };
+      rec.onend = () => setOn(false);
+      rec.onerror = (e: any) => { setOn(false); if (e?.error === 'not-allowed') toast('Permite el micrófono para dictar.', { tone: 'bad' }); };
+      recRef.current = rec; rec.start(); setOn(true);
+    } catch { setOn(false); }
+  };
+  return <IconButton icon={on ? 'mic' : 'mic-outline'} label={on ? 'Dejar de escuchar' : 'Dictar la tarea'} onPress={toggle} color={on ? C.bad : C.muted} />;
 }
 
 function Chip({ text, color, dot, icon, strong }: { text: string; color?: string; dot?: boolean; icon?: any; strong?: boolean }) {
@@ -346,7 +378,7 @@ function InboxPanel({ visible }: { visible: boolean }) {
       if (xs.some((x) => !x.read_at)) setTimeout(() => { markNotificationsRead().then(() => setNavCounts({ unread: 0 })).catch(() => {}); }, 800);
     }).catch(() => setItems([]));
   }, [visible]);
-  const icon = (k: string): any => k === 'reminder' ? 'alarm-outline' : k === 'daily' ? 'sunny-outline' : k === 'weekly' ? 'stats-chart-outline' : k === 'assigned' ? 'person-add-outline' : k === 'plan' ? 'flag-outline' : 'people-outline';
+  const icon = (k: string): any => k === 'reminder' ? 'alarm-outline' : k === 'daily' ? 'sunny-outline' : k === 'weekly' ? 'stats-chart-outline' : k === 'assigned' ? 'person-add-outline' : k === 'plan' ? 'flag-outline' : k === 'cierre' ? 'moon-outline' : k === 'semana' ? 'compass-outline' : 'people-outline';
   return (
     <Panel visible={visible} onClose={closeInbox} top maxWidth={480}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
