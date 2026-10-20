@@ -421,7 +421,7 @@ export async function remapSlots(plan: { id: string; newSlot: number | null }[])
 import { decode } from 'base64-arraybuffer';
 export async function uploadPhoto(base64: string): Promise<string> {
   const u = await uid();
-  const path = `${u}/${Date.now()}.jpg`;
+  const path = `${u}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
   const { error } = await supabase.storage.from('notes').upload(path, decode(base64), {
     contentType: 'image/jpeg',
     upsert: false,

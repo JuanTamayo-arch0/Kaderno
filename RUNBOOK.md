@@ -1257,3 +1257,29 @@ Vuelve a correr `supabase/schema_v21.sql` completo (es idempotente). La fase 3 a
 
 `npm test` (cuándo preguntar, esfuerzo, veredicto y razones, sugerencias, nota escrita, puntos de la gráfica) y `bash tests/run_sql.sh` (incluye `tests/sql/21c_pruebas.sql`: uno por parcial propio, nota dentro de la escala, "no lo presenté", privado y se borra con el parcial).
 
+## Versión 22 (parte 4): Capturar nueva y lectura de fotos segura
+
+### 1. Funciones
+
+No hay migración. Vuelve a desplegar las dos funciones de IA:
+
+```bash
+npx supabase functions deploy ocr
+npx supabase functions deploy ai
+```
+
+- `ocr` ahora exige sesión y tiene tope de 80 páginas por día y persona (usa `ai_take` de schema_v19). Lee en modo `notes` (Markdown con títulos, tablas, fórmulas y la caja de los dibujos), `board` (pizarra) o `plain` (texto tal cual). Sin modo responde como antes.
+- `ai` exige sesión para todo y suma topes al resumen (40) y a las microtareas (40).
+
+### 2. Lo que cambia para el usuario
+
+- **Modos**: Apuntes, Pizarra, PDF y Cronograma o tarea.
+- **Lectura más fiel**: sale en Markdown con títulos, listas, tablas y fórmulas; lo dudoso queda con [?] y se avisa; los dibujos se recortan y quedan como imagen en su lugar (se pueden quitar). Revisión con la foto al lado en computador (pestañas Foto y Texto en el celular), "Ver cómo queda" y "Leer de nuevo" por página.
+- **Foto más limpia**: girar, recortar arrastrando las esquinas y modo escáner (se puede dejar siempre activo).
+- **Menos pasos**: materia según la clase de ahora (o la última usada), título con el primer título de la foto o "Clase del 20 oct", y guardar en una nota nueva, en la clase de hoy o al final de otra nota. Lo que llevas queda guardado en el dispositivo ("Tienes una captura sin guardar").
+- **Más cosas**: PDF de hasta 20 páginas (sin IA si ya trae texto), pizarra como imagen con el texto debajo, y del cronograma a Importar cronograma o de un enunciado a Nueva tarea con la descripción llena.
+
+### 3. Pruebas
+
+`npm test` (lectura en Markdown y dibujos válidos, materia y título sugeridos, páginas con dibujos, pizarra, recorte, modo escáner, texto de un PDF). No hay pruebas SQL nuevas.
+
