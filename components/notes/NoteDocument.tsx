@@ -22,6 +22,7 @@ import { NoteEditor } from './NoteEditor';
 import type { HeadingItem, NoteEditorHandle, SelectionAction } from './editorTypes';
 import { RecallTest } from './RecallTest';
 import { ShareNoteSheet } from './ShareNoteSheet';
+import { useClassRecorder, RecorderBar, RecordButton, TranscriptPanel, whenSaid, type NoteMark, type SaidFocus } from './ClassRecorder';
 import { recallLabel } from '../../lib/quiz';
 import { extractLinks, refreshLinkTitles } from '../../lib/noteLinks';
 import { noteTitles } from '../../lib/cardsDb';
@@ -68,6 +69,12 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
   const latest = useRef({ title: '', content: '' });
   const ed = useRef<NoteEditorHandle>(null);
   const cbRef = useRef(onNoteChange); cbRef.current = onNoteChange;
+  // Grabar la clase (v22): transcripción en vivo y minuto de cada párrafo.
+  const rec = useClassRecorder(noteId, () => ed.current?.flush() ?? latest.current.content);
+  const [recMarks, setRecMarks] = useState<NoteMark[]>([]);
+  const [said, setSaid] = useState<SaidFocus | null>(null);
+  const [edKey, setEdKey] = useState(0);
+  const panelRef = useRef<View>(null);
 
   useEffect(() => {
     let alive = true;
@@ -145,6 +152,7 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
   // Guardado automático 1,2 s después de dejar de escribir.
   useEffect(() => {
     latest.current = { title, content };
+    if (rec.active) rec.onNoteChange(content);
     if (!note) return;
     if (title === saved.current.title && content === saved.current.content) return;
     setStatus('saving');
@@ -204,6 +212,13 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
     router.push({ pathname: '/oraculo', params: { mode: 'note', noteId, subjectId: note?.subject_id ?? '', noteTitle: title || 'Nota', ...(q ? { q } : {}) } } as any);
   }
   function onSelection(kind: SelectionAction, text: string) {
+    if (kind === 'whenSaid') {
+      const m = whenSaid(recMarks, text);
+      if (!m) { toast('Ese texto no se escribió durante una clase grabada.'); return; }
+      setSaid({ t: m.t, tid: m.tid, key: Date.now() });
+      setTimeout(() => { (panelRef.current as any)?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }); }, 120);
+      return;
+    }
     if (kind === 'flashcard') makeFlashcards(text);
     else askOracle(`Explícame esto de mi nota "${title || 'Nota'}": ${text.slice(0, 600)}`);
   }
@@ -247,6 +262,7 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
           <Text style={{ color: status === 'error' ? C.badText : status === 'saved' ? C.goodText : C.muted, fontSize: 12.5 }}>{statusText}</Text>
         </View>
       )}
+      <RecordButton rec={rec} onStarted={() => setEditing(true)} />
       <Button label={editing ? 'Listo' : 'Editar'} icon={editing ? 'checkmark' : 'create-outline'} size="sm" kind={editing ? 'primary' : 'secondary'} onPress={() => setEditing((v) => !v)} />
       <IconButton icon="ellipsis-horizontal" label="Más opciones de la nota" onPress={() => setMenu(true)} color={C.text} />
     </View>
@@ -254,13 +270,20 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
 
   const doc = (
     <View style={{ width: '100%', maxWidth: 720, alignSelf: 'center' }}>
+      <RecorderBar rec={rec} />
       {meta}
       <TextInput value={title} onChangeText={setTitle} placeholder="Título de la nota" placeholderTextColor={C.muted} multiline accessibilityLabel="Título"
         onContentSizeChange={(e) => setTitleH(e.nativeEvent.contentSize.height)} blurOnSubmit
         style={[{ color: C.text, fontSize: scroll ? 36 : 28, fontWeight: '800', letterSpacing: -0.3, paddingVertical: 4, marginBottom: 14, height: Math.max(scroll ? 50 : 40, titleH) }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
-      <NoteEditor key={noteId} ref={ed} value={content} onChange={setContent} editing={editing} onRequestEdit={() => setEditing(true)} onRequestRead={() => setEditing(false)}
+      <NoteEditor key={`${noteId}:${edKey}`} ref={ed} value={content} onChange={setContent} editing={editing} onRequestEdit={() => setEditing(true)} onRequestRead={() => setEditing(false)}
         onOutline={setHeads} onSelectionAction={onSelection} uploadImage={uploadImage} minHeight={scroll ? 420 : 300}
-        searchNotes={(q) => searchNoteTitles(q, noteId)} onOpenNote={(id) => router.push(`/nota/${id}`)} />
+        searchNotes={(q) => searchNoteTitles(q, noteId)} onOpenNote={(id) => router.push(`/nota/${id}`)} canAskWhenSaid={recMarks.length > 0} />
+      <View ref={panelRef}>
+        <TranscriptPanel noteId={noteId} version={rec.version} focus={said} subjectName={subjects.find((s) => s.id === note.subject_id)?.name ?? null}
+          getMd={() => ed.current?.flush() ?? content} onHasMarks={setRecMarks}
+          onInsert={(md) => { const cur = (ed.current?.flush() ?? content).trimEnd(); setContent(cur ? `${cur}\n\n${md}` : md); setEdKey((k) => k + 1); }}
+          onCards={(txt) => maker.start(txt, 'note', { noteId, subjectId: note.subject_id ?? null, title: title || 'Nota' })} />
+      </View>
     </View>
   );
 

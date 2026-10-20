@@ -2,7 +2,7 @@
 //  Edge Function: ai
 //  Genera un RESUMEN, FLASHCARDS o MICROTAREAS (task: 'steps') a partir de un texto,
 //  usando un modelo de Claude. v20 fase 3: SIMULACRO (quiz), CORRECCIÓN (grade)
-//  y "PONME A PRUEBA" (recall).
+//  y "PONME A PRUEBA" (recall). v22: RESUMEN DE UNA CLASE transcrita (class_summary).
 //
 //  Desplegar:   npx supabase functions deploy ai
 //  (usa la misma ANTHROPIC_API_KEY que ya configuraste para "ocr")
@@ -16,10 +16,11 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { flashcardPrompt, parseCards } from '../_shared/cards.ts';
 import { quizPrompt, parseQuiz, gradePrompt, parseGrades, recallPrompt, parseRecall } from '../_shared/quiz.ts';
+import { classSummaryPrompt, parseClassSummary } from '../_shared/classSummary.ts';
 
 // Usos por día y persona.
-const LIMITS: Record<string, number> = { flashcards: 30, quiz: 5, recall: 10, grade: 25 };
-const LIMIT_TEXT: Record<string, string> = { flashcards: 'creaciones de tarjetas', quiz: 'simulacros', recall: 'pruebas de notas', grade: 'correcciones' };
+const LIMITS: Record<string, number> = { flashcards: 30, quiz: 5, recall: 10, grade: 25, class_summary: 10 };
+const LIMIT_TEXT: Record<string, string> = { flashcards: 'creaciones de tarjetas', quiz: 'simulacros', recall: 'pruebas de notas', grade: 'correcciones', class_summary: 'resúmenes de clase' };
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -52,7 +53,9 @@ Deno.serve(async (req) => {
     }
 
     const headings: string[] = Array.isArray(body.headings) ? body.headings.map(String).slice(0, 40) : [];
-    const prompt = task === 'quiz'
+    const prompt = task === 'class_summary'
+      ? classSummaryPrompt(String(content), String(body.notes_md ?? ''), body.subject ? String(body.subject) : null)
+      : task === 'quiz'
       ? quizPrompt(notes, Number(body.count ?? 10), body.subject ? String(body.subject) : null)
       : task === 'grade'
       ? gradePrompt(items)
@@ -82,6 +85,11 @@ Deno.serve(async (req) => {
     const data = await res.json();
     const text = (data.content ?? []).map((b: any) => b.text ?? '').join('').trim();
 
+    if (task === 'class_summary') {
+      const summary = parseClassSummary(text);
+      if (!summary) return json({ error: 'La IA no pudo resumir la clase, intenta de nuevo.' }, 502);
+      return json({ summary });
+    }
     if (task === 'quiz') {
       const questions = parseQuiz(text, Math.max(1, Math.min(20, Number(body.count ?? 10))), Math.max(1, notes.length));
       if (!questions.length) return json({ error: 'La IA no devolvió preguntas, intenta de nuevo.', questions: [] }, 502);

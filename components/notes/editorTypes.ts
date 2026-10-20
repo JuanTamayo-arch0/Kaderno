@@ -8,7 +8,7 @@ export type NoteEditorHandle = {
   flush: () => string | null;
 };
 
-export type SelectionAction = 'flashcard' | 'explain';
+export type SelectionAction = 'flashcard' | 'explain' | 'whenSaid';
 
 export type NoteEditorProps = {
   /** Markdown inicial. El editor se vuelve a montar al cambiar de nota (usa `key`). */
@@ -30,6 +30,8 @@ export type NoteEditorProps = {
   searchNotes?: (q: string) => Promise<{ id: string; title: string }[]>;
   /** v21: abrir una nota enlazada (kd-note:<id>). */
   onOpenNote?: (id: string) => void;
+  /** v22: la nota tiene clase grabada; al seleccionar se ofrece "¿Qué se decía?". */
+  canAskWhenSaid?: boolean;
 };
 
 /** Prefijo de las imágenes guardadas dentro del texto: ![](kd-img:<ruta>). */
