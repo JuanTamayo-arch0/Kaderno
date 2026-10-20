@@ -14,6 +14,12 @@
 --   · file_highlights: resaltados y comentarios en los PDF de Archivos de la
 --     materia y de los proyectos. Son de cada persona (aunque el archivo sea
 --     de un proyecto en grupo) y se borran con el archivo.
+--
+-- Fase 3 · ¿Cómo te fue?
+--   · exam_results: la nota de un parcial o quiz (o "no lo presenté"), cómo
+--     te sentiste, tus razones y qué harás distinto, con una foto de las
+--     horas de enfoque de ese momento. Uno por parcial. La nota también va a
+--     Calificaciones (grade_id).
 -- =====================================================================
 
 
@@ -131,4 +137,34 @@ do $$ begin
       for each row execute function public._file_highlights_gone('project');
   end if;
 end $$;
+
+
+-- =====================================================================
+--  FASE 3 · ¿Cómo te fue?
+-- =====================================================================
+create table if not exists public.exam_results (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null default auth.uid() references auth.users on delete cascade,
+  task_id    uuid not null unique references public.assignments on delete cascade,
+  subject_id uuid references public.subjects on delete set null,
+  title      text not null default '' check (char_length(title) <= 200),
+  exam_date  date,
+  score      numeric check (score is null or score >= 0),
+  max_score  numeric not null default 5 check (max_score > 0 and max_score <= 1000),
+  skipped    boolean not null default false,
+  felt       smallint check (felt is null or felt between 1 and 5),
+  reasons    text[] not null default '{}' check (cardinality(reasons) <= 12),
+  change     text check (change is null or char_length(change) <= 300),
+  grade_id   uuid references public.grades on delete set null,
+  focus_min  integer not null default 0 check (focus_min between 0 and 100000),
+  created_at timestamptz not null default now(),
+  constraint exam_results_score_chk check (skipped or (score is not null and score <= max_score))
+);
+create index if not exists exam_results_user_idx on public.exam_results (user_id, subject_id, created_at desc);
+alter table public.exam_results enable row level security;
+drop policy if exists "own exam results" on public.exam_results;
+create policy "own exam results" on public.exam_results for all
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid() and exists (select 1 from public.assignments a where a.id = task_id and a.user_id = auth.uid()));
+grant select, insert, update, delete on public.exam_results to authenticated;
 

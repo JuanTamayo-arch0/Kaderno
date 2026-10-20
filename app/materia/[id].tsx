@@ -9,6 +9,7 @@ import {
   getSchedule, getSubjectStudy,
 } from '../../lib/db';
 import { subjectAverage, neededFor } from '../../lib/grades';
+import { ExamResultsList } from '../../components/exam/ExamReview';
 import { bucketOf } from '../../lib/time';
 import { SCHEDULE } from '../../lib/schedule';
 import { classDays, countdown, nextClass, nextEvaluation, sortNotes } from '../../lib/subjectInfo';
@@ -271,6 +272,7 @@ function MateriaDetalle() {
         <Grades subject={subject} grades={grades} avg={avg} doneWeight={doneWeight} scale={scale} passMark={passMark} target={goal?.target_grade != null ? Number(goal.target_grade) : null}
           onAdd={() => { setEditGrade(null); setGradeModal(true); }} onEdit={(g) => { setEditGrade(g); setGradeModal(true); }} onRemove={removeGrade} />
       )}
+      {tab === 'cal' && <ExamResultsList subjectId={subject.id} />}
       {tab === 'files' && <SubjectFiles subjectId={subject.id} />}
     </>
   );

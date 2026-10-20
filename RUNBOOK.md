@@ -1240,3 +1240,20 @@ pdf.js viene en `public/pdfjs` (versión 4.10.38, la de `pdfjs-dist` en `devDepe
 
 `npm test` (rectángulos en proporciones, líneas juntas, texto limpio, enlace a la página, cita, orden) y `bash tests/run_sql.sh` (incluye `tests/sql/21b_pruebas.sql`: solo archivos propios o de proyectos donde es miembro, resaltados de cada persona y se borran con el archivo).
 
+## Versión 22 (parte 3): ¿cómo te fue?
+
+### 1. Migración
+
+Vuelve a correr `supabase/schema_v21.sql` completo (es idempotente). La fase 3 agrega `exam_results`: la nota de cada parcial o quiz (o "no lo presenté"), cómo te sentiste, tus razones, qué harás distinto y una foto de las horas de enfoque. No hay funciones que desplegar ni usa IA.
+
+### 2. Lo que cambia para el usuario
+
+- Desde el día siguiente a un parcial o quiz (hasta 3 semanas), Hoy pregunta **¿Cómo te fue?** También desde el detalle del parcial.
+- Pides la nota (y cuánto vale, si no estaba en Calificaciones) y cómo te sentiste. Kaderno muestra si el esfuerzo alcanzó frente a la nota que querías (o aprobar): horas de enfoque, días distintos, cuándo empezaste, cuánto fue en las últimas 48 horas, sesiones del plan, tarjetas y simulacros; una gráfica de horas contra nota de tus parciales; y las razones que se ven en los datos.
+- Eliges lo que los datos no ven (nervios, no entendía temas, el examen fue distinto...) y escribes qué harás distinto, con sugerencias. Esa frase aparece al armar el plan del siguiente parcial de la materia.
+- La nota queda en Calificaciones, y la pestaña muestra **Tus parciales: esfuerzo y nota**.
+
+### 3. Pruebas
+
+`npm test` (cuándo preguntar, esfuerzo, veredicto y razones, sugerencias, nota escrita, puntos de la gráfica) y `bash tests/run_sql.sh` (incluye `tests/sql/21c_pruebas.sql`: uno por parcial propio, nota dentro de la escala, "no lo presenté", privado y se borra con el parcial).
+

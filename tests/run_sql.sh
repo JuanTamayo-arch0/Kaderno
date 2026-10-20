@@ -68,3 +68,4 @@ for f in tests/sql/21_antes.sql supabase/schema_v21.sql supabase/schema_v21.sql;
 done
 $PSQL -d k16 -f tests/sql/21_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line|WARNING" | grep -v "^ *$"
 $PSQL -d k16 -f tests/sql/21b_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line|WARNING" | grep -v "^ *$"
+$PSQL -d k16 -f tests/sql/21c_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line|WARNING" | grep -v "^ *$"

@@ -1,6 +1,6 @@
 # PLAN v22: Grabar la clase, anotar PDFs, ¿Cómo te fue? y Capturar nueva
 
-Estado: aprobado el martes 20 de octubre. Fases 1 y 2 construidas (ramas v22-clase y v22-pdf). Se construye por fases, una PR por fase, sobre la versión 21 (`PLAN_v21.md`).
+Estado: aprobado el martes 20 de octubre. Fases 1, 2 y 3 construidas (ramas v22-clase, v22-pdf y v22-parcial). Se construye por fases, una PR por fase, sobre la versión 21 (`PLAN_v21.md`).
 
 Recoge la fase 4 de la versión 21 (grabar la clase y anotar PDFs), ya decidida, y suma dos pedidos nuevos: revisar cómo te fue en un parcial frente al esfuerzo que le pusiste, y una pantalla de Capturar mejor.
 
@@ -122,4 +122,8 @@ Requiere schema_v20 (v21). Idempotente, crece por fases: fase 1 `note_transcript
 6. (Fase 2) Las fuentes de las citas abren el PDF en otra pestaña del navegador (la nota queda abierta al lado). El visor ocupa toda la pantalla, sin la barra lateral.
 7. (Fase 2) "Enviar a una nota" también deja el texto resaltado en amarillo, para encontrarlo después en la lista. Al compartir una nota o copiarla a un proyecto, las fuentes quedan como texto (el PDF es privado).
 8. (Fase 2) Los miembros de un proyecto que solo pueden ver (rol lector) también pueden resaltar los PDF del proyecto: los resaltados son de cada quien.
+9. (Fase 3) El esfuerzo cuenta el enfoque de la tarea del parcial, de sus sesiones de repaso y de la materia en las 3 semanas antes (hasta la hora del examen), sin contar dos veces. "Empezaste" es el primer día con enfoque en esa ventana.
+10. (Fase 3) Sin meta del semestre para la materia, la comparación es contra aprobar (60 % de la escala, 3,0 sobre 5). La nota se puede escribir en la escala de la materia o con la suya ("38/50").
+11. (Fase 3) "Ahora no" esconde la pregunta solo en ese dispositivo; "No lo presenté" queda guardado y no vuelve a preguntar. También se puede responder desde el detalle del parcial.
+12. (Fase 3) Si ya hay una calificación con el mismo nombre en la materia, se le pone la nota; si no, se crea con el peso que digas (o 0 %).
 

@@ -18,8 +18,9 @@ export type Panels = {
   inbox: boolean;
   /** Hoja "Plan de repaso" de un examen (v20, sección G). */
   examPlan: Task | null;
+  examReview: Task | null;
 };
-let panels: Panels = { add: false, addText: '', task: { open: false, edit: null, draft: null }, command: false, inbox: false, examPlan: null };
+let panels: Panels = { add: false, addText: '', task: { open: false, edit: null, draft: null }, command: false, inbox: false, examPlan: null, examReview: null };
 const ls = new Set<(p: Panels) => void>();
 const savedLs = new Set<() => void>();
 
@@ -39,6 +40,8 @@ export function openInbox() { panels = { ...panels, inbox: true }; emit(); }
 export function closeInbox() { panels = { ...panels, inbox: false }; emit(); }
 export function openExamPlan(exam: Task) { panels = { ...panels, examPlan: exam }; emit(); }
 export function closeExamPlan() { panels = { ...panels, examPlan: null }; emit(); }
+export function openExamReview(exam: Task) { panels = { ...panels, examReview: exam }; emit(); }
+export function closeExamReview() { panels = { ...panels, examReview: null }; emit(); }
 
 /** Las pantallas se suscriben para recargar cuando se guarda una tarea en un panel global. */
 export function onDataChanged(fn: () => void) { savedLs.add(fn); return () => { savedLs.delete(fn); }; }
