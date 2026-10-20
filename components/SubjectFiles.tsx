@@ -58,7 +58,7 @@ export function SubjectFiles({ subjectId }: { subjectId: string }) {
   async function open(f: SubjectFile) {
     const url = await signedUrl(f.path);
     if (!url) { notify('No se pudo abrir el archivo', 'Inténtalo de nuevo en un momento.'); return; }
-    router.push({ pathname: '/visor', params: { url, name: f.name, mime: f.mime ?? '' } });
+    router.push({ pathname: '/visor', params: { url, name: f.name, mime: f.mime ?? '', kind: 'subject', fileId: f.id, subjectId } });
   }
 
   function confirmDelete(f: SubjectFile) {

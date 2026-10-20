@@ -87,11 +87,11 @@ export function ProjectFiles({ projectId, members, editable, isWide, onChanged }
     try { stage(await readWebAny(list[0]), target); } catch (e) { notify('No se pudo leer el archivo', friendlyError(e)); }
   }
 
-  async function open(f: { name: string; path: string; mime: string | null }) {
+  async function open(f: { name: string; path: string; mime: string | null; id?: string }) {
     try {
       if (previewable(f.name, f.mime)) {
         const url = await fileUrl(f.path);
-        router.push({ pathname: '/visor', params: { url, name: f.name, mime: f.mime ?? '' } });
+        router.push({ pathname: '/visor', params: { url, name: f.name, mime: f.mime ?? '', ...(f.id ? { kind: 'project', fileId: f.id } : {}) } });
       } else {
         await Linking.openURL(await fileUrl(f.path, f.name));
       }

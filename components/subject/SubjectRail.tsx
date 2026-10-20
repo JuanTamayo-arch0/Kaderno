@@ -68,7 +68,7 @@ export function SubjectRail({ subject, nextCls, scheduleLoaded = true, tasks, no
 
   async function openFile(f: SubjectFile) {
     const url = await signedUrl(f.path).catch(() => null);
-    if (url) router.push({ pathname: '/visor', params: { url, name: f.name, mime: f.mime ?? '' } } as any);
+    if (url) router.push({ pathname: '/visor', params: { url, name: f.name, mime: f.mime ?? '', kind: 'subject', fileId: f.id, subjectId: subject.id } } as any);
   }
 
   return (

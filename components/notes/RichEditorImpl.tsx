@@ -60,6 +60,7 @@ function injectCss() {
   .kd-ed .ProseMirror > :first-child { margin-top: 0; }
   .kd-ed .ProseMirror strong { font-weight: 700; color: ${C.text}; }
   .kd-ed .ProseMirror a { color: ${C.brand}; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .kd-ed .ProseMirror a[href^="kd-file:"] { text-decoration-style: dotted; color: ${C.muted}; }
   .kd-ed .ProseMirror a[href^="kd-note:"] { text-decoration-style: dotted; background: ${hexA(C.brand, 0.08)}; border-radius: 4px; padding: 0 2px; }
   .kd-ed .ProseMirror .kd-card-line { border-left: 3px solid ${hexA(C.brand2, 0.7)}; padding-left: 10px; }
   .kd-ed .ProseMirror .kd-card-line::after { content: 'tarjeta'; font: 700 10px var(--kd-ui-font); color: ${C.brand2}; background: ${hexA(C.brand2, 0.12)}; border-radius: 99px; padding: 1px 6px; margin-left: 8px; vertical-align: middle; }
@@ -431,7 +432,7 @@ const RichEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(function RichEd
     contentType: 'markdown',
     extensions: [
       StarterKit.configure({
-        link: { openOnClick: false, autolink: true, defaultProtocol: 'https', protocols: ['kd-note'], HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer' } },
+        link: { openOnClick: false, autolink: true, defaultProtocol: 'https', protocols: ['kd-note', 'kd-file'], HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer' } },
       }),
       Markdown.configure({ markedOptions: { gfm: true, breaks: false } }),
       Placeholder.configure({ placeholder: 'Escribe aquí. Usa / para insertar fórmulas, tablas o imágenes, [[ para enlazar otra nota y "pregunta :: respuesta" para una tarjeta.' }),
@@ -580,11 +581,13 @@ const RichEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(function RichEd
         // Enlaces a otras notas: se abren en Kaderno (leyendo, o con Ctrl/Cmd mientras se edita).
         const a = (e.target as HTMLElement).closest('a');
         const href = a?.getAttribute('href') ?? '';
-        if (!href.startsWith('kd-note:')) return;
+        const isNote = href.startsWith('kd-note:'), isFile = href.startsWith('kd-file:');
+        if (!isNote && !isFile) return;
         e.preventDefault();
         if (editing && !(e.ctrlKey || e.metaKey)) return;
         e.stopPropagation();
-        cb.current.onOpenNote?.(href.slice('kd-note:'.length));
+        if (isNote) cb.current.onOpenNote?.(href.slice('kd-note:'.length));
+        else cb.current.onOpenFile?.(href);
       }}
       onMouseUp={(e) => {
         if (editing || !onRequestEdit) return;

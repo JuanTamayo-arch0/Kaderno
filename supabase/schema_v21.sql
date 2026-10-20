@@ -9,6 +9,11 @@
 --   · note_transcripts: el texto de la clase (frases con su segundo) y las
 --     líneas de la nota con el segundo en que se escribieron. El audio nunca
 --     se guarda. Solo el dueño de la nota.
+--
+-- Fase 2 · Anotar PDFs
+--   · file_highlights: resaltados y comentarios en los PDF de Archivos de la
+--     materia y de los proyectos. Son de cada persona (aunque el archivo sea
+--     de un proyecto en grupo) y se borran con el archivo.
 -- =====================================================================
 
 
@@ -54,3 +59,76 @@ language plpgsql as $$ begin new.updated_at := now(); return new; end $$;
 drop trigger if exists note_transcripts_touch_trg on public.note_transcripts;
 create trigger note_transcripts_touch_trg before update on public.note_transcripts
   for each row execute function public._note_transcripts_touch();
+
+
+-- =====================================================================
+--  FASE 2 · Anotar PDFs
+-- =====================================================================
+create table if not exists public.file_highlights (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null default auth.uid() references auth.users on delete cascade,
+  file_kind  text not null check (file_kind in ('subject', 'project')),
+  file_id    uuid not null,
+  page       integer not null check (page between 1 and 5000),
+  rects      jsonb not null check (jsonb_typeof(rects) = 'array' and jsonb_array_length(rects) between 1 and 200),
+  text       text not null default '' check (char_length(text) <= 5000),
+  color      text not null default 'yellow' check (color in ('yellow', 'green', 'blue', 'pink')),
+  comment    text check (comment is null or char_length(comment) <= 2000),
+  created_at timestamptz not null default now()
+);
+create index if not exists file_highlights_file_idx on public.file_highlights (user_id, file_kind, file_id, page);
+
+-- ¿Puede la persona ver ese archivo? (el suyo de una materia, o de un proyecto donde es miembro)
+create or replace function public._can_see_file(p_kind text, p_id uuid) returns boolean
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if p_kind = 'subject' then
+    return exists (select 1 from subject_files f where f.id = p_id and f.user_id = auth.uid());
+  elsif p_kind = 'project' then
+    return exists (select 1 from project_files f where f.id = p_id and is_project_member(f.project_id));
+  end if;
+  return false;
+end $$;
+revoke all on function public._can_see_file(text, uuid) from public, anon;
+grant execute on function public._can_see_file(text, uuid) to authenticated;
+
+alter table public.file_highlights enable row level security;
+drop policy if exists "own highlights" on public.file_highlights;
+create policy "own highlights" on public.file_highlights for all
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid() and public._can_see_file(file_kind, file_id));
+grant select, insert, update, delete on public.file_highlights to authenticated;
+
+-- Tope de 2000 resaltados por archivo y persona.
+create or replace function public._file_highlights_cap() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if (select count(*) from file_highlights where user_id = new.user_id and file_kind = new.file_kind and file_id = new.file_id) >= 2000 then
+    raise exception 'Máximo 2000 resaltados por archivo.' using errcode = 'P0001';
+  end if;
+  return new;
+end $$;
+drop trigger if exists file_highlights_cap_trg on public.file_highlights;
+create trigger file_highlights_cap_trg before insert on public.file_highlights
+  for each row execute function public._file_highlights_cap();
+
+-- Al borrar el archivo se borran sus resaltados (de todos).
+create or replace function public._file_highlights_gone() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  delete from file_highlights where file_kind = tg_argv[0] and file_id = old.id;
+  return old;
+end $$;
+do $$ begin
+  if to_regclass('public.subject_files') is not null then
+    drop trigger if exists subject_files_highlights_trg on public.subject_files;
+    create trigger subject_files_highlights_trg after delete on public.subject_files
+      for each row execute function public._file_highlights_gone('subject');
+  end if;
+  if to_regclass('public.project_files') is not null then
+    drop trigger if exists project_files_highlights_trg on public.project_files;
+    create trigger project_files_highlights_trg after delete on public.project_files
+      for each row execute function public._file_highlights_gone('project');
+  end if;
+end $$;
+

@@ -69,3 +69,42 @@ test('línea de tiempo: frases del mismo segundo en su orden', async () => {
   const t = timeline([{ t: 1, text: 'a' }, { t: 1, text: 'b' }, { t: 1, text: 'c' }], [{ t: 1, line: 'x' }]);
   assert.deepEqual(t.map((x) => x.text), ['a', 'b', 'c', 'x']);
 });
+
+// ---------- Fase 2: anotar PDFs ----------
+test('resaltados: rectángulos en proporciones de la página, líneas juntas', async () => {
+  const { toPageRects, mergeLines } = await import('../lib/highlights');
+  const page = { left: 100, top: 50, width: 600, height: 800 };
+  const r = toPageRects([
+    { left: 160, top: 130, width: 120, height: 16 },
+    { left: 282, top: 131, width: 200, height: 15 },
+    { left: 160, top: 150, width: 300, height: 16 },
+    { left: 0, top: 0, width: 0.5, height: 10 },
+    { left: 900, top: 130, width: 50, height: 16 },
+  ], page);
+  assert.equal(r.length, 2, 'dos líneas; fuera de la página y diminutos se quitan');
+  assert.deepEqual(r[0], { x: 0.1, y: 0.1, w: 0.5367, h: 0.02 });
+  assert.equal(r[1].y, 0.125);
+  assert.deepEqual(toPageRects([{ left: 1, top: 1, width: 5, height: 5 }], { left: 0, top: 0, width: 0, height: 0 }), []);
+  assert.equal(mergeLines([{ x: 0.1, y: 0.1, w: 0.1, h: 0.02 }, { x: 0.5, y: 0.1, w: 0.1, h: 0.02 }]).length, 2, 'lejos en la misma línea no se juntan');
+});
+
+test('citas de PDF: texto limpio, enlace a la página y vuelta', async () => {
+  const { cleanPdfText, quoteMarkdown, fileLink, parseFileLink, sortHighlights, clampPage } = await import('../lib/highlights');
+  assert.equal(cleanPdfText('la conser-\nvación de la\n energía  ­total'), 'la conservación de la energía total');
+  assert.equal(cleanPdfText('Bogotá-\nMedellín'), 'Bogotá-Medellín', 'mayúscula después del guion no se une');
+  const id = '11111111-2222-3333-4444-555555555555';
+  assert.equal(fileLink('subject', id, 4), `kd-file:subject:${id}#p=4`);
+  assert.deepEqual(parseFileLink(`kd-file:project:${id}#p=12`), { kind: 'project', id, page: 12 });
+  assert.deepEqual(parseFileLink(`kd-file:subject:${id}`), { kind: 'subject', id, page: 1 });
+  assert.equal(parseFileLink('kd-file:otro:x'), null);
+  assert.equal(quoteMarkdown('La ley\nde Ohm', 'Guía [3].pdf', 'subject', id, 4, 'Sale en el parcial'),
+    `> La ley de Ohm\n>\n> [Guía 3.pdf, pág. 4](kd-file:subject:${id}#p=4)\n\nSale en el parcial\n`);
+  const s = sortHighlights([{ page: 2, rects: [{ x: 0, y: 0.5, w: 1, h: 0.1 }] }, { page: 1, rects: [{ x: 0, y: 0.9, w: 1, h: 0.1 }] }, { page: 2, rects: [{ x: 0, y: 0.1, w: 1, h: 0.1 }] }]);
+  assert.deepEqual(s.map((h) => [h.page, h.rects[0].y]), [[1, 0.9], [2, 0.1], [2, 0.5]]);
+  assert.equal(clampPage(0, 10), 1); assert.equal(clampPage(99, 10), 10); assert.equal(clampPage(NaN, 10), 1);
+});
+
+test('compartir y exportar quitan los enlaces a PDFs privados', async () => {
+  const { noteForExport } = await import('../lib/noteLinks');
+  assert.equal(noteForExport('N', '> cita\n>\n> [Guía.pdf, pág. 4](kd-file:subject:11111111-2222-3333-4444-555555555555#p=4)'), '# N\n\n> cita\n>\n> Guía.pdf, pág. 4\n');
+});

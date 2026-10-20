@@ -95,6 +95,7 @@ export function classNoteTitle(d: Date): string { return `Clase del ${d.getDate(
 export function noteForExport(title: string, md: string): string {
   const body = (md ?? '')
     .replace(/!\[([^\]\n]*)\]\(kd-img:[^)\s]+\)/g, (_a, alt) => `*(imagen${alt ? `: ${alt}` : ''})*`)
-    .replace(/\[([^\]\n]*)\]\(kd-note:[0-9a-fA-F-]{36}\)/g, '$1');
+    .replace(/\[([^\]\n]*)\]\(kd-note:[0-9a-fA-F-]{36}\)/g, '$1')
+    .replace(/\[([^\]\n]*)\]\(kd-file:[^)\s]+\)/g, '$1');
   return `# ${title || 'Nota'}\n\n${body.trim()}\n`;
 }
