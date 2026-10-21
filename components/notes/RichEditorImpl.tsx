@@ -300,6 +300,7 @@ const I = {
   undo: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5" /><path d="M4 9h11a5 5 0 0 1 0 10h-3" /></svg>,
   redo: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 14l5-5-5-5" /><path d="M20 9H9a5 5 0 0 0 0 10h3" /></svg>,
   cards: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="7" width="14" height="13" rx="2" /><path d="M7 4h12a2 2 0 0 1 2 2v11" /></svg>,
+  clock: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>,
   spark: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" /></svg>,
 };
 
@@ -659,6 +660,7 @@ const RichEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(function RichEd
           )}
           <Btn label="Crear flashcards con esto" onClick={() => { const t = selText(); if (t) cb.current.onSelectionAction?.('flashcard', t); }}>{I.cards}<span>Flashcards</span></Btn>
           <Btn label="Pedir al Oráculo que lo explique" onClick={() => { const t = selText(); if (t) cb.current.onSelectionAction?.('explain', t); }}>{I.spark}<span>Explicar</span></Btn>
+          {props.canAskWhenSaid && <Btn label="Qué se decía en la clase cuando escribiste esto" onClick={() => { const t = selText(); if (t) cb.current.onSelectionAction?.('whenSaid', t); }}>{I.clock}<span>¿Qué se decía?</span></Btn>}
         </div>
       </BubbleMenu>
 

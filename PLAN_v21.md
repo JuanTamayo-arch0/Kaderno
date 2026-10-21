@@ -1,6 +1,6 @@
 # PLAN v21: Organizar el día y notas conectadas
 
-Estado: fases 1, 2 y 3 construidas (lunes 19 de octubre, ramas v21-dia, v21-notas y v21-afuera). La fase 4 (grabar la clase, anotar PDFs) espera decisión de costo, proveedor y espacio. Se hace después de la versión 20 (`PLAN_v20.md`) y se apoya en ella: usa los planes con hora (`plan_at`), el ritual del lunes y la hoja "Revisa tus tarjetas".
+Estado: fases 1, 2 y 3 construidas (lunes 19 de octubre, ramas v21-dia, v21-notas y v21-afuera). La fase 4 (grabar la clase, anotar PDFs) se decidió el 20 de octubre (transcripción del navegador, sin guardar audio, visor con pdf.js) y pasa a `PLAN_v22.md`. Se hace después de la versión 20 (`PLAN_v20.md`) y se apoya en ella: usa los planes con hora (`plan_at`), el ritual del lunes y la hoja "Revisa tus tarjetas".
 
 Este plan sale de revisar apps de notas (Notion, Obsidian, Notability, Goodnotes, RemNote) y de organización del día (Todoist, TickTick, Things, Structured, Sunsama, Microsoft To Do), y de compararlas con lo que ya tiene Kaderno.
 

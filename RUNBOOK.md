@@ -1198,3 +1198,27 @@ No hay cambios en el droplet: la página `/compartida/<token>` es parte de la ap
 
 `npm test` (lector de .ics con zonas, todo el día, repeticiones y ediciones; direcciones permitidas; agenda con eventos; copia sin imágenes privadas; enlaces seguros) y `bash tests/run_sql.sh` (incluye `tests/sql/20c_pruebas.sql`: solo https y máximo 5, la app no escribe eventos, calendarios aislados por persona, la nota compartida solo con su enlace y sin datos del dueño, y al desactivarlo deja de funcionar).
 
+## Versión 22 (parte 1): grabar la clase
+
+### 1. Migración y funciones
+
+1. Corre `supabase/schema_v21.sql` completo (es idempotente). La fase 1 agrega `note_transcripts`: el texto de la clase con su minuto y las líneas de la nota con el minuto en que se escribieron (máximo 4 horas y 10 grabaciones por nota). El audio no se guarda.
+2. Vuelve a desplegar la función `ai` (trae el resumen de clase, con tope de 10 por día):
+
+   ```bash
+   npx supabase functions deploy ai
+   ```
+
+No hay secretos nuevos ni cambios en el droplet.
+
+### 2. Lo que cambia para el usuario
+
+- En una nota, **Grabar clase** (con el idioma: español o inglés). La primera vez recuerda pedir permiso al profesor y que el audio no se guarda. Mientras graba hay una barra con el tiempo, la última frase, Pausar y Terminar; la pantalla no se apaga.
+- Funciona con el reconocimiento del navegador: Chrome, Edge y Safari (en Firefox avisa que no se puede). Necesita internet.
+- Al terminar, debajo de la nota queda **Transcripción de la clase**: buscador, tus apuntes intercalados por minuto, **Resumir con IA** (ideas, fórmulas, lo que dejó el profesor con "Crear tarea" y preguntas para repasar), **Insertar en la nota**, **Crear tarjetas** y borrar.
+- Al seleccionar texto escrito durante la grabación: **¿Qué se decía?** lleva a ese minuto de la transcripción.
+
+### 3. Pruebas
+
+`npm test` (incluye `tests/v22.test.ts`: frases sin duplicar, minuto de cada línea, búsqueda, resumen en la nota, validación de lo que devuelve la IA) y `bash tests/run_sql.sh` (incluye `tests/sql/21_pruebas.sql`: solo en notas propias, topes, nadie más la ve y se borra con la nota).
+
