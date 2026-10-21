@@ -19,8 +19,9 @@ import { quizPrompt, parseQuiz, gradePrompt, parseGrades, recallPrompt, parseRec
 import { classSummaryPrompt, parseClassSummary } from '../_shared/classSummary.ts';
 
 // Usos por día y persona.
-const LIMITS: Record<string, number> = { flashcards: 30, quiz: 5, recall: 10, grade: 25, class_summary: 10 };
-const LIMIT_TEXT: Record<string, string> = { flashcards: 'creaciones de tarjetas', quiz: 'simulacros', recall: 'pruebas de notas', grade: 'correcciones', class_summary: 'resúmenes de clase' };
+const LIMITS: Record<string, number> = { flashcards: 30, quiz: 5, recall: 10, grade: 25, class_summary: 10, summary: 40, steps: 40 };
+const LIMIT_TEXT: Record<string, string> = { flashcards: 'creaciones de tarjetas', quiz: 'simulacros', recall: 'pruebas de notas', grade: 'correcciones', class_summary: 'resúmenes de clase', summary: 'resúmenes', steps: 'divisiones en pasos' };
+const TASKS = ['flashcards', 'quiz', 'recall', 'grade', 'class_summary', 'summary', 'steps'];
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -37,15 +38,19 @@ Deno.serve(async (req) => {
     const items: { q: string; expected: string; given: string }[] = Array.isArray(body.items) ? body.items.map((it: any) => ({ q: String(it?.q ?? ''), expected: String(it?.expected ?? ''), given: String(it?.given ?? '') })) : [];
     if (task === 'quiz' ? !notes.some((n) => String(n?.content ?? '').trim()) : task === 'grade' ? !items.length : !content) return json({ error: 'Falta el contenido' }, 400);
     // "3 preguntas rápidas" de una nota cuenta como prueba de la nota, no como simulacro.
-    const limitKey = task === 'quiz' && body.quick ? 'recall' : task;
+    const limitKey = task === 'quiz' && body.quick ? 'recall' : TASKS.includes(task) ? task : 'summary';
 
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (!apiKey) return json({ error: 'ANTHROPIC_API_KEY no configurada' }, 500);
 
+    // v22: solo con sesión (antes, el resumen y los pasos no la pedían).
+    const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } } });
+    const { data: who } = await supabase.auth.getUser();
+    if (!who?.user) return json({ error: 'Inicia sesión para usar la IA.' }, 401);
+
     // Tope diario (si la base tiene schema_v19).
     if (LIMITS[limitKey]) {
-      const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!,
-        { global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } } });
       const { data: left, error } = await supabase.rpc('ai_take', { p_task: limitKey, p_limit: LIMITS[limitKey] });
       if (!error && typeof left === 'number' && left < 0) {
         return json({ error: `Llegaste al límite de hoy (${LIMITS[limitKey]} ${LIMIT_TEXT[limitKey]}). Mañana se renueva.`, code: 'limit' }, 429);

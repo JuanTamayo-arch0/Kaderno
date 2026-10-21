@@ -9,6 +9,8 @@ import type { Task } from './db';
 export type TaskDraft = {
   title?: string; subjectId?: string | null; typeKey?: string | null;
   dueDate?: string | null; dueTime?: string | null;
+  /** v22: desde Capturar (el enunciado leído). */
+  description?: string | null;
 };
 export type Panels = {
   add: boolean;

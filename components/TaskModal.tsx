@@ -73,7 +73,7 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
     const d = t?.due_at ? isoDate(new Date(t.due_at)) : t?.due_date ?? draft?.dueDate ?? (t ? null : isoDate(new Date()));
     const tm = t ? dueTimeHHMM(t) : draft?.dueTime ?? null;
     setTitle(t?.title ?? draft?.title ?? '');
-    setDescription(t?.description ?? '');
+    setDescription(t?.description ?? draft?.description ?? '');
     setSubjectId(t ? t.subject_id : draft?.subjectId ?? initialSubjectId ?? null);
     setType(t?.type ?? draft?.typeKey ?? 'tarea');
     setDate(d);
@@ -83,7 +83,7 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
     setSteps([]);
     setNewType(null);
     setTitleError(null);
-    setMore(!!(t?.description || t?.estimate_min));
+    setMore(!!(t?.description || t?.estimate_min || draft?.description));
     setPlan({ at: t?.plan_at ?? null, place: t?.plan_place ?? null });
     setHintOff(!!t?.estimate_min);
     getEstimateRatio().then(setRatio).catch(() => setRatio(null));

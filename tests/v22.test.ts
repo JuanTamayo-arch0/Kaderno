@@ -171,3 +171,73 @@ test('veredicto: alcanzó o no, y por qué', async () => {
   assert.deepEqual(chartPoints([{ title: 'P1', focus_min: 120, score: 4, max_score: 5 }, { title: 'X', focus_min: 0, score: null, max_score: 5, skipped: true }], { focus_min: 60, pct: 50, title: 'P2' }),
     [{ x: 2, y: 80, title: 'P1', current: false }, { x: 1, y: 50, title: 'P2', current: true }]);
 });
+
+// ---------- Fase 4: Capturar nueva ----------
+test('lectura de fotos: Markdown, dibujos válidos y texto sin JSON', async () => {
+  const { parseOcr, cleanFigures, ocrPrompt } = await import('../supabase/functions/_shared/ocrMarkdown');
+  const r = parseOcr('```json\n{"markdown":"# Ley de Ohm\\n\\n$$V = IR$$\\n\\n![circuito en serie](figura:1)\\n\\n![malo](figura:2)","figures":[{"id":1,"x":0.1,"y":0.5,"w":0.6,"h":0.3,"caption":"circuito [en] serie"},{"id":2,"x":0.9,"y":0.9,"w":0.5,"h":0.01}],"title":"Ley de Ohm"}\n```', 'notes');
+  assert.equal(r.markdown, '# Ley de Ohm\n\n$$V = IR$$\n\n![circuito en serie](figura:1)');
+  assert.deepEqual(r.figures, [{ id: 1, x: 0.1, y: 0.5, w: 0.6, h: 0.3, caption: 'circuito  en  serie' }]);
+  assert.equal(r.title, 'Ley de Ohm');
+  assert.deepEqual(parseOcr('Solo texto\nsin json', 'notes'), { markdown: 'Solo texto\nsin json', figures: [], title: null });
+  assert.deepEqual(parseOcr('{"markdown": "x"}', 'plain').markdown, '{"markdown": "x"}', 'en modo texto no se interpreta');
+  assert.deepEqual(cleanFigures([{ id: 1, x: 0.8, y: 0, w: 0.9, h: 0.5 }]).map((f) => f.w), [0.19999999999999996]);
+  assert.equal(cleanFigures('x' as any).length, 0);
+  assert.match(ocrPrompt('board'), /tablero o pizarra/);
+  assert.match(ocrPrompt('notes'), /figura:N/);
+});
+
+test('capturar: materia de la clase de ahora, título, páginas con dibujos y pizarra', async () => {
+  const { suggestSubject, suggestTitle, uncertainCount, mergePages, resolveFigures, boardMarkdown, firstLine } = await import('../lib/capture');
+  const blocks = [{ id: 'b1', start: '07:00', end: '09:00' }, { id: 'b2', start: '09:00', end: '11:00' }];
+  const subs = [{ id: 'cal', name: 'Cálculo', color: '#000' }, { id: 'fis', name: 'Física', color: '#111' }];
+  const slots = [{ day: 1, slot: 1, subject_id: 'fis' }];
+  assert.equal(suggestSubject(new Date(2026, 9, 20, 10, 15), slots, blocks, subs, 'cal'), 'fis', 'martes en clase de física');
+  assert.equal(suggestSubject(new Date(2026, 9, 20, 11, 15), slots, blocks, subs, 'cal'), 'fis', 'hasta 20 min después de la clase');
+  assert.equal(suggestSubject(new Date(2026, 9, 20, 15, 0), slots, blocks, subs, 'cal'), 'cal', 'sin clase: la última usada');
+  assert.equal(suggestSubject(new Date(2026, 9, 20, 15, 0), slots, blocks, subs, 'otra'), 'cal');
+  assert.equal(suggestTitle('texto\n## Ley de **Ohm** [?]\n', new Date(2026, 9, 20)), 'Ley de Ohm');
+  assert.equal(suggestTitle('sin títulos', new Date(2026, 9, 20)), 'Clase del 20 oct');
+  assert.equal(suggestTitle('# A', new Date(), 'Del modelo'), 'Del modelo');
+  assert.equal(uncertainCount('la ley [?] de [?] Ohm'), 2);
+  const m = mergePages([
+    { markdown: 'Pág 1 ![a](figura:1)', figures: [{ id: 1, x: 0, y: 0, w: 0.5, h: 0.5, caption: 'a' }] },
+    { markdown: '', figures: [] },
+    { markdown: 'Pág 3 ![b](figura:1) ![c](figura:2)', figures: [{ id: 1, x: 0, y: 0, w: 0.5, h: 0.5, caption: 'b' }] },
+  ]);
+  assert.equal(m.markdown, 'Pág 1 ![a](figura:p1f1)\n\nPág 3 ![b](figura:p3f1) ![c](figura:2)');
+  assert.deepEqual(m.figures.map((f) => [f.page, f.key]), [[0, 'p1f1'], [2, 'p3f1']]);
+  assert.equal(resolveFigures(m.markdown, { p1f1: 'u/1.jpg' }), 'Pág 1 ![a](kd-img:u/1.jpg)\n\nPág 3');
+  assert.equal(boardMarkdown(['u/a.jpg', 'u/b.jpg'], ['F = ma ![x](figura:1)', ''], true), '![Pizarra 1](kd-img:u/a.jpg)\n\nF = ma\n\n![Pizarra 2](kd-img:u/b.jpg)');
+  assert.equal(boardMarkdown(['u/a.jpg'], ['texto'], false), '![Pizarra](kd-img:u/a.jpg)');
+  assert.equal(firstLine('\n# Taller 3: **circuitos**\nResolver...'), 'Taller 3: circuitos');
+});
+
+test('foto: recorte dentro de la imagen y modo escáner', async () => {
+  const { clampCrop, scanFilter } = await import('../lib/capture');
+  assert.deepEqual(clampCrop({ x: -0.2, y: 0.5, w: 2, h: 0.01 }), { x: 0, y: 0.5, w: 1, h: 0.08 });
+  assert.deepEqual(Object.values(clampCrop({ x: 0.99, y: 0.99, w: 0.5, h: 0.5 })).map((v) => Math.round(v * 100) / 100), [0.92, 0.92, 0.08, 0.08]);
+  // Papel grisáceo (~220) con manchas (196) y trazo (50): papel y manchas blancos, trazo negro.
+  const px: number[] = [];
+  for (let i = 0; i < 1000; i++) { const v = i < 10 ? 50 : i % 97 === 0 ? 196 : 218 + (i % 5); px.push(v, v, v, 255); }
+  scanFilter(px, 100, 10);
+  assert.equal(px[0], 0, 'trazo negro');
+  assert.equal(px[500 * 4], 255, 'papel blanco');
+  assert.ok(px[97 * 2 * 4] >= 250, 'una mancha apenas más oscura que el papel no se vuelve negra');
+  assert.equal(px[3], 255, 'no toca la transparencia');
+  // Tablero oscuro (40) con tiza clara (230): queda tiza oscura sobre blanco.
+  const b: number[] = [];
+  for (let i = 0; i < 1000; i++) { const v = i < 10 ? 230 : 40; b.push(v, v, v, 255); }
+  scanFilter(b, 100, 10);
+  assert.equal(b[0], 0, 'tiza oscura');
+  assert.equal(b[500 * 4], 255, 'fondo blanco');
+});
+
+test('PDF: texto de una página con sus saltos de línea', async () => {
+  const { textOf } = await import('../lib/captureImage');
+  assert.equal(textOf([
+    { str: 'Guía 3', transform: [0, 0, 0, 0, 72, 720] }, { str: '', hasEOL: true, transform: [0, 0, 0, 0, 72, 720] },
+    { str: 'La ley de ', transform: [0, 0, 0, 0, 72, 700] }, { str: 'Ohm', transform: [0, 0, 0, 0, 130, 700] },
+    { str: 'Otra línea', transform: [0, 0, 0, 0, 72, 680] },
+  ]), 'Guía 3\nLa ley de Ohm\nOtra línea');
+});

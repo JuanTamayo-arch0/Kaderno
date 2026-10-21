@@ -1,4 +1,5 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -37,6 +38,14 @@ function Importar() {
   const [copied, setCopied] = useState(false);
 
   useFocusEffect(useCallback(() => { getSubjects().then(setSubjects).catch(() => {}); loadTaskTypes().catch(() => {}); }, []));
+  // v22: el cronograma leído desde una foto en Capturar.
+  useEffect(() => {
+    AsyncStorage.getItem('kd-import-text').then((raw) => {
+      if (!raw) return;
+      AsyncStorage.removeItem('kd-import-text').catch(() => {});
+      try { const j = JSON.parse(raw); if (j?.text) { setText(String(j.text)); if (j.subjectId) setSubjectId(j.subjectId); toast('Texto del cronograma leído de la foto: revísalo y toca Revisar.'); } } catch { /* noop */ }
+    }).catch(() => {});
+  }, []);
   const subj = subjects.find((s) => s.id === subjectId) ?? null;
 
   function review() {

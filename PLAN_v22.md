@@ -1,6 +1,6 @@
 # PLAN v22: Grabar la clase, anotar PDFs, ¿Cómo te fue? y Capturar nueva
 
-Estado: aprobado el martes 20 de octubre. Fases 1, 2 y 3 construidas (ramas v22-clase, v22-pdf y v22-parcial). Se construye por fases, una PR por fase, sobre la versión 21 (`PLAN_v21.md`).
+Estado: aprobado el martes 20 de octubre. Las cuatro fases construidas (ramas v22-clase, v22-pdf, v22-parcial y v22-captura). Se construye por fases, una PR por fase, sobre la versión 21 (`PLAN_v21.md`).
 
 Recoge la fase 4 de la versión 21 (grabar la clase y anotar PDFs), ya decidida, y suma dos pedidos nuevos: revisar cómo te fue en un parcial frente al esfuerzo que le pusiste, y una pantalla de Capturar mejor.
 
@@ -126,4 +126,9 @@ Requiere schema_v20 (v21). Idempotente, crece por fases: fase 1 `note_transcript
 10. (Fase 3) Sin meta del semestre para la materia, la comparación es contra aprobar (60 % de la escala, 3,0 sobre 5). La nota se puede escribir en la escala de la materia o con la suya ("38/50").
 11. (Fase 3) "Ahora no" esconde la pregunta solo en ese dispositivo; "No lo presenté" queda guardado y no vuelve a preguntar. También se puede responder desde el detalle del parcial.
 12. (Fase 3) Si ya hay una calificación con el mismo nombre en la materia, se le pone la nota; si no, se crea con el peso que digas (o 0 %).
+13. (Fase 4) Los dibujos se recortan con la caja aproximada que da la lectura y se pueden quitar uno por uno antes de guardar. Si la caja no es válida, el marcador se quita y queda solo el texto.
+14. (Fase 4) El modo escáner invierte los tableros oscuros (tiza clara sobre verde o negro) para que queden como tinta oscura sobre blanco.
+15. (Fase 4) "Clase de hoy" usa la misma nota que "Apuntes de hoy" (la crea con la plantilla de la materia si no existe) y agrega al final.
+16. (Fase 4) En Apuntes se guardan las fotos con la nota (la primera como original y las demás adjuntas); en PDF no, porque el archivo ya existe; en Pizarra la foto va dentro de la nota.
+17. (Fase 4) La función `ai` también exige sesión para todo (antes el resumen y las microtareas no la pedían) y tiene tope para el resumen (40) y los pasos (40) por día.
 
