@@ -1222,3 +1222,21 @@ No hay secretos nuevos ni cambios en el droplet.
 
 `npm test` (incluye `tests/v22.test.ts`: frases sin duplicar, minuto de cada línea, búsqueda, resumen en la nota, validación de lo que devuelve la IA) y `bash tests/run_sql.sh` (incluye `tests/sql/21_pruebas.sql`: solo en notas propias, topes, nadie más la ve y se borra con la nota).
 
+## Versión 22 (parte 2): anotar PDFs
+
+### 1. Migración
+
+Vuelve a correr `supabase/schema_v21.sql` completo (es idempotente). La fase 2 agrega `file_highlights`: resaltados y comentarios de cada persona en los PDF de Archivos de la materia y de los proyectos (se borran con el archivo). No hay funciones que desplegar.
+
+pdf.js viene en `public/pdfjs` (versión 4.10.38, la de `pdfjs-dist` en `devDependencies`). Para actualizarlo: cambiar la versión y correr `node scripts/copy-pdfjs.mjs`.
+
+### 2. Lo que cambia para el usuario
+
+- Los PDF de Archivos (materia y proyectos) abren en un visor nuevo a pantalla completa: páginas que cargan al bajar, ir a una página, zoom y texto seleccionable.
+- Al seleccionar texto: resaltar en 4 colores, **Comentar**, **A una nota** (la de la clase de hoy, otra o una nueva, como cita con un enlace que abre el PDF en esa página) y **Tarjeta** (tarjetas con IA desde lo seleccionado).
+- Tocar un resaltado: cambiar el color, comentar, enviarlo a una nota, hacer tarjeta o borrarlo. **Resaltados** muestra la lista del archivo (al lado en computador, abajo en el celular).
+
+### 3. Pruebas
+
+`npm test` (rectángulos en proporciones, líneas juntas, texto limpio, enlace a la página, cita, orden) y `bash tests/run_sql.sh` (incluye `tests/sql/21b_pruebas.sql`: solo archivos propios o de proyectos donde es miembro, resaltados de cada persona y se borran con el archivo).
+

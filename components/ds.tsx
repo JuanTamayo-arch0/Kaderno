@@ -310,7 +310,7 @@ export function useGoBack(fallback: string = '/') {
  */
 export function Screen({
   title, subtitle, back, nav, right, children, scroll = true, maxWidth, padded = true,
-  contentStyle, header, footer, eyebrow, leading,
+  contentStyle, header, footer, eyebrow, leading, noSidebar,
 }: {
   title?: string; subtitle?: string; eyebrow?: string;
   /** Algo a la izquierda del título (por ejemplo la imagen de una materia). */
@@ -318,6 +318,8 @@ export function Screen({
   back?: boolean | string; nav?: NavKey | null; right?: React.ReactNode; children: React.ReactNode;
   scroll?: boolean; maxWidth?: number; padded?: boolean; contentStyle?: StyleProp<ViewStyle>;
   header?: React.ReactNode; footer?: React.ReactNode;
+  /** Pantallas sin barra lateral (el visor): sin el espacio de la izquierda. */
+  noSidebar?: boolean;
 }) {
   const { isWide } = useResponsive();
   const insets = useSafeAreaInsets();
@@ -353,7 +355,7 @@ export function Screen({
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: screenBg(), paddingLeft: isWide ? SIDEBAR_W : 0 }}>
+    <View style={{ flex: 1, backgroundColor: screenBg(), paddingLeft: isWide && !noSidebar ? SIDEBAR_W : 0 }}>
       {head}
       {header ? (
         <View style={{ paddingHorizontal: padX }}>

@@ -1,6 +1,6 @@
 # PLAN v22: Grabar la clase, anotar PDFs, ¿Cómo te fue? y Capturar nueva
 
-Estado: aprobado el martes 20 de octubre. Fase 1 construida (rama v22-clase). Se construye por fases, una PR por fase, sobre la versión 21 (`PLAN_v21.md`).
+Estado: aprobado el martes 20 de octubre. Fases 1 y 2 construidas (ramas v22-clase y v22-pdf). Se construye por fases, una PR por fase, sobre la versión 21 (`PLAN_v21.md`).
 
 Recoge la fase 4 de la versión 21 (grabar la clase y anotar PDFs), ya decidida, y suma dos pedidos nuevos: revisar cómo te fue en un parcial frente al esfuerzo que le pusiste, y una pantalla de Capturar mejor.
 
@@ -118,4 +118,8 @@ Requiere schema_v20 (v21). Idempotente, crece por fases: fase 1 `note_transcript
 2. (Fase 1) La transcripción se guarda cada 20 segundos mientras se graba (si se cierra la pestaña no se pierde casi nada). Cambiar de nota termina la grabación.
 3. (Fase 1) Chrome en Android repite la frase anterior alargada: si una frase nueva empieza igual que la última de hace menos de 30 segundos, la reemplaza.
 4. (Fase 1) Las tareas del resumen no se crean solas: cada una tiene "Crear tarea", que abre Agregar con el texto y la fecha dicha ("Taller 3 el viernes").
+5. (Fase 2) pdf.js 4.10 (versión legacy, para Safari viejo) se copia a `public/pdfjs` con `node scripts/copy-pdfjs.mjs` y se carga solo al abrir un PDF; no entra en el paquete de la app.
+6. (Fase 2) Las fuentes de las citas abren el PDF en otra pestaña del navegador (la nota queda abierta al lado). El visor ocupa toda la pantalla, sin la barra lateral.
+7. (Fase 2) "Enviar a una nota" también deja el texto resaltado en amarillo, para encontrarlo después en la lista. Al compartir una nota o copiarla a un proyecto, las fuentes quedan como texto (el PDF es privado).
+8. (Fase 2) Los miembros de un proyecto que solo pueden ver (rol lector) también pueden resaltar los PDF del proyecto: los resaltados son de cada quien.
 

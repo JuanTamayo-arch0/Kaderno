@@ -30,6 +30,8 @@ export type NoteEditorProps = {
   searchNotes?: (q: string) => Promise<{ id: string; title: string }[]>;
   /** v21: abrir una nota enlazada (kd-note:<id>). */
   onOpenNote?: (id: string) => void;
+  /** v22: abrir la fuente de una cita de PDF (kd-file:subject:<id>#p=4). */
+  onOpenFile?: (href: string) => void;
   /** v22: la nota tiene clase grabada; al seleccionar se ofrece "¿Qué se decía?". */
   canAskWhenSaid?: boolean;
 };

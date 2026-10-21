@@ -25,6 +25,6 @@ Deno.serve(async (req) => {
     content = content.split(`](kd-img:${p})`).join(`](${s?.signedUrl ?? ''})`);
   }
   // Los enlaces a otras notas privadas se dejan como texto.
-  content = content.replace(/\[([^\]\n]*)\]\(kd-note:[0-9a-fA-F-]{36}\)/g, '$1');
+  content = content.replace(/\[([^\]\n]*)\]\(kd-note:[0-9a-fA-F-]{36}\)/g, '$1').replace(/\[([^\]\n]*)\]\(kd-file:[^)\s]+\)/g, '$1');
   return json({ title: note.title ?? 'Nota', content, updated_at: note.updated_at });
 });

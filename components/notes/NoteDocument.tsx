@@ -22,6 +22,7 @@ import { NoteEditor } from './NoteEditor';
 import type { HeadingItem, NoteEditorHandle, SelectionAction } from './editorTypes';
 import { RecallTest } from './RecallTest';
 import { ShareNoteSheet } from './ShareNoteSheet';
+import { parseFileLink } from '../../lib/highlights';
 import { useClassRecorder, RecorderBar, RecordButton, TranscriptPanel, whenSaid, type NoteMark, type SaidFocus } from './ClassRecorder';
 import { recallLabel } from '../../lib/quiz';
 import { extractLinks, refreshLinkTitles } from '../../lib/noteLinks';
@@ -222,6 +223,15 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
     if (kind === 'flashcard') makeFlashcards(text);
     else askOracle(`Explícame esto de mi nota "${title || 'Nota'}": ${text.slice(0, 600)}`);
   }
+  // Fuente de una cita de PDF: abre el visor en esa página. En web, en otra
+  // pestaña (la nota queda abierta al lado); el visor busca la dirección solo.
+  function openFileLink(href: string) {
+    const f = parseFileLink(href);
+    if (!f) return;
+    const path = `/visor?kind=${f.kind}&fileId=${f.id}&p=${f.page}`;
+    if (Platform.OS === 'web' && typeof window !== 'undefined') window.open(path, '_blank', 'noopener');
+    else router.push(path as any);
+  }
   async function uploadImage(file: Blob): Promise<string> {
     try {
       toast('Subiendo imagen…');
@@ -277,7 +287,8 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
         style={[{ color: C.text, fontSize: scroll ? 36 : 28, fontWeight: '800', letterSpacing: -0.3, paddingVertical: 4, marginBottom: 14, height: Math.max(scroll ? 50 : 40, titleH) }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
       <NoteEditor key={`${noteId}:${edKey}`} ref={ed} value={content} onChange={setContent} editing={editing} onRequestEdit={() => setEditing(true)} onRequestRead={() => setEditing(false)}
         onOutline={setHeads} onSelectionAction={onSelection} uploadImage={uploadImage} minHeight={scroll ? 420 : 300}
-        searchNotes={(q) => searchNoteTitles(q, noteId)} onOpenNote={(id) => router.push(`/nota/${id}`)} canAskWhenSaid={recMarks.length > 0} />
+        searchNotes={(q) => searchNoteTitles(q, noteId)} onOpenNote={(id) => router.push(`/nota/${id}`)} canAskWhenSaid={recMarks.length > 0}
+        onOpenFile={openFileLink} />
       <View ref={panelRef}>
         <TranscriptPanel noteId={noteId} version={rec.version} focus={said} subjectName={subjects.find((s) => s.id === note.subject_id)?.name ?? null}
           getMd={() => ed.current?.flush() ?? content} onHasMarks={setRecMarks}
