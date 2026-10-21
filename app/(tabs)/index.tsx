@@ -51,6 +51,7 @@ import { ritualWeekStart, shouldOfferRitual, shouldOfferSemester, tomorrowISO, l
 import { weekStartISO } from '../../lib/streaks';
 import { Countdown } from '../../components/day/Countdown';
 import { DayPlanner } from '../../components/day/DayPlanner';
+import { ExamReviewCard } from '../../components/exam/ExamReview';
 import { getEvents } from '../../lib/calendarsDb';
 import { InboxSort } from '../../components/day/InboxSort';
 import { DayClose } from '../../components/day/DayClose';
@@ -646,6 +647,7 @@ export default function Hoy() {
           <Button label="Ahora no" size="sm" kind="ghost" onPress={() => { setRitualPrefs((r) => (r ? { ...r, semesterDismissed: true } : r)); saveRitualPrefs({ semesterDismissed: true }).catch(() => {}); }} />
         </Card>
       )}
+      <ExamReviewCard tasks={tasks ?? []} />
       {streak.s && <StreakNudge s={streak.s} onFocus={() => { startFocus(); router.push('/enfoque'); }} />}
       {examOffer && !stalled && (
         <Card style={{ marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>

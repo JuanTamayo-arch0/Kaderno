@@ -12,6 +12,7 @@ import { timeLabel } from '../../lib/planSlots';
 import { toast, notify, friendlyError } from '../../lib/feedback';
 import { dataChanged } from '../../lib/uiBus';
 import { refreshNavCounts } from '../../lib/navCounts';
+import { lastChange } from '../../lib/examReviewDb';
 
 // ============================================================
 //  "¿Armo tu plan de repaso para el Parcial 3?" (v20, sección G).
@@ -36,6 +37,9 @@ export function ExamPlanSheet({ exam, onClose }: { exam: Task | null; onClose: (
   const [drafts, setDrafts] = useState<DraftSession[] | null>(null);
   const [keep, setKeep] = useState<boolean[]>([]);
   const [busy, setBusy] = useState(false);
+  // v22: lo que dijiste que harías distinto en el parcial anterior de la materia.
+  const [prev, setPrev] = useState<{ title: string; change: string } | null>(null);
+  useEffect(() => { setPrev(null); if (exam?.subject_id) lastChange(exam.subject_id).then(setPrev).catch(() => {}); }, [exam?.id]);
 
   useEffect(() => {
     if (!exam) return;
@@ -68,6 +72,12 @@ export function ExamPlanSheet({ exam, onClose }: { exam: Task | null; onClose: (
         <Button label="Ahora no" kind="secondary" onPress={later} style={{ flex: 1 }} />
         <Button label={`Crear ${n} ${n === 1 ? 'sesión' : 'sesiones'}`} icon="checkmark" onPress={create} busy={busy} disabled={!drafts || n === 0} style={{ flex: 2 }} />
       </>}>
+      {prev && (
+        <View style={{ flexDirection: 'row', gap: 10, padding: 12, borderRadius: 12, backgroundColor: C.brand2 + '1a', borderWidth: 1, borderColor: C.brand2 + '55' }}>
+          <Ionicons name="return-down-forward-outline" size={18} color={C.brand2} />
+          <Text style={{ color: C.text, fontSize: 13.5, flex: 1, lineHeight: 19 }}>Después de {prev.title} dijiste: <Text style={{ fontWeight: '700' }}>"{prev.change}"</Text></Text>
+        </View>
+      )}
       {!drafts ? (
         <View style={{ padding: 24, alignItems: 'center' }}><ActivityIndicator color={C.brand} /></View>
       ) : drafts.length === 0 ? (

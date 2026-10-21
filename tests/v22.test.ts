@@ -108,3 +108,66 @@ test('compartir y exportar quitan los enlaces a PDFs privados', async () => {
   const { noteForExport } = await import('../lib/noteLinks');
   assert.equal(noteForExport('N', '> cita\n>\n> [Guía.pdf, pág. 4](kd-file:subject:11111111-2222-3333-4444-555555555555#p=4)'), '# N\n\n> cita\n>\n> Guía.pdf, pág. 4\n');
 });
+
+// ---------- Fase 3: ¿Cómo te fue? ----------
+const EX = { id: 'ex', title: 'Parcial 2', subject_id: 'fis', type: 'examen', due_date: '2026-10-19', due_at: null };
+const at = (d: number, h = 15) => new Date(2026, 9, d, h).toISOString();
+
+test('¿cómo te fue?: cuándo se pregunta', async () => {
+  const { shouldAsk } = await import('../lib/examReview');
+  assert.equal(shouldAsk(EX, new Date(2026, 9, 20, 9)), true);
+  assert.equal(shouldAsk(EX, new Date(2026, 9, 19, 9)), false, 'el mismo día todavía no ha pasado (vence 11:59 pm)');
+  assert.equal(shouldAsk({ ...EX, due_at: new Date(2026, 9, 19, 8).toISOString() }, new Date(2026, 9, 19, 12)), true, 'con hora: después de la hora');
+  assert.equal(shouldAsk(EX, new Date(2026, 10, 15)), false, 'más de 3 semanas');
+  assert.equal(shouldAsk({ ...EX, type: 'tarea' }, new Date(2026, 9, 20)), false);
+  assert.equal(shouldAsk({ ...EX, deleted_at: '2026-10-20' } as any, new Date(2026, 9, 20)), false);
+});
+
+test('esfuerzo: horas, días, cuándo empezó, últimas 48 h, plan, tarjetas y simulacros', async () => {
+  const { computeEffort } = await import('../lib/examReview');
+  const e = computeEffort(EX, {
+    focus: [
+      { minutes: 50, created_at: at(5), subject_id: 'fis' },
+      { minutes: 25, created_at: at(12), assignment_id: 's1' },
+      { minutes: 60, created_at: at(18), assignment_id: 'ex', subject_id: 'fis' },
+      { minutes: 90, created_at: at(19, 9), subject_id: 'fis' },
+      { minutes: 40, created_at: at(18), subject_id: 'otra' },
+      { minutes: 30, created_at: at(20), subject_id: 'fis' },
+      { minutes: 30, created_at: new Date(2026, 8, 20).toISOString(), subject_id: 'fis' },
+    ],
+    sessions: [{ id: 's1', status: 'done' }, { id: 's2', status: 'pending' }],
+    reviews: [at(10), at(15), at(25)],
+    quizzes: [{ pct: 55, created_at: at(16) }, { pct: 72, created_at: at(17) }],
+    recalls: [at(14)],
+  });
+  assert.deepEqual({ ...e, last48Share: Math.round(e.last48Share * 100) }, {
+    minutes: 225, days: 4, firstDaysBefore: 14, last48Share: 67, sessionsDone: 1, sessionsTotal: 2, cardReviews: 2, quizzes: 2, bestQuiz: 72, lastQuiz: 72, recalls: 1,
+  });
+});
+
+test('veredicto: alcanzó o no, y por qué', async () => {
+  const { verdict, changeSuggestions, parseScore, chartPoints } = await import('../lib/examReview');
+  const base = { minutes: 120, days: 1, firstDaysBefore: 1, last48Share: 1, sessionsDone: 0, sessionsTotal: 3, cardReviews: 0, quizzes: 0, bestQuiz: null, lastQuiz: null, recalls: 0 };
+  const hist = [{ title: 'P1', focus_min: 600, score: 4.2, max_score: 5 }, { title: 'Q1', focus_min: 480, score: 4.0, max_score: 5 }, { title: 'Q2', focus_min: 60, score: 2.1, max_score: 5 }];
+  const v = verdict(2.8, 5, 4.0, base, hist);
+  assert.equal(v.reached, false);
+  assert.equal(v.headline, 'El esfuerzo no alcanzó');
+  assert.deepEqual(v.reasons.map((r) => r.key), ['late', 'cram', 'less', 'plan', 'nosim']);
+  assert.match(v.reasons.find((r) => r.key === 'less')!.text, /2 h contra unas 9 h/);
+  assert.equal(v.typicalGood, 540);
+  assert.deepEqual(changeSuggestions(v.reasons, ['theory', 'nerves']), ['Empezar el plan del parcial 14 días antes', 'Repartir el estudio en varios días, no dejarlo para el final', 'Darle más horas, como en los parciales donde me fue bien', 'Hacer todas las sesiones del plan']);
+  const good = verdict(4.5, 5, 4.0, { ...base, minutes: 600, days: 6, firstDaysBefore: 12, last48Share: 0.2, sessionsDone: 3, quizzes: 1, bestQuiz: 80, cardReviews: 40 }, hist);
+  assert.equal(good.reached, true);
+  assert.equal(good.headline, 'El esfuerzo alcanzó');
+  assert.ok(good.reasons.every((r) => r.tone === 'good'));
+  const effortOk = verdict(3.5, 5, 4.0, { ...base, minutes: 600, days: 6, firstDaysBefore: 12, last48Share: 0.2, sessionsDone: 3, quizzes: 1, bestQuiz: 75 }, hist);
+  assert.equal(effortOk.headline, 'Le pusiste esfuerzo, pero no alcanzó');
+  assert.equal(verdict(3.0, 5, null, base).targetPct, 60, 'sin meta: aprobar con 3,0');
+  assert.deepEqual(parseScore('4,2'), { score: 4.2, max: 5 });
+  assert.deepEqual(parseScore('38/50'), { score: 38, max: 50 });
+  assert.equal(parseScore('6'), null);
+  assert.equal(parseScore('51/50'), null);
+  assert.equal(parseScore('abc'), null);
+  assert.deepEqual(chartPoints([{ title: 'P1', focus_min: 120, score: 4, max_score: 5 }, { title: 'X', focus_min: 0, score: null, max_score: 5, skipped: true }], { focus_min: 60, pct: 50, title: 'P2' }),
+    [{ x: 2, y: 80, title: 'P1', current: false }, { x: 1, y: 50, title: 'P2', current: true }]);
+});

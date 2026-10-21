@@ -24,7 +24,8 @@ import { getEstimateRatio } from '../lib/studyDb';
 import { estimateHint, fmtMinutes } from '../lib/estimate';
 import { getSessions, removePlan, applyShift, trashTasks, type SessionTask } from '../lib/quizDb';
 import { shouldOffer, planProgress, shiftSessions, KIND_TEXT } from '../lib/examPlan';
-import { openExamPlan, dataChanged } from '../lib/uiBus';
+import { openExamPlan, openExamReview, dataChanged } from '../lib/uiBus';
+import { shouldAsk } from '../lib/examReview';
 import { confirm } from '../lib/feedback';
 import { useRouter } from 'expo-router';
 import { cleanRule, ruleText, type RepeatRule } from '../lib/repeat';
@@ -256,6 +257,15 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
 
       {hasPlanCols() && (needsPlan(date, new Date()) || !!plan.at) && (
         <WhenPicker title={title} dueDate={date} dueTime={time} value={plan} onChange={setPlan} excludeId={editTask?.id ?? null} />
+      )}
+
+      {editTask && shouldAsk({ ...editTask, type, due_date: date } as any, new Date()) && (
+        <Pressable onPress={() => { const ex = { ...editTask, due_date: date, type }; onClose(); openExamReview(ex as Task); }} accessibilityRole="button"
+          style={({ hovered }: any) => ({ marginTop: 14, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: C.brand2 + '66', backgroundColor: hovered ? C.surface2 : C.brand2 + '12' })}>
+          <Ionicons name="school-outline" size={18} color={C.brand2} />
+          <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700', flex: 1 }}>¿Cómo te fue? Pon la nota y mira si el esfuerzo alcanzó</Text>
+          <Ionicons name="chevron-forward" size={16} color={C.muted} />
+        </Pressable>
       )}
 
       {editTask && ['examen', 'quiz'].includes(type) && (sessions.length > 0 || shouldOffer(type, date, new Date())) && (
