@@ -1283,3 +1283,23 @@ npx supabase functions deploy ai
 
 `npm test` (lectura en Markdown y dibujos válidos, materia y título sugeridos, páginas con dibujos, pizarra, recorte, modo escáner, texto de un PDF). No hay pruebas SQL nuevas.
 
+## Versión 23 (parte 1): pantalla de proyecto ordenada
+
+Sin cambios para desplegar: la pantalla de proyecto quedó partida en `components/projects/` y se ve y funciona igual.
+
+## Versión 23 (parte 2): comentarios y menciones en tareas de proyecto
+
+### 1. Migración
+
+Corre `supabase/schema_v22.sql` completo (es idempotente; requiere schema_v12 y schema_v14). Agrega `task_comments` con sus permisos (solo integrantes) y los avisos de mención y de comentario. También cambia el aviso de "te asignaron una tarea" para que abra la tarea. No hay funciones que desplegar: `notify` ya envía cualquier aviso de la bandeja.
+
+### 2. Lo que cambia para el usuario
+
+- En la ventana de una tarea de proyecto, **Comentarios**: escribir con @ muestra a los integrantes para mencionarlos (flechas y Enter, o tocar). Ctrl + Enter envía. Cada quien edita o borra lo suyo; el dueño puede borrar cualquiera.
+- Las tarjetas del tablero y la lista muestran cuántos comentarios tienen.
+- Avisos en la campana y como notificación: "te mencionó" y "comentó en tu tarea". Tocar el aviso abre el proyecto con la tarea.
+
+### 3. Pruebas
+
+`npm test` (incluye `tests/v23.test.ts`: qué se busca tras la @, sugerencias sin tildes, insertar la mención, quién quedó mencionado, correos que no son menciones) y `bash tests/run_sql.sh` (incluye `tests/sql/22_pruebas.sql`: lectores comentan, nada en proyectos ajenos ni a nombre de otro, menciones solo de integrantes, avisos sin duplicar, editar solo avisa a los nuevos y deja marca, el dueño borra, todo se borra con la tarea).
+

@@ -26,6 +26,7 @@ import { MoveMenu, Tablero } from '../../components/projects/ProjectBoard';
 import { Lista } from '../../components/projects/ProjectList';
 import { HeaderBtn, MoreMenu, OptionsButton } from '../../components/projects/ProjectMenu';
 import { Equipo } from '../../components/projects/ProjectTeam';
+import { getCommentCounts } from '../../lib/commentsDb';
 
 // ============================================================
 //  Pantalla de un proyecto: Tablero, Lista, Archivos y Equipo.
@@ -51,7 +52,7 @@ const VIEWS = [
 type ViewKey = (typeof VIEWS)[number]['key'];
 
 function ProyectoDetalle() {
-  const params = useLocalSearchParams<{ id: string | string[] }>();
+  const params = useLocalSearchParams<{ id: string | string[]; tarea?: string }>();
   const projectId = Array.isArray(params.id) ? params.id[0] : (params.id ?? '');
   const router = useRouter();
   const { isWide } = useResponsive();
@@ -67,6 +68,7 @@ function ProyectoDetalle() {
   const [steps, setSteps] = useState<Record<string, PStep[]>>(snap?.steps ?? {});
   const [activity, setActivity] = useState<(Activity & { profile?: Profile | null })[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>(snap?.subjects ?? []);
+  const [comments, setComments] = useState<Record<string, number>>({});   // comentarios por tarea (v23)
   const [loading, setLoading] = useState(!snap);
   const [gone, setGone] = useState(false);
 
@@ -101,6 +103,7 @@ function ProyectoDetalle() {
   async function loadNow() {
     try {
       // Todo a la vez (antes primero el proyecto y después lo demás).
+      getCommentCounts(projectId).then(setComments).catch(() => {});
       const [p, ms, ts, st, ac, sj] = await Promise.all([
         getProject(projectId),
         getMembers(projectId),
@@ -121,6 +124,15 @@ function ProyectoDetalle() {
 
   // Igual que en la lista: sin websockets todavía, se recarga al volver.
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  // Un aviso ("te mencionaron", "te asignaron") abre la tarea directamente.
+  const opened = useRef<string | null>(null);
+  useEffect(() => {
+    const tid = params.tarea;
+    if (!tid || opened.current === tid || !tasks.length) return;
+    const t = tasks.find((x) => x.id === tid);
+    if (t) { opened.current = tid; setView('tablero'); setEditingTask(t); }
+  }, [params.tarea, tasks]);
 
   const cols = useMemo(() => columnsOf(project), [project]);
   const role: ProjectRole | null = useMemo(() => myRole(members, myId), [members, myId]);
@@ -291,7 +303,7 @@ function ProyectoDetalle() {
         <Text style={{ color: C.muted, padding: 24 }}>Cargando…</Text>
       ) : view === 'tablero' ? (
         <Tablero
-          cols={cols} grouped={grouped} steps={steps} members={members} subject={subject}
+          cols={cols} grouped={grouped} steps={steps} members={members} subject={subject} comments={comments}
           editable={editable} isWide={isWide} myId={myId}
           selecting={selecting} selected={selected} onToggleSelect={toggleSelect}
           onOpen={setEditingTask}
@@ -301,7 +313,7 @@ function ProyectoDetalle() {
         />
       ) : view === 'lista' ? (
         <Lista
-          tasks={tasks} cols={cols} steps={steps} members={members}
+          tasks={tasks} cols={cols} steps={steps} members={members} comments={comments}
           editable={editable} isWide={isWide}
           selecting={selecting} selected={selected} onToggleSelect={toggleSelect}
           onOpen={setEditingTask}
@@ -336,6 +348,9 @@ function ProyectoDetalle() {
         visible={!!editingTask || !!newIn}
         task={editingTask}
         projectId={projectId}
+        myId={myId}
+        isOwner={role === 'owner'}
+        onCommentCount={(tid, n) => setComments((c) => (c[tid] === n ? c : { ...c, [tid]: n }))}
         status={editingTask?.status ?? newIn ?? cols[0]?.key ?? 'todo'}
         cols={cols}
         members={members}

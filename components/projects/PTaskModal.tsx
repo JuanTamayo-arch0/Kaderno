@@ -9,17 +9,16 @@ import { StepSuggestions } from '../StepSuggestions';
 import { play } from '../../lib/sound';
 import { BoardColumn, Member, PStep, PTask, addProjectStep, addProjectTask, colorOf, deleteProjectStep, deleteProjectTask, initialsOf, logActivity, nameOf, toggleProjectStep, updateProjectTask } from '../../lib/projects';
 import { btnPrimary, hace, input, isWeb, lbl, pad } from './projectUi';
+import { TaskComments } from './TaskComments';
 
 // ============================================================
 //  Ventana de una tarea de proyecto: datos, responsable, fecha y microtareas.
-//  (Separado de app/proyectos/[id].tsx en la versión 23.)
+//  (Separado de app/proyectos/[id].tsx en la versión 23.) Abajo, los
+//  comentarios con @menciones (v23, fase 2).
 // ============================================================
 
-// ============================================================
-//  Ventana de una tarea de proyecto
-// ============================================================
-
-export function PTaskModal({ visible, task, projectId, status, cols, members, steps, editable, onClose, onSaved, onStepsChanged, onStepPatch }: {
+export function PTaskModal({ visible, task, projectId, status, cols, members, steps, editable, onClose, onSaved, onStepsChanged, onStepPatch, myId = null, isOwner = false, onCommentCount }: {
+  myId?: string | null; isOwner?: boolean; onCommentCount?: (taskId: string, n: number) => void;
   visible: boolean; task: PTask | null; projectId: string; status: string;
   cols: BoardColumn[]; members: Member[]; steps: PStep[]; editable: boolean;
   onClose: () => void; onSaved: () => void; onStepsChanged: () => void;
@@ -275,6 +274,9 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
               <Pressable onPress={borrar} style={{ alignItems: 'center', marginTop: 14 }}>
                 <Text style={{ color: C.bad, fontWeight: '600', fontSize: 13 }}>Borrar tarea</Text>
               </Pressable>
+            )}
+            {task && (
+              <TaskComments projectId={projectId} taskId={task.id} taskTitle={task.title} members={members} myId={myId} isOwner={isOwner} onCountChange={onCommentCount} />
             )}
             <Pressable onPress={onClose} style={{ alignItems: 'center', marginTop: 12 }}>
               <Text style={{ color: C.muted }}>Cerrar</Text>

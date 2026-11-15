@@ -13,7 +13,8 @@ import { COARSE_POINTER, NO_STEPS, SelectBox, dueInfo, isWeb } from './projectUi
 //  (Separado de app/proyectos/[id].tsx en la versión 23.)
 // ============================================================
 
-export function Tablero({ cols, grouped, steps, members, subject, editable, isWide, myId, selecting, selected, onToggleSelect, onOpen, onAdd, onMove, onDrop }: {
+export function Tablero({ cols, grouped, steps, members, subject, editable, isWide, myId, selecting, selected, onToggleSelect, onOpen, onAdd, onMove, onDrop, comments }: {
+  comments?: Record<string, number>;
   selecting: boolean;
   selected: Set<string>;
   onToggleSelect: (id: string) => void;
@@ -71,7 +72,7 @@ export function Tablero({ cols, grouped, steps, members, subject, editable, isWi
                     <DragCard binding={dnd.bind(t.id, col.key, list[i + 1]?.id ?? null)} hidden={drag?.id === t.id} landed={dnd.landed === t.id}>
                       <View dataSet={{ anim: 'enter', i: String(Math.min(i, 8)) }}>
                         <TaskCard
-                          task={t} steps={steps[t.id] ?? NO_STEPS} members={members} subject={subject}
+                          task={t} steps={steps[t.id] ?? NO_STEPS} members={members} subject={subject} comments={comments?.[t.id] ?? 0}
                           color={col.color} dim={false} mine={!!myId && t.assignee_id === myId}
                           showMove={editable && !selecting && (!isWeb || !isWide || COARSE_POINTER)}
                           selecting={selecting} selected={selected.has(t.id)}
@@ -126,10 +127,10 @@ export function Tablero({ cols, grouped, steps, members, subject, editable, isWi
 export const TaskCard = React.memo(TaskCardView, (a, b) =>
   a.task === b.task && a.steps === b.steps && a.members === b.members && a.subject === b.subject && a.color === b.color
   && a.dim === b.dim && a.mine === b.mine && a.showMove === b.showMove && a.selecting === b.selecting && a.selected === b.selected
-  && !!a.onLongPress === !!b.onLongPress);
+  && !!a.onLongPress === !!b.onLongPress && a.comments === b.comments);
 
-export function TaskCardView({ task, steps, members, subject, color, dim, mine, showMove, selecting, selected, onPress, onMove, onLongPress }: {
-  task: PTask; steps: PStep[]; members: Member[]; subject: Subject | null;
+export function TaskCardView({ task, steps, members, subject, color, dim, mine, showMove, selecting, selected, onPress, onMove, onLongPress, comments = 0 }: {
+  task: PTask; steps: PStep[]; members: Member[]; subject: Subject | null; comments?: number;
   color: string; dim: boolean; mine: boolean; showMove: boolean;
   selecting: boolean; selected: boolean;
   onPress: () => void; onMove: () => void; onLongPress?: () => void;
@@ -178,6 +179,13 @@ export function TaskCardView({ task, steps, members, subject, color, dim, mine, 
         {subject && <View style={{ paddingVertical: 2, paddingHorizontal: 7, borderRadius: R.pill, backgroundColor: subject.color + '22' }}>
           <Text style={{ color: subject.color, fontSize: 10, fontWeight: '700' }}>{subject.name}</Text>
         </View>}
+
+        {comments > 0 && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }} accessibilityLabel={`${comments} comentarios`}>
+            <Ionicons name="chatbubble-outline" size={11} color={C.muted} />
+            <Text style={{ color: C.muted, fontSize: 10.5, fontWeight: '700' }}>{comments}</Text>
+          </View>
+        )}
 
         {due && (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
