@@ -27,9 +27,10 @@ import { Lista } from '../../components/projects/ProjectList';
 import { HeaderBtn, MoreMenu, OptionsButton } from '../../components/projects/ProjectMenu';
 import { Equipo } from '../../components/projects/ProjectTeam';
 import { getCommentCounts } from '../../lib/commentsDb';
+import { ProjectCalendar } from '../../components/projects/ProjectCalendar';
 
 // ============================================================
-//  Pantalla de un proyecto: Tablero, Lista, Archivos y Equipo.
+//  Pantalla de un proyecto: Tablero, Lista, Calendario, Archivos y Equipo.
 //  Las vistas y ventanas viven en components/projects/ (versión 23).
 //
 //  Sobre el arrastrar y soltar: en web NO se usa PanResponder ni una librería
@@ -46,6 +47,7 @@ type ProjSnap = { project: Project; members: Member[]; tasks: PTask[]; steps: Re
 const VIEWS = [
   { key: 'tablero', label: 'Tablero', icon: 'grid-outline' },
   { key: 'lista', label: 'Lista', icon: 'list-outline' },
+  { key: 'calendario', label: 'Calendario', icon: 'calendar-outline' },
   { key: 'archivos', label: 'Archivos', icon: 'folder-open-outline' },
   { key: 'equipo', label: 'Equipo', icon: 'people-outline' },
 ] as const;
@@ -75,6 +77,7 @@ function ProyectoDetalle() {
   const [view, setView] = useState<ViewKey>('tablero');
   const [editingTask, setEditingTask] = useState<PTask | null>(null);
   const [newIn, setNewIn] = useState<string | null>(null);   // clave de columna donde se crea
+  const [newDate, setNewDate] = useState<Date | null>(null); // fecha al crear desde el calendario
   const [colsModal, setColsModal] = useState(false);
   const [moving, setMoving] = useState<PTask | null>(null);  // tarjeta en el menú "mover a"
 
@@ -332,6 +335,9 @@ function ProyectoDetalle() {
             load();
           }}
         />
+      ) : view === 'calendario' ? (
+        <ProjectCalendar projectId={projectId} tasks={tasks} cols={cols} members={members} editable={editable} isWide={isWide} myId={myId}
+          onOpen={setEditingTask} onAddOn={(d) => { setNewDate(d); setNewIn(cols[0]?.key ?? 'todo'); }} />
       ) : view === 'archivos' ? (
         <ProjectFiles projectId={projectId} members={members} editable={editable} isWide={isWide} onChanged={load} />
       ) : (
@@ -348,6 +354,7 @@ function ProyectoDetalle() {
         visible={!!editingTask || !!newIn}
         task={editingTask}
         projectId={projectId}
+        defaultDate={newDate}
         myId={myId}
         isOwner={role === 'owner'}
         onCommentCount={(tid, n) => setComments((c) => (c[tid] === n ? c : { ...c, [tid]: n }))}
@@ -356,8 +363,8 @@ function ProyectoDetalle() {
         members={members}
         steps={editingTask ? steps[editingTask.id] ?? [] : []}
         editable={editable}
-        onClose={() => { setEditingTask(null); setNewIn(null); }}
-        onSaved={() => { setEditingTask(null); setNewIn(null); load(); }}
+        onClose={() => { setEditingTask(null); setNewIn(null); setNewDate(null); }}
+        onSaved={() => { setEditingTask(null); setNewIn(null); setNewDate(null); load(); }}
         onStepsChanged={load}
         onStepPatch={(stepId, done) => setSteps((prev) => {
           const out: Record<string, PStep[]> = {};

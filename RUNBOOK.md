@@ -1303,3 +1303,20 @@ Corre `supabase/schema_v22.sql` completo (es idempotente; requiere schema_v12 y 
 
 `npm test` (incluye `tests/v23.test.ts`: qué se busca tras la @, sugerencias sin tildes, insertar la mención, quién quedó mencionado, correos que no son menciones) y `bash tests/run_sql.sh` (incluye `tests/sql/22_pruebas.sql`: lectores comentan, nada en proyectos ajenos ni a nombre de otro, menciones solo de integrantes, avisos sin duplicar, editar solo avisa a los nuevos y deja marca, el dueño borra, todo se borra con la tarea).
 
+## Versión 23 (parte 3): calendario del proyecto
+
+Sin migración: usa `start_at` y `due_at` de `project_tasks` (schema_v13).
+
+### Lo que cambia para el usuario
+
+- Nueva vista **Calendario** en cada proyecto, entre Lista y Archivos.
+- **Mes**: las entregas de cada día con el color de su columna. En computador, tocar un día vacío crea una tarea con esa fecha; en celular, tocar un día muestra sus tareas y "+ Tarea este día". Los lectores solo miran.
+- **Línea de tiempo**: una barra por tarea del inicio a la entrega, la raya de hoy y la de la entrega final. Las tareas sin fecha quedan abajo.
+- Arriba, **Entrega final**: cuántos días faltan, cuántas van hechas, las vencidas, las de esta semana y si el ritmo alcanza. Se puede escoger qué tarea es la entrega final.
+- **Cruces**: avisa cuando alguien tiene tres o más tareas pendientes al mismo tiempo.
+- Filtros "Solo lo mío" y "Ocultar hechas".
+- La ventana de la tarea tiene un campo nuevo, **Empieza (opcional)**.
+
+### Pruebas
+
+`npm test` (incluye en `tests/v23.test.ts` la cuadrícula del mes, barras recortadas al rango, cruces que juntan días seguidos y el camino a la entrega final).
