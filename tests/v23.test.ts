@@ -86,3 +86,49 @@ test('cruces por persona y camino a la entrega final', async () => {
   assert.equal(roadToFinal([tk('x', '2027-03-01')], new Date(2026, 10, 15)).pace, 'ok');
   assert.equal(roadToFinal([], new Date()).pace, 'none');
 });
+
+// ---------- Fase 4: ropa de temporada ----------
+import { SEASONS, inSeason, seasonOn, seasonOfItem, upcomingSeason, seasonEnd } from '../lib/pets/seasons';
+import { ITEM_RULES as RULES, SHOP_ORDER as ORDER, itemState as stateOf } from '../lib/pets/economy';
+import { ITEMS as PET_ITEMS } from '../lib/pets/art';
+import { readFileSync as readSql } from 'node:fs';
+
+test('temporadas: Navidad cruza el año, Halloween llega al 2 de noviembre', () => {
+  const nav = SEASONS.find((s) => s.id === 'navidad')!;
+  assert.ok(inSeason(nav, new Date(2026, 11, 1)) && inSeason(nav, new Date(2027, 0, 6)));
+  assert.ok(!inSeason(nav, new Date(2027, 0, 7)) && !inSeason(nav, new Date(2026, 10, 30)));
+  assert.equal(seasonOn(new Date(2026, 10, 2))?.id, 'halloween');
+  assert.equal(seasonOn(new Date(2026, 10, 15)), null);
+  assert.equal(seasonEnd(nav, new Date(2026, 11, 20)).getTime(), new Date(2027, 0, 6).getTime());
+});
+
+test('próxima temporada: desde el 15 de noviembre viene Navidad en 16 días', () => {
+  const u = upcomingSeason(new Date(2026, 10, 15, 18, 30));
+  assert.equal(u.season.id, 'navidad');
+  assert.equal(u.days, 16);
+  assert.equal(upcomingSeason(new Date(2026, 11, 24)).days, 0);
+  assert.equal(upcomingSeason(new Date(2027, 0, 10)).season.id, 'carnaval');
+});
+
+test('tienda: las de temporada van aparte y fuera de fecha no se venden (lo comprado se queda)', () => {
+  for (const s of SEASONS) for (const id of s.items) { assert.ok(id in PET_ITEMS && id in RULES, id); assert.ok(!ORDER.includes(id)); assert.equal(seasonOfItem(id)?.id, s.id); }
+  const pet = { xp: 5000, coins: 5000, outfit: {} };
+  assert.equal(stateOf('gorro_navidad', pet, new Set(), new Date(2026, 10, 15)), 'fuera');
+  assert.equal(stateOf('gorro_navidad', pet, new Set(), new Date(2026, 11, 15)), 'comprable');
+  assert.equal(stateOf('gorro_navidad', pet, new Set(['gorro_navidad']), new Date(2026, 10, 15)), 'tuya');
+  assert.equal(stateOf('gorro', pet, new Set(), new Date(2026, 10, 15)), 'comprable');
+});
+
+test('las fechas y precios de temporada son los mismos en schema_v22.sql', () => {
+  const sql = readSql('supabase/schema_v22.sql', 'utf8');
+  const f4 = sql.slice(sql.indexOf('FASE 4 · Ropa de temporada'));
+  for (const s of SEASONS) for (const id of s.items) {
+    const m = new RegExp(`\\('${id}', '([^']+)', (\\d+), (\\d+)\\)`).exec(f4);
+    assert.ok(m, `${id} sin temporada en SQL`);
+    assert.equal(m![1], s.name, id);
+    assert.equal(Number(m![2]), s.from[0] * 100 + s.from[1], id);
+    assert.equal(Number(m![3]), s.to[0] * 100 + s.to[1], id);
+    const r = RULES[id];
+    assert.ok(f4.includes(`('${id}', ${r.price}, ${r.level}, '${r.slot}')`), `${id}: precio, nivel o lugar distinto en SQL`);
+  }
+});

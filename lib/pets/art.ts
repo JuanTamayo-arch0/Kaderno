@@ -17,7 +17,9 @@ export type Slot = 'cabeza' | 'ojos' | 'cuello';
 export type ItemId =
   | 'gorro' | 'birrete' | 'audifonos' | 'corona' | 'boina'
   | 'gafas' | 'gafas_sol'
-  | 'bufanda' | 'corbatin' | 'collar';
+  | 'bufanda' | 'corbatin' | 'collar'
+  // De temporada (lib/pets/seasons.ts): solo se compran en su época.
+  | 'gorro_navidad' | 'cuernos_reno' | 'luces' | 'antifaz' | 'gafas_corazon' | 'sombrero_bruja' | 'sombrero_vueltiao';
 export type Outfit = Partial<Record<Slot, ItemId | null>>;
 
 /** Cuadros de animación. */
@@ -330,6 +332,7 @@ const ITEM_PAL: Palette = {
   g: '#f2c14e', G: '#c9951f', u: '#3a7bd5', U: '#2a5ea8', l: '#9fd3ff',
   v: '#8b5cf6', V: '#6d3fd6', n: '#2b3752', N: '#1d2638', a: '#5b6475', A: '#3a4152',
   p: '#e86f86', q: 'rgba(255,255,255,.28)',
+  b: '#9a6a43', B: '#6e4a2c', o: '#f08a24', c: '#f3e6c4', C: '#d6c39a', e: '#3fae5a',
 };
 
 type ItemDef = {
@@ -466,6 +469,99 @@ export const ITEMS: Record<ItemId, ItemDef> = {
       '......kggk......',
       '......kGGk......',
       '.......kk.......',
+    ],
+  },
+  // ---------- De temporada ----------
+  gorro_navidad: {
+    name: 'Gorro de Navidad', slot: 'cabeza', oy: 7,
+    rows: [
+      '.....kkkk..kkk..',
+      '....krrrrkkwwwk.',
+      '...krrRrrrkwwwk.',
+      '..krrrrrRrkkkk..',
+      '..krrrrrrrrrk...',
+      '.krrRrrrrrRrrk..',
+      '.kwwwwwwwwwwwwk.',
+      '.kWWWWWWWWWWWWk.',
+      '..kkkkkkkkkkkk..',
+    ],
+  },
+  cuernos_reno: {
+    name: 'Cuernos de reno', slot: 'cabeza', oy: 7,
+    rows: [
+      '.kk..............kk.',
+      'kbbk.kk......kk.kbbk',
+      'kbbkkbbk....kbbkkbbk',
+      '.kbbbbk......kbbbbk.',
+      '..kbbk........kbbk..',
+      '..kbbk........kbbk..',
+      '...kbbkkkkkkkkbbk...',
+      '...kBrrrrrrrrrrBk...',
+      '....kkkkkkkkkkkk....',
+    ],
+  },
+  sombrero_bruja: {
+    name: 'Sombrero de bruja', slot: 'cabeza', oy: 10,
+    rows: [
+      '..............kk......',
+      '.............kvvk.....',
+      '............kvvk......',
+      '...........kvvvk......',
+      '..........kvvvvk......',
+      '.........kvvvvvvk.....',
+      '........kvvvvvvvk.....',
+      '.......kvvvvvvvvvk....',
+      '......kooooooooook....',
+      'kkkkkkVVVVVVVVVVVVkkkk',
+      'kvvvvvvvvvvvvvvvvvvvvk',
+      '.kkkkkkkkkkkkkkkkkkkk.',
+    ],
+  },
+  sombrero_vueltiao: {
+    name: 'Sombrero vueltiao', slot: 'cabeza', oy: 7,
+    rows: [
+      '........kkkkkkkkkk........',
+      '.......kcccccccccck.......',
+      '.......kkkkkkkkkkkk.......',
+      '.......kckckckckckk.......',
+      '.......kkkkkkkkkkkk.......',
+      '..kkkkkcccccccccccckkkkk..',
+      '.kcckkckkckkckkckkckkckck.',
+      'kcccccccccccccccccccccccck',
+      '.kkkkkkkkkkkkkkkkkkkkkkkk.',
+    ],
+  },
+  antifaz: {
+    name: 'Antifaz de carnaval', slot: 'ojos', oy: 2,
+    rows: [
+      '.gkkkkkkkkkkkkkkkkg.',
+      'kvvvvvvvvvvvvvvvvvvk',
+      'kvv...vvvggvvv...vvk',
+      'kvvv..vvvvvvvv..vvvk',
+      '.kvvvvvvkkkkvvvvvvk.',
+      '..kkkkkk....kkkkkk..',
+    ],
+  },
+  gafas_corazon: {
+    name: 'Gafas de corazón', slot: 'ojos', oy: 2,
+    rows: [
+      '.kk.kk....kk.kk.',
+      'krrkrrk..krrkrrk',
+      'krqrrrkkkkrqrrrk',
+      '.krrrk....krrrk.',
+      '..krk......krk..',
+      '...k........k...',
+    ],
+  },
+  luces: {
+    name: 'Luces de Navidad', slot: 'cuello', oy: 0,
+    rows: [
+      'k..................k',
+      '.kk..............kk.',
+      '...kkkkkkkkkkkkkk...',
+      '..k...k...k...k...k.',
+      '.rr..gg..uu..ee..rr.',
+      '.rr..gg..uu..ee..rr.',
     ],
   },
 };

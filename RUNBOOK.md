@@ -1320,3 +1320,20 @@ Sin migración: usa `start_at` y `due_at` de `project_tasks` (schema_v13).
 ### Pruebas
 
 `npm test` (incluye en `tests/v23.test.ts` la cuadrícula del mes, barras recortadas al rango, cruces que juntan días seguidos y el camino a la entrega final).
+
+## Versión 23 (parte 4): ropa de temporada y citas de PDF
+
+### 1. Migración
+
+Corre otra vez `supabase/schema_v22.sql` completo (es idempotente; ahora también requiere schema_v17). La fase 4 agrega siete prendas al catálogo y hace que `pet_buy` solo venda las de temporada en sus fechas, con la fecha local de cada quien. Sin correrla, la tienda muestra las prendas pero la compra responde "Eso no está en la tienda".
+
+### 2. Lo que cambia para el usuario
+
+- En Mascota > Ropa, debajo de la tienda de siempre, **Temporada**: si hay una activa, sus prendas y hasta cuándo se venden; si no, la próxima con la fecha en que llega ("Llega el 1 dic, en 16 días"). Lo de otras temporadas que ya compraste aparece en "Tuyas de otras temporadas".
+- Temporadas: Carnaval, vacaciones de mitad de año, Amor y Amistad, Halloween y Navidad.
+- Tocar la fuente de una cita de PDF en una nota abre el visor en la misma pestaña, en la página citada; atrás vuelve a la nota.
+- Las notas abiertas ya no se repintan sin parar (gastaban batería y procesador aunque no se tocaran).
+
+### 3. Pruebas
+
+`npm test` (temporadas que cruzan el año, la próxima temporada, estados de la tienda y que las fechas y precios coincidan con el SQL) y `bash tests/run_sql.sh` (incluye `tests/sql/22d_pruebas.sql`: fechas, fuera de temporada no se vende, la ropa de siempre sí, lo comprado se pone todo el año).

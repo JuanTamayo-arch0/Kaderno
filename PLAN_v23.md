@@ -1,6 +1,6 @@
 # PLAN v23: lo pendiente, cobrar suscripciones y Kaderno para el trabajo
 
-Estado: propuesta del domingo 15 de noviembre de 2026. Parte A: fases 1, 2 y 3 construidas (ramas v23-proyecto, v23-comentarios y v23-calendario); se construye una PR por fase. Las partes B y C esperan tus decisiones (sección D).
+Estado: propuesta del domingo 15 de noviembre de 2026. Parte A construida completa (ramas v23-proyecto, v23-comentarios, v23-calendario y v23-temporada); se construye una PR por fase. Las partes B y C esperan tus decisiones (sección D).
 
 ---
 
@@ -98,3 +98,5 @@ Fuentes de la parte B (noviembre de 2026): documentación de fuentes de pago de 
 5. (Fase 3) "Cruce": tres o más tareas pendientes de la misma persona en el mismo día, contando de su inicio a su entrega. Solo se avisa de hoy en adelante.
 6. (Fase 3) "Apretado": lo pendiente no cabe a una tarea cada dos días hábiles antes de la entrega final. Con una tarea vencida, el aviso es "pónganse al día".
 7. (Fase 3) Las tareas ganan un campo "Empieza (opcional)" para dibujar la barra; sin inicio, la barra es solo el día de entrega. No necesita migración (la columna existe desde schema_v13).
+8. (Fase 4) Temporadas y prendas: Carnaval (20 ene a 10 mar, antifaz), vacaciones de mitad de año (15 jun a 31 jul, sombrero vueltiao), Amor y Amistad (septiembre, gafas de corazón), Halloween (1 oct a 2 nov, sombrero de bruja) y Navidad (1 dic a 6 ene, gorro navideño, cuernos de reno y luces). Precios de 120 a 220, nivel 1 o 2. Fuera de temporada se ven con la fecha en que llegan; lo comprado se queda y se pone todo el año.
+9. (Fase 4) La cita de PDF ya abre en la misma pestaña. La causa de la pantalla en blanco era un ciclo en el editor de notas: el menú flotante del texto mandaba una actualización en cada repintado y el editor se repintaba con cada actualización. Pasaba siempre que había una nota abierta (miles de cambios por segundo, gastando batería), no solo al abrir la cita.

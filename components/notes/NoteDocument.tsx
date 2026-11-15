@@ -223,14 +223,12 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
     if (kind === 'flashcard') makeFlashcards(text);
     else askOracle(`Explícame esto de mi nota "${title || 'Nota'}": ${text.slice(0, 600)}`);
   }
-  // Fuente de una cita de PDF: abre el visor en esa página. En web, en otra
-  // pestaña (la nota queda abierta al lado); el visor busca la dirección solo.
+  // Fuente de una cita de PDF: abre el visor en esa página, en la misma pestaña
+  // (atrás vuelve a la nota). El visor busca la dirección del archivo solo.
   function openFileLink(href: string) {
     const f = parseFileLink(href);
     if (!f) return;
-    const path = `/visor?kind=${f.kind}&fileId=${f.id}&p=${f.page}`;
-    if (Platform.OS === 'web' && typeof window !== 'undefined') window.open(path, '_blank', 'noopener');
-    else router.push(path as any);
+    router.push({ pathname: '/visor', params: { kind: f.kind, fileId: f.id, p: String(f.page) } } as any);
   }
   async function uploadImage(file: Blob): Promise<string> {
     try {

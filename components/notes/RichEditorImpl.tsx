@@ -365,6 +365,15 @@ function headingsOf(ed: Editor): (HeadingItem & { pos: number })[] {
   return out.filter((h) => h.text);
 }
 
+// Fuera del componente: si fueran objetos nuevos en cada render, BubbleMenu
+// despacharía una transacción "updateOptions" cada vez.
+const BUBBLE_OPTIONS = { placement: 'top' as const, offset: 8 };
+function bubbleShouldShow({ editor: ed, state }: { editor: Editor; state: any }): boolean {
+  const { empty, from, to } = state.selection;
+  if (empty || (state.selection as any).node) return false;
+  return state.doc.textBetween(from, to, ' ').trim().length > 0 && !ed.isActive('codeBlock');
+}
+
 const RichEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(function RichEditor(props, ref) {
   const { value, editing, onRequestEdit, minHeight = 320 } = props;
   const cb = useRef(props); cb.current = props;
@@ -543,7 +552,14 @@ const RichEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(function RichEd
   const [, force] = useState(0);
   useEffect(() => {
     if (!editor) return;
-    const f = () => force((x) => x + 1);
+    // Las transacciones que solo cambian opciones de un menú flotante no cambian
+    // lo que se pinta: repintar con ellas armaba un ciclo sin fin con BubbleMenu
+    // (y dejaba en blanco la pantalla siguiente al abrir una cita de PDF).
+    const f = (e?: any) => {
+      const tr = e?.transaction;
+      if (tr && !tr.docChanged && !tr.selectionSet && !tr.storedMarksSet && Object.keys(tr.meta ?? {}).some((k) => k.startsWith('bubbleMenu'))) return;
+      force((x) => x + 1);
+    };
     editor.on('selectionUpdate', f); editor.on('transaction', f);
     return () => { editor.off('selectionUpdate', f); editor.off('transaction', f); };
   }, [editor]);
@@ -646,12 +662,7 @@ const RichEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(function RichEd
             </div>
       )}
 
-      <BubbleMenu editor={editor} options={{ placement: 'top', offset: 8 }}
-        shouldShow={({ editor: ed, state }) => {
-          const { empty, from, to } = state.selection;
-          if (empty || (state.selection as any).node) return false;
-          return state.doc.textBetween(from, to, ' ').trim().length > 0 && !ed.isActive('codeBlock');
-        }}>
+      <BubbleMenu editor={editor} options={BUBBLE_OPTIONS} shouldShow={bubbleShouldShow}>
         <div className="kd-pop kd-bubble" role="toolbar" aria-label="Texto seleccionado">
           {editing && (
             <>
