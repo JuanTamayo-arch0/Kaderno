@@ -8,6 +8,9 @@
 //  fórmulas y la caja de los dibujos), "board" (pizarra) y "plain" (texto
 //  tal cual, para cronogramas). Sin modo responde como antes ({ text }).
 //
+//  v24: el tope de páginas depende del plan (Gratis o Pro, ver
+//  _shared/plans.ts). Sin schema_v23 se usa el de Pro.
+//
 //  Desplegar:   npx supabase functions deploy ocr
 //  Secreto:     npx supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
 //  La API key NUNCA vive en la app: solo aquí, en el servidor.
@@ -16,12 +19,12 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { ocrPrompt, parseOcr, type OcrMode } from '../_shared/ocrMarkdown.ts';
+import { limitOf, limitMessage } from '../_shared/plans.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-const DAILY_PAGES = 80;
 const MAX_B64 = 8_000_000; // unos 6 MB de imagen
 
 Deno.serve(async (req) => {
@@ -41,9 +44,11 @@ Deno.serve(async (req) => {
     if (imageBase64.length > MAX_B64) return json({ error: 'La imagen es muy grande.' }, 413);
     if (!/^image\/(jpeg|png|webp|gif)$/.test(mediaType)) return json({ error: 'Formato de imagen no soportado.' }, 400);
 
-    const { data: left, error: takeErr } = await supabase.rpc('ai_take', { p_task: 'ocr', p_limit: DAILY_PAGES });
+    const { data: mp, error: planErr } = await supabase.rpc('my_plan');
+    const plan = planErr ? 'pro' : String((mp as any)?.plan ?? 'free');
+    const { data: left, error: takeErr } = await supabase.rpc('ai_take', { p_task: 'ocr', p_limit: limitOf(plan, 'ocr') });
     if (!takeErr && typeof left === 'number' && left < 0) {
-      return json({ error: `Llegaste al límite de hoy (${DAILY_PAGES} páginas). Mañana se renueva.`, code: 'limit' }, 429);
+      return json({ error: limitMessage(plan, 'ocr'), code: 'limit', plan }, 429);
     }
 
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY');

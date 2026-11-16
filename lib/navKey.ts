@@ -11,6 +11,7 @@ export function navKeyOf(path: string): NavKey | null {
   if (p.startsWith('/materia') || p.startsWith('/nota')) return 'materias';
   if (p.startsWith('/importar')) return 'index';
   if (p.startsWith('/sala')) return 'enfoque';
+  if (p.startsWith('/plan')) return 'ajustes';
   const first = p.split('/')[1] as NavKey;
   const known: NavKey[] = ['horario', 'proyectos', 'estudiar', 'enfoque', 'repaso', 'oraculo', 'capturar', 'mascota', 'buscar', 'ajustes', 'tipos', 'personalizar', 'papelera'];
   return known.includes(first) ? first : null;
