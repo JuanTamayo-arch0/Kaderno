@@ -1360,3 +1360,68 @@ Sin la migración, la IA usa los topes de Pro y la pantalla "Tu plan" avisa que 
 ### 3. Pruebas
 
 `npm test` (precios, ahorro anual, topes y lo que dice "Tu plan" en cada estado) y `bash tests/run_sql.sh` (incluye `tests/sql/23_pruebas.sql`: cuenta nueva, prueba una sola vez, nadie se regala Pro, calendarios por plan, puestos de Equipo y vencimiento).
+
+## Versión 24 (parte 2): cobro con Wompi
+
+Todo funciona en el modo de pruebas de Wompi (sandbox) sin RUT. Para cobrar de verdad, ver PLAN_v24.md, sección D.
+
+### 1. Migración
+
+Corre otra vez `supabase/schema_v23.sql` completo. La fase 2 agrega `billing_payments`, `billing_events`, los precios (`billing_price`), las funciones del servidor para crear, aplicar y renovar pagos, `billing_cancel`, `billing_resume` y los puestos de Equipo (`team_seat_add`, `team_seat_remove`).
+
+### 2. Llaves de Wompi
+
+1. Crea la cuenta en comercios.wompi.co. Mientras aprueban el comercio, en Desarrolladores ya salen las llaves de **pruebas** (empiezan por `pub_test_`, `prv_test_`, `test_integrity_` y `test_events_`).
+2. Guárdalas como secretos de Supabase (nunca en el repositorio ni en el droplet):
+
+   ```bash
+   npx supabase secrets set WOMPI_PUBLIC_KEY=pub_test_... WOMPI_PRIVATE_KEY=prv_test_... \
+     WOMPI_INTEGRITY_SECRET=test_integrity_... WOMPI_EVENTS_SECRET=test_events_... \
+     WOMPI_ENV=sandbox APP_URL=https://TU-DOMINIO
+   ```
+
+   `APP_URL` es la dirección de Kaderno (a donde vuelve la persona después de pagar). Si usas varias, sepáralas con comas.
+3. Despliega las tres funciones:
+
+   ```bash
+   npx supabase functions deploy billing
+   npx supabase functions deploy billing-webhook --no-verify-jwt
+   npx supabase functions deploy billing-charge --no-verify-jwt
+   ```
+
+4. En Wompi > Desarrolladores > **URL de eventos** (la de pruebas): `https://TU-PROYECTO.supabase.co/functions/v1/billing-webhook`.
+5. Programa el cobro de renovaciones y los avisos cada hora (en el SQL Editor):
+
+   ```sql
+   select cron.schedule('kaderno-billing', '7 * * * *', $$
+     select net.http_post(
+       url := 'https://TU-PROYECTO.supabase.co/functions/v1/billing-charge',
+       headers := jsonb_build_object('x-cron-secret', 'EL-MISMO-NOTIFY_CRON_SECRET')
+     );
+   $$);
+   ```
+
+No hay cambios en el droplet.
+
+### 3. Probar en sandbox
+
+- Ajustes > Tu plan > Pagar Pro > **Pagar una vez**: abre la página de Wompi; con PSE escoge "Banco que aprueba"; con tarjeta usa 4242 4242 4242 4242. Al volver, "Tu plan" muestra "Pago aprobado" y el plan sube a Pro.
+- **Renovar solo con tarjeta**: 4242 4242 4242 4242 aprueba, 4111 1111 1111 1111 rechaza. **Con Nequi**: 3991111111 aprueba, 3992222222 rechaza.
+- Para probar una renovación sin esperar un mes: en el SQL Editor, `update subscriptions set next_charge_at = now() where user_id = '...';` y llama `billing-charge` (o espera la hora).
+- Cada evento que manda Wompi queda en `billing_events` (con `ok = false` si la firma no coincide).
+
+### 4. Pasar a producción
+
+Cuando Wompi apruebe el comercio: cambia los cuatro secretos por los de producción (`pub_prod_`, `prv_prod_`, `prod_integrity_`, `prod_events_`), `WOMPI_ENV=production`, y pon la URL de eventos de producción en Wompi. No hay que desplegar nada otra vez. Haz un pago real pequeño (Pro mensual) y reembólsalo desde el panel de Wompi para confirmar.
+
+### 5. Lo que cambia para el usuario
+
+- En Tu plan: **Pagar una vez** (cualquier medio de Wompi, sin renovación) o **Renovar solo** con tarjeta o Nequi (se cobra un día antes de que termine el periodo).
+- Si una renovación falla, se reintenta 1, 2 y 4 días después y la persona conserva su plan mientras tanto; al tercer fallo se apaga la renovación. Cada paso llega como aviso.
+- Cambiar el medio de pago, apagar y prender la renovación, historial de pagos con su referencia.
+- Equipo: agregar y quitar personas por correo, y comprar puestos extra a mitad de periodo (se cobra la parte que falta).
+- Avisos: la prueba termina mañana; un plan sin renovación termina en 3 días.
+
+### 6. Pruebas
+
+`npm test` (firma de integridad, verificación de eventos, checkout, tarjeta y Nequi, precios iguales en el SQL) y `bash tests/run_sql.sh` (incluye `tests/sql/23b_pruebas.sql`: monto exacto, idempotencia, renovación y reintentos, Equipo y puestos, que nadie apruebe pagos desde la app, cancelar y avisos).
