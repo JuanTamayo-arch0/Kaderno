@@ -72,3 +72,6 @@ Queda para después: avisos a Slack o Teams y crear tareas reenviando un correo.
 8. (Fase 2) Puestos extra de Equipo a mitad de periodo: la parte proporcional de lo que falta, mínimo $2.000 por puesto. Desde la siguiente renovación se cobran con el resto.
 9. (Fase 2) Apagar la renovación olvida el medio de pago en Kaderno (la tarjeta queda en Wompi, que no la vuelve a cobrar sin nosotros).
 10. (Fase 2) Los datos de la tarjeta van de la app directo a Wompi con la llave pública; el servidor solo recibe el token. El webhook verifica la firma con el secreto de eventos y aplicar un pago es idempotente.
+11. (Fase 3) El modo cambia nombres y orden, no datos: una materia y un área son lo mismo por dentro. Por eso se puede pasar de un modo a otro sin perder nada.
+12. (Fase 3) En "Los dos" se dejan los nombres del estudio (la mayoría de quienes eligen ambos son estudiantes que trabajan) y se prenden las funciones del trabajo.
+13. (Fase 3) El modo se guarda en la cuenta y, para pintar rápido al abrir, también en el dispositivo.

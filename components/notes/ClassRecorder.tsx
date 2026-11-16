@@ -12,6 +12,7 @@ import {
 import { browserSpeechSupported, createBrowserTranscriber, keepAwake, LANGS, type Transcriber, type TranscriberState } from '../../lib/transcribe';
 import { createTranscript, saveTranscript, getTranscripts, deleteTranscript, summarizeClass, type Transcript } from '../../lib/transcriptsDb';
 import { openAdd } from '../../lib/uiBus';
+import { getMode, useMode } from '../../lib/mode';
 
 // ============================================================
 //  Grabar la clase (v22, fase 1): el texto de la clase se escribe solo
@@ -74,12 +75,14 @@ export function useClassRecorder(noteId: string, getMd: () => string) {
 
   async function start() {
     if (!supported) {
-      notify('Este navegador no puede transcribir', 'Abre Kaderno en Chrome, Edge o Safari para grabar la clase. En Firefox no está disponible.');
+      notify('Este navegador no puede transcribir', `Abre Kaderno en Chrome, Edge o Safari para grabar la ${getMode() === 'trabajo' ? 'reunión' : 'clase'}. En Firefox no está disponible.`);
       return false;
     }
     const ok = await AsyncStorage.getItem(CONSENT_KEY).catch(() => null);
     if (!ok) {
-      const yes = await confirm('Antes de grabar', 'Pide permiso al profesor. El audio no se guarda: Kaderno solo escribe lo que se dice, y el texto queda solo en tu cuenta.', 'Entendido, grabar');
+      const yes = await confirm('Antes de grabar', getMode() === 'trabajo'
+        ? 'Avisa a quienes están en la reunión. El audio no se guarda: Kaderno solo escribe lo que se dice, y el texto queda solo en tu cuenta.'
+        : 'Pide permiso al profesor (o avisa en la reunión). El audio no se guarda: Kaderno solo escribe lo que se dice, y el texto queda solo en tu cuenta.', 'Entendido, grabar');
       if (!yes) return false;
       AsyncStorage.setItem(CONSENT_KEY, '1').catch(() => {});
     }
@@ -120,7 +123,7 @@ export function useClassRecorder(noteId: string, getMd: () => string) {
     c.dirty = true;
     await flush();
     setState('stopped'); setInterim('');
-    toast(c.segs.length ? `Clase guardada: ${c.segs.length} ${c.segs.length === 1 ? 'frase' : 'frases'} y ${marksList(c.marks).length} apuntes con minuto` : 'No se alcanzó a escuchar nada.');
+    toast(c.segs.length ? `${getMode() === 'trabajo' ? 'Reunión guardada' : 'Grabación guardada'}: ${c.segs.length} ${c.segs.length === 1 ? 'frase' : 'frases'} y ${marksList(c.marks).length} apuntes con minuto` : 'No se alcanzó a escuchar nada.');
     setVersion((v) => v + 1);
   }
   /** La nota cambió mientras se graba: marcar las líneas nuevas con el minuto. */
@@ -159,11 +162,13 @@ export function RecorderBar({ rec }: { rec: Recorder }) {
 /** Botón para empezar, con el idioma de la clase. */
 export function RecordButton({ rec, onStarted }: { rec: Recorder; onStarted: () => void }) {
   const [open, setOpen] = useState(false);
+  const { mode } = useMode();
+  const what = mode === 'trabajo' ? 'reunión' : mode === 'ambos' ? 'clase o reunión' : 'clase';
   if (rec.active || Platform.OS !== 'web') return null;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      <Button label="Grabar clase" icon="mic-outline" size="sm" kind="secondary" onPress={async () => { if (await rec.start()) onStarted(); }} />
-      <Pressable onPress={() => setOpen(!open)} accessibilityRole="button" accessibilityLabel={`Idioma de la clase: ${LANGS.find((l) => l.code === rec.lang)?.label ?? rec.lang}`} hitSlop={6}
+      <Button label={mode === 'trabajo' ? 'Grabar reunión' : mode === 'ambos' ? 'Grabar' : 'Grabar clase'} icon="mic-outline" size="sm" kind="secondary" onPress={async () => { if (await rec.start()) onStarted(); }} />
+      <Pressable onPress={() => setOpen(!open)} accessibilityRole="button" accessibilityLabel={`Idioma de la ${what}: ${LANGS.find((l) => l.code === rec.lang)?.label ?? rec.lang}`} hitSlop={6}
         style={{ paddingHorizontal: 6, paddingVertical: 6 }}>
         <Text style={{ color: C.muted, fontSize: 11.5, fontWeight: '700' }}>{rec.lang.slice(0, 2).toUpperCase()} ▾</Text>
       </Pressable>
@@ -172,7 +177,7 @@ export function RecordButton({ rec, onStarted }: { rec: Recorder; onStarted: () 
           {LANGS.map((l) => (
             <Pressable key={l.code} onPress={() => { rec.setLang(l.code); setOpen(false); }} accessibilityRole="menuitem"
               style={({ hovered }: any) => ({ padding: 8, borderRadius: 8, backgroundColor: hovered ? C.surface2 : 'transparent' })}>
-              <Text style={{ color: C.text, fontSize: 13, fontWeight: rec.lang === l.code ? '800' : '500' }}>Clase en {l.label.toLowerCase()}</Text>
+              <Text style={{ color: C.text, fontSize: 13, fontWeight: rec.lang === l.code ? '800' : '500' }}>{mode === 'trabajo' ? 'Reunión' : mode === 'ambos' ? 'Grabación' : 'Clase'} en {l.label.toLowerCase()}</Text>
             </Pressable>
           ))}
         </View>
@@ -200,7 +205,7 @@ export function TranscriptPanel({ noteId, version, focus, subjectName, getMd, on
 
   if (!list?.length) return null;
   return (
-    <View style={{ marginTop: 28, gap: 10 }} accessibilityLabel="Transcripciones de la clase">
+    <View style={{ marginTop: 28, gap: 10 }} accessibilityLabel="Transcripciones">
       {list.map((t) => (
         <TranscriptCard key={t.id} t={t} open={open === t.id} onToggle={() => setOpen(open === t.id ? null : t.id)} focusT={focus?.tid === t.id ? focus : null}
           subjectName={subjectName} getMd={getMd} onInsert={onInsert} onCards={onCards}
@@ -217,6 +222,7 @@ function TranscriptCard({ t, open, onToggle, focusT, subjectName, getMd, onInser
   onChanged: (patch: Partial<Transcript>) => void; onDeleted: () => void;
 }) {
   const [q, setQ] = useState('');
+  const { v: mv } = useMode();
   const [mine, setMine] = useState(true);
   const [busy, setBusy] = useState(false);
   const [hl, setHl] = useState<number | null>(null);
@@ -246,7 +252,7 @@ function TranscriptCard({ t, open, onToggle, focusT, subjectName, getMd, onInser
     finally { setBusy(false); }
   }
   async function remove() {
-    if (!(await confirm('¿Borrar esta transcripción?', 'Se borra el texto de la clase. Tus apuntes no cambian.', 'Borrar'))) return;
+    if (!(await confirm('¿Borrar esta transcripción?', 'Se borra el texto de la grabación. Tus apuntes no cambian.', 'Borrar'))) return;
     try { await deleteTranscript(t.id); onDeleted(); toast('Transcripción borrada'); } catch (e) { notify('No se pudo borrar', friendlyError(e)); }
   }
 
@@ -256,7 +262,7 @@ function TranscriptCard({ t, open, onToggle, focusT, subjectName, getMd, onInser
         style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, backgroundColor: hovered ? C.surface2 : 'transparent' })}>
         <Ionicons name="mic-outline" size={18} color={C.brand} />
         <View style={{ flex: 1 }}>
-          <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '800' }}>Transcripción de la clase · {dateLabel}</Text>
+          <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '800' }}>{mv.transcriptOf} · {dateLabel}</Text>
           <Text style={{ color: C.muted, fontSize: 12 }}>{fmtClock(t.duration_s)} · {segs.length} frases{t.marks?.length ? ` · ${t.marks.length} apuntes con minuto` : ''}{t.summary ? ' · con resumen' : ''}</Text>
         </View>
         <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={C.muted} />
@@ -290,7 +296,7 @@ function TranscriptCard({ t, open, onToggle, focusT, subjectName, getMd, onInser
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             <View style={{ flex: 1, minWidth: 180, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.surface2, borderRadius: 10, borderWidth: 1, borderColor: C.line, paddingHorizontal: 10 }}>
               <Ionicons name="search" size={15} color={C.muted} />
-              <TextInput value={q} onChangeText={setQ} placeholder="Buscar en la clase" placeholderTextColor={C.muted} accessibilityLabel="Buscar en la transcripción"
+              <TextInput value={q} onChangeText={setQ} placeholder={`Buscar en la ${mv.klass}`} placeholderTextColor={C.muted} accessibilityLabel="Buscar en la transcripción"
                 style={[{ flex: 1, color: C.text, fontSize: 13.5, paddingVertical: 8 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
               {!!q && <Text style={{ color: C.muted, fontSize: 12 }}>{hits.size}</Text>}
             </View>

@@ -8,7 +8,8 @@ import { confirm, notify, friendlyError, toast } from '../../lib/feedback';
 import { ProgressBar } from '../../components/ProgressBar';
 import { Screen, Button, Card, EmptyState, Field, IconButton, Skeleton, ErrorState, Badge } from '../../components/ds';
 import { Subject, getSubjects } from '../../lib/db';
-import { Overview, Member, TEMPLATES, getProjectsOverview, createProject, joinProject, peekProject, initialsOf, colorOf } from '../../lib/projects';
+import { Overview, Member, TEMPLATES, projectTemplatesFor, getProjectsOverview, createProject, joinProject, peekProject, initialsOf, colorOf } from '../../lib/projects';
+import { getMode } from '../../lib/mode';
 import { onDataChanged } from '../../lib/uiBus';
 import { useAuth } from '../../lib/auth';
 import { snapshotFor } from '../../lib/snapshot';
@@ -195,7 +196,7 @@ function NewProjectModal({ visible, subjects, onClose, onCreated }: { visible: b
       <Field label="Descripción (opcional)" value={desc} onChangeText={setDesc} placeholder="De qué se trata" multiline inputStyle={{ minHeight: 60, textAlignVertical: 'top' }} />
       <Text style={lbl}>Plantilla</Text>
       <View style={{ gap: 8 }}>
-        {TEMPLATES.map((t) => {
+        {projectTemplatesFor(getMode()).map((t) => {
           const on = t.key === template;
           return (
             <Pressable key={t.key} onPress={() => setTemplate(t.key)} accessibilityRole="radio" accessibilityState={{ checked: on }}

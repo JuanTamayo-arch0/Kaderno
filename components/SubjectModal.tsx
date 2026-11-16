@@ -7,6 +7,7 @@ import { confirm, notify, toast, friendlyError } from '../lib/feedback';
 import { Button, Field, IconButton } from './ds';
 import { SubjectIcon, isPhotoIcon } from './SubjectIcon';
 import { shrinkToSquare } from '../lib/imageResize';
+import { useMode } from '../lib/mode';
 
 // Se carga al usarlo: así expo-image-picker no se descarga al abrir la app.
 const loadPicker = () => import('expo-image-picker');
@@ -19,6 +20,7 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
   /** Campo que recibe el foco al abrir (desde "Agregar profesor" en la ficha). */
   focusField?: 'teacher' | 'room' | 'link';
 }) {
+  const { v: mv } = useMode();
   const [name, setName] = useState('');
   const [color, setColor] = useState(SUBJECT_COLORS[0]);
   const [hexText, setHexText] = useState(SUBJECT_COLORS[0]);
@@ -53,7 +55,7 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
     } catch (e) { notify('No se pudo cargar la imagen', friendlyError(e)); }
   }
   async function save() {
-    if (!name.trim()) { setErr('Escribe el nombre de la materia.'); return; }
+    if (!name.trim()) { setErr(`Escribe el nombre de la ${mv.subjectLower}.`); return; }
     const l = cleanLink(link);
     if (link.trim() && !l) { setLinkErr('Pega un enlace que empiece por https://'); return; }
     setBusy(true);
@@ -64,7 +66,7 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
         const same = (editSubject.teacher ?? null) === extra.teacher && (editSubject.room ?? null) === extra.room && (editSubject.link ?? null) === extra.link;
         await updateSubject(editSubject.id, { name: name.trim(), color, icon, credits: cr, ...(same ? {} : extra) });
       } else await addSubject(name.trim(), color, icon, cr, extra);
-      toast(editSubject ? 'Materia guardada' : `Materia creada: ${name.trim()}`, { tone: 'good' });
+      toast(editSubject ? `${mv.subject} guardada` : `${mv.subject} creada: ${name.trim()}`, { tone: 'good' });
       onSaved();
     } catch (e) { notify('No se pudo guardar', friendlyError(e)); }
     finally { setBusy(false); }
@@ -86,7 +88,7 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
         <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} accessibilityViewIsModal style={{ backgroundColor: C.surface, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 440, maxHeight: '90%' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-            <Text style={{ color: C.text, fontSize: 18, fontWeight: '700', flex: 1 }} accessibilityRole="header">{editSubject ? 'Editar materia' : 'Nueva materia'}</Text>
+            <Text style={{ color: C.text, fontSize: 18, fontWeight: '700', flex: 1 }} accessibilityRole="header">{editSubject ? `Editar ${mv.subjectLower}` : mv.newSubject}</Text>
             <IconButton icon="close" label="Cerrar" onPress={onClose} />
           </View>
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -125,13 +127,13 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
             {editSubject && (
               <Pressable onPress={archive} accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 20, paddingVertical: 8 }}>
                 <Ionicons name="archive-outline" size={18} color={C.badText} />
-                <Text style={{ color: C.badText, fontWeight: '700' }}>Archivar materia</Text>
+                <Text style={{ color: C.badText, fontWeight: '700' }}>Archivar {mv.subjectLower}</Text>
               </Pressable>
             )}
           </ScrollView>
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
             <Button label="Cancelar" kind="secondary" onPress={onClose} style={{ flex: 1 }} />
-            <Button label={editSubject ? 'Guardar' : 'Crear materia'} onPress={save} busy={busy} style={{ flex: 2 }} />
+            <Button label={editSubject ? 'Guardar' : `Crear ${mv.subjectLower}`} onPress={save} busy={busy} style={{ flex: 2 }} />
           </View>
         </Pressable>
       </Pressable>

@@ -1425,3 +1425,21 @@ Cuando Wompi apruebe el comercio: cambia los cuatro secretos por los de producci
 ### 6. Pruebas
 
 `npm test` (firma de integridad, verificación de eventos, checkout, tarjeta y Nequi, precios iguales en el SQL) y `bash tests/run_sql.sh` (incluye `tests/sql/23b_pruebas.sql`: monto exacto, idempotencia, renovación y reintentos, Equipo y puestos, que nadie apruebe pagos desde la app, cancelar y avisos).
+
+## Versión 24 (parte 3): modo Trabajo
+
+### 1. Migración
+
+Ninguna: el modo se guarda en las preferencias de cada persona (`user_prefs.settings.mode`).
+
+### 2. Lo que cambia para el usuario
+
+- La bienvenida empieza preguntando para qué usas Kaderno: **Estudio**, **Trabajo** o **Los dos**. También se cambia en Ajustes > "Para qué usas Kaderno".
+- En Trabajo: Materias pasa a ser **Áreas** (áreas o clientes, con ícono de maletín), Horario pasa a ser **Agenda**, la sección Estudiar pasa a ser **Herramientas** (en el celular, la pestaña dice Enfoque), y "Grabar clase" pasa a ser **Grabar reunión** (con su aviso para los asistentes y la nota "Reunión del 23 nov" con la plantilla de acta).
+- En Los dos: se conservan los nombres del estudio ("Materias y áreas") y se suman las plantillas y funciones del trabajo.
+- Plantillas de notas nuevas: acta de reunión, uno a uno, retrospectiva, propuesta e informe semanal. Plantillas de proyecto nuevas: proyecto con cliente, sprint de dos semanas y lanzamiento. En Trabajo salen primero; en Estudio no salen.
+- Nada se borra ni se mueve al cambiar de modo: solo cambian los nombres y el orden.
+
+### 3. Pruebas
+
+`npm test` (nombres por modo y orden de las plantillas).

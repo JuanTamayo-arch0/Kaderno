@@ -25,6 +25,7 @@ import { getRitualPrefs, saveRitualPrefs } from '../lib/ritualsDb';
 import { clearHoyHidden, resetHoyHiddenCache, saveHoyVista } from '../lib/hoyHidden';
 import { usePlan } from '../lib/billingDb';
 import { planView } from '../lib/billing';
+import { MODES, saveMode, useMode } from '../lib/mode';
 
 // ============================================================
 //  Ajustes: cuenta, apariencia, avisos, calendario, instalar la app,
@@ -96,6 +97,7 @@ function Ajustes() {
   const [semester, setSemester] = useState(false);
   const { plan } = usePlan();
   const pv = planView(plan);
+  const { mode } = useMode();
 
   useFocusEffect(useCallback(() => {
     resetHoyHiddenCache();
@@ -184,6 +186,27 @@ function Ajustes() {
       <Card padded={false}>
         <ListRow title={`Tu plan: ${pv.name}`} subtitle={pv.line} left={<Ionicons name={pv.badge === 'free' ? 'leaf-outline' : 'sparkles'} size={20} color={pv.badge === 'warn' ? C.badText : pv.badge === 'free' ? C.muted : C.brand} />}
           onPress={() => router.push('/plan' as any)} />
+      </Card>
+
+      <SectionLabel text="Para qué usas Kaderno" />
+      <Card style={{ gap: 10 }}>
+        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }} accessibilityRole="radiogroup">
+          {MODES.map((m) => {
+            const on = mode === m.key;
+            return (
+              <Pressable key={m.key} onPress={() => saveMode(m.key).then(() => toast(m.key === 'estudio' ? 'Modo Estudio' : m.key === 'trabajo' ? 'Modo Trabajo: materias pasan a ser áreas o clientes' : 'Estudio y trabajo juntos')).catch((e) => notify('No se pudo guardar', friendlyError(e)))}
+                accessibilityRole="radio" accessibilityState={{ checked: on }} accessibilityLabel={`${m.label}: ${m.hint}`}
+                style={({ hovered }: any) => ({ flexGrow: 1, flexBasis: 150, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 12, borderWidth: on ? 2 : 1, borderColor: on ? C.brand : C.line, backgroundColor: hovered ? C.surface2 : 'transparent' })}>
+                <Ionicons name={m.icon as any} size={20} color={on ? C.brand : C.muted} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: C.text, fontSize: 14, fontWeight: '700' }}>{m.label}</Text>
+                  <Text style={{ color: C.muted, fontSize: 12 }} numberOfLines={2}>{m.hint}</Text>
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
+        <Text style={{ color: C.muted, fontSize: 12 }}>Cambia los nombres (materias o áreas, parciales o entregas, clases o reuniones) y prende la grabación de reuniones y el registro de horas. No borra nada.</Text>
       </Card>
 
       <SectionLabel text="Apariencia y organización" />

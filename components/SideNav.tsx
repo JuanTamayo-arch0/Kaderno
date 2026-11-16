@@ -11,6 +11,7 @@ import { updateAmbient } from '../lib/ambient';
 import { useAmbient } from './focus/AmbientControls';
 import { openAdd, openCommand, openInbox } from '../lib/uiBus';
 import { navKeyOf } from '../lib/navKey';
+import { useMode } from '../lib/mode';
 export { navKeyOf };
 
 // ============================================================
@@ -71,13 +72,17 @@ export function SideNav({ active, onNavigate }: { active: NavKey | null; onNavig
   const focus = useFocusTimer();
   const amb = useAmbient();
   const me = displayName(session);
+  const { v } = useMode();
+  // v24: en modo Trabajo, Materias se llama Áreas y Horario, Agenda.
+  const named = (it: Item): Item => it.key === 'materias' ? { ...it, label: v.subjects, icon: v.subjectIcon + '-outline', iconOn: v.subjectIcon } : it.key === 'horario' ? { ...it, label: v.schedule } : it;
 
   const go = (it: { key: NavKey; href: string }) => {
     if (onNavigate && TAB_KEYS.includes(it.key)) onNavigate(it.key);
     else router.push(it.href as any);
   };
 
-  const row = (it: Item, extra?: React.ReactNode) => {
+  const row = (it0: Item, extra?: React.ReactNode) => {
+    const it = named(it0);
     const on = active === it.key || (it.key === 'materias' && active === 'materias');
     return (
       <Pressable key={it.key} onPress={() => go(it)}
@@ -152,8 +157,8 @@ export function SideNav({ active, onNavigate }: { active: NavKey | null; onNavig
         {row(MAIN_ITEMS[2])}
         {row(MAIN_ITEMS[3])}
 
-        <Pressable onPress={() => go({ key: 'estudiar', href: '/estudiar' })} accessibilityRole="link" accessibilityLabel="Estudiar">
-          <Text style={{ color: active === 'estudiar' ? C.brand : C.muted, fontSize: 11.5, fontWeight: '800', letterSpacing: 0.7, textTransform: 'uppercase', paddingHorizontal: 10, paddingTop: 16, paddingBottom: 6 }}>Estudiar</Text>
+        <Pressable onPress={() => go({ key: 'estudiar', href: '/estudiar' })} accessibilityRole="link" accessibilityLabel={v.studySection}>
+          <Text style={{ color: active === 'estudiar' ? C.brand : C.muted, fontSize: 11.5, fontWeight: '800', letterSpacing: 0.7, textTransform: 'uppercase', paddingHorizontal: 10, paddingTop: 16, paddingBottom: 6 }}>{v.studySection}</Text>
         </Pressable>
         {row(STUDY_ITEMS[0], timer)}
         {row(STUDY_ITEMS[1], badge(counts.repaso))}
@@ -218,6 +223,7 @@ export function BottomBar({ active, onNavigate, bottomInset }: { active: NavKey;
   const counts = useNavCounts();
   const focus = useFocusTimer();
   const section = SECTION_OF[active] ?? active;
+  const { v } = useMode();
   const tab = (key: NavKey, label: string, icon: any, iconOn: any, badgeN = 0, extra?: string) => {
     const on = section === key;
     return (
@@ -239,14 +245,14 @@ export function BottomBar({ active, onNavigate, bottomInset }: { active: NavKey;
   return (
     <View dataSet={{ petFloor: '1' }} style={{ flexDirection: 'row', backgroundColor: C.surface, borderTopWidth: 1, borderTopColor: C.line, paddingBottom: Math.max(bottomInset, 6) }}>
       {tab('index', 'Hoy', 'today-outline', 'today', counts.today)}
-      {tab('materias', 'Materias', 'book-outline', 'book')}
+      {tab('materias', v.subjectsTab, v.subjectIcon + '-outline', v.subjectIcon)}
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
         <Pressable onPress={openAdd} accessibilityRole="button" accessibilityLabel="Agregar" dataSet={{ petObstacle: '1' }}
           style={({ pressed }) => ({ width: 50, height: 44, borderRadius: 15, backgroundColor: C.brand, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.85 : 1 })}>
           <Ionicons name="add" size={28} color={C.onBrand} />
         </Pressable>
       </View>
-      {tab('estudiar', 'Estudiar', 'school-outline', 'school', counts.repaso, timerLabel)}
+      {tab('estudiar', v.studyTab, v.studyTab === 'Enfoque' ? 'timer-outline' : 'school-outline', v.studyTab === 'Enfoque' ? 'timer' : 'school', counts.repaso, timerLabel)}
       {tab('proyectos', 'Proyectos', 'people-outline', 'people')}
     </View>
   );

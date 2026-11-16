@@ -15,6 +15,7 @@ import { onDataChanged } from '../../lib/uiBus';
 import { Screen, Button, Card, EmptyState, ErrorState, Segmented, Skeleton } from '../../components/ds';
 import { SubjectIcon } from '../../components/SubjectIcon';
 import { SubjectModal } from '../../components/SubjectModal';
+import { useMode } from '../../lib/mode';
 
 // ============================================================
 //  Materias: tarjetas con lo pendiente, la próxima entrega y el promedio.
@@ -24,6 +25,7 @@ import { SubjectModal } from '../../components/SubjectModal';
 
 export default function Materias() {
   const router = useRouter();
+  const { v: mv } = useMode();
   const { isWide, width } = useResponsive();
   const { session } = useAuth();
   // Foto de la última visita para pintar al instante.
@@ -51,19 +53,19 @@ export default function Materias() {
   const cardW = cols === 1 ? '100%' : `${100 / cols - 1.5}%`;
 
   return (
-    <Screen title="Materias" subtitle={subjects?.length ? `${subjects.length} este semestre` : 'Organiza por asignatura'} maxWidth={1180}
-      right={isWide ? <Button label="Nueva materia" icon="add" size="sm" onPress={() => setModal(true)} /> : undefined}
+    <Screen title={mv.subjects} subtitle={subjects?.length ? mv.subjectsCount(subjects.length) : mv.subjectLower === 'área' ? 'Organiza por área o cliente' : 'Organiza por asignatura'} maxWidth={1180}
+      right={isWide ? <Button label={mv.newSubject} icon="add" size="sm" onPress={() => setModal(true)} /> : undefined}
       header={!isWide ? <Segmented value="materias" onChange={(k) => { if (k === 'horario') router.navigate('/horario'); }}
-        items={[{ key: 'materias', label: 'Materias', icon: 'book-outline' }, { key: 'horario', label: 'Horario', icon: 'grid-outline' }]} /> : undefined}>
+        items={[{ key: 'materias', label: mv.subjectsTab, icon: (mv.subjectIcon + '-outline') as any }, { key: 'horario', label: mv.schedule, icon: 'grid-outline' }]} /> : undefined}>
       {!isWide && <View style={{ height: 14 }} />}
       {subjects === null ? (
         [0, 1, 2].map((i) => <Skeleton key={i} height={96} />)
       ) : error && !subjects.length ? (
         <ErrorState message={error} onRetry={load} />
       ) : subjects.length === 0 ? (
-        <EmptyState icon="book-outline" title="Aún no tienes materias"
-          text="Crea las materias del semestre para organizar tareas, notas y calificaciones."
-          action={{ label: 'Crear materia', icon: 'add', onPress: () => setModal(true) }} />
+        <EmptyState icon={(mv.subjectIcon + '-outline') as any} title={mv.noSubjects}
+          text={mv.noSubjectsText}
+          action={{ label: mv.newSubject, icon: 'add', onPress: () => setModal(true) }} />
       ) : (
         <>
         <Summary subjects={subjects} tasks={tasks} grades={grades} slots={slots} isWide={isWide} onOpen={(id) => router.push(`/materia/${id}`)} />
@@ -112,7 +114,7 @@ export default function Materias() {
         </View>
         </>
       )}
-      {!isWide && subjects && subjects.length > 0 && <Button label="Nueva materia" icon="add" kind="secondary" onPress={() => setModal(true)} style={{ marginTop: 14 }} full />}
+      {!isWide && subjects && subjects.length > 0 && <Button label={mv.newSubject} icon="add" kind="secondary" onPress={() => setModal(true)} style={{ marginTop: 14 }} full />}
       <SubjectModal visible={modal} onClose={() => setModal(false)} onSaved={() => { setModal(false); load(); }} />
     </Screen>
   );

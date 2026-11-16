@@ -15,6 +15,7 @@ import { useStudyStreak, StreakCard } from '../../components/streaks/Streak';
 import { weeksLabel } from '../../lib/streaks';
 import { Countdown } from '../../components/day/Countdown';
 import { getTasks, type Task } from '../../lib/db';
+import { useMode } from '../../lib/mode';
 
 // ============================================================
 //  Estudiar: Enfoque, Repaso y Oráculo en un solo lugar, más el avance
@@ -22,6 +23,7 @@ import { getTasks, type Task } from '../../lib/db';
 // ============================================================
 
 export default function Estudiar() {
+  const { v: mv } = useMode();
   const router = useRouter();
   const { isWide } = useResponsive();
   const focus = useFocusTimer();
@@ -50,7 +52,7 @@ export default function Estudiar() {
   const R = 40, CIRC = 2 * Math.PI * R;
 
   return (
-    <Screen title="Estudiar" subtitle="Enfoque, repaso y tu avance" maxWidth={1100}>
+    <Screen title={mv.studySection === 'Herramientas' ? 'Enfoque' : 'Estudiar'} subtitle={mv.studySection === 'Herramientas' ? 'Enfoque, horas y tu avance' : 'Enfoque, repaso y tu avance'} maxWidth={1100}>
       <Countdown tasks={tasks} />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
         {/* Enfoque */}

@@ -60,6 +60,7 @@ import { shouldOfferClose, carryOver, localISO as dayISO } from '../../lib/day';
 import { skipRepeat, updateTask } from '../../lib/db';
 import { ruleText } from '../../lib/repeat';
 import { openClassNote } from '../../lib/notesDb';
+import { useMode } from '../../lib/mode';
 
 // ============================================================
 //  Hoy.
@@ -76,6 +77,7 @@ type HoySnap = { subjects: Subject[]; tasks: Task[]; steps: Record<string, Step[
 export default function Hoy() {
   const router = useRouter();
   const { isWide, width } = useResponsive();
+  const { v: mv } = useMode();
   const { session } = useAuth();
   const counts = useNavCounts();
   const focus = useFocusTimer();
@@ -454,7 +456,7 @@ export default function Hoy() {
         <ScopeSwitch value={vista} onChange={changeVista}
           items={[
             { key: 'todo', label: 'Todo', count: nMaterias + nProyectos },
-            { key: 'materias', label: 'Materias', count: nMaterias, icon: 'school-outline' },
+            { key: 'materias', label: mv.subjectsTab, count: nMaterias, icon: 'school-outline' },
             { key: 'proyectos', label: 'Proyectos', count: nProyectos, icon: 'people-outline' },
           ]} />
       )}
@@ -500,16 +502,16 @@ export default function Hoy() {
   ) : error && !tasks.length ? (
     <ErrorState message={error} onRetry={load} />
   ) : subjects.length === 0 && live.length === 0 ? (
-    <EmptyState icon="school-outline" title="Empecemos por tus materias"
-      text="Crea las materias del semestre y luego anota tus entregas. También puedes importar el cronograma completo."
-      action={{ label: 'Crear materias', icon: 'add', onPress: () => router.push('/bienvenida') }} />
+    <EmptyState icon="school-outline" title={`Empecemos por tus ${mv.subjectsLower}`}
+      text={mv.subjectLower === 'área' ? 'Crea tus áreas o clientes y luego anota tus entregas.' : 'Crea las materias del semestre y luego anota tus entregas. También puedes importar el cronograma completo.'}
+      action={{ label: `Crear ${mv.subjectsLower}`, icon: 'add', onPress: () => router.push('/bienvenida') }} />
   ) : groups.length === 0 ? (
     vista === 'proyectos' && !day && !filter ? (
       <EmptyState icon="people-outline" title="Nada de proyectos para ti"
         text={hiddenCount > 0 ? 'Tienes tareas de proyecto ocultas. Puedes mostrarlas abajo.' : 'Cuando te asignen una tarea en un proyecto, aparecerá aquí.'}
         action={{ label: 'Ver todo', icon: 'list-outline', onPress: () => changeVista('todo') }} compact />
     ) : (
-    <EmptyState icon="checkmark-done-outline" title={day ? 'Nada para ese día' : filter ? (vista === 'proyectos' ? 'Nada pendiente en este proyecto' : 'Nada pendiente en esta materia') : 'Todo al día'}
+    <EmptyState icon="checkmark-done-outline" title={day ? 'Nada para ese día' : filter ? (vista === 'proyectos' ? 'Nada pendiente en este proyecto' : `Nada pendiente en esta ${mv.subjectLower}`) : 'Todo al día'}
       text={day || filter ? 'Toca de nuevo el filtro para ver todo.' : 'No tienes entregas pendientes. Agrega la próxima cuando te la pongan.'}
       action={{ label: 'Agregar tarea', icon: 'add', onPress: openAdd }} compact />
     )

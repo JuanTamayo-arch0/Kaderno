@@ -153,7 +153,7 @@ test('tarjetas escritas en la nota', async () => {
 
 test('plantillas y nota de clase', async () => {
   const { TEMPLATES, builtinTemplate, classNoteTitle } = await import('../lib/noteLinks');
-  assert.deepEqual(TEMPLATES.map((t) => t.key), ['cornell', 'lab', 'capitulo', 'ejercicio']);
+  assert.deepEqual(TEMPLATES.filter((t) => !t.work).map((t) => t.key), ['cornell', 'lab', 'capitulo', 'ejercicio']);
   assert.match(builtinTemplate('lab')!.content, /## Conclusiones/);
   assert.equal(builtinTemplate('x'), null);
   assert.equal(classNoteTitle(new Date(2026, 9, 23)), 'Clase del 23 oct');

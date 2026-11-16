@@ -121,3 +121,31 @@ test('wompi: los precios del SQL son los mismos de la app', async () => {
   }
   assert.match(fn, /greatest\(2, least\(200/, 'Equipo: de 2 a 200 puestos, como TEAM_MIN_SEATS y TEAM_MAX_SEATS');
 });
+
+// ---------- Fase 3: modo Trabajo ----------
+test('modo: nombres según estudio, trabajo o los dos', async () => {
+  const { vocab, hasWork, hasStudy, parseMode } = await import('../lib/mode');
+  assert.equal(vocab('estudio').subjects, 'Materias');
+  assert.equal(vocab('trabajo').subjects, 'Áreas');
+  assert.equal(vocab('trabajo').exam, 'Entrega');
+  assert.equal(vocab('trabajo').record, 'Grabar reunión');
+  assert.equal(vocab('ambos').subjectsTab, 'Materias', 'la pestaña del celular sigue corta');
+  assert.equal(vocab('trabajo').subjectsCount(1), '1 activa');
+  assert.equal(vocab(null).subject, 'Materia');
+  assert.ok(hasWork('ambos') && hasWork('trabajo') && !hasWork('estudio'));
+  assert.ok(hasStudy('ambos') && !hasStudy('trabajo'));
+  assert.equal(parseMode('raro'), 'estudio');
+});
+
+test('modo: plantillas de notas y proyectos en el orden del modo', async () => {
+  const { templatesFor, classNoteTitle } = await import('../lib/noteLinks');
+  const { projectTemplatesFor } = await import('../lib/projectTemplates');
+  assert.ok(templatesFor('estudio').every((t) => !t.work), 'en Estudio no salen las de trabajo');
+  assert.equal(templatesFor('trabajo')[0].key, 'acta');
+  assert.deepEqual(templatesFor('trabajo').filter((t) => t.work).map((t) => t.key), ['acta', 'uno-a-uno', 'retro', 'propuesta', 'informe']);
+  assert.equal(templatesFor('ambos').length, templatesFor('estudio').length + 5);
+  assert.deepEqual(projectTemplatesFor('trabajo').slice(0, 4).map((t) => t.key), ['blank', 'cliente', 'sprint', 'lanzamiento']);
+  assert.ok(projectTemplatesFor('estudio').every((t) => !t.work));
+  assert.equal(classNoteTitle(new Date(2026, 10, 23), true), 'Reunión del 23 nov');
+  assert.equal(classNoteTitle(new Date(2026, 10, 23)), 'Clase del 23 nov');
+});
