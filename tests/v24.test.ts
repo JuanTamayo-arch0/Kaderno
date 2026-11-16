@@ -192,3 +192,70 @@ test('reunión: responsable, acta en Markdown y archivo', async () => {
   assert.equal(meetingTaskQuick(m.tasks[1]), 'Llamar al cliente mañana');
   assert.ok(isMeeting(m) && !isMeeting({ ideas: [] }) && !isMeeting(null));
 });
+
+// ---------- Fase 5: registro de horas e informe semanal ----------
+const at = (y: number, m: number, d: number, h = 10) => new Date(y, m - 1, d, h).toISOString();
+
+test('horas: periodos, duración y formato', async () => {
+  const { periodRange, fmtHours, decHours, parseDuration } = await import('../lib/hours');
+  const now = new Date(2026, 10, 15, 20); // domingo 15 nov
+  const w = periodRange('week', 0, now);
+  assert.equal(w.from.getDate(), 9); assert.equal(w.to.getDate(), 16); assert.equal(w.label, '9 al 15 de noviembre');
+  assert.equal(periodRange('week', -2, now).label, '26 de octubre al 1 de noviembre');
+  const m = periodRange('month', -11, now);
+  assert.equal(m.label, 'Diciembre 2025'); assert.equal(m.to.getMonth(), 0);
+  assert.equal(fmtHours(200), '3 h 20 min'); assert.equal(fmtHours(45), '45 min'); assert.equal(fmtHours(120), '2 h');
+  assert.equal(decHours(200), '3,33');
+  assert.equal(parseDuration('1:30'), 90); assert.equal(parseDuration('1,5'), 90); assert.equal(parseDuration('90'), 90);
+  assert.equal(parseDuration('2'), 120, 'un número chico son horas'); assert.equal(parseDuration('1h 30'), 90); assert.equal(parseDuration('45m'), 45);
+  assert.equal(parseDuration('mucho'), null);
+});
+
+test('horas: sumas, tarifas, CSV e informe', async () => {
+  const { groupHours, totals, hoursCsv, hoursReportHtml } = await import('../lib/hours');
+  const names = { s1: { name: 'Cliente Acme', color: '#f00' }, p1: { name: 'Web Acme' }, p2: { name: 'Interno' } };
+  const list = [
+    { id: '1', minutes: 50, created_at: at(2026, 11, 10), subject_id: 's1', project_id: 'p1', source: 'focus' as const },
+    { id: '2', minutes: 90, created_at: at(2026, 11, 11), subject_id: 's1', project_id: null, note: 'Llamada; "urgente"', source: 'manual' as const },
+    { id: '3', minutes: 30, created_at: at(2026, 11, 11, 15), subject_id: null, project_id: 'p2', source: 'focus' as const },
+  ];
+  const rates = { p1: 60_000, s1: 40_000 };
+  const byP = groupHours(list, 'project', names, rates);
+  assert.deepEqual(byP.map((r) => [r.name, r.minutes, r.amount]), [['Sin proyecto', 90, 60_000], ['Web Acme', 50, 50_000], ['Interno', 30, 0]]);
+  const byS = groupHours(list, 'subject', names, rates);
+  assert.deepEqual(byS.map((r) => [r.name, r.minutes, r.amount]), [['Cliente Acme', 140, 110_000], ['Sin área', 30, 0]], 'la tarifa del proyecto gana a la del área');
+  assert.deepEqual(groupHours(list, 'day', names).map((r) => r.name), ['mar 10 nov', 'mié 11 nov']);
+  assert.deepEqual(totals(list, rates), { minutes: 170, amount: 110_000, days: 2 });
+  const csv = hoursCsv(list, names, rates);
+  assert.ok(csv.startsWith('﻿Fecha;Hora;Minutos;Horas;'));
+  assert.match(csv, /2026-11-11;10:00;90;1,50;Cliente Acme;;"Llamada; ""urgente""";A mano;40000;60000/);
+  const html = hoursReportHtml({ who: 'Juan', period: '9 al 15 de noviembre', list, names, rates });
+  assert.match(html, /Times New Roman/); assert.doesNotMatch(html, /color:\s*#(?!000)/i, 'todo en negro');
+  assert.match(html, /Total: 2 h 50 min \(2,83 horas\) en 2 días\. Valor: \$110\.000/);
+  assert.doesNotMatch(html, /—/, 'sin rayas largas');
+});
+
+test('informe semanal del proyecto', async () => {
+  const { weeklyReport, weeklyReportMarkdown } = await import('../lib/projectReport');
+  const today = new Date(2026, 10, 15, 9);
+  const people = [{ user_id: 'a', name: 'Ana' }, { user_id: 'l', name: 'Luis' }];
+  const T = (id: string, title: string, o: any) => ({ id, title, done: false, done_at: null, due_date: null, assignee_id: null, ...o });
+  const tasks = [
+    T('1', 'Maqueta', { done: true, done_at: at(2026, 11, 12), assignee_id: 'a' }),
+    T('2', 'Viejo', { done: true, done_at: at(2026, 10, 1) }),
+    T('3', 'Pruebas', { due_date: '2026-11-18', assignee_id: 'l' }),
+    T('4', 'Informe', { due_date: '2026-11-13', assignee_id: 'l' }),
+    T('5', 'Sin fecha', {}),
+    T('6', 'Lejos', { due_date: '2026-12-20', assignee_id: 'a' }),
+  ];
+  const r = weeklyReport(tasks, people, today);
+  assert.deepEqual(r.done.map((t) => t.id), ['1']);
+  assert.deepEqual(r.next.map((t) => t.id), ['3']);
+  assert.deepEqual(r.late.map((t) => t.id), ['4']);
+  assert.deepEqual(r.load, [{ name: 'Luis', pending: 2, late: 1 }, { name: 'Ana', pending: 1, late: 0 }]);
+  assert.equal(r.unassigned, 1);
+  const md = weeklyReportMarkdown('Zenit', r, people);
+  assert.match(md, /^# Informe semanal: Zenit\n\nDel 9 nov al 15 nov\. Avance total: 2 de 6 tareas \(33 %\)\./);
+  assert.match(md, /- Pruebas \(Luis, 18 nov\)/); assert.match(md, /## Atrasado \(1\)\n\n- Informe \(Luis, 13 nov\)/);
+  assert.match(md, /- Luis: 2 pendientes, 1 atrasada/); assert.match(md, /- Sin responsable: 1/);
+});

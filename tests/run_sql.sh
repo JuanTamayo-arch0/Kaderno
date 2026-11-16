@@ -83,3 +83,4 @@ for f in supabase/schema_v23.sql supabase/schema_v23.sql; do
 done
 $PSQL -d k16 -f tests/sql/23_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line|WARNING" | grep -v "^ *$"
 $PSQL -d k16 -f tests/sql/23b_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line|WARNING" | grep -v "^ *$"
+$PSQL -d k16 -f tests/sql/23c_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line|WARNING" | grep -v "^ *$"

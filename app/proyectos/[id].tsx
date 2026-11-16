@@ -17,6 +17,7 @@ import { ProjectFiles } from '../../components/projects/ProjectFiles';
 import { readSnap, writeSnap } from '../../lib/snapshot';
 import { play } from '../../lib/sound';
 import { BulkAction, BulkBar, BulkDialog, ExportSheet, confirmBulkDelete } from '../../components/projects/BulkTools';
+import { ReportSheet } from '../../components/projects/ReportSheet';
 import { undoProjectBatch } from '../../lib/projectsBulk';
 import { Subject, getSubjects } from '../../lib/db';
 import { Activity, Member, PStep, PTask, Profile, Project, ProjectRole, canEdit, columnsOf, getActivity, getMembers, getProject, getProjectSteps, getProjectTasks, logActivity, moveTask, myRole, setBoardColumns, updateProjectTask } from '../../lib/projects';
@@ -84,6 +85,7 @@ function ProyectoDetalle() {
   // Importar / exportar / edición en masa
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [cleanupOpen, setCleanupOpen] = useState(false);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -406,6 +408,7 @@ function ProyectoDetalle() {
               ...(editable && isTaskView && !selecting && !isWide ? [{ icon: 'checkbox-outline', label: 'Seleccionar varias', hint: 'Cambiar columna, responsable o fechas a la vez', onPress: () => setSelecting(true) }] : []),
               ...(editable ? [{ icon: 'cloud-upload-outline', label: 'Importar tareas', hint: 'Desde un CSV, un JSON o una IA', onPress: () => setImportOpen(true) }] : []),
               { icon: 'download-outline', label: 'Exportar tareas', hint: 'Para editarlas en Excel o pasarlas a una IA', onPress: () => setExportOpen(true) },
+              { icon: 'document-text-outline', label: 'Informe semanal', hint: 'Lo hecho, lo que viene y lo atrasado, listo para mandar', onPress: () => setReportOpen(true) },
             ],
           },
           {
@@ -446,7 +449,10 @@ function ProyectoDetalle() {
         />
       )}
       {project && (
+        <>
         <ExportSheet visible={exportOpen} project={project} members={members} onClose={() => setExportOpen(false)} />
+        <ReportSheet visible={reportOpen} project={project} tasks={tasks} members={members} editable={editable} onClose={() => setReportOpen(false)} />
+        </>
       )}
       <BoardCleanup visible={cleanupOpen} projectId={projectId} cols={cols} onClose={() => setCleanupOpen(false)}
         onDone={async ({ batchId, text }) => { setCleanupOpen(false); await load(); if (batchId) showUndo(batchId, text); }} />

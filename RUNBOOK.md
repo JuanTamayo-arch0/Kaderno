@@ -1465,3 +1465,23 @@ npx supabase functions deploy ai
 ### 3. Pruebas
 
 `npm test` (el acta se valida, responsables sin adivinar de más, Markdown y nombre del archivo).
+
+## Versión 24 (parte 5): registro de horas e informes
+
+### 1. Migración
+
+Corre otra vez `supabase/schema_v23.sql` completo (la fase 5 requiere también schema_v12 y schema_v14). `focus_sessions` gana `project_id`, `note` y `source`; se agrega `project_hours`. Sin correrla, el registro de horas muestra el tiempo por área, pero sin proyectos ni horas a mano.
+
+### 2. Lo que cambia para el usuario
+
+- **Horas** (en la barra de Herramientas en modo Trabajo, y desde Enfoque en el celular): el tiempo de la semana o del mes, por proyecto, por área o cliente, o por día.
+- En Enfoque, con modo Trabajo o los dos, "Contar para un proyecto": cada pomodoro suma a ese proyecto.
+- **Anotar horas** a mano (reuniones, llamadas, trabajo fuera de Kaderno): fecha, duración (1:30, 1,5 o 90), área, proyecto y nota. Máximo 12 horas por registro y nunca en el futuro.
+- **Tarifa por hora** por proyecto o por área: el informe muestra el valor (la del proyecto gana a la del área). Solo la ve la persona.
+- **CSV** para Excel o Google Sheets (gratis) e **informe en PDF** (Pro): sobrio, en Times New Roman y en negro, con resumen y detalle.
+- **Horas del equipo** en un proyecto (plan Equipo): cuánto anotó cada integrante en el periodo.
+- En cada proyecto, menú > **Informe semanal**: lo hecho en la semana, lo que viene en 7 días, lo atrasado y la carga de cada quien. Se copia, se descarga o se guarda en Archivos.
+
+### 3. Pruebas
+
+`npm test` (periodos, duración, sumas con tarifa, CSV, informe y el informe semanal) y `bash tests/run_sql.sh` (incluye `tests/sql/23c_pruebas.sql`: enfoque con su hora real, horas a mano con tope, solo en proyectos propios, y las horas del equipo solo con plan Equipo).

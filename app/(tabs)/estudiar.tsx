@@ -23,7 +23,7 @@ import { useMode } from '../../lib/mode';
 // ============================================================
 
 export default function Estudiar() {
-  const { v: mv } = useMode();
+  const { v: mv, mode } = useMode();
   const router = useRouter();
   const { isWide } = useResponsive();
   const focus = useFocusTimer();
@@ -54,6 +54,16 @@ export default function Estudiar() {
   return (
     <Screen title={mv.studySection === 'Herramientas' ? 'Enfoque' : 'Estudiar'} subtitle={mv.studySection === 'Herramientas' ? 'Enfoque, horas y tu avance' : 'Enfoque, repaso y tu avance'} maxWidth={1100}>
       <Countdown tasks={tasks} />
+      {mv.studySection === 'Herramientas' || mode === 'ambos' ? (
+        <Card onPress={() => router.push('/horas' as any)} accessibilityLabel="Abrir registro de horas" style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+          <Ionicons name="time-outline" size={22} color={C.brand} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: C.text, fontSize: 15, fontWeight: '700' }}>Registro de horas</Text>
+            <Text style={{ color: C.muted, fontSize: 12.5 }}>Por proyecto y por {mv.subjectLower}, con informe para cobrar o reportar.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={C.muted} />
+        </Card>
+      ) : null}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
         {/* Enfoque */}
         <Card style={col}>

@@ -28,6 +28,9 @@ export type FocusState = {
   subjectId: string | null;
   taskId: string | null;
   taskTitle: string | null;
+  // v24: el enfoque cuenta para un proyecto (registro de horas)
+  projectId?: string | null;
+  projectTitle?: string | null;
   cycle: number;              // pomodoros completados en la tanda (0..3)
   sound: boolean;
   // v20: pausas guiadas y "Anotar para después"
@@ -125,7 +128,7 @@ function finish(silent: boolean, skipped = false) {
     // Saltar a mitad de un pomodoro guarda solo lo que se alcanzó a hacer
     // (antes guardaba el pomodoro completo y regalaba minutos y monedas).
     const minutes = skipped ? Math.floor((totalMs(s) - remainingMs(s)) / 60000) : Math.max(1, s.workMin);
-    if (minutes >= 1) addFocusSession(minutes, s.subjectId, s.taskId, s.roomId).then(() => streakChanged(300)).catch(() => {});
+    if (minutes >= 1) addFocusSession(minutes, s.subjectId, s.taskId, s.roomId, s.projectId ?? null).then(() => streakChanged(300)).catch(() => {});
     const cycle = (s.cycle + 1) % 4;
     const brk = cycle === 0 ? s.longBreakMin : s.breakMin;
     // Sugerencia para el descanso, sin repetir las de hoy.
@@ -154,7 +157,7 @@ export function startFocus(opts: Partial<Pick<FocusState, 'subjectId' | 'taskId'
 export function pauseFocus() { cancelScheduled(); set({ running: false, remainingMs: remainingMs(), endsAt: null, startsAt: null }); }
 export function resetFocus() { cancelScheduled(); set({ running: false, endsAt: null, mode: 'work', remainingMs: Math.max(1, state.workMin) * 60000, distractions: 0, tipId: null, startsAt: null }); }
 export function skipFocus() { finish(true, true); }
-export function configureFocus(patch: Partial<Pick<FocusState, 'workMin' | 'breakMin' | 'longBreakMin' | 'subjectId' | 'taskId' | 'taskTitle' | 'sound'>>) {
+export function configureFocus(patch: Partial<Pick<FocusState, 'workMin' | 'breakMin' | 'longBreakMin' | 'subjectId' | 'taskId' | 'taskTitle' | 'sound' | 'projectId' | 'projectTitle'>>) {
   const next = { ...state, ...patch };
   if (!state.running && (patch.workMin != null || patch.breakMin != null)) {
     next.remainingMs = Math.max(1, next.mode === 'work' ? next.workMin : next.breakMin) * 60000;

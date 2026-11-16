@@ -18,6 +18,8 @@ import { unlockAmbient } from '../../lib/ambient';
 import { RoomsCard } from '../../components/focus/RoomsCard';
 import { useStudyStreak, StreakMini } from '../../components/streaks/Streak';
 import { weeksLabel } from '../../lib/streaks';
+import { useMode } from '../../lib/mode';
+import { getProjects, type Project } from '../../lib/projects';
 
 // ============================================================
 //  Enfoque (Pomodoro).
@@ -40,6 +42,10 @@ export default function Enfoque() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [detail, setDetail] = useState<{ todayMin: number; weekMin: number; streak: number; byDay: { label: string; min: number }[]; recent: FocusSession[] }>({ todayMin: 0, weekMin: 0, streak: 0, byDay: [], recent: [] });
   const [pickTask, setPickTask] = useState(false);
+  const [pickProject, setPickProject] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const { v: mv, work } = useMode();
+  useEffect(() => { if (work) getProjects().then(setProjects).catch(() => {}); }, [work]);
   const [mixer, setMixer] = useState(false);
   const [onScreen, setOnScreen] = useState(false);
   const streak = useStudyStreak();
@@ -110,7 +116,17 @@ export default function Enfoque() {
             ) : <Ionicons name="chevron-down" size={18} color={C.muted} />}
           </Pressable>
         </View>
-        {!s.taskId && <SubjectPicker subjects={subjects} value={s.subjectId} onChange={(v) => configureFocus({ subjectId: v })} placeholder="Sin materia" />}
+        {!s.taskId && <SubjectPicker subjects={subjects} value={s.subjectId} onChange={(v) => configureFocus({ subjectId: v })} placeholder={`Sin ${mv.subjectLower}`} />}
+        {(work || s.projectId) && (
+          <Pressable onPress={() => setPickProject(true)} accessibilityRole="button" accessibilityLabel="Elegir proyecto para el registro de horas"
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 10, padding: 12, minHeight: 44 }}>
+            <Ionicons name="briefcase-outline" size={18} color={C.muted} />
+            <Text style={{ color: s.projectTitle ? C.text : C.muted, flex: 1 }} numberOfLines={1}>{s.projectTitle ?? 'Contar para un proyecto (opcional)'}</Text>
+            {s.projectId ? (
+              <Pressable onPress={() => configureFocus({ projectId: null, projectTitle: null })} accessibilityLabel="Quitar proyecto" hitSlop={8}><Ionicons name="close-circle" size={18} color={C.muted} /></Pressable>
+            ) : <Ionicons name="chevron-down" size={18} color={C.muted} />}
+          </Pressable>
+        )}
       </View>
 
       <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
@@ -175,6 +191,11 @@ export default function Enfoque() {
         {stats}
       </View>
       <MixerSheet visible={mixer} onClose={() => setMixer(false)} running={s.running} />
+      <ActionMenu visible={pickProject} title="Contar el tiempo para" onClose={() => setPickProject(false)}
+        actions={[...projects.slice(0, 15).map((p) => ({
+          label: p.name, icon: 'briefcase-outline' as const, hint: 'Suma al registro de horas',
+          onPress: () => configureFocus({ projectId: p.id, projectTitle: `${p.icon ? p.icon + ' ' : ''}${p.name}` }),
+        })), { label: 'Ver registro de horas', icon: 'time-outline' as const, onPress: () => router.push('/horas' as any) }]} />
       <ActionMenu visible={pickTask} title="Elegir tarea" onClose={() => setPickTask(false)}
         actions={tasks.slice(0, 12).map((t) => ({
           label: t.title, icon: 'ellipse-outline', hint: fmtDue(t),

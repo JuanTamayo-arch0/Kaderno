@@ -162,7 +162,7 @@ export type TaskInput = {
 // Columnas de versiones nuevas (schema_v19 y v20). Si la base no las tiene, se
 // guarda sin ellas y se recuerda cuáles faltan (sin apagar lo de schema_v14).
 const OPT_COLS = ['plan_at', 'plan_place', 'plan_day', 'plan_band', 'repeat_rule', 'inbox'];
-const OPT_RE = /plan_(at|place|day|band)|repeat_rule|inbox/;
+const OPT_RE = /plan_(at|place|day|band)|repeat_rule|inbox|project_id|room_id/;
 const MISSING = new Set<string>();
 export function hasPlanCols(): boolean { return !MISSING.has('plan_at'); }
 export function hasV20Cols(): boolean { return !MISSING.has('repeat_rule') && !MISSING.has('inbox'); }
@@ -526,11 +526,17 @@ export function gradeSummary(grades: Grade[], passMark: number) {
 }
 
 // ---------- Pomodoro ----------
-export async function addFocusSession(minutes: number, subjectId: string | null, assignmentId: string | null = null, roomId: string | null = null): Promise<void> {
+export async function addFocusSession(minutes: number, subjectId: string | null, assignmentId: string | null = null, roomId: string | null = null, projectId: string | null = null): Promise<void> {
   const u = await uid();
   const row: Record<string, any> = { user_id: u, minutes, subject_id: subjectId, assignment_id: assignmentId };
   if (roomId) row.room_id = roomId;
+  if (projectId) row.project_id = projectId;
   let { error } = await v14((on) => supabase.from('focus_sessions').insert(on ? row : stripV14(row)));
+  // v24: sin schema_v23 (fase 5) no existe project_id; o el proyecto ya no es tuyo: se guarda sin proyecto.
+  if (error && projectId && (isMissingColumn(error) || /parte de ese proyecto/.test(String(error.message ?? '')))) {
+    delete row.project_id;
+    ({ error } = await v14((on) => supabase.from('focus_sessions').insert(on ? row : stripV14(row))));
+  }
   // Sin schema_v19 no existe room_id: se guarda igual, sin sala.
   if (error && roomId && isMissingColumn(error)) {
     delete row.room_id;
