@@ -149,3 +149,46 @@ test('modo: plantillas de notas y proyectos en el orden del modo', async () => {
   assert.equal(classNoteTitle(new Date(2026, 10, 23), true), 'Reunión del 23 nov');
   assert.equal(classNoteTitle(new Date(2026, 10, 23)), 'Clase del 23 nov');
 });
+
+// ---------- Fase 4: grabar la reunión ----------
+test('reunión: el acta de la IA se valida', async () => {
+  const { parseMeeting, meetingPrompt } = await import('../supabase/functions/_shared/meeting');
+  const raw = 'Claro: {"title":"Revisión del lanzamiento","summary":["Se revisó el avance."],"attendees":["Ana","Luis"],"decisions":["Salimos el 1 de diciembre"],' +
+    '"tasks":[{"title":"Enviar la propuesta","owner":"Ana","due":"2026-11-20","when":"el viernes"},{"title":"Revisar precios","owner":"nadie","due":"2026-02-30","when":null},{"title":"","owner":"x"}],"open":["¿Quién llama al cliente?"]}';
+  const m = parseMeeting(raw)!;
+  assert.equal(m.kind, 'meeting');
+  assert.equal(m.tasks.length, 2, 'sin título no hay tarea');
+  assert.deepEqual(m.tasks[0], { title: 'Enviar la propuesta', owner: 'Ana', due: '2026-11-20', when: 'el viernes' });
+  assert.equal(m.tasks[1].owner, null, '"nadie" no es un responsable');
+  assert.equal(m.tasks[1].due, null, 'fecha imposible');
+  assert.equal(parseMeeting('no hay json'), null);
+  assert.equal(parseMeeting('{"summary":[],"decisions":[],"tasks":[]}'), null, 'un acta vacía no sirve');
+  const pr = meetingPrompt('hola', '', ['Ana María', 'Luis'], '2026-11-15');
+  assert.match(pr, /Hoy es 2026-11-15/); assert.match(pr, /Ana María, Luis/);
+  assert.doesNotMatch(meetingPrompt('hola', '', [], ''), /Hoy es|Personas del equipo/);
+});
+
+test('reunión: responsable, acta en Markdown y archivo', async () => {
+  const { matchOwner, minutesMarkdown, minutesFileName, meetingTaskQuick, isMeeting } = await import('../lib/meeting');
+  const people = [{ user_id: 'a', name: 'Ana María Gómez' }, { user_id: 'b', name: 'Luis Pérez' }, { user_id: 'c', name: 'Ana Ruiz' }, { user_id: 'd', name: 'Andrés' }];
+  assert.equal(matchOwner('Luis', people), 'b');
+  assert.equal(matchOwner('luis perez', people), 'b');
+  assert.equal(matchOwner('Ana', people), null, 'dos Anas: no se adivina');
+  assert.equal(matchOwner('Ana María', people), 'a');
+  assert.equal(matchOwner('Ana Ruiz', people), 'c');
+  assert.equal(matchOwner('ANDRÉS', people), 'd', 'sin tildes ni mayúsculas');
+  assert.equal(matchOwner('Pedro', people), null);
+  assert.equal(matchOwner(null, people), null);
+  const m = { kind: 'meeting' as const, title: 'Revisión', summary: ['Se habló del avance.'], attendees: ['Ana', 'Luis'], decisions: ['Salimos el 1 dic'],
+    tasks: [{ title: 'Enviar | propuesta', owner: 'Ana', due: '2026-11-20', when: 'el viernes' }, { title: 'Llamar al cliente', owner: null, due: null, when: 'mañana' }], open: ['Precios'] };
+  const md = minutesMarkdown(m, '15 nov');
+  assert.match(md, /^## Acta: Revisión · 15 nov/);
+  assert.match(md, /\*\*Asistentes:\*\* Ana, Luis/);
+  assert.match(md, /\| Enviar \/ propuesta \| Ana \| 20 nov \|/, 'sin romper la tabla');
+  assert.match(md, /\| Llamar al cliente \| Sin asignar \| mañana \|/);
+  assert.match(md, /- \[ \] Precios/);
+  assert.doesNotMatch(minutesMarkdown(m, '15 nov', false), /^## Acta/);
+  assert.equal(minutesFileName({ ...m, title: 'Plan: Q1/2027' }, new Date(2026, 10, 15)), 'Acta 15 nov - Plan Q1 2027.md');
+  assert.equal(meetingTaskQuick(m.tasks[1]), 'Llamar al cliente mañana');
+  assert.ok(isMeeting(m) && !isMeeting({ ideas: [] }) && !isMeeting(null));
+});

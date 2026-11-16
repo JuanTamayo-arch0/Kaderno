@@ -75,3 +75,6 @@ Queda para después: avisos a Slack o Teams y crear tareas reenviando un correo.
 11. (Fase 3) El modo cambia nombres y orden, no datos: una materia y un área son lo mismo por dentro. Por eso se puede pasar de un modo a otro sin perder nada.
 12. (Fase 3) En "Los dos" se dejan los nombres del estudio (la mayoría de quienes eligen ambos son estudiantes que trabajan) y se prenden las funciones del trabajo.
 13. (Fase 3) El modo se guarda en la cuenta y, para pintar rápido al abrir, también en el dispositivo.
+14. (Fase 4) El responsable se adivina solo si no hay duda (nombre completo, o el único con ese nombre); si no, queda "¿Ana?" en amarillo para escogerlo a mano.
+15. (Fase 4) La IA convierte "el viernes" en fecha con el día de hoy; si la fecha no existe o no se dijo, la tarea queda sin fecha.
+16. (Fase 4) Las tareas publicadas van a la primera columna del tablero que no sea de terminadas, con la descripción "De la reunión del 15 nov".

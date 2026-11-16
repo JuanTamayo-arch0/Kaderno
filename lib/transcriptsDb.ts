@@ -3,10 +3,11 @@
 // ============================================================
 import { supabase } from './supabase';
 import type { ClassSummary, Mark, Segment } from './classRec';
+import type { MeetingMinutes } from './meeting';
 
 export type Transcript = {
   id: string; note_id: string; started_at: string; duration_s: number; lang: string;
-  segments: Segment[]; marks: Mark[]; summary: ClassSummary | null;
+  segments: Segment[]; marks: Mark[]; summary: ClassSummary | MeetingMinutes | null;
 };
 
 const missing = (e: any) => !!e && (e.code === '42P01' || e.code === 'PGRST205' || /does not exist|Could not find/i.test(String(e.message ?? '')));
@@ -29,7 +30,7 @@ export async function createTranscript(noteId: string, lang: string): Promise<st
   return (data as { id: string }).id;
 }
 
-export async function saveTranscript(id: string, patch: { segments?: Segment[]; marks?: Mark[]; duration_s?: number; summary?: ClassSummary | null }): Promise<void> {
+export async function saveTranscript(id: string, patch: { segments?: Segment[]; marks?: Mark[]; duration_s?: number; summary?: ClassSummary | MeetingMinutes | null }): Promise<void> {
   const clean = { ...patch, ...(patch.duration_s != null ? { duration_s: Math.min(14400, Math.max(0, Math.round(patch.duration_s))) } : {}) };
   const { error } = await supabase.from('note_transcripts').update(clean).eq('id', id);
   if (error) throw error;
@@ -48,4 +49,17 @@ export async function summarizeClass(transcript: string, notesMd: string, subjec
     throw new Error(msg || 'No se pudo resumir la clase. Intenta de nuevo.');
   }
   return (data as { summary: ClassSummary }).summary;
+}
+
+/** v24: el acta de una reunión (resumen, decisiones, tareas con responsable y pendientes). */
+export async function meetingMinutes(transcript: string, notesMd: string, people: string[]): Promise<MeetingMinutes> {
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const { data, error } = await supabase.functions.invoke('ai', { body: { task: 'meeting', content: transcript, notes_md: notesMd, people, today } });
+  if (error) {
+    let msg = '';
+    try { const ctx: any = (error as any).context; const j = ctx?.json ? await ctx.json() : null; msg = j?.error ?? ''; } catch { /* noop */ }
+    throw new Error(msg || 'No se pudo armar el acta. Intenta de nuevo.');
+  }
+  return (data as { minutes: MeetingMinutes }).minutes;
 }
