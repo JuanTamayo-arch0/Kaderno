@@ -17,8 +17,8 @@ import { TaskComments } from './TaskComments';
 //  comentarios con @menciones (v23, fase 2).
 // ============================================================
 
-export function PTaskModal({ visible, task, projectId, status, cols, members, steps, editable, onClose, onSaved, onStepsChanged, onStepPatch, myId = null, isOwner = false, onCommentCount }: {
-  myId?: string | null; isOwner?: boolean; onCommentCount?: (taskId: string, n: number) => void;
+export function PTaskModal({ visible, task, projectId, status, cols, members, steps, editable, onClose, onSaved, onStepsChanged, onStepPatch, myId = null, isOwner = false, onCommentCount, defaultDate = null }: {
+  defaultDate?: Date | null; myId?: string | null; isOwner?: boolean; onCommentCount?: (taskId: string, n: number) => void;
   visible: boolean; task: PTask | null; projectId: string; status: string;
   cols: BoardColumn[]; members: Member[]; steps: PStep[]; editable: boolean;
   onClose: () => void; onSaved: () => void; onStepsChanged: () => void;
@@ -30,6 +30,8 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
   const [assignee, setAssignee] = useState<string | null>(null);
   const [date, setDate] = useState<Date | null>(null);
   const [time, setTime] = useState('');   // 'HH:MM' o vacío (= 11:59 p. m.)
+  const [start, setStart] = useState<Date | null>(null);   // inicio (opcional), para la línea de tiempo
+  const [showStart, setShowStart] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [busy, setBusy] = useState(false);
   const [nuevoPaso, setNuevoPaso] = useState('');
@@ -39,7 +41,7 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
   // render" que React permite, y no un useEffect: así no hay un parpadeo con los
   // datos de la tarea anterior. La clave incluye el cerrado (null), porque si no
   // volver a abrir la MISMA tarjeta no restablecería lo que se dejó a medias.
-  const clave = visible ? `${task?.id ?? 'nueva'}:${status}` : null;
+  const clave = visible ? `${task?.id ?? 'nueva'}:${status}:${task ? '' : defaultDate?.getTime() ?? ''}` : null;
   if (clave !== abierta) {
     setAbierta(clave);
     if (clave) {
@@ -52,11 +54,14 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
         setDate(new Date(at.getFullYear(), at.getMonth(), at.getDate()));
         setTime(at.getHours() === 23 && at.getMinutes() === 59 ? '' : `${pad(at.getHours())}:${pad(at.getMinutes())}`);
       } else {
-        setDate(task?.due_date ? new Date(task.due_date + 'T00:00:00') : null);
+        setDate(task?.due_date ? new Date(task.due_date + 'T00:00:00') : task ? null : defaultDate);
         setTime('');
       }
+      const sa = task?.start_at ? new Date(task.start_at) : null;
+      setStart(sa && !isNaN(sa.getTime()) ? new Date(sa.getFullYear(), sa.getMonth(), sa.getDate()) : null);
       setNuevoPaso('');
       setShowPicker(false);
+      setShowStart(false);
     }
   }
 
@@ -66,16 +71,19 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
     const due = date ? `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` : null;
     const [hh, mm] = /^\d{2}:\d{2}$/.test(time) ? time.split(':').map(Number) : [23, 59];
     const dueAt = date ? new Date(date.getFullYear(), date.getMonth(), date.getDate(), hh, mm).toISOString() : null;
+    if (start && date && start > date) { setBusy(false); return notify('El inicio va antes de la entrega'); }
+    const startAt = start ? new Date(start.getFullYear(), start.getMonth(), start.getDate(), 8, 0).toISOString() : null;
+    const startPatch = start || task?.start_at ? { start_at: startAt } : {};
     try {
       if (task) {
         await updateProjectTask(task.id, {
           title: title.trim(), description: desc.trim() || null, status: st,
-          assignee_id: assignee, due_date: due, due_at: dueAt,
+          assignee_id: assignee, due_date: due, due_at: dueAt, ...startPatch,
         });
       } else {
         const creada = await addProjectTask({
           project_id: projectId, title: title.trim(), status: st,
-          description: desc.trim() || null, assignee_id: assignee, due_date: due, due_at: dueAt,
+          description: desc.trim() || null, assignee_id: assignee, due_date: due, due_at: dueAt, ...startPatch,
         });
         await logActivity(projectId, 'task_new', `creó “${creada.title}”`, { task_id: creada.id });
       }
@@ -197,6 +205,34 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
             {date && editable && (
               <Pressable onPress={() => { setDate(null); setTime(''); }} style={{ alignSelf: 'flex-start', marginTop: 6 }}>
                 <Text style={{ color: C.muted, fontSize: 12 }}>Quitar la fecha</Text>
+              </Pressable>
+            )}
+
+            <Text style={lbl}>Empieza (opcional)</Text>
+            {isWeb ? (
+              React.createElement('input', {
+                type: 'date',
+                value: start ? `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}` : '',
+                max: date ? `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` : undefined,
+                disabled: !editable,
+                'aria-label': 'Fecha de inicio',
+                onChange: (e: any) => { const v = e.target.value; setStart(v ? new Date(v + 'T00:00:00') : null); },
+                style: { backgroundColor: C.surface2, border: `1px solid ${C.line}`, borderRadius: 11, color: C.text, padding: 12, fontSize: 14, colorScheme: uiScheme(), width: '100%', boxSizing: 'border-box' },
+              })
+            ) : (
+              <>
+                <Pressable onPress={() => editable && setShowStart(true)} style={input}>
+                  <Text style={{ color: start ? C.text : C.muted }}>{start ? start.toLocaleDateString('es') : 'Sin inicio'}</Text>
+                </Pressable>
+                {showStart && (
+                  <DateTimePicker value={start ?? date ?? new Date()} mode="date" maximumDate={date ?? undefined}
+                    onChange={(_, d) => { setShowStart(false); if (d) setStart(d); }} />
+                )}
+              </>
+            )}
+            {start && editable && (
+              <Pressable onPress={() => setStart(null)} style={{ alignSelf: 'flex-start', marginTop: 6 }}>
+                <Text style={{ color: C.muted, fontSize: 12 }}>Quitar el inicio</Text>
               </Pressable>
             )}
 

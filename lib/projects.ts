@@ -413,17 +413,18 @@ export async function getProjectTasks(projectId: string): Promise<PTask[]> {
 // responde que no la encuentra: en ese caso se reintenta sin ella para que crear
 // y editar tareas nunca se rompa por la hora.
 function missingDueAt(error: { message?: string; code?: string } | null): boolean {
-  return !!error && /due_at/.test(error.message ?? '') && /column|schema cache/i.test(error.message ?? '');
+  return !!error && /due_at|start_at/.test(error.message ?? '') && /column|schema cache/i.test(error.message ?? '');
 }
-function withoutDueAt<T extends { due_at?: string | null }>(o: T): Omit<T, 'due_at'> {
-  const { due_at: _omit, ...rest } = o;
+// Sin schema_v13 no existen due_at ni start_at: se guarda sin ellas.
+function withoutDueAt<T extends { due_at?: string | null; start_at?: string | null }>(o: T): Omit<T, 'due_at' | 'start_at'> {
+  const { due_at: _omit, start_at: _omit2, ...rest } = o;
   return rest;
 }
 
 export async function addProjectTask(t: {
   project_id: string; title: string; status: string;
   description?: string | null; assignee_id?: string | null; due_date?: string | null;
-  due_at?: string | null; position?: number;
+  due_at?: string | null; start_at?: string | null; position?: number;
 }): Promise<PTask> {
   const row: Record<string, any> = {
     project_id: t.project_id,
@@ -436,6 +437,7 @@ export async function addProjectTask(t: {
     created_by: await uid(),
   };
   if (t.due_at !== undefined) row.due_at = t.due_at;
+  if (t.start_at) row.start_at = t.start_at;
   let { data, error } = await supabase.from('project_tasks').insert(row).select('*').single();
   if (missingDueAt(error)) ({ data, error } = await supabase.from('project_tasks').insert(withoutDueAt(row)).select('*').single());
   if (error) throw error;
@@ -444,7 +446,7 @@ export async function addProjectTask(t: {
 
 export async function updateProjectTask(id: string, patch: {
   title?: string; description?: string | null; status?: string;
-  assignee_id?: string | null; due_date?: string | null; due_at?: string | null; position?: number;
+  assignee_id?: string | null; due_date?: string | null; due_at?: string | null; start_at?: string | null; position?: number;
 }): Promise<void> {
   let { error } = await supabase.from('project_tasks').update(patch).eq('id', id);
   if (missingDueAt(error)) ({ error } = await supabase.from('project_tasks').update(withoutDueAt(patch)).eq('id', id));
