@@ -10,7 +10,9 @@ import {
   MAX_SECONDS, type MarkMap, type Segment, type Mark,
 } from '../../lib/classRec';
 import { browserSpeechSupported, createBrowserTranscriber, keepAwake, LANGS, type Transcriber, type TranscriberState } from '../../lib/transcribe';
-import { createTranscript, saveTranscript, getTranscripts, deleteTranscript, summarizeClass, type Transcript } from '../../lib/transcriptsDb';
+import { createTranscript, saveTranscript, getTranscripts, deleteTranscript, summarizeClass, meetingMinutes, type Transcript } from '../../lib/transcriptsDb';
+import { isMeeting, minutesMarkdown, meetingTaskQuick, type MeetingMinutes } from '../../lib/meeting';
+import { MeetingPublish } from './MeetingPublish';
 import { openAdd } from '../../lib/uiBus';
 import { getMode, useMode } from '../../lib/mode';
 
@@ -222,7 +224,10 @@ function TranscriptCard({ t, open, onToggle, focusT, subjectName, getMd, onInser
   onChanged: (patch: Partial<Transcript>) => void; onDeleted: () => void;
 }) {
   const [q, setQ] = useState('');
-  const { v: mv } = useMode();
+  const { v: mv, work, study } = useMode();
+  const [publish, setPublish] = useState(false);
+  const cls = t.summary && !isMeeting(t.summary) ? t.summary : null;
+  const mtg = isMeeting(t.summary) ? t.summary : null;
   const [mine, setMine] = useState(true);
   const [busy, setBusy] = useState(false);
   const [hl, setHl] = useState<number | null>(null);
@@ -251,6 +256,15 @@ function TranscriptCard({ t, open, onToggle, focusT, subjectName, getMd, onInser
     } catch (e) { notify('No se pudo resumir', friendlyError(e)); }
     finally { setBusy(false); }
   }
+  async function minutes() {
+    setBusy(true);
+    try {
+      const m = await meetingMinutes(transcriptText(segs), getMd(), []);
+      await saveTranscript(t.id, { summary: m });
+      onChanged({ summary: m });
+    } catch (e) { notify('No se pudo armar el acta', friendlyError(e)); }
+    finally { setBusy(false); }
+  }
   async function remove() {
     if (!(await confirm('¿Borrar esta transcripción?', 'Se borra el texto de la grabación. Tus apuntes no cambian.', 'Borrar'))) return;
     try { await deleteTranscript(t.id); onDeleted(); toast('Transcripción borrada'); } catch (e) { notify('No se pudo borrar', friendlyError(e)); }
@@ -263,21 +277,21 @@ function TranscriptCard({ t, open, onToggle, focusT, subjectName, getMd, onInser
         <Ionicons name="mic-outline" size={18} color={C.brand} />
         <View style={{ flex: 1 }}>
           <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '800' }}>{mv.transcriptOf} · {dateLabel}</Text>
-          <Text style={{ color: C.muted, fontSize: 12 }}>{fmtClock(t.duration_s)} · {segs.length} frases{t.marks?.length ? ` · ${t.marks.length} apuntes con minuto` : ''}{t.summary ? ' · con resumen' : ''}</Text>
+          <Text style={{ color: C.muted, fontSize: 12 }}>{fmtClock(t.duration_s)} · {segs.length} frases{t.marks?.length ? ` · ${t.marks.length} apuntes con minuto` : ''}{mtg ? ' · con acta' : cls ? ' · con resumen' : ''}</Text>
         </View>
         <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={C.muted} />
       </Pressable>
       {open && (
         <View style={{ padding: 14, paddingTop: 0, gap: 12 }}>
-          {t.summary ? (
+          {cls ? (
             <View style={{ padding: 12, borderRadius: 12, backgroundColor: C.surface2, gap: 8 }}>
               <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '800' }}>Resumen</Text>
-              {t.summary.ideas.map((x, i) => <Text key={i} style={{ color: C.text, fontSize: 13.5, lineHeight: 20 }}>• {x}</Text>)}
-              {t.summary.formulas.length > 0 && <Text style={{ color: C.muted, fontSize: 12.5 }}>{t.summary.formulas.length} {t.summary.formulas.length === 1 ? 'fórmula' : 'fórmulas'} (se ven al insertarlo en la nota)</Text>}
-              {t.summary.tasks.length > 0 && (
+              {cls.ideas.map((x, i) => <Text key={i} style={{ color: C.text, fontSize: 13.5, lineHeight: 20 }}>• {x}</Text>)}
+              {cls.formulas.length > 0 && <Text style={{ color: C.muted, fontSize: 12.5 }}>{cls.formulas.length} {cls.formulas.length === 1 ? 'fórmula' : 'fórmulas'} (se ven al insertarlo en la nota)</Text>}
+              {cls.tasks.length > 0 && (
                 <View style={{ gap: 6, marginTop: 2 }}>
                   <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>Lo que dejó el profesor</Text>
-                  {t.summary.tasks.map((k, i) => (
+                  {cls.tasks.map((k, i) => (
                     <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                       <Text style={{ color: C.text, fontSize: 13, flex: 1 }}>{k.title}{k.when ? ` · ${k.when}` : ''}</Text>
                       <Button label="Crear tarea" size="sm" kind="ghost" onPress={() => openAdd(taskQuickText(k))} />
@@ -286,12 +300,17 @@ function TranscriptCard({ t, open, onToggle, focusT, subjectName, getMd, onInser
                 </View>
               )}
               <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
-                <Button label="Insertar en la nota" size="sm" icon="arrow-down-outline" onPress={() => { onInsert(summaryMarkdown(t.summary!, dateLabel)); toast('Resumen agregado al final de la nota'); }} />
+                <Button label="Insertar en la nota" size="sm" icon="arrow-down-outline" onPress={() => { onInsert(summaryMarkdown(cls, dateLabel)); toast('Resumen agregado al final de la nota'); }} />
                 <Button label="Rehacer" size="sm" kind="ghost" busy={busy} onPress={summarize} />
               </View>
             </View>
+          ) : mtg ? (
+            <MinutesBlock m={mtg} dateLabel={dateLabel} busy={busy} onRedo={minutes} onInsert={(md) => { onInsert(md); toast('Acta agregada al final de la nota'); }} onPublish={() => setPublish(true)} />
           ) : (
-            <Button label="Resumir con IA" icon="sparkles-outline" size="sm" busy={busy} disabled={segs.length < 3} onPress={summarize} />
+            <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+              {study && <Button label="Resumir con IA" icon="sparkles-outline" size="sm" busy={busy} disabled={segs.length < 3} onPress={summarize} />}
+              {work && <Button label="Hacer acta con IA" icon="document-text-outline" size="sm" kind={study ? 'secondary' : 'primary'} busy={busy} disabled={segs.length < 3} onPress={minutes} />}
+            </View>
           )}
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             <View style={{ flex: 1, minWidth: 180, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.surface2, borderRadius: 10, borderWidth: 1, borderColor: C.line, paddingHorizontal: 10 }}>
@@ -325,10 +344,11 @@ function TranscriptCard({ t, open, onToggle, focusT, subjectName, getMd, onInser
           </ScrollView>
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
             <Button label="Crear tarjetas" icon="albums-outline" size="sm" kind="secondary" disabled={segs.length < 3}
-              onPress={() => onCards((t.summary ? t.summary.ideas.join('\n') + '\n\n' : '') + transcriptText(segs, 30_000, false))} />
+              onPress={() => onCards((cls ? cls.ideas.join('\n') + '\n\n' : mtg ? mtg.summary.join('\n') + '\n\n' : '') + transcriptText(segs, 30_000, false))} />
             <Button label="Borrar transcripción" icon="trash-outline" size="sm" kind="ghost" onPress={remove} />
           </View>
           <Text style={{ color: C.muted, fontSize: 11.5 }}>Hecha con el reconocimiento del navegador: puede tener palabras mal entendidas. El audio no se guardó.</Text>
+          {mtg && <MeetingPublish visible={publish} minutes={mtg} date={new Date(t.started_at)} onClose={() => setPublish(false)} />}
         </View>
       )}
     </View>
@@ -338,4 +358,44 @@ function TranscriptCard({ t, open, onToggle, focusT, subjectName, getMd, onInser
 /** Para "¿Qué se decía?": la grabación y el minuto de la línea seleccionada. */
 export function whenSaid(marks: NoteMark[], selected: string): NoteMark | null {
   return (findMark(marks, selected) as NoteMark | null) ?? null;
+}
+
+/** El acta de la reunión: resumen, decisiones, tareas con responsable y pendientes. */
+function MinutesBlock({ m, dateLabel, busy, onRedo, onInsert, onPublish }: {
+  m: MeetingMinutes; dateLabel: string; busy: boolean; onRedo: () => void; onInsert: (md: string) => void; onPublish: () => void;
+}) {
+  const sec = (title: string, items: string[]) => items.length > 0 && (
+    <View style={{ gap: 4 }}>
+      <Text style={{ color: C.text, fontSize: 13, fontWeight: '800' }}>{title}</Text>
+      {items.map((x, i) => <Text key={i} style={{ color: C.text, fontSize: 13.5, lineHeight: 20 }}>• {x}</Text>)}
+    </View>
+  );
+  return (
+    <View style={{ padding: 12, borderRadius: 12, backgroundColor: C.surface2, gap: 10 }} accessibilityLabel="Acta de la reunión">
+      <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>Acta{m.title ? `: ${m.title}` : ''}</Text>
+      {m.attendees.length > 0 && <Text style={{ color: C.muted, fontSize: 12.5 }}>Asistentes: {m.attendees.join(', ')}</Text>}
+      {sec('Resumen', m.summary)}
+      {sec('Decisiones', m.decisions)}
+      {m.tasks.length > 0 && (
+        <View style={{ gap: 6 }}>
+          <Text style={{ color: C.text, fontSize: 13, fontWeight: '800' }}>Tareas</Text>
+          {m.tasks.map((k, i) => (
+            <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: C.text, fontSize: 13.5 }}>{k.title}</Text>
+                <Text style={{ color: C.muted, fontSize: 12 }}>{k.owner ?? 'Sin responsable'}{k.due || k.when ? ` · ${k.when ?? k.due}` : ''}</Text>
+              </View>
+              <Button label="Para mí" size="sm" kind="ghost" onPress={() => openAdd(meetingTaskQuick(k))} accessibilityLabel={`Crear "${k.title}" en mis tareas`} />
+            </View>
+          ))}
+        </View>
+      )}
+      {sec('Pendientes para la próxima', m.open)}
+      <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 2 }}>
+        <Button label="Publicar en un proyecto" size="sm" icon="people-outline" onPress={onPublish} />
+        <Button label="Insertar en la nota" size="sm" kind="secondary" icon="arrow-down-outline" onPress={() => onInsert(minutesMarkdown(m, dateLabel))} />
+        <Button label="Rehacer" size="sm" kind="ghost" busy={busy} onPress={onRedo} />
+      </View>
+    </View>
+  );
 }

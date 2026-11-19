@@ -11,7 +11,8 @@
 //  las que ya existen y se validan. Con schema_v19 hay tope diario por
 //  persona (función ai_take); sin la migración, funciona sin tope.
 //  v24: el tope depende del plan (Gratis o Pro, ver _shared/plans.ts y
-//  schema_v23). Sin schema_v23 se usan los topes de Pro..
+//  schema_v23). Sin schema_v23 se usan los topes de Pro. Nueva tarea:
+//  ACTA DE REUNIÓN (meeting), con decisiones y tareas con responsable.
 // ============================================================
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
@@ -20,8 +21,9 @@ import { flashcardPrompt, parseCards } from '../_shared/cards.ts';
 import { quizPrompt, parseQuiz, gradePrompt, parseGrades, recallPrompt, parseRecall } from '../_shared/quiz.ts';
 import { classSummaryPrompt, parseClassSummary } from '../_shared/classSummary.ts';
 import { limitOf, limitMessage, type LimitKey } from '../_shared/plans.ts';
+import { meetingPrompt, parseMeeting } from '../_shared/meeting.ts';
 
-const TASKS: LimitKey[] = ['flashcards', 'quiz', 'recall', 'grade', 'class_summary', 'summary', 'steps'];
+const TASKS: LimitKey[] = ['flashcards', 'quiz', 'recall', 'grade', 'class_summary', 'meeting', 'summary', 'steps'];
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -58,7 +60,9 @@ Deno.serve(async (req) => {
     }
 
     const headings: string[] = Array.isArray(body.headings) ? body.headings.map(String).slice(0, 40) : [];
-    const prompt = task === 'class_summary'
+    const prompt = task === 'meeting'
+      ? meetingPrompt(String(content), String(body.notes_md ?? ''), Array.isArray(body.people) ? body.people.map((x: unknown) => String(x).slice(0, 60)).slice(0, 40) : [], /^\d{4}-\d{2}-\d{2}$/.test(String(body.today ?? '')) ? String(body.today) : '')
+      : task === 'class_summary'
       ? classSummaryPrompt(String(content), String(body.notes_md ?? ''), body.subject ? String(body.subject) : null)
       : task === 'quiz'
       ? quizPrompt(notes, Number(body.count ?? 10), body.subject ? String(body.subject) : null)
@@ -80,7 +84,7 @@ Deno.serve(async (req) => {
       headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
         model: Deno.env.get('AI_MODEL') ?? Deno.env.get('OCR_MODEL') ?? 'claude-sonnet-5',
-        max_tokens: task === 'quiz' ? 7000 : task === 'grade' ? 3000 : 2500,
+        max_tokens: task === 'quiz' ? 7000 : task === 'grade' || task === 'meeting' ? 3000 : 2500,
         messages: [{ role: 'user', content: prompt }],
       }),
     });
@@ -90,6 +94,11 @@ Deno.serve(async (req) => {
     const data = await res.json();
     const text = (data.content ?? []).map((b: any) => b.text ?? '').join('').trim();
 
+    if (task === 'meeting') {
+      const minutes = parseMeeting(text);
+      if (!minutes) return json({ error: 'La IA no pudo armar el acta, intenta de nuevo.' }, 502);
+      return json({ minutes });
+    }
     if (task === 'class_summary') {
       const summary = parseClassSummary(text);
       if (!summary) return json({ error: 'La IA no pudo resumir la clase, intenta de nuevo.' }, 502);

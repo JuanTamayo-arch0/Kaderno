@@ -1443,3 +1443,25 @@ Ninguna: el modo se guarda en las preferencias de cada persona (`user_prefs.sett
 ### 3. Pruebas
 
 `npm test` (nombres por modo y orden de las plantillas).
+
+## Versión 24 (parte 4): grabar la reunión
+
+### 1. Migración y despliegue
+
+Sin migración (el acta se guarda en `note_transcripts.summary`, como el resumen de clase). Despliega otra vez la función `ai` (nueva tarea `meeting`):
+
+```
+npx supabase functions deploy ai
+```
+
+### 2. Lo que cambia para el usuario
+
+- En una nota, "Grabar reunión" (modo Trabajo) o "Grabar" (los dos) graba igual que la clase: el texto se escribe solo y el audio no se guarda.
+- Al terminar, **Hacer acta con IA**: título, asistentes, resumen, decisiones, tareas con responsable y fecha, y pendientes para la próxima. En "Los dos" se puede escoger entre resumen de clase y acta.
+- **Publicar en un proyecto**: escoges el proyecto, Kaderno adivina el responsable de cada tarea entre los integrantes (si hay dos con el mismo nombre, pregunta), puedes cambiarlo, quitar fechas o tareas, y al publicar se crean las tareas asignadas (cada responsable recibe el aviso de siempre) y el acta queda en Archivos como `Acta 15 nov - Título.md`.
+- "Para mí" crea una tarea personal; "Insertar en la nota" pega el acta al final de la nota.
+- Tope diario: 2 actas con Gratis y 8 con Pro.
+
+### 3. Pruebas
+
+`npm test` (el acta se valida, responsables sin adivinar de más, Markdown y nombre del archivo).
