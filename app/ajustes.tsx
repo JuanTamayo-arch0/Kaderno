@@ -23,6 +23,8 @@ import { StudySettings } from '../components/cards/StudySettings';
 import { SemesterRitual } from '../components/ritual/SemesterRitual';
 import { getRitualPrefs, saveRitualPrefs } from '../lib/ritualsDb';
 import { clearHoyHidden, resetHoyHiddenCache, saveHoyVista } from '../lib/hoyHidden';
+import { usePlan } from '../lib/billingDb';
+import { planView } from '../lib/billing';
 
 // ============================================================
 //  Ajustes: cuenta, apariencia, avisos, calendario, instalar la app,
@@ -92,6 +94,8 @@ function Ajustes() {
   const scroller = React.useRef<any>(null);
   const [mondayRitual, setMondayRitual] = useState(true);
   const [semester, setSemester] = useState(false);
+  const { plan } = usePlan();
+  const pv = planView(plan);
 
   useFocusEffect(useCallback(() => {
     resetHoyHiddenCache();
@@ -174,6 +178,12 @@ function Ajustes() {
             right={nameDirty ? <Button label="Guardar" size="sm" onPress={saveName} style={{ marginRight: 4 }} /> : undefined} />
           <Text style={{ color: C.muted, fontSize: 13 }}>{email}</Text>
         </View>
+      </Card>
+
+      <SectionLabel text="Plan" />
+      <Card padded={false}>
+        <ListRow title={`Tu plan: ${pv.name}`} subtitle={pv.line} left={<Ionicons name={pv.badge === 'free' ? 'leaf-outline' : 'sparkles'} size={20} color={pv.badge === 'warn' ? C.badText : pv.badge === 'free' ? C.muted : C.brand} />}
+          onPress={() => router.push('/plan' as any)} />
       </Card>
 
       <SectionLabel text="Apariencia y organización" />

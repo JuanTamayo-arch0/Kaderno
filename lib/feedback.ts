@@ -64,8 +64,16 @@ function pushDialog(title: string, message: string | undefined, buttons: DialogB
 
 /** Aviso con un solo botón. */
 export function notify(title: string, message?: string): Promise<void> {
+  // v24: el tope del día con Gratis ofrece ver los planes.
+  if (UPSELL.test(String(message ?? '')) || UPSELL.test(title)) {
+    return pushDialog(title, message, [{ label: 'Ahora no', tone: 'plain', value: false }, { label: 'Ver planes', tone: 'primary', value: true }])
+      .then((go) => { if (go) openPlans(); });
+  }
   return pushDialog(title, message, [{ label: 'Entendido', tone: 'primary', value: true }]).then(() => undefined);
 }
+
+const UPSELL = /con Kaderno Pro/i;
+function openPlans() { import('expo-router').then((m) => m.router.push('/plan' as any)).catch(() => {}); }
 
 /** Pregunta sí/no. Devuelve true si se aceptó. */
 export function confirm(
@@ -85,6 +93,7 @@ export function confirm(
 /** Mensaje corto abajo de la pantalla, con acción opcional. */
 export function toast(message: string, opts: Partial<Omit<ToastReq, 'id' | 'message'>> = {}): number {
   const id = seq++;
+  if (UPSELL.test(message) && !opts.actionLabel) opts = { ...opts, actionLabel: 'Ver planes', onAction: openPlans };
   const t: ToastReq = { id, message, duration: opts.actionLabel ? 6000 : 3200, ...opts };
   if (t.tone === 'bad') { try { play('error'); } catch { /* */ } }
   state = { ...state, toasts: [...state.toasts.slice(-2), t] };

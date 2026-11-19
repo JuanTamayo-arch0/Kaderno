@@ -40,7 +40,8 @@ export async function addCalendar(name: string, url: string, color: string): Pro
   const { data, error } = await supabase.from('external_calendars').insert({ name: name.trim().slice(0, 60) || 'Mi calendario', url: clean, color }).select('id').single();
   if (error) {
     if (missing(error)) throw new Error(NEEDS_V20_3);
-    if (/(hasta|Máximo) 5/i.test(String(error.message))) throw new Error('Puedes conectar hasta 5 calendarios.');
+    if (/plan Gratis/i.test(String(error.message))) throw new Error(String(error.message));
+    if (/(hasta|Máximo) (5|10)/i.test(String(error.message))) throw new Error(/10/.test(String(error.message)) ? 'Puedes conectar hasta 10 calendarios.' : 'Puedes conectar hasta 5 calendarios.');
     throw error;
   }
   const id = (data as { id: string }).id;

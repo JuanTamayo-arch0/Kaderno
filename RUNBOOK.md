@@ -1337,3 +1337,26 @@ Corre otra vez `supabase/schema_v22.sql` completo (es idempotente; ahora tambié
 ### 3. Pruebas
 
 `npm test` (temporadas que cruzan el año, la próxima temporada, estados de la tienda y que las fechas y precios coincidan con el SQL) y `bash tests/run_sql.sh` (incluye `tests/sql/22d_pruebas.sql`: fechas, fuera de temporada no se vende, la ropa de siempre sí, lo comprado se pone todo el año).
+
+## Versión 24 (parte 1): planes y topes
+
+### 1. Migración
+
+Corre `supabase/schema_v23.sql` completo (requiere schema_v14, schema_v19 y schema_v20; es idempotente). Crea `subscriptions` y `team_seats`, las funciones `plan_of`, `my_plan` y `start_trial`, y cambia el tope de calendarios externos (2 con Gratis, 10 con Pro). Después despliega otra vez las funciones `ai` y `ocr`:
+
+```
+npx supabase functions deploy ai
+npx supabase functions deploy ocr
+```
+
+Sin la migración, la IA usa los topes de Pro y la pantalla "Tu plan" avisa que falta correrla.
+
+### 2. Lo que cambia para el usuario
+
+- Ajustes > **Tu plan**: el plan de hoy, la prueba gratis de Pro (7 días, sin tarjeta, una vez), los precios (mensual y anual), qué incluye cada plan y cuánto llevas usado de la IA hoy.
+- Cuando se acaba el cupo del día con Gratis, el aviso trae el botón "Ver planes".
+- Topes diarios: ver PLAN_v24.md, sección B.
+
+### 3. Pruebas
+
+`npm test` (precios, ahorro anual, topes y lo que dice "Tu plan" en cada estado) y `bash tests/run_sql.sh` (incluye `tests/sql/23_pruebas.sql`: cuenta nueva, prueba una sola vez, nadie se regala Pro, calendarios por plan, puestos de Equipo y vencimiento).
