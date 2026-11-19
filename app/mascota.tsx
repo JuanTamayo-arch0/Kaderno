@@ -9,6 +9,7 @@ import { useResponsive } from '../lib/responsive';
 import { ITEMS, SPECIES, type ItemId, type Species } from '../lib/pets/art';
 import { ITEM_RULES, ITEM_SHORT, SHOP_ORDER, adoptPrice, coinLabel, homeItemState, itemState, levelProgress, DEFAULT_NAMES, type ItemState } from '../lib/pets/economy';
 import { activePet, activatePet, adoptPet, buyItem, checkAchievements, loadPets, renamePet, setHome, usePets, wearItem, type Pet } from '../lib/pets/store';
+import { SEASONS, seasonOn, seasonEnd, upcomingSeason, seasonOfItem, nextStart } from '../lib/pets/seasons';
 import { HOME_DEFAULT_NAMES, HOME_DEFAULT_SHORT, HOME_ITEMS, HOME_ORDER, withItem, type HomeItemId } from '../lib/pets/home';
 import { PetRoom, RoomThumb } from '../components/pets/PetRoom';
 import { ACHIEVEMENTS, sortAchievements, type AchievementRow } from '../lib/pets/achievements';
@@ -24,7 +25,7 @@ import { CoinIcon, PetImage, PetSprite } from '../components/pets/PetArt';
 
 type Tab = 'ropa' | 'casa' | 'mascotas' | 'logros' | 'ganar' | 'ajustes';
 const TABS: Tab[] = ['ropa', 'casa', 'mascotas', 'logros', 'ganar', 'ajustes'];
-const STATE_TEXT: Record<ItemState, string> = { puesta: 'Puesta', tuya: 'Tuya', comprable: '', cara: '', bloqueada: '' };
+const STATE_TEXT: Record<ItemState, string> = { puesta: 'Puesta', tuya: 'Tuya', comprable: '', cara: '', bloqueada: '', fuera: '' };
 
 function Mascota() {
   const s = usePets();
@@ -133,50 +134,83 @@ function Shop({ pet, owned }: { pet: Pet; owned: Set<string> }) {
   const { isWide } = useResponsive();
   const coin = SPECIES[pet.species].coin;
   const [busy, setBusy] = useState<string | null>(null);
+  const today = new Date();
   async function press(id: ItemId, st: ItemState) {
     const r = ITEM_RULES[id];
+    if (st === 'fuera') { const s = seasonOfItem(id)!; toast(`${ITEMS[id].name}: se vende en ${s.name}, desde el ${dayLabel(nextStart(s, new Date()))}.`); return; }
     if (st === 'bloqueada') { toast(`${ITEMS[id].name}: se desbloquea en el nivel ${r.level}.`); return; }
     if (st === 'cara') { toast(`Te faltan ${coinLabel(r.price - pet.coins, coin)} para ${ITEMS[id].name.toLowerCase()}.`); return; }
     setBusy(id);
     try {
       if (st === 'puesta') await wearItem(pet.id, r.slot, null);
       else if (st === 'tuya') await wearItem(pet.id, r.slot, id);
-      else if (await confirm(`¿Comprar ${ITEMS[id].name.toLowerCase()}?`, `Cuesta ${coinLabel(r.price, coin)}. Es solo para ${pet.name}.`, 'Comprar')) {
+      else if (await confirm(`¿Comprar ${ITEMS[id].name.toLowerCase()}?`, `Cuesta ${coinLabel(r.price, coin)}. Es solo para ${pet.name}.${seasonOfItem(id) ? ' Es de temporada: después de la temporada sigue siendo tuya.' : ''}`, 'Comprar')) {
         await buyItem(id);
         toast(`${pet.name} estrena ${ITEMS[id].name.toLowerCase()}`, { tone: 'good' });
       }
     } catch (e) { notify('No se pudo', friendlyError(e)); }
     finally { setBusy(null); }
   }
+  const card = (id: ItemId, extra?: string) => {
+    const st = itemState(id, pet, owned, today);
+    const r = ITEM_RULES[id];
+    const dim = st === 'bloqueada' || st === 'fuera';
+    return (
+      <Pressable key={id} onPress={() => press(id, st)} disabled={busy === id} dataSet={{ press: '1' }}
+        accessibilityRole="button" accessibilityLabel={`${ITEMS[id].name}. ${st === 'puesta' ? 'Puesta, toca para quitarla' : st === 'tuya' ? 'Tuya, toca para ponerla' : st === 'bloqueada' ? `Nivel ${r.level}` : st === 'fuera' ? `Llega ${extra ?? 'en su temporada'}` : coinLabel(r.price, coin)}`}
+        style={({ focused }: any) => [{
+          flexBasis: isWide ? '18%' : '30%', flexGrow: 1, maxWidth: isWide ? '20%' : '33%', alignItems: 'center', gap: 2, paddingTop: 8, paddingBottom: 10, paddingHorizontal: 4,
+          borderRadius: 16, borderWidth: st === 'puesta' ? 2 : 1, borderColor: st === 'puesta' ? C.good : C.line, backgroundColor: C.surface, opacity: dim ? 0.55 : 1,
+        }, focused ? ({ outlineColor: C.focus, outlineWidth: 2, outlineStyle: 'solid' } as any) : null]}>
+        <PetImage species={pet.species} outfit={{ ...pet.outfit, [r.slot]: id }} size={64} />
+        <Text style={{ color: C.text, fontSize: 13, fontWeight: '800', textAlign: 'center' }} numberOfLines={1}>{ITEM_SHORT[id]}</Text>
+        {st === 'puesta' || st === 'tuya'
+          ? <Text style={{ color: st === 'puesta' ? C.goodText : C.muted, fontSize: 12, fontWeight: '800' }}>{STATE_TEXT[st]}</Text>
+          : st === 'fuera'
+            ? <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700' }}>{extra ?? 'En su temporada'}</Text>
+            : st === 'bloqueada'
+              ? <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700' }}>Nivel {r.level}</Text>
+              : <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}><CoinIcon species={pet.species} size={14} /><Text style={{ color: st === 'cara' ? C.muted : C.warnText, fontSize: 12.5, fontWeight: '900', fontVariant: ['tabular-nums'] }}>{r.price.toLocaleString('es-CO')}</Text></View>}
+      </Pressable>
+    );
+  };
+  // Temporada: la activa, o la próxima con su fecha. Aparte, lo tuyo de otras temporadas.
+  const now = seasonOn(today);
+  const next = upcomingSeason(today);
+  const shown = now ?? next.season;
+  const mineOther = SEASONS.filter((x) => x.id !== shown.id).flatMap((x) => x.items).filter((id) => owned.has(id));
   return (
     <View style={{ gap: 10 }}>
       <Text style={{ color: C.muted, fontSize: 13 }}>Toca una prenda para comprarla, ponerla o quitarla. Se paga con {coin.many} y es solo para {pet.name}.</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-        {SHOP_ORDER.map((id) => {
-          const st = itemState(id, pet, owned);
-          const r = ITEM_RULES[id];
-          const dim = st === 'bloqueada';
-          return (
-            <Pressable key={id} onPress={() => press(id, st)} disabled={busy === id} dataSet={{ press: '1' }}
-              accessibilityRole="button" accessibilityLabel={`${ITEMS[id].name}. ${st === 'puesta' ? 'Puesta, toca para quitarla' : st === 'tuya' ? 'Tuya, toca para ponerla' : st === 'bloqueada' ? `Nivel ${r.level}` : coinLabel(r.price, coin)}`}
-              style={({ focused }: any) => [{
-                flexBasis: isWide ? '18%' : '30%', flexGrow: 1, alignItems: 'center', gap: 2, paddingTop: 8, paddingBottom: 10, paddingHorizontal: 4,
-                borderRadius: 16, borderWidth: st === 'puesta' ? 2 : 1, borderColor: st === 'puesta' ? C.good : C.line, backgroundColor: C.surface, opacity: dim ? 0.55 : 1,
-              }, focused ? ({ outlineColor: C.focus, outlineWidth: 2, outlineStyle: 'solid' } as any) : null]}>
-              <PetImage species={pet.species} outfit={{ ...pet.outfit, [r.slot]: id }} size={64} />
-              <Text style={{ color: C.text, fontSize: 13, fontWeight: '800', textAlign: 'center' }} numberOfLines={1}>{ITEM_SHORT[id]}</Text>
-              {st === 'puesta' || st === 'tuya'
-                ? <Text style={{ color: st === 'puesta' ? C.goodText : C.muted, fontSize: 12, fontWeight: '800' }}>{STATE_TEXT[st]}</Text>
-                : st === 'bloqueada'
-                  ? <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700' }}>Nivel {r.level}</Text>
-                  : <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}><CoinIcon species={pet.species} size={14} /><Text style={{ color: st === 'cara' ? C.muted : C.warnText, fontSize: 12.5, fontWeight: '900', fontVariant: ['tabular-nums'] }}>{r.price.toLocaleString('es-CO')}</Text></View>}
-            </Pressable>
-          );
-        })}
+        {SHOP_ORDER.map((id) => card(id))}
       </View>
+      <View style={{ marginTop: 10, gap: 4 }} accessibilityRole="header">
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Ionicons name={now ? 'sparkles' : 'calendar-outline'} size={16} color={now ? C.warnText : C.muted} />
+          <Text style={{ color: C.text, fontSize: 15, fontWeight: '800' }}>{now ? `Temporada de ${now.name}` : `Próxima temporada: ${next.season.name}`}</Text>
+        </View>
+        <Text style={{ color: C.muted, fontSize: 13 }}>
+          {now
+            ? `Estas prendas se venden hasta el ${dayLabel(seasonEnd(now, today))}. Lo que compres se queda contigo todo el año.`
+            : `Llega el ${dayLabel(next.starts)} (en ${next.days} ${next.days === 1 ? 'día' : 'días'}). Ve ahorrando: solo se venden en su temporada.`}
+        </Text>
+      </View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+        {shown.items.map((id) => card(id, now ? undefined : `Desde el ${dayLabel(next.starts)}`))}
+      </View>
+      {mineOther.length > 0 && (
+        <>
+          <Text style={{ color: C.muted, fontSize: 13, fontWeight: '700', marginTop: 6 }}>Tuyas de otras temporadas</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>{mineOther.map((id) => card(id))}</View>
+        </>
+      )}
     </View>
   );
 }
+
+const MONTHS_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const dayLabel = (d: Date) => `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`;
 
 const HOME_GROUPS: { slot: 'papel' | 'piso' | 'vista' | 'mueble'; label: string }[] = [
   { slot: 'papel', label: 'Pared' }, { slot: 'piso', label: 'Piso' }, { slot: 'vista', label: 'Ventana' }, { slot: 'mueble', label: 'Muebles' },
