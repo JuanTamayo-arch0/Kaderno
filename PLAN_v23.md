@@ -1,6 +1,6 @@
 # PLAN v23: lo pendiente, cobrar suscripciones y Kaderno para el trabajo
 
-Estado: propuesta del domingo 15 de noviembre de 2026. Parte A: fase 1 construida (rama v23-proyecto); se construye una PR por fase. Las partes B y C esperan tus decisiones (sección D).
+Estado: propuesta del domingo 15 de noviembre de 2026. Parte A: fases 1 y 2 construidas (ramas v23-proyecto y v23-comentarios); se construye una PR por fase. Las partes B y C esperan tus decisiones (sección D).
 
 ---
 
@@ -86,3 +86,12 @@ Encaja con el plan **Equipo** de la parte B: el modo Trabajo personal es gratis 
 4. **Trabajo**: ¿empezamos por modo Trabajo + grabar la reunión + registro de horas (lo más rápido de hacer con lo que ya existe)?
 
 Fuentes de la parte B (noviembre de 2026): documentación de fuentes de pago de Wompi, página de suscripciones de Mercado Pago Colombia, comparación de pasarelas de Rebill (julio de 2026), comparación de merchant of record de Alex Cloudstar (2026), ayuda de pagos de Paddle.
+
+---
+
+## E. Decisiones tomadas al construir (se pueden cambiar)
+
+1. (Fase 2) Comentan todos los integrantes, también los lectores: comentar no cambia la tarea. Cada quien edita lo suyo; borrar, lo suyo o el dueño del proyecto.
+2. (Fase 2) Avisos: a quien mencionan ("te mencionó") y a quien tiene la tarea ("comentó en tu tarea"), nunca dos avisos por el mismo comentario. Al editar solo se avisa a los mencionados nuevos. Todos abren la tarea directamente (también el de "te asignaron", que ya existía).
+3. (Fase 2) Sin tiempo real todavía: los comentarios de una tarea abierta se refrescan cada 20 segundos.
+

@@ -380,7 +380,7 @@ function InboxPanel({ visible }: { visible: boolean }) {
       if (xs.some((x) => !x.read_at)) setTimeout(() => { markNotificationsRead().then(() => setNavCounts({ unread: 0 })).catch(() => {}); }, 800);
     }).catch(() => setItems([]));
   }, [visible]);
-  const icon = (k: string): any => k === 'reminder' ? 'alarm-outline' : k === 'daily' ? 'sunny-outline' : k === 'weekly' ? 'stats-chart-outline' : k === 'assigned' ? 'person-add-outline' : k === 'plan' ? 'flag-outline' : k === 'cierre' ? 'moon-outline' : k === 'semana' ? 'compass-outline' : 'people-outline';
+  const icon = (k: string): any => k === 'reminder' ? 'alarm-outline' : k === 'daily' ? 'sunny-outline' : k === 'weekly' ? 'stats-chart-outline' : k === 'assigned' ? 'person-add-outline' : k === 'mention' ? 'at-outline' : k === 'comment' ? 'chatbubble-outline' : k === 'plan' ? 'flag-outline' : k === 'cierre' ? 'moon-outline' : k === 'semana' ? 'compass-outline' : 'people-outline';
   return (
     <Panel visible={visible} onClose={closeInbox} top maxWidth={480}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>

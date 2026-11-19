@@ -11,7 +11,8 @@ import { SelectBox, dueInfo } from './projectUi';
 //  (Separado de app/proyectos/[id].tsx en la versión 23.)
 // ============================================================
 
-export function Lista({ tasks, cols, steps, members, editable, isWide, selecting, selected, onToggleSelect, onOpen, onAdd, onToggle }: {
+export function Lista({ tasks, cols, steps, members, editable, isWide, selecting, selected, onToggleSelect, onOpen, onAdd, onToggle, comments }: {
+  comments?: Record<string, number>;
   tasks: PTask[]; cols: BoardColumn[]; steps: Record<string, PStep[]>; members: Member[];
   editable: boolean; isWide: boolean;
   selecting: boolean; selected: Set<string>; onToggleSelect: (id: string) => void;
@@ -102,6 +103,7 @@ export function Lista({ tasks, cols, steps, members, editable, isWide, selecting
                 <Text style={{ color: C.muted, fontSize: 11.5 }}>· {who ? nameOf(who.profile) : 'sin asignar'}</Text>
                 {due && <Text style={{ color: due.color, fontSize: 11.5, fontWeight: '700' }}>· {due.label}</Text>}
                 {st.length > 0 && <Text style={{ color: C.muted, fontSize: 11.5 }}>· {st.filter((s) => s.done).length}/{st.length}</Text>}
+                {!!comments?.[t.id] && <Text style={{ color: C.muted, fontSize: 11.5 }} accessibilityLabel={`${comments[t.id]} comentarios`}>· 💬 {comments[t.id]}</Text>}
               </View>
             </View>
 
