@@ -1,14 +1,15 @@
-import React, { useCallback, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
-import { Platform, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { ActivityIndicator, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../lib/theme';
 import { RequireAuth } from '../components/RequireAuth';
 import { Screen, Button, Card, Badge, Segmented, SectionLabel, Skeleton } from '../components/ds';
 import { useResponsive } from '../lib/responsive';
-import { COMPARE, PRICES, TEAM_MIN_SEATS, cop, perMonth, planView, usageRows, yearlySaving, type Period } from '../lib/billing';
-import { NEEDS_V23, startTrial, usageToday, usePlan } from '../lib/billingDb';
-import { friendlyError, notify, toast } from '../lib/feedback';
+import { COMPARE, PRICES, TEAM_MIN_SEATS, cop, paymentKindText, paymentStatusText, perMonth, planView, shortDate, usageRows, yearlySaving, type Period } from '../lib/billing';
+import { NEEDS_V23, addSeat, cancelRenewal, forgetPlan, getPayments, getSeats, removeSeat, resumeRenewal, startTrial, usageToday, usePlan, waitPayment, type PaymentRow } from '../lib/billingDb';
+import { confirm, friendlyError, notify, toast } from '../lib/feedback';
+import { PayModal, type PayIntent } from '../components/billing/PayModal';
 
 // ============================================================
 //  Tu plan (v24): el plan de hoy, la prueba gratis, los precios y lo que
@@ -26,8 +27,31 @@ function PlanScreen() {
   const [period, setPeriod] = useState<Period>('year');
   const [used, setUsed] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
+  const [pay, setPay] = useState<PayIntent | null>(null);
+  const [payments, setPayments] = useState<PaymentRow[]>([]);
+  const [returning, setReturning] = useState<{ state: 'wait' | 'ok' | 'bad' | 'pending'; text: string } | null>(null);
+  const params = useLocalSearchParams<{ ref?: string; id?: string }>();
+  const router = useRouter();
 
-  useFocusEffect(useCallback(() => { reload().catch(() => {}); usageToday().then(setUsed).catch(() => {}); }, []));
+  const refresh = useCallback(() => { reload().catch(() => {}); usageToday().then(setUsed).catch(() => {}); getPayments().then(setPayments).catch(() => {}); }, []);
+  useFocusEffect(refresh);
+
+  // Al volver del checkout de Wompi: /plan?ref=KD-...&id=<transacción>
+  useEffect(() => {
+    const ref = typeof params.ref === 'string' ? params.ref : undefined;
+    const id = typeof params.id === 'string' ? params.id : undefined;
+    if (!ref && !id) return;
+    setReturning({ state: 'wait', text: 'Confirmando tu pago con Wompi…' });
+    waitPayment(id ? { id } : { reference: ref }, 60_000)
+      .then((p) => {
+        forgetPlan(); refresh();
+        if (p.status === 'APPROVED') setReturning({ state: 'ok', text: `Pago aprobado (${cop(p.amount_in_cents / 100)}). ¡Gracias por apoyar Kaderno!` });
+        else if (p.status === 'PENDING') setReturning({ state: 'pending', text: 'Wompi sigue procesando el pago (con PSE puede tardar unos minutos). Te avisamos cuando se apruebe.' });
+        else setReturning({ state: 'bad', text: `El pago no se aprobó${p.error ? ` (${p.error})` : ''}. No se te cobró nada.` });
+      })
+      .catch((e) => setReturning({ state: 'bad', text: friendlyError(e) }));
+    router.setParams({ ref: undefined, id: undefined, env: undefined } as any);
+  }, [params.ref, params.id]);
 
   async function trial() {
     setBusy(true);
@@ -35,8 +59,15 @@ function PlanScreen() {
     catch (e) { notify('No se pudo empezar la prueba', friendlyError(e)); }
     finally { setBusy(false); }
   }
-  function choose(_p: 'pro' | 'team') {
-    notify('Pagos en camino', 'Los pagos con Wompi llegan en la siguiente actualización de Kaderno.');
+  function choose(p: 'pro' | 'team') {
+    setPay({ plan: p, period, seats: p === 'team' ? Math.max(TEAM_MIN_SEATS, plan?.own_plan === 'team' ? plan?.seats ?? TEAM_MIN_SEATS : TEAM_MIN_SEATS) : 1 });
+  }
+  async function cancel() {
+    if (!(await confirm('¿Apagar la renovación?', `Conservas ${v.name} hasta el ${plan?.period_end ? shortDate(plan.period_end) : 'final del periodo'}. Después vuelves a Gratis sin perder nada.`, 'Apagar renovación'))) return;
+    try { await cancelRenewal(); toast('Renovación apagada'); } catch (e) { notify('No se pudo', friendlyError(e)); }
+  }
+  async function resume() {
+    try { await resumeRenewal(); toast('Renovación prendida'); } catch (e) { notify('No se pudo', friendlyError(e)); }
   }
 
   if (loading && !plan) return <Screen title="Tu plan" back="/ajustes" maxWidth={920}><Skeleton height={120} /><Skeleton height={320} style={{ marginTop: 12 }} /></Screen>;
@@ -55,7 +86,7 @@ function PlanScreen() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <Ionicons name={v.badge === 'free' ? 'leaf-outline' : v.badge === 'team' ? 'people' : 'sparkles'} size={22} color={b.color} />
           <Text style={{ color: C.text, fontSize: 20, fontWeight: '800' }}>{v.name}</Text>
-          <Badge text={b.text} color={b.color} />
+          {(v.badge === 'trial' || v.badge === 'warn') && <Badge text={b.text} color={b.color} />}
         </View>
         <Text style={{ color: C.text, fontSize: 14, lineHeight: 20 }}>{v.line}</Text>
         {plan?.trial_available && (
@@ -65,6 +96,45 @@ function PlanScreen() {
           </View>
         )}
       </Card>
+
+      {returning && (
+        <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14, borderColor: returning.state === 'ok' ? C.good : returning.state === 'bad' ? C.bad : C.line }} accessibilityLabel="Resultado del pago">
+          {returning.state === 'wait' ? <ActivityIndicator color={C.brand} /> : <Ionicons name={returning.state === 'ok' ? 'checkmark-circle' : returning.state === 'bad' ? 'close-circle' : 'time-outline'} size={24} color={returning.state === 'ok' ? C.good : returning.state === 'bad' ? C.bad : C.warn} />}
+          <Text style={{ color: C.text, fontSize: 14, flex: 1 }} accessibilityLiveRegion="polite">{returning.text}</Text>
+          {returning.state !== 'wait' && <Pressable onPress={() => setReturning(null)} accessibilityRole="button" accessibilityLabel="Cerrar" hitSlop={8}><Ionicons name="close" size={18} color={C.muted} /></Pressable>}
+        </Card>
+      )}
+
+      {plan && plan.own_plan && plan.own_plan !== 'free' && plan.status !== 'trial' && !plan.via_team && (
+        <>
+          <SectionLabel text="Renovación" />
+          <Card style={{ gap: 10, marginBottom: 18 }}>
+            {plan.auto_renew ? (
+              <>
+                <Text style={{ color: C.text, fontSize: 14 }}>Se cobra {plan.period === 'year' ? 'cada año' : 'cada mes'}{plan.source_label ? ` a ${plan.source_label}` : ''}{plan.next_charge_at ? `, el próximo el ${shortDate(plan.next_charge_at)}` : ''}.</Text>
+                <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
+                  <Button label="Cambiar medio de pago" size="sm" kind="secondary" icon="card-outline" onPress={() => setPay({ plan: plan.own_plan === 'team' ? 'team' : 'pro', period: plan.period ?? 'month', seats: plan.seats ?? 1, kind: 'source', method: plan.source_kind ?? 'CARD' })} />
+                  <Button label="Apagar renovación" size="sm" kind="ghost" onPress={cancel} />
+                </View>
+              </>
+            ) : plan.source_label && plan.period_end && new Date(plan.period_end) > new Date() ? (
+              <>
+                <Text style={{ color: C.text, fontSize: 14 }}>La renovación está apagada. Tienes guardado {plan.source_label}.</Text>
+                <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
+                  <Button label={`Renovar con ${plan.source_label}`} size="sm" onPress={resume} />
+                  <Button label="Usar otro medio" size="sm" kind="secondary" onPress={() => setPay({ plan: plan.own_plan === 'team' ? 'team' : 'pro', period: plan.period ?? 'month', seats: plan.seats ?? 1, kind: 'source' })} />
+                </View>
+              </>
+            ) : (
+              <Text style={{ color: C.muted, fontSize: 13.5 }}>No se renueva solo. Antes de que termine te avisamos para que pagues otro periodo, o elige "Renovar solo" al pagar.</Text>
+            )}
+          </Card>
+        </>
+      )}
+
+      {plan?.own_plan === 'team' && plan.period_end && new Date(plan.period_end) > new Date() && (
+        <TeamSeats seats={plan.seats ?? TEAM_MIN_SEATS} onAddSeats={() => setPay({ plan: 'team', period: plan.period ?? 'month', seats: 1, kind: 'seats', periodEnd: plan.period_end })} onChanged={() => reload()} />
+      )}
 
       {/* Precios */}
       <SectionLabel text="Planes" right={
@@ -80,7 +150,7 @@ function PlanScreen() {
         <PlanCard title="Equipo" price={cop(PRICES.team[period])} note={`por persona ${period === 'month' ? 'al mes' : 'al año'} · desde ${TEAM_MIN_SEATS}`}
           current={v.badge === 'team'}
           points={['Pro para cada persona', 'Un solo pago para todos', 'Horas de todo el equipo por proyecto']}
-          action={!plan?.via_team ? <Button label={plan?.own_plan === 'team' ? 'Administrar' : 'Pagar Equipo'} kind="secondary" full onPress={() => choose('team')} /> : undefined} />
+          action={!plan?.via_team ? <Button label={plan?.own_plan === 'team' && v.isPaid ? 'Pagar otro periodo' : 'Pagar Equipo'} kind="secondary" full onPress={() => choose('team')} /> : undefined} />
       </View>
 
       {/* Comparación */}
@@ -124,11 +194,75 @@ function PlanScreen() {
         <Text style={{ color: C.muted, fontSize: 12 }}>Se renueva cada día a medianoche (tu hora).</Text>
       </Card>
 
+      {payments.length > 0 && (
+        <>
+          <SectionLabel text="Tus pagos" />
+          <Card padded={false} style={{ marginBottom: 20 }}>
+            {payments.map((p, i) => (
+              <View key={p.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 11, borderBottomWidth: i < payments.length - 1 ? 1 : 0, borderBottomColor: C.line }}>
+                <Ionicons name={p.status === 'APPROVED' ? 'checkmark-circle' : p.status === 'PENDING' ? 'time-outline' : 'close-circle'} size={18} color={p.status === 'APPROVED' ? C.good : p.status === 'PENDING' ? C.warn : C.bad} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '600' }} numberOfLines={1}>{paymentKindText(p.kind)} · {p.plan === 'team' ? `Equipo (${p.seats})` : 'Pro'} {p.kind === 'seats' ? '' : p.period === 'year' ? 'anual' : 'mensual'}</Text>
+                  <Text style={{ color: C.muted, fontSize: 12 }} numberOfLines={1}>{shortDate(p.created_at)} · {paymentStatusText(p.status)}{p.method ? ` · ${p.method}` : ''} · {p.reference}</Text>
+                </View>
+                <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700', fontVariant: ['tabular-nums'] }}>{cop(p.amount_in_cents / 100)}</Text>
+              </View>
+            ))}
+          </Card>
+        </>
+      )}
+
       <Text style={{ color: C.muted, fontSize: 12, lineHeight: 18, marginBottom: 30 }}>
         Precios finales en pesos colombianos. Pagas con Nequi, tarjeta, PSE o Bancolombia a través de Wompi; Kaderno nunca ve los datos de tu tarjeta.
         Cancelas cuando quieras y conservas el plan hasta el final del periodo pagado. Si vuelves a Gratis no se borra nada tuyo.
       </Text>
+      <PayModal intent={pay} onClose={() => setPay(null)} onPaid={refresh} />
     </Screen>
+  );
+}
+
+function TeamSeats({ seats, onAddSeats, onChanged }: { seats: number; onAddSeats: () => void; onChanged: () => void }) {
+  const [list, setList] = useState<string[] | null>(null);
+  const [email, setEmail] = useState('');
+  const [busy, setBusy] = useState(false);
+  const load = useCallback(() => getSeats().then(setList), []);
+  useEffect(() => { load(); }, [load]);
+  const free = seats - 1 - (list?.length ?? 0);
+  async function add() {
+    if (!email.trim()) return;
+    setBusy(true);
+    try { await addSeat(email); setEmail(''); await load(); onChanged(); toast('Listo: esa persona ya tiene Pro con su cuenta de Kaderno'); }
+    catch (e) { notify('No se pudo agregar', friendlyError(e)); }
+    finally { setBusy(false); }
+  }
+  async function remove(m: string) {
+    if (!(await confirm(`¿Quitar a ${m}?`, 'Vuelve a Gratis enseguida. No se borra nada suyo.', 'Quitar'))) return;
+    try { await removeSeat(m); await load(); onChanged(); } catch (e) { notify('No se pudo', friendlyError(e)); }
+  }
+  return (
+    <>
+      <SectionLabel text="Tu equipo" count={(list?.length ?? 0) + 1} />
+      <Card style={{ gap: 10, marginBottom: 18 }}>
+        <Text style={{ color: C.text, fontSize: 13.5 }}>{seats} puestos, contándote. {free > 0 ? `Te ${free === 1 ? 'queda 1 libre' : `quedan ${free} libres`}.` : 'Todos están en uso.'}</Text>
+        {list === null && <ActivityIndicator color={C.brand} />}
+        {list?.map((m) => (
+          <View key={m} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Ionicons name="person-circle-outline" size={20} color={C.muted} />
+            <Text style={{ color: C.text, fontSize: 13.5, flex: 1 }} numberOfLines={1}>{m}</Text>
+            <Pressable onPress={() => remove(m)} accessibilityRole="button" accessibilityLabel={`Quitar a ${m}`} hitSlop={6}><Text style={{ color: C.muted, fontSize: 12.5 }}>Quitar</Text></Pressable>
+          </View>
+        ))}
+        {free > 0 ? (
+          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+            <TextInput value={email} onChangeText={setEmail} placeholder="correo@empresa.co" placeholderTextColor={C.muted} keyboardType="email-address" autoCapitalize="none" accessibilityLabel="Correo de la persona"
+              onSubmitEditing={add} style={[{ flex: 1, backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 11, color: C.text, padding: 10, fontSize: 14 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
+            <Button label="Agregar" size="sm" busy={busy} onPress={add} />
+          </View>
+        ) : null}
+        <Text style={{ color: C.muted, fontSize: 12 }}>Cada persona entra a Kaderno con ese correo (si no tiene cuenta, la crea) y tiene Pro mientras tu plan esté vigente.</Text>
+        <Button label="Agregar puestos" size="sm" kind="secondary" icon="add" onPress={onAddSeats} style={{ alignSelf: 'flex-start' }} />
+      </Card>
+    </>
   );
 }
 

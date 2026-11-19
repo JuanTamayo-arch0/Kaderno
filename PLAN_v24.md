@@ -66,3 +66,9 @@ Queda para después: avisos a Slack o Teams y crear tareas reenviando un correo.
 2. (Fase 1) Si la base no tiene schema_v23, la IA usa los topes de Pro (nadie se queda sin IA por una migración pendiente).
 3. (Fase 1) El cupo se cuenta por día local, como antes; los topes nuevos aplican desde el día en que se despliega.
 4. (Fase 1) Equipo: quien paga cuenta como un puesto; los demás se agregan por correo y tienen Pro mientras el plan esté vigente.
+5. (Fase 2) Dos formas de pagar: "una vez" por el checkout web de Wompi (todos los medios, sin renovación; avisamos 3 días antes de que termine) y "renovar solo" con tarjeta o Nequi guardados en Wompi. PSE y Bancolombia no se pueden cobrar solos, por eso existe la primera.
+6. (Fase 2) La renovación se cobra un día antes del fin. Si falla, reintentos 1, 2 y 4 días después, conservando el plan hasta 7 días después del fin; al tercer fallo se apaga la renovación (no se borra nada).
+7. (Fase 2) Pagar otro periodo antes de que termine se suma al final. No se cambia de Pro a Equipo (ni al revés) con un periodo pagado vigente; la prueba gratis sí se puede pagar en cualquier momento.
+8. (Fase 2) Puestos extra de Equipo a mitad de periodo: la parte proporcional de lo que falta, mínimo $2.000 por puesto. Desde la siguiente renovación se cobran con el resto.
+9. (Fase 2) Apagar la renovación olvida el medio de pago en Kaderno (la tarjeta queda en Wompi, que no la vuelve a cobrar sin nosotros).
+10. (Fase 2) Los datos de la tarjeta van de la app directo a Wompi con la llave pública; el servidor solo recibe el token. El webhook verifica la firma con el secreto de eventos y aplicar un pago es idempotente.

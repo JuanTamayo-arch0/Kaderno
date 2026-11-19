@@ -13,3 +13,11 @@ verify_jwt = false
 
 [functions.notify]
 verify_jwt = false
+
+# v24: Wompi llama al webhook sin sesión (verifica su propia firma) y pg_cron
+# llama al cobro de renovaciones con x-cron-secret.
+[functions.billing-webhook]
+verify_jwt = false
+
+[functions.billing-charge]
+verify_jwt = false
