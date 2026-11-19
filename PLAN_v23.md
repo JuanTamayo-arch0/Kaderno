@@ -1,6 +1,6 @@
 # PLAN v23: lo pendiente, cobrar suscripciones y Kaderno para el trabajo
 
-Estado: propuesta del domingo 15 de noviembre de 2026. Parte A construida completa (ramas v23-proyecto, v23-comentarios, v23-calendario y v23-temporada); se construye una PR por fase. Las partes B y C esperan tus decisiones (sección D).
+Estado: propuesta del domingo 15 de noviembre de 2026. Parte A construida completa (ramas v23-proyecto, v23-comentarios, v23-calendario y v23-temporada); se construye una PR por fase. Las partes B y C se decidieron y se construyeron en PLAN_v24.md (Wompi, precios de mercado, sandbox mientras llega el RUT).
 
 ---
 

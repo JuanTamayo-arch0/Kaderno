@@ -1,6 +1,6 @@
 # PLAN v24: planes, pagos con Wompi y Kaderno para el trabajo
 
-Estado: en construcción desde el domingo 15 de noviembre de 2026. Decisiones de Juan José: pagos con Wompi, precios según el mercado, todavía sin RUT. Todo se construye y se prueba en el modo de pruebas de Wompi (sandbox); para cobrar de verdad faltan el RUT y la cuenta de comercio (sección D). Una PR por fase, en orden.
+Estado: construido completo el domingo 15 de noviembre de 2026 (ramas v24-planes, v24-wompi, v24-trabajo, v24-reunion y v24-horas). Decisiones de Juan José: pagos con Wompi, precios según el mercado, todavía sin RUT. Todo se construye y se prueba en el modo de pruebas de Wompi (sandbox); para cobrar de verdad faltan el RUT y la cuenta de comercio (sección D). Una PR por fase, en orden.
 
 ---
 
@@ -78,3 +78,7 @@ Queda para después: avisos a Slack o Teams y crear tareas reenviando un correo.
 14. (Fase 4) El responsable se adivina solo si no hay duda (nombre completo, o el único con ese nombre); si no, queda "¿Ana?" en amarillo para escogerlo a mano.
 15. (Fase 4) La IA convierte "el viernes" en fecha con el día de hoy; si la fecha no existe o no se dijo, la tarea queda sin fecha.
 16. (Fase 4) Las tareas publicadas van a la primera columna del tablero que no sea de terminadas, con la descripción "De la reunión del 15 nov".
+17. (Fase 5) Las horas son las sesiones de Enfoque más las anotadas a mano, en la misma tabla. El enfoque se fecha al terminar (no se puede anotar en el pasado desde la app); a mano sí, hasta hoy.
+18. (Fase 5) CSV gratis y PDF con Pro: el CSV basta para cobrar; el PDF es el informe presentable.
+19. (Fase 5) Las horas de los demás no se pueden leer directo de la tabla; solo sumadas por persona en un proyecto compartido y con plan Equipo.
+20. (Fase 5) El informe semanal se arma en el dispositivo con las tareas del proyecto; no necesita IA ni migración.

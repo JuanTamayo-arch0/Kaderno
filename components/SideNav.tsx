@@ -46,6 +46,8 @@ export const STUDY_ITEMS: Item[] = [
   { key: 'capturar', label: 'Capturar', icon: 'camera-outline', iconOn: 'camera', href: '/capturar' },
   { key: 'mascota', label: 'Mascota', icon: 'paw-outline', iconOn: 'paw', href: '/mascota' },
 ];
+/** v24: solo en modo Trabajo o los dos. */
+export const HOURS_ITEM: Item = { key: 'horas', label: 'Horas', icon: 'time-outline', iconOn: 'time', href: '/horas' };
 /** Rutas que son pestañas (se navega con el navegador de pestañas para no perder su estado). */
 export const TAB_KEYS: NavKey[] = ['index', 'materias', 'horario', 'proyectos', 'estudiar', 'enfoque', 'oraculo', 'capturar'];
 
@@ -72,7 +74,7 @@ export function SideNav({ active, onNavigate }: { active: NavKey | null; onNavig
   const focus = useFocusTimer();
   const amb = useAmbient();
   const me = displayName(session);
-  const { v } = useMode();
+  const { v, work } = useMode();
   // v24: en modo Trabajo, Materias se llama Áreas y Horario, Agenda.
   const named = (it: Item): Item => it.key === 'materias' ? { ...it, label: v.subjects, icon: v.subjectIcon + '-outline', iconOn: v.subjectIcon } : it.key === 'horario' ? { ...it, label: v.schedule } : it;
 
@@ -161,6 +163,7 @@ export function SideNav({ active, onNavigate }: { active: NavKey | null; onNavig
           <Text style={{ color: active === 'estudiar' ? C.brand : C.muted, fontSize: 11.5, fontWeight: '800', letterSpacing: 0.7, textTransform: 'uppercase', paddingHorizontal: 10, paddingTop: 16, paddingBottom: 6 }}>{v.studySection}</Text>
         </Pressable>
         {row(STUDY_ITEMS[0], timer)}
+        {work && row(HOURS_ITEM)}
         {row(STUDY_ITEMS[1], badge(counts.repaso))}
         {row(STUDY_ITEMS[2])}
         {row(STUDY_ITEMS[3])}
@@ -216,7 +219,7 @@ export function KadernoMark({ size = 28 }: { size?: number }) {
 
 // ---------- Barra inferior (celular) ----------
 const SECTION_OF: Partial<Record<NavKey, NavKey>> = {
-  horario: 'materias', enfoque: 'estudiar', repaso: 'estudiar', oraculo: 'estudiar', capturar: 'estudiar',
+  horario: 'materias', enfoque: 'estudiar', repaso: 'estudiar', oraculo: 'estudiar', capturar: 'estudiar', horas: 'estudiar',
 };
 
 export function BottomBar({ active, onNavigate, bottomInset }: { active: NavKey; onNavigate: (k: NavKey) => void; bottomInset: number }) {

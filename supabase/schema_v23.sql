@@ -29,6 +29,13 @@
 --   · team_seat_add() y team_seat_remove(): los puestos de Equipo.
 --   · plan_of(): con la renovación fallida se conserva el plan 7 días más
 --     mientras se reintenta el cobro.
+--
+-- Fase 5 · Registro de horas (requiere schema_v12 y schema_v14)
+--   · focus_sessions gana project_id, note y source ('focus' o 'manual'):
+--     el enfoque cuenta por proyecto, y se pueden anotar horas a mano.
+--   · Solo se puede anotar tiempo en proyectos donde uno está; a mano, de 1
+--     minuto a 12 horas, y nunca en el futuro.
+--   · project_hours(): las horas de todo el equipo en un proyecto (plan Equipo).
 -- =====================================================================
 
 
@@ -464,3 +471,64 @@ revoke all on function public.team_seat_add(text) from public, anon;
 revoke all on function public.team_seat_remove(text) from public, anon;
 grant execute on function public.team_seat_add(text) to authenticated;
 grant execute on function public.team_seat_remove(text) to authenticated;
+
+
+-- =====================================================================
+--  FASE 5 · Registro de horas
+-- =====================================================================
+alter table public.focus_sessions add column if not exists project_id uuid references public.projects on delete set null;
+alter table public.focus_sessions add column if not exists note text;
+alter table public.focus_sessions add column if not exists source text not null default 'focus';
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'focus_sessions_note_len') then
+    alter table public.focus_sessions add constraint focus_sessions_note_len check (note is null or char_length(note) <= 300);
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'focus_sessions_source_ok') then
+    alter table public.focus_sessions add constraint focus_sessions_source_ok check (source in ('focus', 'manual'));
+  end if;
+end $$;
+create index if not exists focus_sessions_project_idx on public.focus_sessions (project_id, created_at) where project_id is not null;
+create index if not exists focus_sessions_user_day_idx on public.focus_sessions (user_id, created_at);
+
+create or replace function public._focus_sessions_hours() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.project_id is not null and not exists (select 1 from project_members m where m.project_id = new.project_id and m.user_id = new.user_id) then
+    raise exception 'No eres parte de ese proyecto.' using errcode = 'P0001';
+  end if;
+  if new.source = 'manual' then
+    if new.minutes is null or new.minutes < 1 or new.minutes > 720 then
+      raise exception 'Las horas a mano van de 1 minuto a 12 horas.' using errcode = 'P0001';
+    end if;
+    if new.created_at > now() + interval '1 day' then
+      raise exception 'No se pueden anotar horas en el futuro.' using errcode = 'P0001';
+    end if;
+  elsif tg_op = 'INSERT' then
+    new.created_at := now(); -- el enfoque se anota al terminar
+  end if;
+  return new;
+end $$;
+drop trigger if exists focus_sessions_hours_trg on public.focus_sessions;
+create trigger focus_sessions_hours_trg before insert or update on public.focus_sessions
+  for each row execute function public._focus_sessions_hours();
+
+-- Horas de todo el equipo en un proyecto (para quien está en el proyecto y tiene plan Equipo).
+create or replace function public.project_hours(p_project uuid, p_from timestamptz, p_to timestamptz)
+returns table (user_id uuid, name text, minutes bigint, sessions bigint)
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if not is_project_member(p_project) then raise exception 'No eres parte de ese proyecto.' using errcode = 'P0001'; end if;
+  if plan_of(auth.uid()) <> 'team' then raise exception 'Las horas de todo el equipo son del plan Equipo.' using errcode = 'P0001'; end if;
+  if p_to <= p_from or p_to - p_from > interval '400 days' then raise exception 'Rango inválido.' using errcode = 'P0001'; end if;
+  return query
+    select f.user_id, coalesce(nullif(btrim(pr.display_name), ''), split_part(u.email, '@', 1))::text, sum(f.minutes)::bigint, count(*)::bigint
+      from focus_sessions f
+      join project_members m on m.project_id = f.project_id and m.user_id = f.user_id
+      join auth.users u on u.id = f.user_id
+      left join profiles pr on pr.id = f.user_id
+     where f.project_id = p_project and f.created_at >= p_from and f.created_at < p_to
+     group by f.user_id, pr.display_name, u.email
+     order by 3 desc;
+end $$;
+revoke all on function public.project_hours(uuid, timestamptz, timestamptz) from public, anon;
+grant execute on function public.project_hours(uuid, timestamptz, timestamptz) to authenticated;
