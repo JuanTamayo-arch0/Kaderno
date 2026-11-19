@@ -4,6 +4,7 @@
 // ============================================================
 import { supabase, currentUserId } from './supabase';
 import { addNote, isMissingColumn } from './db';
+import { getMode } from './mode';
 import { builtinTemplate, classNoteTitle, diffNoteCards, parseCardLines, type NoteCard } from './noteLinks';
 
 const missing = (e: any) => !!e && (e.code === '42P01' || e.code === 'PGRST205' || e.code === 'PGRST202' || /does not exist|Could not find/i.test(String(e.message ?? '')));
@@ -75,13 +76,14 @@ export async function templateContent(key: string | null): Promise<string> {
 
 /** Abre (o crea) la nota de la clase de hoy en esa materia, con su plantilla. */
 export async function openClassNote(subjectId: string, now = new Date()): Promise<{ id: string; created: boolean }> {
-  const title = classNoteTitle(now);
+  const work = getMode() === 'trabajo';
+  const title = classNoteTitle(now, work);
   const start = new Date(now); start.setHours(0, 0, 0, 0);
   const { data } = await supabase.from('notes').select('id').eq('subject_id', subjectId).eq('title', title).is('deleted_at', null)
     .gte('created_at', start.toISOString()).limit(1);
   const found = (data as { id: string }[] | null)?.[0];
   if (found) return { id: found.id, created: false };
-  const key = (await subjectTemplate(subjectId)) ?? 'cornell';
+  const key = (await subjectTemplate(subjectId)) ?? (work ? 'acta' : 'cornell');
   const id = await addNote({ subject_id: subjectId, title, content: await templateContent(key), image_path: null });
   return { id, created: true };
 }

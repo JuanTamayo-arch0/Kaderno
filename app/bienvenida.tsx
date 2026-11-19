@@ -18,13 +18,16 @@ import { Button, Card, Dot } from '../components/ds';
 import { KadernoMark } from '../components/SideNav';
 import { PetChooser } from '../components/pets/PetChooser';
 import { loadPets, usePets } from '../lib/pets/store';
+import { MODES, saveMode, useMode, type Mode } from '../lib/mode';
 
 // ============================================================
-//  Bienvenida en cuatro pasos: materias, primeras entregas, mascota y avisos.
+//  Bienvenida en cinco pasos: para qué usas Kaderno (v24: estudio, trabajo
+//  o los dos), materias o áreas, primeras entregas, mascota y avisos.
 //  Pide lo mínimo para que "Hoy" no aparezca vacío la primera vez.
 // ============================================================
 
 const SUGGEST = ['Cálculo', 'Física', 'Química', 'Programación', 'Inglés', 'Estadística', 'Álgebra lineal', 'Ética'];
+const SUGGEST_WORK = ['Ventas', 'Marketing', 'Operaciones', 'Finanzas', 'Clientes', 'Proyecto interno', 'Administrativo'];
 
 function Bienvenida() {
   const router = useRouter();
@@ -38,6 +41,8 @@ function Bienvenida() {
   const [busy, setBusy] = useState(false);
 
   const pets = usePets();
+  const { mode, v: mv } = useMode();
+  const work = mode === 'trabajo';
   useEffect(() => { getSubjects().then(setSubjects).catch(() => {}); getPushStatus().then(setPush).catch(() => {}); loadPets().catch(() => {}); }, []);
 
   async function addSub(n: string) {
@@ -68,7 +73,7 @@ function Bienvenida() {
     router.replace(to as any);
   }
 
-  const steps = ['Materias', 'Entregas', 'Compañero', 'Avisos'];
+  const steps = ['Uso', mv.subjectsTab, 'Entregas', 'Compañero', 'Avisos'];
   const LAST = steps.length - 1;
   const input = (value: string, set: (v: string) => void, ph: string, onSubmit: () => void, label: string) => (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.line, borderRadius: 12, paddingLeft: 12 }}>
@@ -99,11 +104,34 @@ function Bienvenida() {
 
           {step === 0 && (
             <>
-              <Text style={{ color: C.text, fontSize: 26, fontWeight: '800' }}>¿Qué materias ves este semestre?</Text>
-              <Text style={{ color: C.muted, fontSize: 14.5, marginTop: 6, marginBottom: 18, lineHeight: 21 }}>Con ellas se organizan tus tareas, notas, horario y calificaciones. Luego puedes cambiarles color, ícono y créditos.</Text>
-              {input(name, setName, 'Nombre de la materia', () => addSub(name), 'Nombre de la materia')}
+              <Text style={{ color: C.text, fontSize: 26, fontWeight: '800' }}>¿Para qué vas a usar Kaderno?</Text>
+              <Text style={{ color: C.muted, fontSize: 14.5, marginTop: 6, marginBottom: 18, lineHeight: 21 }}>Cambia los nombres y lo que ves primero. Lo puedes cambiar cuando quieras en Ajustes.</Text>
+              <View style={{ gap: 10 }}>
+                {MODES.map((m) => {
+                  const on = mode === m.key;
+                  return (
+                    <Pressable key={m.key} onPress={() => saveMode(m.key as Mode).catch(() => {})} accessibilityRole="radio" accessibilityState={{ checked: on }} accessibilityLabel={`${m.label}: ${m.hint}`}
+                      style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, borderRadius: 14, borderWidth: on ? 2 : 1, borderColor: on ? C.brand : C.line, backgroundColor: hovered ? C.surface2 : C.surface })}>
+                      <Ionicons name={m.icon as any} size={26} color={on ? C.brand : C.muted} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: C.text, fontSize: 16, fontWeight: '800' }}>{m.label}</Text>
+                        <Text style={{ color: C.muted, fontSize: 13, marginTop: 2 }}>{m.hint}</Text>
+                      </View>
+                      <Ionicons name={on ? 'radio-button-on' : 'radio-button-off'} size={20} color={on ? C.brand : C.muted} />
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </>
+          )}
+
+          {step === 1 && (
+            <>
+              <Text style={{ color: C.text, fontSize: 26, fontWeight: '800' }}>{work ? '¿En qué áreas o con qué clientes trabajas?' : mode === 'ambos' ? '¿Qué materias ves y en qué áreas trabajas?' : '¿Qué materias ves este semestre?'}</Text>
+              <Text style={{ color: C.muted, fontSize: 14.5, marginTop: 6, marginBottom: 18, lineHeight: 21 }}>{work ? 'Con ellas se organizan tus tareas, notas, agenda y horas. Luego puedes cambiarles color e ícono.' : 'Con ellas se organizan tus tareas, notas, horario y calificaciones. Luego puedes cambiarles color, ícono y créditos.'}</Text>
+              {input(name, setName, work ? 'Nombre del área o cliente' : 'Nombre de la materia', () => addSub(name), work ? 'Nombre del área o cliente' : 'Nombre de la materia')}
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
-                {SUGGEST.filter((s) => !subjects.some((x) => x.name.toLowerCase() === s.toLowerCase())).map((s) => (
+                {(work ? SUGGEST_WORK : mode === 'ambos' ? [...SUGGEST.slice(0, 5), ...SUGGEST_WORK.slice(0, 3)] : SUGGEST).filter((s) => !subjects.some((x) => x.name.toLowerCase() === s.toLowerCase())).map((s) => (
                   <Pressable key={s} onPress={() => addSub(s)} accessibilityRole="button" accessibilityLabel={`Agregar ${s}`}
                     style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 36, paddingHorizontal: 12, borderRadius: 99, borderWidth: 1, borderColor: C.line }}>
                     <Ionicons name="add" size={14} color={C.muted} /><Text style={{ color: C.text, fontSize: 13 }}>{s}</Text>
@@ -118,23 +146,23 @@ function Bienvenida() {
             </>
           )}
 
-          {step === 1 && (
+          {step === 2 && (
             <>
               <Text style={{ color: C.text, fontSize: 26, fontWeight: '800' }}>Anota tus próximas entregas</Text>
-              <Text style={{ color: C.muted, fontSize: 14.5, marginTop: 6, marginBottom: 18, lineHeight: 21 }}>Escríbelas como hablas: "parcial cálculo viernes 10am" o "informe física el 20/10". Kaderno entiende la materia, el día y la hora.</Text>
-              {input(task, setTask, 'Ej: taller de química mañana', addT, 'Entrega')}
+              <Text style={{ color: C.muted, fontSize: 14.5, marginTop: 6, marginBottom: 18, lineHeight: 21 }}>{work ? 'Escríbelas como hablas: "propuesta ventas viernes 10am" o "informe mensual el 30/11". Kaderno entiende el área, el día y la hora.' : 'Escríbelas como hablas: "parcial cálculo viernes 10am" o "informe física el 20/10". Kaderno entiende la materia, el día y la hora.'}</Text>
+              {input(task, setTask, work ? 'Ej: enviar cotización mañana' : 'Ej: taller de química mañana', addT, 'Entrega')}
               {parsed && <Text style={{ color: C.muted, fontSize: 13, marginTop: 8 }}>Se guarda como: <Text style={{ color: C.text, fontWeight: '700' }}>{parsed.title}</Text>{parsed.subjectId ? ` · ${subjects.find((s) => s.id === parsed.subjectId)?.name}` : ''}{parsed.dueDate ? ` · ${fmtDue({ due_date: parsed.dueDate, due_at: parsed.dueTime ? combine(parsed.dueDate, parsed.dueTime) : null })}` : ' · sin fecha'}</Text>}
               {added.length > 0 && <Card style={{ marginTop: 16, gap: 8 }}>{added.map((a, i) => <View key={i} style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}><Ionicons name="checkmark-circle" size={17} color={C.goodText} /><Text style={{ color: C.text }}>{a}</Text></View>)}</Card>}
-              <Pressable onPress={() => finish('/importar')} style={{ marginTop: 18, flexDirection: 'row', alignItems: 'center', gap: 6 }} accessibilityRole="link">
+              {!work && <Pressable onPress={() => finish('/importar')} style={{ marginTop: 18, flexDirection: 'row', alignItems: 'center', gap: 6 }} accessibilityRole="link">
                 <Ionicons name="download-outline" size={16} color={C.brand} />
                 <Text style={{ color: C.brand, fontWeight: '700' }}>¿Tienes el cronograma del curso? Impórtalo completo</Text>
-              </Pressable>
+              </Pressable>}
             </>
           )}
 
-          {step === 2 && (
+          {step === 3 && (
             <>
-              <Text style={{ color: C.text, fontSize: 26, fontWeight: '800' }}>Elige tu compañero de estudio</Text>
+              <Text style={{ color: C.text, fontSize: 26, fontWeight: '800' }}>{work ? 'Elige tu compañero' : 'Elige tu compañero de estudio'}</Text>
               <Text style={{ color: C.muted, fontSize: 14.5, marginTop: 6, marginBottom: 18, lineHeight: 21 }}>Una mascota pixel que camina por la app, celebra lo que terminas y te da un empujón cuando lo necesitas. Es opcional.</Text>
               {pets.available === false ? (
                 <Card><Text style={{ color: C.muted }}>Las mascotas todavía no están activadas en este servidor. Puedes seguir.</Text></Card>
@@ -152,7 +180,7 @@ function Bienvenida() {
           {step === LAST && (
             <>
               <Text style={{ color: C.text, fontSize: 26, fontWeight: '800' }}>Que no se te pase nada</Text>
-              <Text style={{ color: C.muted, fontSize: 14.5, marginTop: 6, marginBottom: 18, lineHeight: 21 }}>Kaderno te avisa antes de cada entrega y cada mañana te dice qué tienes. También puedes cargar tu horario para ver la clase de ahora en Hoy.</Text>
+              <Text style={{ color: C.muted, fontSize: 14.5, marginTop: 6, marginBottom: 18, lineHeight: 21 }}>{work ? 'Kaderno te avisa antes de cada entrega y cada mañana te dice qué tienes. También puedes cargar tu agenda fija para ver la reunión de ahora en Hoy.' : 'Kaderno te avisa antes de cada entrega y cada mañana te dice qué tienes. También puedes cargar tu horario para ver la clase de ahora en Hoy.'}</Text>
               <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 <Ionicons name="notifications-outline" size={22} color={C.brand} />
                 <View style={{ flex: 1 }}>
@@ -162,11 +190,11 @@ function Bienvenida() {
                 {push === 'off' && <Button label="Activar" size="sm" onPress={async () => { try { setPush(await enablePush()); } catch (e) { notify('No se pudieron activar', friendlyError(e)); } }} />}
                 {push === 'on' && <Ionicons name="checkmark-circle" size={22} color={C.goodText} />}
               </Card>
-              <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 }} onPress={() => finish('/horario')} accessibilityLabel="Cargar mi horario">
+              <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 }} onPress={() => finish('/horario')} accessibilityLabel={work ? 'Cargar mi agenda' : 'Cargar mi horario'}>
                 <Ionicons name="grid-outline" size={22} color={C.brand} />
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: C.text, fontWeight: '700' }}>Cargar mi horario</Text>
-                  <Text style={{ color: C.muted, fontSize: 13 }}>Toca cada franja y elige la materia.</Text>
+                  <Text style={{ color: C.text, fontWeight: '700' }}>{work ? 'Cargar mi agenda' : 'Cargar mi horario'}</Text>
+                  <Text style={{ color: C.muted, fontSize: 13 }}>Toca cada franja y elige {work ? 'el área' : 'la materia'}.</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={C.muted} />
               </Card>
@@ -177,8 +205,8 @@ function Bienvenida() {
           <View style={{ flexDirection: 'row', gap: 10, paddingBottom: insets.bottom + 8 }}>
             {step > 0 && <Button label="Atrás" kind="secondary" onPress={() => setStep(step - 1)} style={{ flex: 1 }} />}
             {step < LAST
-              ? <Button label={step === 0 && !subjects.length ? 'Lo hago después' : step === 2 && !pets.pets.length && pets.available !== false ? 'Ahora no' : 'Siguiente'} onPress={() => setStep(step + 1)} style={{ flex: 2 }} kind={(step === 0 && !subjects.length) || (step === 2 && !pets.pets.length) ? 'secondary' : 'primary'} />
-              : <Button label="Ir a Hoy" icon="arrow-forward" onPress={() => { toast('Todo listo. ¡Buen semestre!', { tone: 'good' }); finish(); }} style={{ flex: 2 }} />}
+              ? <Button label={step === 1 && !subjects.length ? 'Lo hago después' : step === 3 && !pets.pets.length && pets.available !== false ? 'Ahora no' : 'Siguiente'} onPress={() => setStep(step + 1)} style={{ flex: 2 }} kind={(step === 1 && !subjects.length) || (step === 3 && !pets.pets.length) ? 'secondary' : 'primary'} />
+              : <Button label="Ir a Hoy" icon="arrow-forward" onPress={() => { toast(work ? 'Todo listo. ¡A darle!' : 'Todo listo. ¡Buen semestre!', { tone: 'good' }); finish(); }} style={{ flex: 2 }} />}
           </View>
         </View>
       </ScrollView>

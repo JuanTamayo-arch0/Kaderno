@@ -12,6 +12,7 @@ import {
   loadScheduleNative, newBlockId, overlappingIds, planRemap, saveSchedule, sortBlocks, toMinutes,
 } from '../../lib/schedule';
 import { SubjectIcon } from '../../components/SubjectIcon';
+import { useMode } from '../../lib/mode';
 import { Screen, Card, Dot, EmptyState, Segmented } from '../../components/ds';
 
 // ============================================================
@@ -24,6 +25,7 @@ import { Screen, Card, Dot, EmptyState, Segmented } from '../../components/ds';
 // ============================================================
 
 export default function Horario() {
+  const { v: mv } = useMode();
   const { isWide } = useResponsive();
   const router = useRouter();
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -226,10 +228,10 @@ export default function Horario() {
   );
 
   return (
-    <Screen title="Horario" subtitle="Tu semana de clases" maxWidth={1300}
+    <Screen title={mv.schedule} subtitle={mv.subjectLower === 'área' ? 'Tu semana de trabajo y reuniones fijas' : 'Tu semana de clases'} maxWidth={1300}
       right={isWide ? cfgButton : undefined}
       header={!isWide ? <Segmented value="horario" onChange={(k) => { if (k === 'materias') router.navigate('/materias'); }}
-        items={[{ key: 'materias', label: 'Materias', icon: 'book-outline' }, { key: 'horario', label: 'Horario', icon: 'grid-outline' }]} /> : undefined}>
+        items={[{ key: 'materias', label: mv.subjectsTab, icon: (mv.subjectIcon + '-outline') as any }, { key: 'horario', label: mv.schedule, icon: 'grid-outline' }]} /> : undefined}>
       {!isWide && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 12 }}>
           <Text style={{ color: C.muted, fontSize: 12.5, flex: 1 }}>Toca una celda para poner o quitar una clase.</Text>

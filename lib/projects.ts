@@ -102,109 +102,13 @@ async function uid(): Promise<string> {
 
 // ---------- Columnas por defecto y plantillas ----------
 
-export const DEFAULT_COLUMNS: BoardColumn[] = [
-  { key: 'todo',   label: 'Por hacer',   color: '#9aa3b2' },
-  { key: 'doing',  label: 'En curso',    color: '#6c8cff' },
-  { key: 'review', label: 'En revisión', color: '#f5b64c' },
-  { key: 'done',   label: 'Hecho',       color: '#37c98b', done: true },
-];
+export { DEFAULT_COLUMNS } from './projectTemplates';
+import { DEFAULT_COLUMNS, TEMPLATES } from './projectTemplates';
 
 // Las plantillas viven aquí, en el cliente, y NO en una tabla. Una plantilla es
 // un puñado de columnas y unas tarjetas de arranque; ponerlas en la base
 // obligaría a una migración cada vez que se quiera cambiar una palabra.
-export type Template = {
-  key: string;
-  label: string;
-  icon: string;
-  hint: string;
-  columns: BoardColumn[];
-  tasks: string[];
-};
-
-export const TEMPLATES: Template[] = [
-  {
-    key: 'blank',
-    label: 'En blanco',
-    icon: '📋',
-    hint: 'Cuatro columnas y nada más.',
-    columns: DEFAULT_COLUMNS,
-    tasks: [],
-  },
-  {
-    key: 'grupo',
-    label: 'Trabajo en grupo',
-    icon: '👥',
-    hint: 'Repartir, escribir, revisar y entregar.',
-    columns: DEFAULT_COLUMNS,
-    tasks: [
-      'Repartir las partes',
-      'Buscar fuentes',
-      'Escribir el borrador',
-      'Revisar redacción y citas',
-      'Armar la entrega final',
-    ],
-  },
-  {
-    key: 'laboratorio',
-    label: 'Laboratorio',
-    icon: '🧪',
-    hint: 'De la práctica al informe.',
-    columns: [
-      { key: 'prep',    label: 'Preparación', color: '#9aa3b2' },
-      { key: 'toma',    label: 'Toma de datos', color: '#6c8cff' },
-      { key: 'analisis',label: 'Análisis',    color: '#b98cff' },
-      { key: 'informe', label: 'Informe',     color: '#f5b64c' },
-      { key: 'entregado', label: 'Entregado', color: '#37c98b', done: true },
-    ],
-    tasks: [
-      'Leer la guía de la práctica',
-      'Preparar materiales',
-      'Tomar mediciones',
-      'Calcular resultados y error',
-      'Redactar conclusiones',
-    ],
-  },
-  {
-    key: 'exposicion',
-    label: 'Exposición',
-    icon: '🎤',
-    hint: 'Guion, diapositivas y ensayo.',
-    columns: [
-      { key: 'ideas',   label: 'Ideas',       color: '#9aa3b2' },
-      { key: 'guion',   label: 'Guion',       color: '#6c8cff' },
-      { key: 'diapos',  label: 'Diapositivas',color: '#f5b64c' },
-      { key: 'ensayo',  label: 'Ensayo',      color: '#b98cff' },
-      { key: 'lista',   label: 'Lista',       color: '#37c98b', done: true },
-    ],
-    tasks: [
-      'Definir el mensaje principal',
-      'Escribir el guion',
-      'Diseñar las diapositivas',
-      'Repartir quién dice qué',
-      'Ensayar con cronómetro',
-    ],
-  },
-  {
-    key: 'investigacion',
-    label: 'Investigación',
-    icon: '🔎',
-    hint: 'Pregunta, fuentes, escritura.',
-    columns: [
-      { key: 'pregunta', label: 'Pregunta',  color: '#9aa3b2' },
-      { key: 'fuentes',  label: 'Fuentes',   color: '#6c8cff' },
-      { key: 'escritura',label: 'Escritura', color: '#f5b64c' },
-      { key: 'revision', label: 'Revisión',  color: '#b98cff' },
-      { key: 'entregado',label: 'Entregado', color: '#37c98b', done: true },
-    ],
-    tasks: [
-      'Delimitar la pregunta',
-      'Reunir bibliografía',
-      'Fichar las fuentes',
-      'Escribir el marco teórico',
-      'Revisar citas y formato',
-    ],
-  },
-];
+export { TEMPLATES, projectTemplatesFor, type Template } from './projectTemplates';
 
 // Normaliza lo que venga de la base: si alguien dejó el tablero vacío o con
 // basura, se cae a las columnas por defecto en lugar de pintar una pantalla en

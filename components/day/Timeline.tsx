@@ -8,6 +8,7 @@ import { layoutBlocks, minuteAt, taskMinutes, localISO, dayParts, BANDS, DAY_STA
 import { minToLabel } from '../../lib/agenda';
 import { ActionMenu } from '../ActionMenu';
 import { toast, friendlyError } from '../../lib/feedback';
+import { getMode } from '../../lib/mode';
 
 // ============================================================
 //  Línea de tiempo (v21, sección 3): clases, planes con hora, eventos de
@@ -31,7 +32,7 @@ function itemsFor(day: Date, tasks: Task[], slots: Slot[], subjects: Subject[], 
   const blocks = SCHEDULE.blocks;
   slots.filter((s) => s.day === dow && blocks[s.slot]).forEach((s) => {
     const sub = subOf(s.subject_id); if (!sub) return;
-    out.push({ id: 'c' + s.id, kind: 'class', start: toMinutes(blocks[s.slot].start), end: toMinutes(blocks[s.slot].end), title: sub.name, color: sub.color, sub: 'Clase' });
+    out.push({ id: 'c' + s.id, kind: 'class', start: toMinutes(blocks[s.slot].start), end: toMinutes(blocks[s.slot].end), title: sub.name, color: sub.color, sub: getMode() === 'trabajo' ? 'Agenda fija' : 'Clase' });
   });
   for (const t of tasks) {
     if (!t.plan_at || t.status === 'done') continue;
