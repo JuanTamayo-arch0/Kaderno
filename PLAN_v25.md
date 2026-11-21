@@ -1,6 +1,6 @@
 # PLAN v25: potenciar el modo Trabajo (análisis de apps de trabajo)
 
-Estado: propuesta del sábado 21 de noviembre de 2026, para decidir. Nada está construido. Parte de lo que ya trae la versión 24 (modo Trabajo, actas de reunión, registro de horas, planes y Wompi).
+Estado: aprobado el sábado 21 de noviembre de 2026 ("implementa como lo desees"). Se construyen las fases 1 a 6, una PR por fase; la 7 queda para después salvo compartir por WhatsApp. Parte de lo que ya trae la versión 24 (modo Trabajo, actas de reunión, registro de horas, planes y Wompi).
 
 ---
 
@@ -49,7 +49,6 @@ Lo que falta frente a ellas, ordenado por cuánto lo nota alguien que trabaja:
 - **Cuenta de cobro** desde el registro de horas o desde un proyecto: número consecutivo, ciudad y fecha, tus datos (nombre, cédula, teléfono, cuenta bancaria), los del cliente (nombre y NIT o cédula), concepto, periodo y valor. PDF sobrio, listo para firmar y mandar.
 - **Clientes**: nombre, NIT o cédula, correo y tarifa por defecto; un proyecto o un área pueden tener cliente.
 - **Presupuesto por proyecto** en horas o en pesos, con aviso al 80 % y al 100 % (a ti y al dueño del proyecto).
-- **Recordatorio de anotar horas** al cerrar el día si no anotaste nada.
 - Aviso: la cuenta de cobro sirve solo a quien no está obligado a facturar; la pantalla lo dice y, si eres responsable de IVA, sugiere factura electrónica.
 
 ### Fase 2. Cronómetro y hoja semanal
@@ -79,7 +78,7 @@ Lo que falta frente a ellas, ordenado por cuánto lo nota alguien que trabaja:
 ### Fase 6. Planear el día de trabajo
 - El ritual de la mañana pregunta **cuánto dura** cada tarea, suma contra las horas libres del calendario y avisa si no cabe (como Sunsama).
 - **Sugerir horario**: la IA propone en qué bloque va cada tarea según fechas y reuniones; tú aceptas o mueves (más simple y barato que agendar solo como Motion).
-- El **cierre del día** muestra las horas registradas y deja anotar lo que faltó.
+- El **cierre del día** muestra las horas registradas y, si no anotaste nada, recuerda anotar lo que faltó.
 
 ### Fase 7. Conexiones
 - **Avisos a WhatsApp, Slack o Teams** por proyecto: tareas nuevas, vencidas, terminadas y el informe semanal. Slack y Teams con un enlace de webhook (gratis); WhatsApp por la API de WhatsApp Business, que cobra por mensaje, así que sería de Equipo.
@@ -113,6 +112,14 @@ Con esto, Pro reemplaza Toggl, Sunsama y un tomador de actas, que juntos pasan d
 ## F. Decisiones que necesito
 
 1. **Orden**: propongo 1, 2, 3, 4 primero (cobrar, cronómetro, proyectos y clientes); 5, 6 y 7 después.
-2. **Cuenta de cobro**: ¿tus datos de cobro (cédula, cuenta bancaria) se guardan en la cuenta para no escribirlos cada vez? Propongo que sí, cifrados y visibles solo para ti.
+2. **Cuenta de cobro**: ¿tus datos de cobro (cédula, cuenta bancaria) se guardan en la cuenta para no escribirlos cada vez? Propongo que sí, visibles solo para ti (Supabase los guarda cifrados en disco).
 3. **WhatsApp Business**: ¿lo dejamos para cuando haya clientes de Equipo (cuesta por mensaje y pide verificar el negocio) y empezamos con compartir por WhatsApp, que es gratis?
 4. **Correo entrante y Google Calendar**: los dos piden servicios externos (dominio de correo, verificación de Google). ¿Los dejamos para la fase 7?
+
+## G. Decisiones tomadas al construir
+
+1. Orden: fases 1 a 6. De la fase 7 solo entra compartir por WhatsApp (gratis, con texto listo); los avisos a Slack, Teams y WhatsApp Business, el correo entrante y Google Calendar quedan para después.
+2. (Fase 1) Los datos de cobro se guardan en la cuenta, en una tabla que solo lee su dueño. Cada cuenta de cobro guarda una copia de tus datos y los del cliente, para que no cambie si después editas algo.
+3. (Fase 1) El total lo calcula el servidor con las líneas (horas por tarifa, redondeado), no la app. El consecutivo no se repite; anular no libera el número.
+4. (Fase 1) Un cliente agrupa proyectos y áreas; de un área solo cuentan las horas sin proyecto (las del proyecto van con el cliente del proyecto).
+5. (Fase 1) El presupuesto es de horas por proyecto, con las de todo el equipo. Avisa una sola vez al 80 % y una al 100 % por cada presupuesto (si lo cambias, vuelve a avisar).

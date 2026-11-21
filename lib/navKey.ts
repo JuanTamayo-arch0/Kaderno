@@ -2,7 +2,7 @@
 export type NavKey =
   | 'index' | 'materias' | 'horario' | 'proyectos' | 'estudiar'
   | 'enfoque' | 'repaso' | 'oraculo' | 'capturar'
-  | 'buscar' | 'ajustes' | 'tipos' | 'personalizar' | 'papelera' | 'mascota' | 'horas';
+  | 'buscar' | 'ajustes' | 'tipos' | 'personalizar' | 'papelera' | 'mascota' | 'horas' | 'cobros';
 
 /** Qué entrada de la barra corresponde a la ruta actual. */
 export function navKeyOf(path: string): NavKey | null {
@@ -13,7 +13,7 @@ export function navKeyOf(path: string): NavKey | null {
   if (p.startsWith('/sala')) return 'enfoque';
   if (p.startsWith('/plan')) return 'ajustes';
   const first = p.split('/')[1] as NavKey;
-  const known: NavKey[] = ['horario', 'proyectos', 'estudiar', 'enfoque', 'repaso', 'oraculo', 'capturar', 'mascota', 'buscar', 'ajustes', 'tipos', 'personalizar', 'papelera', 'horas'];
+  const known: NavKey[] = ['horario', 'proyectos', 'estudiar', 'enfoque', 'repaso', 'oraculo', 'capturar', 'mascota', 'buscar', 'ajustes', 'tipos', 'personalizar', 'papelera', 'horas', 'cobros'];
   return known.includes(first) ? first : null;
 }
 
