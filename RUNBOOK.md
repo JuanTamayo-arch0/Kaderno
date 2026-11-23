@@ -1605,3 +1605,27 @@ Nada. Es solo de la app.
 ### 3. Pruebas
 
 `npm test` (huecos libres, orden y acomodo sin cruces, lo que no cabe, el recordatorio de horas).
+
+## Versión 26 (parte 1): marca base (Margen)
+
+### 1. Migración y despliegue
+
+Nada en Supabase. Es solo la app: al fusionar se publica sola en el droplet. Los archivos nuevos viajan en `public/` (la letra en `public/fonts/`, los íconos y `og.png`).
+
+### 2. Lo que cambia para el usuario
+
+- **Logo nuevo** en la barra lateral, el inicio de sesión, la bienvenida y las páginas públicas del cliente: la raya del margen junto a la K. El nombre va en minúscula, "kaderno".
+- **Íconos nuevos:** pestaña del navegador, app instalada (Android e iOS), insignia de los avisos e imagen al compartir un enlace.
+- **Letra de la marca** (Plus Jakarta Sans), servida desde el mismo servidor.
+- **Temas Kaderno oscuro y Kaderno claro** con **color de acento** a elección: coral (el de la marca), lápiz azul, hoja verde, uva, mostaza o rosa. Los temas de antes siguen en Personalizar > Más colores.
+- El panel del inicio de sesión es una hoja de cuaderno en tinta con la raya del margen.
+- Quien tenía los valores de fábrica de antes (tema Medianoche y letra del sistema) pasa una sola vez a Kaderno oscuro con la letra de la marca. Quien había escogido otro tema u otra letra los conserva. Si después vuelve a escoger Medianoche, se respeta.
+- La app instalada puede tardar en mostrar el ícono nuevo: el sistema lo actualiza solo, o al reinstalarla.
+
+### 3. Para regenerar los íconos
+
+Solo si cambia el logo: `npx tsx scripts/brand-icons.ts` (usa el Chromium de Playwright). La guía de la marca está en `docs/marca.md`.
+
+### 4. Pruebas
+
+`npm test` (incluye `tests/v26.test.ts`: contraste de cada acento en los dos temas, el dibujo del logo en todas sus versiones, el paso a la marca una sola vez y la letra servida desde la app).

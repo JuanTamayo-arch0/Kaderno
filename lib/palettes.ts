@@ -3,6 +3,11 @@ import type { BasePalette } from './color';
 // ---------- Temas (oscuros y claros) ----------
 export type Theme = { id: string; name: string; scheme: 'dark' | 'light'; palette: BasePalette };
 export const THEMES: Record<string, Theme> = {
+  // v26: los temas de la marca (Margen). Su acento se elige aparte (lib/brand.ts).
+  'kaderno-oscuro': { id: 'kaderno-oscuro', name: 'Kaderno oscuro', scheme: 'dark', palette: {
+    bg: '#12131F', surface: '#1A1C2C', surface2: '#23263A', line: '#2E3149', text: '#ECEBF4', muted: '#A3A4BC', brand: '#F2674E', brand2: '#7FB5FF', good: '#3FC98A', warn: '#F2B44C', bad: '#FF5C70' } },
+  'kaderno-claro': { id: 'kaderno-claro', name: 'Kaderno claro', scheme: 'light', palette: {
+    bg: '#F7F4EE', surface: '#FFFFFF', surface2: '#EFEAE0', line: '#E2DCCF', text: '#1B1D3A', muted: '#5E6077', brand: '#C93F28', brand2: '#2F6FE0', good: '#12A150', warn: '#B9770A', bad: '#D6334A' } },
   medianoche: { id: 'medianoche', name: 'Medianoche', scheme: 'dark', palette: {
     bg: '#0f1115', surface: '#181b22', surface2: '#20242e', line: '#2a2f3a', text: '#e8eaf0', muted: '#9aa3b2', brand: '#6c8cff', brand2: '#8b6cff', good: '#37c98b', warn: '#f5b64c', bad: '#f56c6c' } },
   carbon: { id: 'carbon', name: 'Carbón', scheme: 'dark', palette: {

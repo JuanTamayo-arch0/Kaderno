@@ -12,6 +12,7 @@ import {
   PERSONALIZE, DEFAULTS, currentTheme,
   loadPersonalizeNative, savePersonalize, scaleOf,
 } from '../lib/theme';
+import { migrateBrand } from '../lib/brand';
 import { fetchPrefs, savePrefs, getSubjects, updateSubject } from '../lib/db';
 import { shrinkToSquare, BIG_ICON_CHARS } from '../lib/imageResize';
 
@@ -82,6 +83,8 @@ function applyWebChrome() {
     (document.documentElement.style as any).zoom = String(scaleOf(PERSONALIZE.sizeId));
     document.documentElement.style.background = currentTheme().palette.bg;
     document.body.style.background = currentTheme().palette.bg;
+    // La barra del navegador (celular) con el fondo del tema.
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', currentTheme().palette.bg);
   } catch { /* noop */ }
 }
 
@@ -149,7 +152,8 @@ function Shell() {
         // vista de Hoy, etc. Con esas claves la comparación nunca daba igual y la
         // app se remontaba entera en cada arranque.
         const pick = (o: Record<string, any>) => Object.fromEntries((Object.keys(DEFAULTS) as (keyof typeof DEFAULTS)[]).map((k) => [k, o[k] ?? DEFAULTS[k]])) as typeof DEFAULTS;
-        const merged = pick({ ...DEFAULTS, ...pers });
+        // v26: quien tenía los valores de fábrica de antes pasa a los de la marca (una vez).
+        const merged = migrateBrand(pick({ ...DEFAULTS, brandV: 0, ...pers }));
         if (JSON.stringify(merged) === JSON.stringify(pick(PERSONALIZE as any))) {
           if (schedChanged) setRev((n) => n + 1);
           return;

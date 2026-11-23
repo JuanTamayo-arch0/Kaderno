@@ -209,3 +209,12 @@ La fase 1 se ve de inmediato y no cambia datos. La 2 es la más grande y la que 
 3. Escala de notas: la ajusta cada persona según su institución (nota máxima, nota para aprobar y decimales). Se pregunta al crear el primer semestre, con 0 a 5 y 3,0 como sugerencia.
 4. Mascota en Trabajo: discreta.
 5. Orden de las fases: el de H.
+
+## K. Decisiones tomadas al construir
+
+1. (Fase 1) Logo: Margen (la idea 1 del lienzo).
+2. (Fase 1) El cuadro del logo es de tinta sobre fondos claros y claro sobre fondos oscuros; la raya siempre es coral (terracota o cobre en Trabajo). No sigue al acento.
+3. (Fase 1) Los errores usan un rojo distinto al coral (#FF5C70 en oscuro, #D6334A en claro) y siempre van con ícono o palabra.
+4. (Fase 1) El paso a la marca es una sola vez y solo toca los valores de fábrica de antes (Medianoche y letra del sistema). Se marca con `brandV: 26` en los ajustes.
+5. (Fase 1) La letra se sirve desde el mismo servidor y la página la precarga; las otras letras de Personalizar siguen viniendo de Google Fonts.
+6. (Fase 1) Los íconos salen del mismo dibujo que la app (`lib/brand.ts`) con `scripts/brand-icons.ts`, para que nunca se desalineen.
