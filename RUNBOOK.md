@@ -1796,6 +1796,7 @@ Desde v26 (parte 4), cada cambio de pantalla dejaba la página quieta unos 4 seg
 Medido con la CPU 4 veces más lenta, ida y vuelta entre Materias, Oráculo, Horario y Hoy: antes 4.124 ms por cambio (mediana), ahora 227 ms.
 
 No hay migración. Se pierde que el ícono de la materia viaje hasta su ficha.
+
 ## Versión 27 (parte 1): importante y la matriz de Eisenhower
 
 ### 1. Migración
