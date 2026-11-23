@@ -86,3 +86,4 @@ $PSQL -d k16 -f tests/sql/23b_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARO
 $PSQL -d k16 -f tests/sql/23c_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line|WARNING" | grep -v "^ *$"
 for f in supabase/schema_v24.sql supabase/schema_v24.sql; do echo "== k16 $f"; $PSQL -d k16 -f $f 2>&1 | grep -v "NOTICE" | grep -v "^$" | head -20; done
 $PSQL -d k16 -f tests/sql/24_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line|WARNING" | grep -v "^ *$"
+$PSQL -d k16 -f tests/sql/24b_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line|WARNING" | grep -v "^ *$"

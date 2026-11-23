@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../lib/theme';
 import { SIDEBAR_W, useResponsive } from '../lib/responsive';
+import { StopwatchPill } from './StopwatchPill';
 import { useAuth } from '../lib/auth';
 import { useNavCounts } from '../lib/navCounts';
 import { useFocusTimer } from '../lib/focusTimer';
@@ -172,6 +173,7 @@ export function SideNav({ active, onNavigate }: { active: NavKey | null; onNavig
         {row(STUDY_ITEMS[4])}
 
         <View style={{ flex: 1, minHeight: 16 }} />
+        <StopwatchPill inline />
         <Pressable onPress={() => router.push('/ajustes')} accessibilityRole="link" accessibilityLabel="Ajustes y cuenta"
           style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, borderRadius: 12, borderTopWidth: 1, borderTopColor: C.line, backgroundColor: active === 'ajustes' ? C.brand + '22' : hovered ? C.surface2 : 'transparent' })}>
           <Avatar initials={me.initials} />

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { startStopwatch } from '../lib/stopwatch';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C, R } from '../lib/theme';
@@ -188,6 +189,7 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
         <Text style={{ color: C.text, fontSize: 18, fontWeight: '700', flex: 1 }} accessibilityRole="header">{editTask ? 'Editar tarea' : 'Nueva tarea'}</Text>
         {editTask && <IconButton icon="timer-outline" label="Enfocarme en esta tarea" onPress={() => { startFocus({ taskId: editTask.id, taskTitle: editTask.title, subjectId: editTask.subject_id }); onClose(); toast('Enfoque iniciado: ' + editTask.title); }} />}
+        {editTask && <IconButton icon="play-circle-outline" label="Iniciar cronómetro" onPress={() => { startStopwatch({ title: editTask.title, subjectId: editTask.subject_id, assignmentId: editTask.id }); onClose(); toast('Cronómetro: ' + editTask.title); }} />}
         {editTask && <IconButton icon="trash-outline" label="Borrar tarea" onPress={remove} />}
         <IconButton icon="close" label="Cerrar" onPress={onClose} />
       </View>

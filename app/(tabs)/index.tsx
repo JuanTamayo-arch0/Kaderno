@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { startStopwatch } from '../../lib/stopwatch';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -261,6 +262,7 @@ export default function Hoy() {
       t.type === 'repaso' && t.session_kind === 'sim'
         ? { label: 'Hacer el simulacro', icon: 'clipboard-outline', onPress: () => startTask(t) }
         : { label: 'Enfocarme en esta tarea', icon: 'timer-outline', onPress: () => { startFocus({ taskId: t.id, taskTitle: t.title, subjectId: t.subject_id }); router.push('/enfoque'); } },
+      ...(t.status !== 'done' ? [{ label: 'Iniciar cronómetro', icon: 'play-circle-outline' as const, onPress: () => { startStopwatch({ title: t.title, subjectId: t.subject_id, assignmentId: t.id }); toast('Cronómetro: ' + t.title); } }] : []),
       ...(['examen', 'quiz'].includes(String(t.type)) && t.status !== 'done' ? [{ label: 'Plan de repaso', icon: 'calendar-number-outline' as const, onPress: () => openTask(t) }] : []),
       ...(t.repeat_rule && t.status !== 'done' ? [{ label: 'Saltar esta vez', icon: 'play-skip-forward-outline' as const, onPress: async () => {
         try { await skipRepeat(t.id); toast(`Saltada. Sigue ${ruleText(t.repeat_rule)}.`, { actionLabel: 'Ver', onAction: load }); load(); refreshNavCounts(true); }

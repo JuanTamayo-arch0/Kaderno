@@ -13,6 +13,12 @@
 --     (invoice_create). Con Gratis, 2 al mes.
 --   · Presupuesto de horas por proyecto (project_set_budget) y aviso al 80 %
 --     y al 100 % al dueño del proyecto y a quien anota.
+--
+-- Fase 2 · Cronómetro y hoja semanal
+--   · focus_sessions acepta source 'timer' (cronómetro libre, hasta 12 horas)
+--     y project_task_id (la tarea del proyecto).
+--   · timesheet_weeks: la semana de horas que cada integrante manda al dueño
+--     del proyecto (plan Equipo); aprobada, ya no se puede cambiar.
 -- =====================================================================
 
 
@@ -226,3 +232,136 @@ end $$;
 drop trigger if exists focus_sessions_budget_trg on public.focus_sessions;
 create trigger focus_sessions_budget_trg after insert on public.focus_sessions
   for each row execute function public._project_budget_alert();
+
+
+-- =====================================================================
+--  FASE 2 · Cronómetro y hoja semanal
+-- =====================================================================
+alter table public.focus_sessions add column if not exists project_task_id uuid references public.project_tasks on delete set null;
+alter table public.focus_sessions drop constraint if exists focus_sessions_source_ok;
+alter table public.focus_sessions add constraint focus_sessions_source_ok check (source in ('focus', 'manual', 'timer'));
+
+create table if not exists public.timesheet_weeks (
+  project_id   uuid not null references public.projects on delete cascade,
+  user_id      uuid not null references auth.users on delete cascade,
+  week_start   date not null check (extract(isodow from week_start) = 1),
+  status       text not null default 'enviada' check (status in ('enviada', 'aprobada', 'devuelta')),
+  minutes      integer not null default 0,
+  note         text check (char_length(note) <= 300),
+  submitted_at timestamptz not null default now(),
+  decided_by   uuid references auth.users on delete set null,
+  decided_at   timestamptz,
+  primary key (project_id, user_id, week_start)
+);
+alter table public.timesheet_weeks enable row level security;
+drop policy if exists "timesheet read" on public.timesheet_weeks;
+create policy "timesheet read" on public.timesheet_weeks for select
+  using (user_id = auth.uid() or coalesce(can_edit_project(project_id), false));
+revoke insert, update, delete on public.timesheet_weeks from anon, authenticated;
+grant select on public.timesheet_weeks to authenticated;
+
+-- ¿Esa sesión cae en una semana ya aprobada? (lunes local de su fecha)
+create or replace function public._week_locked(p_user uuid, p_project uuid, p_at timestamptz) returns boolean
+language sql stable security definer set search_path = public as $$
+  select p_project is not null and exists (
+    select 1 from timesheet_weeks w where w.project_id = p_project and w.user_id = p_user and w.status = 'aprobada'
+       and w.week_start = date_trunc('week', p_at at time zone coalesce(_kaderno_tz(p_user), 'America/Bogota'))::date);
+$$;
+
+-- Reemplaza el de schema_v23: suma el cronómetro, la tarea del proyecto y el candado de la semana aprobada.
+create or replace function public._focus_sessions_hours() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if tg_op in ('UPDATE', 'DELETE') and _week_locked(old.user_id, old.project_id, old.created_at) then
+    raise exception 'Esa semana ya fue aprobada: pídele al dueño del proyecto que la devuelva para cambiarla.' using errcode = 'P0001';
+  end if;
+  if tg_op = 'DELETE' then return old; end if;
+  if new.project_id is not null and not exists (select 1 from project_members m where m.project_id = new.project_id and m.user_id = new.user_id) then
+    raise exception 'No eres parte de ese proyecto.' using errcode = 'P0001';
+  end if;
+  if new.project_task_id is not null then
+    if new.project_id is null then
+      select project_id into new.project_id from project_tasks where id = new.project_task_id;
+    end if;
+    if not exists (select 1 from project_tasks t where t.id = new.project_task_id and t.project_id = new.project_id) then
+      raise exception 'Esa tarea no es de ese proyecto.' using errcode = 'P0001';
+    end if;
+  end if;
+  if new.source in ('manual', 'timer') and (new.minutes is null or new.minutes < 1 or new.minutes > 720) then
+    raise exception 'Un registro va de 1 minuto a 12 horas.' using errcode = 'P0001';
+  end if;
+  if new.source = 'manual' then
+    if new.created_at > now() + interval '1 day' then
+      raise exception 'No se pueden anotar horas en el futuro.' using errcode = 'P0001';
+    end if;
+  elsif tg_op = 'INSERT' then
+    new.created_at := now(); -- el enfoque y el cronómetro se anotan al terminar
+  end if;
+  if _week_locked(new.user_id, new.project_id, new.created_at) then
+    raise exception 'Esa semana ya fue aprobada: pídele al dueño del proyecto que la devuelva para cambiarla.' using errcode = 'P0001';
+  end if;
+  return new;
+end $$;
+drop trigger if exists focus_sessions_hours_trg on public.focus_sessions;
+create trigger focus_sessions_hours_trg before insert or update or delete on public.focus_sessions
+  for each row execute function public._focus_sessions_hours();
+
+-- Mandar la semana (lunes) de un proyecto al dueño.
+create or replace function public.timesheet_submit(p_project uuid, p_week date, p_note text default null) returns public.timesheet_weeks
+language plpgsql security definer set search_path = public as $$
+declare me uuid := auth.uid(); tz text := coalesce(_kaderno_tz(auth.uid()), 'America/Bogota'); mins int; r timesheet_weeks; pr projects;
+begin
+  if not coalesce(is_project_member(p_project), false) then raise exception 'No eres parte de ese proyecto.' using errcode = 'P0001'; end if;
+  if extract(isodow from p_week) <> 1 then raise exception 'La semana empieza el lunes.' using errcode = 'P0001'; end if;
+  select * into pr from projects where id = p_project;
+  if plan_of(pr.owner_id) <> 'team' and plan_of(me) <> 'team' then
+    raise exception 'Mandar las horas para aprobar es del plan Equipo.' using errcode = 'P0001';
+  end if;
+  if exists (select 1 from timesheet_weeks where project_id = p_project and user_id = me and week_start = p_week and status = 'aprobada') then
+    raise exception 'Esa semana ya está aprobada.' using errcode = 'P0001';
+  end if;
+  select coalesce(sum(minutes), 0) into mins from focus_sessions
+   where user_id = me and project_id = p_project
+     and (created_at at time zone tz)::date between p_week and p_week + 6;
+  insert into timesheet_weeks (project_id, user_id, week_start, status, minutes, note, submitted_at, decided_by, decided_at)
+  values (p_project, me, p_week, 'enviada', mins, left(p_note, 300), now(), null, null)
+  on conflict (project_id, user_id, week_start) do update set status = 'enviada', minutes = excluded.minutes, note = excluded.note,
+    submitted_at = now(), decided_by = null, decided_at = null
+  returning * into r;
+  if pr.owner_id <> me then
+    insert into notification_queue (user_id, kind, ref, title, body, url)
+    values (pr.owner_id, 'timesheet', p_project || '-' || me || '-' || p_week || '-' || extract(epoch from now())::bigint,
+      'Horas para aprobar en ' || pr.name,
+      coalesce((select display_name from profiles where id = me), 'Alguien') || ' mandó ' || round(mins / 60.0, 1) || ' h de la semana del ' || to_char(p_week, 'DD/MM') || '.',
+      '/horas') on conflict do nothing;
+  end if;
+  return r;
+end $$;
+
+-- Aprobar o devolver (quien edita el proyecto).
+create or replace function public.timesheet_decide(p_project uuid, p_user uuid, p_week date, p_status text, p_note text default null) returns public.timesheet_weeks
+language plpgsql security definer set search_path = public as $$
+declare r timesheet_weeks; pr projects;
+begin
+  if p_status not in ('aprobada', 'devuelta') then raise exception 'Estado inválido.' using errcode = 'P0001'; end if;
+  if not coalesce(can_edit_project(p_project), false) then raise exception 'Solo quien edita el proyecto aprueba las horas.' using errcode = 'P0001'; end if;
+  if p_user = auth.uid() and coalesce(project_role(p_project), '') <> 'owner' then
+    raise exception 'Tus propias horas las aprueba el dueño del proyecto.' using errcode = 'P0001';
+  end if;
+  update timesheet_weeks set status = p_status, decided_by = auth.uid(), decided_at = now(), note = coalesce(left(p_note, 300), note)
+   where project_id = p_project and user_id = p_user and week_start = p_week
+  returning * into r;
+  if r.project_id is null then raise exception 'Esa semana no se ha mandado.' using errcode = 'P0001'; end if;
+  select * into pr from projects where id = p_project;
+  if p_user <> auth.uid() then
+    insert into notification_queue (user_id, kind, ref, title, body, url)
+    values (p_user, 'timesheet', p_project || '-' || p_week || '-' || p_status || '-' || extract(epoch from now())::bigint,
+      case when p_status = 'aprobada' then 'Aprobaron tus horas en ' || pr.name else 'Te devolvieron las horas de ' || pr.name end,
+      'Semana del ' || to_char(p_week, 'DD/MM') || coalesce(': ' || nullif(btrim(p_note), ''), '.'), '/horas') on conflict do nothing;
+  end if;
+  return r;
+end $$;
+revoke all on function public.timesheet_submit(uuid, date, text) from public, anon;
+revoke all on function public.timesheet_decide(uuid, uuid, date, text, text) from public, anon;
+grant execute on function public.timesheet_submit(uuid, date, text) to authenticated;
+grant execute on function public.timesheet_decide(uuid, uuid, date, text, text) to authenticated;

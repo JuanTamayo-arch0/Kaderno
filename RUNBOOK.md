@@ -1505,3 +1505,21 @@ Corre `supabase/schema_v24.sql` completo (requiere schema_v12, schema_v14 y sche
 ### 3. Pruebas
 
 `npm test` (número, valor en letras, líneas desde las horas, total igual al del servidor, documento) y `bash tests/run_sql.sh` (incluye `tests/sql/24_pruebas.sql`: pide tus datos, total del servidor, consecutivo, tope de Gratis, nadie ve datos ajenos, presupuesto y sus avisos).
+
+## Versión 25 (parte 2): cronómetro y hoja semanal
+
+### 1. Migración
+
+Corre otra vez `supabase/schema_v24.sql` completo. La fase 2 permite `source = 'timer'` y `project_task_id` en `focus_sessions`, crea `timesheet_weeks` con `timesheet_submit` y `timesheet_decide`, y bloquea los cambios en una semana aprobada. Sin la migración, el cronómetro guarda su tiempo como horas a mano.
+
+### 2. Lo que cambia para el usuario
+
+- **Cronómetro libre**: "Iniciar cronómetro" en una tarea (Hoy, la tarea abierta o la tarea del proyecto) o en Horas > Cronómetro. Uno a la vez: si inicias otro, el anterior se anota solo.
+- Mientras corre se ve con el botón de parar: en computador, en la barra lateral encima de Ajustes; en el celular, encima de las pestañas (salvo en el Oráculo, Repaso, el simulacro, el editor de notas, las salas y Enfoque, donde taparía lo de abajo). Al parar, el tiempo queda en el registro de horas con su proyecto y su tarea.
+- **Cronómetro olvidado**: si pasa de 3 horas, pregunta "¿Se te olvidó pararlo?" y deja anotar la duración real, seguir o descartar.
+- **Hoja semanal** (Horas > Semana > Hoja semanal): filas por proyecto o área y una columna por día; se escribe la duración en la casilla (1:30, 1,5 o 90). Si baja, se recortan primero las horas a mano; las del enfoque y el cronómetro se borran en "Cada registro".
+- **Aprobar horas** (plan Equipo): cada integrante manda su semana de un proyecto ("Mandar para aprobar") y el dueño la aprueba o la devuelve en "Horas del equipo". Aprobada, esa semana ya no se puede cambiar en ese proyecto. Quien edita no aprueba sus propias horas; el dueño sí.
+
+### 3. Pruebas
+
+`npm test` (reloj, cronómetro olvidado, hoja semanal y cómo se edita una casilla) y `bash tests/run_sql.sh` (incluye `tests/sql/24b_pruebas.sql`: cronómetro, tarea del proyecto, mandar, aprobar, candado de la semana aprobada, devolver y plan Equipo).
