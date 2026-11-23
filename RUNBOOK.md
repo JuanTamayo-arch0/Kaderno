@@ -1700,3 +1700,25 @@ Sin la migración, Historial avisa que falta este paso y lo demás sigue igual.
 ### 3. Pruebas
 
 `npm test` (escala, nombres de semestre, promedio igual al del servidor, acumulado con escalas distintas, racha y el PDF) y `bash tests/run_sql.sh` (incluye `tests/sql/25b_pruebas.sql`).
+
+## Versión 26 (parte 4): movimiento e interfaz
+
+### 1. Migración
+
+Ninguna. Es solo de la app.
+
+### 2. Lo que cambia para el usuario
+
+- **Paso entre pantallas:** en los navegadores que lo permiten (Chrome, Edge y Safari reciente), cambiar de pantalla hace un fundido corto y la barra lateral y la barra de abajo se quedan quietas. Al abrir una materia desde Materias, su ícono viaja hasta el encabezado de la ficha. Donde el navegador no lo permite, la pantalla cambia como antes.
+- **Listas que se acomodan:** en Hoy, al completar, borrar o mover una tarea, las demás se deslizan a su nuevo lugar en vez de saltar.
+- **Deslizar una tarea en el teléfono:** a la derecha la completa ("Hecha") y a la izquierda la pasa a mañana. El aviso de abajo permite deshacer. El desplazamiento vertical de la lista sigue igual, y el toque al soltar no abre la tarea.
+- **Hojas que se cierran deslizando:** en el teléfono las hojas de abajo tienen una agarradera; se cierran arrastrando el encabezado hacia abajo.
+- **Barra de abajo:** la marca de la pestaña activa se desliza de una a otra.
+- **Números que suben:** el promedio y los créditos de Historial y el total de Horas cuentan hasta su valor al aparecer.
+- **Pantallas vacías:** una hoja de cuaderno con la raya del margen, el dibujo de la marca.
+- **Esquinas por espacio:** Estudio es más redondo y Trabajo más recto (botones, campos, tarjetas, filas y hojas).
+- Con "reducir movimiento" activado en el sistema no hay fundidos, ni deslizamientos, ni conteos.
+
+### 3. Pruebas
+
+`npm test` (radios por espacio) y una vuelta a mano en el teléfono: deslizar una tarea en Hoy a cada lado y cerrar una hoja arrastrando.

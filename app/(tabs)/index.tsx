@@ -29,6 +29,7 @@ import { refreshNavCounts, useNavCounts } from '../../lib/navCounts';
 import { useFocusTimer, startFocus, pauseFocus } from '../../lib/focusTimer';
 import { useAuth } from '../../lib/auth';
 import { SpaceSwitch } from '../../components/SpaceSwitch';
+import { FlipList } from '../../components/FlipList';
 import { Screen, Button, Card, ChipRow, EmptyState, ErrorState, FilterChip, IconButton, SectionLabel, Skeleton, Dot } from '../../components/ds';
 import { TaskRow } from '../../components/TaskRow';
 import { MiniCalendar } from '../../components/MiniCalendar';
@@ -507,6 +508,7 @@ export default function Hoy() {
   const renderRow = (r: Row) => r.kind === 'task' ? (
     <TaskRow key={r.t.id} task={leaving.has(r.t.id) ? { ...r.t, status: 'done' } : r.t} subject={subjOf(r.t.subject_id)} steps={steps[r.t.id]} focusMin={focusBy[r.t.id]}
       onToggle={toggle} onOpen={(t) => openTask(t)} actions={actionsFor(r.t)}
+      swipe={!isWide && r.t.status !== 'done' ? { onDone: () => toggle(r.t), onLater: () => move(r.t, tomorrowISO(new Date()), 'mañana') } : undefined}
       onStepsChange={(id, next) => setSteps((s) => ({ ...s, [id]: next }))} />
   ) : (
     <ProjectRow key={'p' + r.p.id} p={r.p} onOpen={() => router.push(`/proyectos/${r.p.project_id}`)}
@@ -536,14 +538,17 @@ export default function Hoy() {
       action={{ label: 'Agregar tarea', icon: 'add', onPress: openAdd }} compact />
     )
   ) : (
-    groups.map(({ b, rows }) => (
-      <View key={b}>
-        <SectionLabel text={BUCKET_LABEL[b]} count={rows.length} tone={b === 'overdue' ? C.bad : undefined} />
-        {rows.map((r, i) => (
-          <View key={r.kind === 'task' ? r.t.id : 'p' + r.p.id} dataSet={{ anim: r.kind === 'task' && leaving.has(r.t.id) ? 'leave' : 'enter', i: String(Math.min(i, 8)) }}>{renderRow(r)}</View>
-        ))}
-      </View>
-    ))
+    // v26: al mover o filtrar, las filas se deslizan a su nuevo lugar.
+    <FlipList>
+      {groups.map(({ b, rows }) => (
+        <View key={b}>
+          <SectionLabel text={BUCKET_LABEL[b]} count={rows.length} tone={b === 'overdue' ? C.bad : undefined} />
+          {rows.map((r, i) => (
+            <View key={r.kind === 'task' ? r.t.id : 'p' + r.p.id} dataSet={{ anim: r.kind === 'task' && leaving.has(r.t.id) ? 'leave' : 'enter', i: String(Math.min(i, 8)), flip: r.kind === 'task' ? r.t.id : 'p' + r.p.id }}>{renderRow(r)}</View>
+          ))}
+        </View>
+      ))}
+    </FlipList>
   );
 
   const doneBlock = doneRecent.length > 0 && !day ? (

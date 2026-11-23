@@ -6,7 +6,8 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { C, R, S, screenBg } from '../lib/theme';
+import { C, R, RAD, S, screenBg } from '../lib/theme';
+import { prefersReducedMotion, vtNavigate } from '../lib/motion';
 import { useResponsive, SIDEBAR_W } from '../lib/responsive';
 import { usePets } from '../lib/pets/store';
 import { type NavKey } from './SideNav';
@@ -59,7 +60,7 @@ export function Button({
       accessibilityState={{ disabled: !!off, busy: !!busy }}
       style={({ pressed, focused }: any) => [{
         flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-        minHeight: size === 'sm' ? 36 : 44, borderRadius: 10, backgroundColor: bg,
+        minHeight: size === 'sm' ? 36 : 44, borderRadius: RAD.btn, backgroundColor: bg,
         borderWidth: kind === 'secondary' ? 1 : 0, borderColor: C.line,
         opacity: off ? 0.55 : pressed ? 0.8 : 1, alignSelf: full ? 'stretch' : 'auto',
       }, pad, focused ? focusRingStyle() : null, style]}
@@ -80,7 +81,7 @@ export function IconButton({
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} dataSet={{ press: '1' }}
       style={({ pressed, focused }: any) => [{
-        width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
+        width: 44, height: 44, borderRadius: RAD.btn + 2, alignItems: 'center', justifyContent: 'center',
         backgroundColor: active ? C.brand + '22' : pressed ? C.surface2 : 'transparent',
       }, focused ? focusRingStyle() : null, style]}>
       <Ionicons name={icon} size={size} color={color ?? (active ? C.brand : C.muted)} />
@@ -101,7 +102,7 @@ export function Field({
   return (
     <View style={[{ marginBottom: 12 }, style]}>
       {!!label && <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600', marginBottom: 6 }}>{label}</Text>}
-      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: C.surface2, borderWidth: 1, borderRadius: 10, borderColor: error ? C.bad : focus ? C.brand : C.line }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: C.surface2, borderWidth: 1, borderRadius: RAD.field, borderColor: error ? C.bad : focus ? C.brand : C.line }}>
         <TextInput
           placeholderTextColor={C.muted}
           accessibilityLabel={label}
@@ -122,7 +123,7 @@ export function Field({
 export function Card({ children, style, onPress, accessibilityLabel, padded = true }: {
   children: React.ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void; accessibilityLabel?: string; padded?: boolean;
 }) {
-  const base: ViewStyle = { backgroundColor: C.surface, borderColor: C.line, borderWidth: 1, borderRadius: 14, padding: padded ? 16 : 0 };
+  const base: ViewStyle = { backgroundColor: C.surface, borderColor: C.line, borderWidth: 1, borderRadius: RAD.card, padding: padded ? 16 : 0 };
   // La mascota se puede subir a las tarjetas (ver lib/pets/dom.ts).
   if (!onPress) return <View dataSet={{ petPerch: '1' }} style={[base, style]}>{children}</View>;
   return (
@@ -252,9 +253,7 @@ export function EmptyState({ icon, title, text, action, compact }: {
 }) {
   return (
     <View style={{ alignItems: 'center', paddingVertical: compact ? 20 : 44, paddingHorizontal: 20 }}>
-      <View style={{ width: compact ? 48 : 64, height: compact ? 48 : 64, borderRadius: 32, backgroundColor: C.surface2, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-        <Ionicons name={icon} size={compact ? 22 : 28} color={C.muted} />
-      </View>
+      <PageArt icon={icon} compact={compact} />
       <Text style={{ color: C.text, fontSize: 16, fontWeight: '700', textAlign: 'center' }}>{title}</Text>
       {!!text && <Text style={{ color: C.muted, fontSize: 13.5, textAlign: 'center', marginTop: 6, lineHeight: 19, maxWidth: 380 }}>{text}</Text>}
       {action && <Button label={action.label} icon={action.icon} onPress={action.onPress} style={{ marginTop: 16 }} />}
@@ -262,9 +261,56 @@ export function EmptyState({ icon, title, text, action, compact }: {
   );
 }
 
+/**
+ * v26, fase 4: la ilustración de los estados vacíos es una hoja de cuaderno
+ * (la marca): renglones, la raya del margen en el color de acento y el ícono
+ * encima. Entra subiendo apenas.
+ */
+function PageArt({ icon, compact }: { icon: IconName; compact?: boolean }) {
+  const w = compact ? 56 : 76, h = compact ? 64 : 88;
+  return (
+    <View dataSet={{ anim: 'enter' }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ marginBottom: 14 }}>
+    <View style={{ width: w, height: h, borderRadius: compact ? 9 : 12, backgroundColor: C.surface, borderWidth: 1, borderColor: C.line, overflow: 'hidden', transform: [{ rotate: '-3deg' }] }}>
+      {[0.3, 0.48, 0.66, 0.84].map((y) => <View key={y} style={{ position: 'absolute', left: 0, right: 0, top: h * y, height: 1, backgroundColor: C.line }} />)}
+      <View style={{ position: 'absolute', top: 0, bottom: 0, left: compact ? 11 : 15, width: 2, backgroundColor: C.brand, opacity: 0.85 }} />
+      <View style={{ position: 'absolute', top: 0, bottom: 0, left: compact ? 13 : 17, right: 0, alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ width: compact ? 30 : 38, height: compact ? 30 : 38, borderRadius: 99, backgroundColor: C.surface2, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name={icon} size={compact ? 16 : 20} color={C.text} />
+        </View>
+      </View>
+    </View>
+    </View>
+  );
+}
+
+// ---------- Número que cuenta ----------
+/**
+ * v26, fase 4: los números grandes cuentan hasta su valor al aparecer (unos
+ * 600 ms, solo web y sin "reducir movimiento"). `format` da el texto.
+ */
+export function CountUp({ value, format, style }: { value: number | null; format: (n: number) => string; style?: StyleProp<TextStyle> }) {
+  const [shown, setShown] = React.useState<number | null>(value);
+  const from = React.useRef<number>(0);
+  React.useEffect(() => {
+    if (value == null || !Number.isFinite(value)) { setShown(value); return; }
+    if (Platform.OS !== 'web' || prefersReducedMotion() || typeof requestAnimationFrame === 'undefined') { setShown(value); from.current = value; return; }
+    const a = from.current, b = value, t0 = performance.now(), dur = 600;
+    let raf = 0;
+    const step = (t: number) => {
+      const k = Math.min(1, (t - t0) / dur);
+      const e = 1 - Math.pow(1 - k, 3);
+      setShown(a + (b - a) * e);
+      if (k < 1) raf = requestAnimationFrame(step); else from.current = b;
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return <Text style={style} accessibilityLabel={value == null ? undefined : format(value)}>{shown == null ? format(NaN) : format(shown)}</Text>;
+}
+
 // ---------- Esqueleto de carga ----------
 export function Skeleton({ height = 64, style }: { height?: number; style?: StyleProp<ViewStyle> }) {
-  return <View dataSet={{ skeleton: '1' }} style={[{ height, borderRadius: 12, backgroundColor: C.surface, borderWidth: 1, borderColor: C.line, marginBottom: 8, opacity: 0.7 }, style]} />;
+  return <View dataSet={{ skeleton: '1' }} style={[{ height, borderRadius: RAD.row, backgroundColor: C.surface, borderWidth: 1, borderColor: C.line, marginBottom: 8, opacity: 0.7 }, style]} />;
 }
 
 // ---------- Error con reintentar ----------
@@ -295,8 +341,11 @@ export function SectionLabel({ text, count, tone, right, style }: { text: string
 export function useGoBack(fallback: string = '/') {
   const router = useRouter();
   return React.useCallback(() => {
-    if (router.canGoBack()) router.back();
-    else router.replace(fallback as any);
+    // v26: volver también se funde (y la ficha vuelve a su tarjeta).
+    vtNavigate(() => {
+      if (router.canGoBack()) router.back();
+      else router.replace(fallback as any);
+    });
   }, [router, fallback]);
 }
 

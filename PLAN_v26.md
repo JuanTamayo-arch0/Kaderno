@@ -228,3 +228,6 @@ La fase 1 se ve de inmediato y no cambia datos. La 2 es la más grande y la que 
 14. (Fase 3) El resumen de cada semestre se guarda como foto (jsonb) y no cambia aunque después se borren materias o notas. No guarda los identificadores de las materias, solo sus datos.
 15. (Fase 3) La escala la pone cada persona (nota máxima, para aprobar y decimales) en sus ajustes. Cada semestre guarda la escala con la que se cerró, y el acumulado los convierte a la escala actual.
 16. (Fase 3) El semestre abierto se crea solo, con el nombre por la fecha. No se pregunta la escala al empezar: queda 0 a 5 con 3,0 y se cambia en Historial o Ajustes.
+17. (Fase 4) Las transiciones entre pantallas usan la API de transiciones de vista del navegador. No se agregó una librería de animación: donde no existe, la pantalla cambia sin efecto. Si la pantalla tarda en pintarse, la transición se suelta sin error.
+18. (Fase 4) Deslizar una tarea solo está en el teléfono y solo en Hoy. En escritorio se completa con el círculo o el menú, como antes. Tras deslizar se ignora el toque de 400 ms, porque el navegador manda un clic al soltar.
+19. (Fase 4) Los radios cambian por espacio con un solo objeto (RAD) que se actualiza al cambiar de espacio. Espaciado, tamaños de letra e íconos no cambian: así el paso entre Estudio y Trabajo se siente del mismo producto.

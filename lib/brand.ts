@@ -188,3 +188,10 @@ export function migrateBrand<T extends Persisted>(s: T): T & { accentId?: string
     brandV: BRAND_VERSION,
   };
 }
+
+// ---------- Radios por espacio (fase 4) ----------
+/** Estudio es más redondo y Trabajo más recto; lo demás (espaciado, íconos) es igual. */
+export const SPACE_RADII = {
+  estudio: { btn: 10, field: 10, card: 14, row: 12, sheet: 16, sheetTop: 20 },
+  trabajo: { btn: 8, field: 8, card: 10, row: 9, sheet: 12, sheetTop: 14 },
+} as const;

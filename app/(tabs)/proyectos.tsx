@@ -14,6 +14,7 @@ import { onDataChanged } from '../../lib/uiBus';
 import { useAuth } from '../../lib/auth';
 import { snapshotFor } from '../../lib/snapshot';
 import { useSpaceFilter } from '../../lib/useSpace';
+import { vtNavigate } from '../../lib/motion';
 
 const PROJECT_ICONS = ['📦', '👥', '🧪', '🎤', '🔎', '📊', '🎬', '🏗️', '🎨', '💡', '📚', '⚙️'];
 
@@ -69,7 +70,7 @@ export default function Proyectos() {
       ) : (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
           {rows.map((r) => (
-            <ProjectCard key={r.project.id} row={r} subjects={subjects} wide={isWide} onPress={() => router.push(`/proyectos/${r.project.id}`)} />
+            <ProjectCard key={r.project.id} row={r} subjects={subjects} wide={isWide} onPress={() => vtNavigate(() => router.push(`/proyectos/${r.project.id}`))} />
           ))}
         </View>
       )}

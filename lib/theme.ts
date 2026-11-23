@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { derive, type BasePalette, type Palette } from './color';
 import { THEMES, type Theme } from './palettes';
-import { BRAND_FONT, BRAND_FONT_FACES, BRAND_VERSION, DEFAULT_ACCENT, DEFAULT_WORK_ACCENT, WORK_FONT, WORK_HEAD_FONT, isKadernoTheme, migrateBrand, spacePalette } from './brand';
+import { BRAND_FONT, BRAND_FONT_FACES, BRAND_VERSION, DEFAULT_ACCENT, DEFAULT_WORK_ACCENT, WORK_FONT, WORK_HEAD_FONT, isKadernoTheme, migrateBrand, spacePalette, SPACE_RADII } from './brand';
 import { getSpace } from './mode';
 export * from './color';
 export { THEMES, type Theme } from './palettes';
@@ -18,6 +18,12 @@ export const C: Palette = {
   good: '#37c98b', warn: '#f5b64c', bad: '#f56c6c',
   onBrand: '#0f1115', onBad: '#0f1115', goodText: '#37c98b', warnText: '#f5b64c', badText: '#f56c6c', focus: '#6c8cff',
 };
+
+/**
+ * v26, fase 4: radios de los componentes base. Estudio es más redondo,
+ * Trabajo más recto. Se leen en el render (cambian con el espacio).
+ */
+export const RAD: { btn: number; field: number; card: number; row: number; sheet: number; sheetTop: number } = { ...SPACE_RADII.estudio };
 
 export const DARK_THEMES = Object.values(THEMES).filter((t) => t.scheme === 'dark');
 export const LIGHT_THEMES = Object.values(THEMES).filter((t) => t.scheme === 'light');
@@ -178,6 +184,7 @@ export function applyAll(s: PSettings): void {
   const pal: Palette = derive(spacePalette({ themeId: theme.id, scheme: theme.scheme, base: theme.palette, space, accentId: s.accentId, workAccentId: s.workAccentId }));
   if (hasWallpaper(s)) pal.bg = hexToRgba(theme.palette.bg, theme.scheme === 'light' ? 0.82 : 0.76);
   Object.assign(C, pal);
+  Object.assign(RAD, SPACE_RADII[space]);
   const family = s.fontId === 'marca' && space === 'trabajo' ? WORK_FONT : fontFamilyOf(s.fontId);
   applyWebFont(family, s.fontId === 'marca' && space === 'trabajo' ? WORK_HEAD_FONT : undefined);
   loadWebFont(family);
@@ -239,6 +246,7 @@ export function uiScheme(): 'light' | 'dark' {
 }
 
 export const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
+
 export const R = { sm: 10, md: 14, lg: 18, xl: 24, pill: 999 };
 export const shadow = {
   shadowColor: '#000', shadowOpacity: 0.22, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,

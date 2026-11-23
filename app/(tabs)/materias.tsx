@@ -19,6 +19,7 @@ import { useMode, getMode } from '../../lib/mode';
 import { ensureOpenTerm, useGradeScale } from '../../lib/termsDb';
 import { useSpaceFilter } from '../../lib/useSpace';
 import { fmtGrade } from '../../lib/terms';
+import { vtNavigate, vtRef } from '../../lib/motion';
 
 // ============================================================
 //  Materias: tarjetas con lo pendiente, la próxima entrega y el promedio.
@@ -93,10 +94,10 @@ export default function Materias() {
             const soon = nc && (nc.now || dayWord(nc.start) === 'Hoy' || dayWord(nc.start) === 'Mañana');
             const who = [s.teacher, days].filter(Boolean).join(' · ');
             return (
-              <Card key={s.id} onPress={() => router.push(`/materia/${s.id}`)} accessibilityLabel={`Abrir ${s.name}`}
+              <Card key={s.id} onPress={() => vtNavigate(() => router.push(`/materia/${s.id}`))} accessibilityLabel={`Abrir ${s.name}`}
                 style={{ width: cardW as any, borderLeftWidth: 4, borderLeftColor: s.color }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: s.color + '26', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                  <View ref={vtRef(`subj-${s.id}`)} style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: s.color + '26', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                     <SubjectIcon icon={s.icon} box={44} emoji={21} />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>

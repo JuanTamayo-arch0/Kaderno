@@ -78,7 +78,16 @@ const CSS = `
 }
 [data-ghost] > * { transform: scale(1.03); transition: transform .15s ${EASE}; }
 
+/* v26, fase 4: paso entre pantallas (View Transitions). La barra lateral
+   tiene su propio nombre, así que se queda quieta; el resto se funde y sube. */
+::view-transition-old(root) { animation: kd-vt-out .16s ${EASE} both; }
+::view-transition-new(root) { animation: kd-vt-in .24s ${EASE} both; }
+::view-transition-group(*) { animation-duration: .3s; animation-timing-function: ${EASE}; }
+@keyframes kd-vt-out { to { opacity: 0; transform: translateY(-3px); } }
+@keyframes kd-vt-in { from { opacity: 0; transform: translateY(6px); } }
+
 @media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
   [data-anim], [data-anim]::after, [data-landed] > *, [data-skeleton] { animation: none !important; }
   [data-press], [data-lift], [data-ghost] > * { transition: none !important; transform: none !important; }
 }
@@ -98,4 +107,64 @@ export function installMotion(): void {
 /** ¿La persona pidió menos movimiento? (para animaciones hechas en JS). */
 export function prefersReducedMotion(): boolean {
   try { return Platform.OS === 'web' && window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; }
+}
+
+// ---------- v26, fase 4: paso entre pantallas y listas que se reacomodan ----------
+
+const nextPaint = () => new Promise<void>((res) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(res, 40))));
+
+/**
+ * Cambia de pantalla con una transición suave (Chrome, Edge y Safari
+ * recientes). En los demás navegadores, o con "reducir movimiento", cambia sin
+ * más. `go` hace la navegación (router.push, router.back...).
+ */
+export function vtNavigate(go: () => void): void {
+  const doc: any = typeof document !== 'undefined' ? document : null;
+  if (Platform.OS !== 'web' || !doc?.startViewTransition || prefersReducedMotion()) { go(); return; }
+  try {
+    const t = doc.startViewTransition(async () => { go(); await nextPaint(); });
+    // Si la pantalla nueva tarda, el navegador cancela la animación: no es un error.
+    [t?.ready, t?.finished, t?.updateCallbackDone].forEach((pr: Promise<unknown> | undefined) => pr?.catch?.(() => {}));
+  } catch { go(); }
+}
+
+/**
+ * Da un nombre de transición a un elemento: si en la pantalla siguiente hay
+ * otro con el mismo nombre, el navegador lo lleva de un lugar al otro (la
+ * tarjeta de la materia crece hasta ser su ficha). Los nombres deben ser
+ * únicos en cada pantalla.
+ */
+export function vtRef(name: string | null | undefined) {
+  return (node: any) => {
+    if (Platform.OS !== 'web' || !node) return;
+    const el: HTMLElement | null = node instanceof HTMLElement ? node : (node?._nativeTag ?? null);
+    if (el?.style) (el.style as any).viewTransitionName = name ? name.replace(/[^a-zA-Z0-9_-]/g, '-') : '';
+  };
+}
+
+/**
+ * Listas que se reacomodan suave (FLIP): cuando una fila cambia de lugar
+ * (se completa otra, se filtra, se reordena), se desliza a su nuevo puesto
+ * en vez de saltar. Los hijos se marcan con dataSet={{ flip: id }}.
+ */
+export type FlipPos = { left: number; top: number };
+export function flipChildren(container: HTMLElement | null, prev: Map<string, FlipPos>): Map<string, FlipPos> {
+  const next = new Map<string, FlipPos>();
+  if (!container || typeof window === 'undefined') return next;
+  const reduce = prefersReducedMotion();
+  // Posiciones relativas a la lista: así desplazar la página no cuenta como movimiento.
+  const box = container.getBoundingClientRect();
+  container.querySelectorAll<HTMLElement>('[data-flip]').forEach((el) => {
+    const key = el.dataset.flip as string;
+    const b = el.getBoundingClientRect();
+    const r = { left: b.left - box.left, top: b.top - box.top };
+    next.set(key, r);
+    const before = prev.get(key);
+    if (!before || reduce || typeof el.animate !== 'function') return;
+    const dx = before.left - r.left, dy = before.top - r.top;
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+    if (Math.abs(dy) > window.innerHeight) return; // muy lejos: no vale la pena animar
+    el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { duration: 240, easing: 'cubic-bezier(.2,.8,.2,1)' });
+  });
+  return next;
 }
