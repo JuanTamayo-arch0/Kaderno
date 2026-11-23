@@ -120,3 +120,6 @@ Lo que falta es una forma de separar lo **importante** de lo **urgente** en las 
 6. (Fase 2) Arreglo de paso: una tarea planeada para un día sin hora ni franja (por ejemplo "Pasarla a mañana" en Mi día) no aparecía en ninguna parte de Mi día. Ahora va en "Sin hora".
 7. (Fase 2) La regla 1-3-5 viene apagada; se prende en Ajustes. Mide por el estimado (corregido con tu tiempo real) y solo avisa, no mueve nada.
 8. (Fase 2) En Trabajo la tarjeta se llama "Lo primero de hoy" y la mascota no recuerda la rana (está en modo discreto).
+9. (Fase 3) Flujo usa el mismo reloj (con tope de 90 min) pero muestra el tiempo hacia arriba. Así las salas, la mascota y los sonidos de fondo siguen funcionando sin cambios. "Terminar y descansar" guarda lo trabajado y da una pausa de un quinto (entre 5 y 20 min).
+10. (Fase 3) La forma de enfocarse se cambia solo con el reloj quieto. Al volver a Pomodoro se recuperan los tiempos que tenías.
+11. (Fase 3) El aviso del bloque que se pasa solo existe cuando el enfoque se empieza desde una tarea con hora (Mi día o Hoy). Usa la hora más el estimado (30 min si no tiene) y se repite cada 15 min mientras sigas. No mueve la tarea: eso queda en Mi día.

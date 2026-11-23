@@ -6,7 +6,8 @@ import { ProgressRing } from '../../components/Ring';
 import { C } from '../../lib/theme';
 import { useResponsive } from '../../lib/responsive';
 import { Subject, Task, FocusSession, getSubjects, getTasks, getFocusDetail } from '../../lib/db';
-import { useFocusTimer, startFocus, pauseFocus, resetFocus, skipFocus, configureFocus } from '../../lib/focusTimer';
+import { useFocusTimer, startFocus, pauseFocus, resetFocus, skipFocus, configureFocus, setFocusStyle, FLOW_CAP_MIN, type FocusStyle } from '../../lib/focusTimer';
+import { toast } from '../../lib/feedback';
 import { compareDue, fmtDue } from '../../lib/time';
 import { Screen, Button, Card, SectionLabel, Dot, Toggle } from '../../components/ds';
 import { SubjectPicker } from '../../components/SubjectPicker';
@@ -85,17 +86,41 @@ export default function Enfoque() {
   const started = s.running || f.remaining < f.total;
   const modeColor = s.mode === 'work' ? C.brand : C.good;
 
+  const style: FocusStyle = s.style ?? 'pomodoro';
+  const STYLES: { k: FocusStyle; label: string; hint: string }[] = [
+    { k: 'pomodoro', label: 'Pomodoro', hint: 'Bloques cortos con pausa; pausa larga cada 4.' },
+    { k: '52-17', label: '52/17', hint: '52 minutos de trabajo y 17 de pausa.' },
+    { k: 'flujo', label: 'Flujo', hint: `Cuenta hacia arriba hasta que pares (máximo ${FLOW_CAP_MIN} min). La pausa es un quinto de lo trabajado.` },
+  ];
+  const styleSwitch = (
+    <View style={{ width: '100%', gap: 6 }}>
+      <View accessibilityRole="radiogroup" accessibilityLabel="Forma de enfocarte" style={{ flexDirection: 'row', padding: 3, borderRadius: 12, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.line }}>
+        {STYLES.map((it) => {
+          const on = it.k === style;
+          return (
+            <Pressable key={it.k} accessibilityRole="radio" accessibilityState={{ checked: on, disabled: started && !on }}
+              onPress={() => { if (!setFocusStyle(it.k)) toast('Termina o reinicia el bloque en curso para cambiar la forma de enfocarte.'); }}
+              style={{ flex: 1, alignItems: 'center', paddingVertical: 7, borderRadius: 9, backgroundColor: on ? C.surface : 'transparent', borderWidth: 1, borderColor: on ? C.line : 'transparent', opacity: started && !on ? 0.5 : 1 }}>
+              <Text style={{ color: on ? C.text : C.muted, fontSize: 13, fontWeight: on ? '700' : '600' }}>{it.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <Text style={{ color: C.muted, fontSize: 12, textAlign: 'center' }}>{STYLES.find((x) => x.k === style)!.hint}</Text>
+    </View>
+  );
   const timer = (
     <Card style={{ alignItems: 'center', gap: 16, paddingVertical: 24, width: isWide ? 420 : '100%' }}>
-      <View style={{ flexDirection: 'row', gap: 6 }} accessibilityLabel={`Pomodoro ${s.cycle + 1} de 4`}>
+      {styleSwitch}
+      {style === 'pomodoro' && <View style={{ flexDirection: 'row', gap: 6 }} accessibilityLabel={`Pomodoro ${s.cycle + 1} de 4`}>
         {[0, 1, 2, 3].map((i) => (
           <View key={i} style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: i < s.cycle ? C.brand : C.surface2, borderWidth: 1, borderColor: i < s.cycle ? C.brand : C.line }} />
         ))}
-      </View>
-      <View style={{ width: 228, height: 228, alignItems: 'center', justifyContent: 'center' }} accessibilityRole="timer" accessibilityLabel={`${s.mode === 'work' ? 'Enfoque' : 'Descanso'}, quedan ${f.label}`}>
+      </View>}
+      <View style={{ width: 228, height: 228, alignItems: 'center', justifyContent: 'center' }} accessibilityRole="timer" accessibilityLabel={`${s.mode === 'work' ? 'Enfoque' : 'Descanso'}, ${f.countsUp ? 'llevas' : 'quedan'} ${f.label}`}>
         <ProgressRing size={228} stroke={14} inset={7} frac={f.frac} color={modeColor} color2={s.mode === 'work' ? C.brand2 : C.good} track={C.surface2} />
         <Text style={{ color: C.text, fontSize: 46, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{f.label}</Text>
-        <Text style={{ color: s.mode === 'work' ? C.muted : C.goodText, marginTop: 2, fontSize: 14, fontWeight: '600' }}>{s.mode === 'work' ? 'Enfoque' : s.cycle === 0 ? 'Descanso largo' : 'Descanso'}</Text>
+        <Text style={{ color: s.mode === 'work' ? C.muted : C.goodText, marginTop: 2, fontSize: 14, fontWeight: '600' }}>{s.mode === 'work' ? (f.countsUp ? 'En flujo' : 'Enfoque') : style === 'pomodoro' && s.cycle === 0 ? 'Descanso largo' : 'Descanso'}</Text>
       </View>
 
       <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
@@ -103,7 +128,7 @@ export default function Enfoque() {
           onPress={() => { if (s.running) pauseFocus(); else { unlockAmbient(); startFocus(); } }} style={{ flex: 2 }} />
         <Button label="Reiniciar" kind="secondary" size="lg" onPress={resetFocus} disabled={!started} style={{ flex: 1 }} />
       </View>
-      {started && <Button label={s.mode === 'work' ? 'Terminar y descansar' : 'Saltar descanso'} kind="ghost" size="sm" onPress={skipFocus} />}
+      {started && <Button label={s.mode === 'work' ? 'Terminar y descansar' : 'Saltar descanso'} kind={f.countsUp ? 'secondary' : 'ghost'} size="sm" onPress={skipFocus} />}
 
       {s.mode === 'break' && s.running ? <BreakCoach s={s} /> : <ParkButton s={s} active={onScreen} />}
       <SoundRow running={s.running} onMix={() => setMixer(true)} />
@@ -133,11 +158,11 @@ export default function Enfoque() {
         )}
       </View>
 
-      <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
+      {style === 'pomodoro' && <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
         <NumField label="Enfoque" value={s.workMin} onChange={(n) => configureFocus({ workMin: n })} />
         <NumField label="Descanso" value={s.breakMin} onChange={(n) => configureFocus({ breakMin: n })} />
         <NumField label="Desc. largo" value={s.longBreakMin} onChange={(n) => configureFocus({ longBreakMin: n })} />
-      </View>
+      </View>}
       <View style={{ width: '100%', borderTopWidth: 1, borderTopColor: C.line, marginTop: 4 }}>
         <Toggle label="Sonido al terminar" value={s.sound} onChange={(v) => configureFocus({ sound: v })} />
       </View>
@@ -189,7 +214,7 @@ export default function Enfoque() {
   );
 
   return (
-    <Screen title="Enfoque" subtitle="Técnica Pomodoro: 25 minutos de trabajo y una pausa corta" maxWidth={1100} back={isWide ? undefined : '/estudiar'}>
+    <Screen title="Enfoque" subtitle="Trabaja en bloques con pausas: Pomodoro, 52/17 o en flujo" maxWidth={1100} back={isWide ? undefined : '/estudiar'}>
       <View style={{ flexDirection: isWide ? 'row' : 'column', gap: 18, alignItems: 'flex-start' }}>
         {timer}
         {stats}

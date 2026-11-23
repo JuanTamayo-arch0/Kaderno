@@ -378,7 +378,9 @@ export default function Hoy() {
     (planFocus[t.id] ?? 0) > 0 || (focus.state.taskId === t.id && (focus.state.running || focus.remaining < focus.total))));
   const startTask = (t: Task) => {
     if (t.type === 'repaso' && t.session_kind === 'sim') { router.push({ pathname: '/simulacro', params: { materia: t.subject_id ?? '', examen: t.parent_id ?? '', sesion: t.id } } as any); return; }
-    startFocus({ taskId: t.id, taskTitle: t.title, subjectId: t.subject_id }); router.push('/enfoque');
+    // v27: si la tarea tiene hora hoy, el enfoque recuerda cuándo termina su bloque (aviso al pasarse).
+    const end = t.plan_at ? new Date(t.plan_at).getTime() + (t.estimate_min && t.estimate_min > 0 ? t.estimate_min : 30) * 60_000 : null;
+    startFocus({ taskId: t.id, taskTitle: t.title, subjectId: t.subject_id, blockEnd: end && end > Date.now() && end - Date.now() < 12 * 3600_000 ? end : null }); router.push('/enfoque');
   };
   // Examen sin plan de repaso (por ejemplo, recién importado): se ofrece uno a la vez.
   const examOffer = noOffer ? allPending.filter((t) => shouldOffer(t.type, t.due_date, now) && !noOffer.has(t.id) && daysUntil(new Date(t.due_date + 'T12:00:00'), now) <= 21)

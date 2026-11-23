@@ -130,3 +130,36 @@ test('rana: la mascota la recuerda en la mañana, antes que las vencidas', async
   assert.match(react(ev, b, 'pinguino', 1e12, 0)?.say ?? '', /Informe final/);
   assert.match(react({ ...ev, hour: 15 }, b, 'pinguino', 1e12, 0)?.say ?? '', /vencida/i, 'en la tarde ya no');
 });
+
+// ---------- Fase 3: formas de enfocarse ----------
+import { flowBreakMin, breakAfter, styleTimes, FLOW_CAP_MIN } from '../lib/focusStyle';
+
+test('enfoque: Flujo da una pausa de un quinto, entre 5 y 20', () => {
+  assert.deepEqual([flowBreakMin(10), flowBreakMin(40), flowBreakMin(62), flowBreakMin(90), flowBreakMin(200)], [5, 8, 12, 18, 20]);
+});
+
+test('enfoque: la pausa según la forma', () => {
+  const s = { breakMin: 5, longBreakMin: 15 };
+  assert.equal(breakAfter('pomodoro', 25, 1, s), 5);
+  assert.equal(breakAfter('pomodoro', 25, 0, s), 15, 'la larga cada 4');
+  assert.equal(breakAfter(undefined, 25, 0, s), 15, 'lo guardado antes de v27 es Pomodoro');
+  assert.equal(breakAfter('52-17', 52, 0, s), 17, 'sin pausa larga');
+  assert.equal(breakAfter('flujo', 47, 0, s), 9);
+});
+
+test('enfoque: tiempos de cada forma; Pomodoro vuelve a los tuyos', () => {
+  const mine = { work: 40, brk: 8, long: 20 };
+  assert.deepEqual(styleTimes('52-17', mine), { workMin: 52, breakMin: 17, longBreakMin: 17 });
+  assert.equal(styleTimes('flujo', mine).workMin, FLOW_CAP_MIN);
+  assert.deepEqual(styleTimes('pomodoro', mine), { workMin: 40, breakMin: 8, longBreakMin: 20 });
+});
+
+test('enfoque: el aviso del bloque que se pasa y la pausa en curso', async () => {
+  const fs = await import('node:fs');
+  const ft = fs.readFileSync('lib/focusTimer.ts', 'utf8');
+  assert.match(ft, /now >= state\.blockEnd/);
+  assert.match(ft, /BLOCK_SNOOZE_MS = 15 \* 60_000/);
+  assert.match(ft, /s\.brkMin \?\? \(s\.cycle === 0/, 'el reloj de la pausa usa la pausa que tocó');
+  const lay = fs.readFileSync('app/_layout.tsx', 'utf8');
+  assert.match(lay, /Se acabó el bloque de/);
+});
