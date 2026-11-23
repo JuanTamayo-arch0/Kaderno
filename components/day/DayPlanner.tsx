@@ -5,7 +5,8 @@ import { C } from '../../lib/theme';
 import { useResponsive } from '../../lib/responsive';
 import { Card, Button } from '../ds';
 import { supabase } from '../../lib/supabase';
-import { updateTask, type Task, type Slot, type Subject, type FocusSession } from '../../lib/db';
+import { updateTask, setFrog, fetchPrefs, type Task, type Slot, type Subject, type FocusSession } from '../../lib/db';
+import { check135, frogOf, orderLoose, suggestFrog } from '../../lib/frog';
 import { getEstimateRatio } from '../../lib/studyDb';
 import { SCHEDULE, toMinutes } from '../../lib/schedule';
 import { dayParts, plannedMinutes, freeMinutes, overloadText, moveCandidates, localISO, taskMinutes, fmtHours, suggestSchedule, clockLabel, type Suggested } from '../../lib/day';
@@ -36,7 +37,9 @@ export function DayPlanner({ tasks, slots, subjects, onChanged, onToggle, onFocu
   const [placing, setPlacing] = useState<Task | null>(null);
   const [plan, setPlan] = useState<{ day: string; placed: Suggested[]; left: string[] } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [limit135, setLimit135] = useState(false);
   const { work } = useMode();
+  useEffect(() => { fetchPrefs().then((p) => setLimit135(!!p?.limit135)).catch(() => {}); }, []);
   const week = mode === 'week' && isWide && width >= 900;
   const days = useMemo(() => {
     if (!week) return [day];
@@ -55,8 +58,18 @@ export function DayPlanner({ tasks, slots, subjects, onChanged, onToggle, onFocu
 
   const todayISO = localISO(new Date());
   const dayISO = localISO(day);
-  const parts = dayParts(tasks, dayISO, todayISO);
+  const raw = dayParts(tasks, dayISO, todayISO);
+  // v27: la rana primero y luego la lista del día en su orden.
+  const parts = { ...raw, loose: orderLoose(raw.loose, dayISO) };
   const isToday = dayISO === todayISO;
+  const dayTasks = [...parts.timed, ...parts.banded.manana, ...parts.banded.tarde, ...parts.banded.noche, ...parts.loose];
+  const frog = frogOf(tasks, dayISO);
+  const frogSuggestion = frog ? null : suggestFrog(dayTasks, new Date(), ratio);
+  const rule135 = limit135 && dayISO >= todayISO ? check135(dayTasks, ratio).text : null;
+  async function chooseFrog(t: Task | null) {
+    try { await setFrog(t ? t.id : null, dayISO); toast(t ? `Lo primero: ${t.title}` : 'Sin rana para este día'); onChanged(); }
+    catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
+  }
 
   // Sobrecarga (solo hoy): lo planeado contra las horas libres que quedan.
   const now = new Date();
@@ -134,7 +147,8 @@ export function DayPlanner({ tasks, slots, subjects, onChanged, onToggle, onFocu
     <View style={{ gap: 8 }}>
       <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '800' }}>Sin hora {isToday ? 'hoy' : ''} · {parts.loose.length}</Text>
       {parts.loose.length === 0 && <Text style={{ color: C.muted, fontSize: 12.5 }}>Nada pendiente sin hora.</Text>}
-      {parts.loose.map((t) => <LooseRow key={t.id} t={t} ratio={ratio} active={placing?.id === t.id} onPlace={() => setPlacing(placing?.id === t.id ? null : t)} onToggle={() => onToggle(t)} />)}
+      {parts.loose.map((t) => <LooseRow key={t.id} t={t} ratio={ratio} active={placing?.id === t.id} onPlace={() => setPlacing(placing?.id === t.id ? null : t)} onToggle={() => onToggle(t)}
+        mark={t.id === frog?.id ? 'rana' : t.plan_day === dayISO && t.plan_order ? t.plan_order : null} />)}
       {parts.loose.length > 0 && <Text style={{ color: C.muted, fontSize: 11.5 }}>{isWide ? 'Arrástrala a una hora, o toca "Poner hora" y luego la hora.' : 'Toca "Poner hora" y luego la hora en la línea.'}</Text>}
       {parts.loose.length > 0 && dayISO >= todayISO && !plan && <Button label="Sugerir horario" icon="sparkles-outline" size="sm" kind="secondary" onPress={suggest} />}
     </View>
@@ -172,6 +186,15 @@ export function DayPlanner({ tasks, slots, subjects, onChanged, onToggle, onFocu
           )}
         </Card>
       )}
+      {dayISO >= todayISO && dayTasks.length > 0 && (
+        <FrogCard frog={frog} suggestion={frogSuggestion} options={dayTasks} isToday={isToday} work={work}
+          onChoose={chooseFrog} onStart={(t) => onFocusTask(t)} />
+      )}
+      {rule135 && (
+        <Card style={{ marginBottom: 10, borderLeftWidth: 4, borderLeftColor: C.warn }}>
+          <Text style={{ color: C.text, fontSize: 13.5 }}>{rule135}</Text>
+        </Card>
+      )}
       {suggestion}
       {placing && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: 10, backgroundColor: C.brand + '18', marginBottom: 10 }} accessibilityLiveRegion="polite">
@@ -201,7 +224,7 @@ export function DayPlanner({ tasks, slots, subjects, onChanged, onToggle, onFocu
   );
 }
 
-function LooseRow({ t, ratio, active, onPlace, onToggle }: { t: Task; ratio: number | null; active: boolean; onPlace: () => void; onToggle: () => void }) {
+function LooseRow({ t, ratio, active, onPlace, onToggle, mark }: { t: Task; ratio: number | null; active: boolean; onPlace: () => void; onToggle: () => void; mark?: 'rana' | number | null }) {
   const ref = useDraggableTask(t.id);
   return (
     <View ref={ref} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: active ? C.brand : C.line, backgroundColor: C.surface }}>
@@ -210,7 +233,9 @@ function LooseRow({ t, ratio, active, onPlace, onToggle }: { t: Task; ratio: num
       </Pressable>
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '600' }} numberOfLines={2}>{t.title}</Text>
-        <Text style={{ color: C.muted, fontSize: 11.5 }}>{fmtHours(taskMinutes(t.estimate_min, ratio))}</Text>
+        <Text style={{ color: mark === 'rana' ? C.brand : C.muted, fontSize: 11.5, fontWeight: mark === 'rana' ? '700' : '400' }}>
+          {mark === 'rana' ? 'Primero · ' : typeof mark === 'number' ? `${mark}.º de la lista · ` : ''}{fmtHours(taskMinutes(t.estimate_min, ratio))}
+        </Text>
       </View>
       <Pressable onPress={onPlace} accessibilityRole="button" accessibilityLabel={`Poner hora a "${t.title}"`}
         style={{ paddingHorizontal: 10, minHeight: 30, justifyContent: 'center', borderRadius: 8, backgroundColor: active ? C.brand : C.surface2 }}>
@@ -221,3 +246,51 @@ function LooseRow({ t, ratio, active, onPlace, onToggle }: { t: Task; ratio: num
 }
 
 const navBtn = { width: 34, height: 34, borderRadius: 9, alignItems: 'center' as const, justifyContent: 'center' as const, borderWidth: 1, borderColor: C.line };
+
+// v27, fase 2: "la rana" del día. Lo más pesado e importante, antes que lo demás.
+function FrogCard({ frog, suggestion, options, isToday, work, onChoose, onStart }: {
+  frog: Task | null; suggestion: Task | null; options: Task[]; isToday: boolean; work: boolean;
+  onChoose: (t: Task | null) => void; onStart: (t: Task) => void;
+}) {
+  const [picking, setPicking] = useState(false);
+  const title = work ? (isToday ? 'Lo primero de hoy' : 'Lo primero de ese día') : (isToday ? 'La rana de hoy' : 'La rana de ese día');
+  const hint = 'Lo más pesado e importante, antes que lo demás: después todo se siente más fácil.';
+  return (
+    <Card style={{ marginBottom: 10, gap: 8, borderLeftWidth: 4, borderLeftColor: C.brand }} accessibilityLabel={title}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Ionicons name="flag" size={16} color={C.brand} />
+        <Text dataSet={{ head: '1' }} style={{ color: C.text, fontSize: 14.5, fontWeight: '800', flex: 1 }}>{title}</Text>
+      </View>
+      {frog ? (
+        <>
+          <Text style={{ color: C.text, fontSize: 15, fontWeight: '700' }} numberOfLines={2}>{frog.title}</Text>
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+            {isToday && <Button label="Empezar" icon="play" size="sm" onPress={() => onStart(frog)} />}
+            <Button label="Cambiar" size="sm" kind="secondary" onPress={() => setPicking((v) => !v)} />
+            <Button label="Quitar" size="sm" kind="ghost" onPress={() => onChoose(null)} />
+          </View>
+        </>
+      ) : (
+        <>
+          <Text style={{ color: C.muted, fontSize: 12.5 }}>{hint}</Text>
+          {suggestion && <Text style={{ color: C.text, fontSize: 13.5 }}>Sugerencia: <Text style={{ fontWeight: '700' }}>{suggestion.title}</Text></Text>}
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+            {suggestion && <Button label="Esa" icon="checkmark" size="sm" onPress={() => onChoose(suggestion)} />}
+            <Button label={suggestion ? 'Elegir otra' : 'Elegir'} size="sm" kind="secondary" onPress={() => setPicking((v) => !v)} />
+          </View>
+        </>
+      )}
+      {picking && (
+        <View style={{ gap: 6 }}>
+          {options.filter((t) => t.id !== frog?.id).slice(0, 10).map((t) => (
+            <Pressable key={t.id} onPress={() => { setPicking(false); onChoose(t); }} accessibilityRole="button" accessibilityLabel={`Que lo primero sea "${t.title}"`}
+              style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 9, borderRadius: 10, borderWidth: 1, borderColor: C.line, backgroundColor: hovered ? C.surface2 : 'transparent' })}>
+              <Ionicons name={t.important ? 'star' : 'ellipse-outline'} size={14} color={t.important ? C.warnText : C.muted} />
+              <Text style={{ color: C.text, fontSize: 13.5, flex: 1 }} numberOfLines={1}>{t.title}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </Card>
+  );
+}

@@ -101,6 +101,7 @@ function Ajustes() {
   const pv = planView(plan);
   const { mode, study } = useMode();
   const [urgentDays, setUrgentDays] = useState(DEFAULT_URGENT_DAYS);
+  const [limit135, setLimit135] = useState(false);
 
   useFocusEffect(useCallback(() => {
     resetHoyHiddenCache();
@@ -111,6 +112,7 @@ function Ajustes() {
       setHiddenN((Array.isArray(ho.tasks) ? ho.tasks.length : 0) + (Array.isArray(ho.projects) ? ho.projects.length : 0));
       setNotif({ ...DEFAULT_NOTIF, ...(p.notif ?? {}) });
       setUrgentDays(cleanUrgentDays(p.urgentDays));
+      setLimit135(!!p.limit135);
     }).catch(() => {});
     getPushStatus().then(setPush).catch(() => {});
     getRitualPrefs().then((r) => setMondayRitual(r.monday)).catch(() => {});
@@ -240,6 +242,9 @@ function Ajustes() {
             })}
           </View>
         </View>
+        <Divider />
+        <Toggle label="Regla 1-3-5 en Mi día" hint="Avisa si un día tiene más de 1 tarea grande, 3 medianas o 5 pequeñas (por el tiempo estimado)." value={limit135}
+          onChange={(v) => { setLimit135(v); savePrefs({ limit135: v }).then(() => dataChanged()).catch((e) => toast(friendlyError(e), { tone: 'bad' })); }} />
         <Divider />
         <Toggle label="Tareas de proyectos en Hoy" hint="También se cambia en Hoy con Todo, Materias o Proyectos." value={hoyProy}
           onChange={(v) => { setHoyProy(v); saveHoyVista(v ? 'todo' : 'materias').catch(() => {}); }} />

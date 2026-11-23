@@ -1822,3 +1822,27 @@ Corre `supabase/schema_v26.sql` (es idempotente). Agrega `assignments.important`
 ### 3. Pruebas
 
 `npm test` (urgente, importante, cuadrantes, arrastrar, balance de la semana) y `bash tests/run_sql.sh` (incluye `tests/sql/26_pruebas.sql`).
+
+## Versión 27 (parte 2): la rana y la lista para mañana
+
+### 1. Migración
+
+Corre otra vez `supabase/schema_v26.sql`. La fase 2 agrega `assignments.frog` y `assignments.plan_order`, y las funciones `day_set_frog` (una rana por día) y `day_plan_list` (hasta 6 en orden). Sin la migración, la tarjeta de la rana y la lista avisan qué falta.
+
+### 2. Lo que cambia para el usuario
+
+- **La rana en Mi día:** una tarjeta arriba propone lo más pesado e importante del día (importante, largo y lo que más lleva esperando).
+  - Se acepta con "Esa", o se elige otra.
+  - Hoy tiene "Empezar", que abre el enfoque con esa tarea.
+  - Va primero en "Sin hora" y en la lista de Hoy se marca como "Primero".
+  - En Trabajo la tarjeta se llama "Lo primero de hoy".
+- **Cerrar el día, nuevo paso "Mañana"** (método Ivy Lee): se escogen hasta 6 tareas en orden.
+  - Quedan planeadas para mañana en ese orden, y la primera es la rana.
+  - Es opcional ("Seguir sin lista").
+- **La mascota** recuerda la rana en la mañana (antes de la 1 p. m.).
+- **Regla 1-3-5** (Ajustes, apagada por defecto): Mi día avisa si el día tiene más de 1 tarea grande, 3 medianas o 5 pequeñas, según el tiempo estimado.
+- **Arreglo:** una tarea pasada a otro día sin hora (por ejemplo con "Pasarla a mañana") ya no desaparece de Mi día.
+
+### 3. Pruebas
+
+`npm test` (sugerencia de la rana, orden de Mi día, 1-3-5, candidatas de la lista, recordatorio de la mascota) y `bash tests/run_sql.sh` (incluye `tests/sql/26b_pruebas.sql`: una rana por día, la lista en orden, máximo 6, tareas ajenas).

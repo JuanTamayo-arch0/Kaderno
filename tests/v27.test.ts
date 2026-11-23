@@ -77,3 +77,56 @@ test('matriz: la vista está en Hoy y la estrella en la tarea', async () => {
   const sql = fs.readFileSync('supabase/schema_v26.sql', 'utf8');
   assert.match(sql, /add column if not exists important boolean not null default false/);
 });
+
+// ---------- Fase 2: la rana y la lista para mañana ----------
+import { frogOf, suggestFrog, orderLoose, sizeOf, check135, ivyCandidates, togglePick } from '../lib/frog';
+import { dayParts } from '../lib/day';
+
+test('rana: se sugiere lo importante, largo y viejo; nunca una sesión de repaso', () => {
+  const now = new Date('2026-11-23T08:00:00');
+  const t = (id: string, o: any = {}) => ({ id, status: 'pending', created_at: '2026-11-22T10:00:00Z', ...o });
+  const list = [t('corta'), t('larga', { estimate_min: 120 }), t('importante', { important: true, estimate_min: 20 }), t('sesion', { important: true, estimate_min: 200, parent_id: 'x' })];
+  assert.equal(suggestFrog(list, now)?.id, 'importante');
+  assert.equal(suggestFrog(list.filter((x) => x.id !== 'importante'), now)?.id, 'larga');
+  assert.equal(suggestFrog([t('vieja', { created_at: '2026-11-01T00:00:00Z' }), t('nueva')], now)?.id, 'vieja');
+  assert.equal(suggestFrog([], now), null);
+  assert.equal(frogOf([t('a', { frog: true, plan_day: '2026-11-24' }), t('b', { frog: true, plan_day: '2026-11-23' })], '2026-11-23')?.id, 'b');
+  assert.equal(frogOf([t('a', { frog: true, plan_day: '2026-11-23', status: 'done' })], '2026-11-23'), null);
+});
+
+test('mi día: la rana primero, luego la lista en orden; lo planeado sin hora ya no se pierde', () => {
+  const D = '2026-11-24';
+  const list = [{ id: 'x' }, { id: 'b', plan_day: D, plan_order: 2 }, { id: 'a', plan_day: D, plan_order: 1 }, { id: 'r', plan_day: D, plan_order: 3, frog: true }];
+  assert.deepEqual(orderLoose(list, D).map((x) => x.id), ['r', 'a', 'b', 'x']);
+  const parts = dayParts([{ id: 'm', status: 'pending', plan_day: D, due_date: '2026-11-30' }], D, '2026-11-23');
+  assert.deepEqual(parts.loose.map((x) => x.id), ['m'], 'antes desaparecía de Mi día');
+});
+
+test('regla 1-3-5: tamaños por estimado y aviso solo si se pasa', () => {
+  assert.deepEqual([sizeOf(120), sizeOf(90), sizeOf(30), sizeOf(15), sizeOf(null)], ['grande', 'mediana', 'mediana', 'pequena', 'mediana']);
+  assert.equal(check135([{ estimate_min: 120 }, { estimate_min: 45 }, { estimate_min: 10 }]).text, null);
+  const r = check135([{ estimate_min: 120 }, { estimate_min: 100 }, { estimate_min: 10 }]);
+  assert.deepEqual(r.counts, { grande: 2, mediana: 0, pequena: 1 });
+  assert.match(r.text!, /2 grandes, 0 medianas y 1 pequeña/);
+});
+
+test('ivy lee: candidatas con lo importante primero y lo ya elegido arriba; máximo 6', () => {
+  const T = '2026-11-24';
+  const c = ivyCandidates([
+    { id: 'hecha', status: 'done' }, { id: 'bandeja', inbox: true }, { id: 'tarde', due_date: '2026-12-10' },
+    { id: 'pronto', due_date: '2026-11-25' }, { id: 'estrella', important: true, due_date: '2026-12-20' }, { id: 'elegida', plan_day: T, plan_order: 1 },
+  ], T);
+  assert.deepEqual(c.map((x) => x.id), ['elegida', 'estrella', 'pronto', 'tarde']);
+  let l: string[] = [];
+  for (const id of ['a', 'b', 'c', 'd', 'e', 'f']) l = togglePick(l, id).list;
+  assert.deepEqual(togglePick(l, 'g'), { list: l, full: true });
+  assert.deepEqual(togglePick(l, 'c').list, ['a', 'b', 'd', 'e', 'f']);
+});
+
+test('rana: la mascota la recuerda en la mañana, antes que las vencidas', async () => {
+  const { react, initialBrain } = await import('../lib/pets/brain');
+  const b = initialBrain();
+  const ev = { type: 'abrir' as const, overdue: [{ id: 'v', title: 'Vencida', overdue: true }], today: [], hour: 8, frog: { id: 'r', title: 'Informe final' } };
+  assert.match(react(ev, b, 'pinguino', 1e12, 0)?.say ?? '', /Informe final/);
+  assert.match(react({ ...ev, hour: 15 }, b, 'pinguino', 1e12, 0)?.say ?? '', /vencida/i, 'en la tarde ya no');
+});

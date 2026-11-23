@@ -91,6 +91,9 @@ export function dayParts<X extends T>(tasks: X[], dayISO: string, todayISO: stri
     if (t.status === 'done' || t.inbox) continue;
     if (t.plan_at && planDay(t) === dayISO) { timed.push(t); continue; }
     if (!t.plan_at && t.plan_day === dayISO && t.plan_band && t.plan_band in banded) { banded[t.plan_band as Band].push(t); continue; }
+    // Planeada para este día sin hora ni franja (pasar a mañana, la lista de Ivy Lee): va sin hora.
+    // Antes se saltaba y la tarea no aparecía en ninguna parte de Mi día.
+    if (!t.plan_at && t.plan_day === dayISO) { loose.push(t); continue; }
     if (planDay(t)) continue; // planeada otro día
     if (t.due_date && (t.due_date === dayISO || (dayISO === todayISO && t.due_date < todayISO))) loose.push(t);
   }

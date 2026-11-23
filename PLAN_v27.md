@@ -116,3 +116,7 @@ Lo que falta es una forma de separar lo **importante** de lo **urgente** en las 
 2. (Fase 1) Arrastrar funciona en el computador. En el teléfono se cambia con la estrella de la fila y con la fecha.
 3. (Fase 1) Las tareas de proyecto entran en la matriz con su prioridad (alta o urgente cuenta como importante) y no se arrastran: su prioridad es del equipo.
 4. (Fase 1) El ritual del lunes pone primero lo que tiene estrella entre las sugerencias, y dice cuánto de lo terminado la semana anterior era importante (desde 5 tareas terminadas).
+5. (Fase 2) La rana es una por día y se guarda en la tarea (`frog` con su `plan_day`). La base impide dos en el mismo día. La lista de Ivy Lee guarda el orden en `plan_order` (1 a 6) y la primera queda como la rana. Las que tenían hora otro día la pierden: el orden reemplaza la hora.
+6. (Fase 2) Arreglo de paso: una tarea planeada para un día sin hora ni franja (por ejemplo "Pasarla a mañana" en Mi día) no aparecía en ninguna parte de Mi día. Ahora va en "Sin hora".
+7. (Fase 2) La regla 1-3-5 viene apagada; se prende en Ajustes. Mide por el estimado (corregido con tu tiempo real) y solo avisa, no mueve nada.
+8. (Fase 2) En Trabajo la tarjeta se llama "Lo primero de hoy" y la mascota no recuerda la rana (está en modo discreto).

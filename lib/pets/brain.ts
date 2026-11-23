@@ -27,7 +27,7 @@ export type BrainState = {
 export type TaskHint = { id: string; title: string; overdue?: boolean; today?: boolean; dueTs?: number | null; estimate?: number | null };
 
 export type PetEvent =
-  | { type: 'abrir'; overdue: TaskHint[]; today: TaskHint[]; hour: number; exam?: { materia: string; dias: number } | null; stale?: { title: string; dias: number } | null; streakAtRisk?: boolean; goal?: { materia: string; plan: string } | null }
+  | { type: 'abrir'; overdue: TaskHint[]; today: TaskHint[]; hour: number; exam?: { materia: string; dias: number } | null; stale?: { title: string; dias: number } | null; streakAtRisk?: boolean; goal?: { materia: string; plan: string } | null; frog?: { id: string; title: string } | null }
   | { type: 'tarea_hecha'; allDone: boolean }
   | { type: 'paseo'; next: TaskHint | null }
   | { type: 'enfoque_inicio' }
@@ -62,7 +62,7 @@ export const GAP: Record<TalkMode, number> = { importa: 45 * MIN, conversador: 2
 /** Espera propia de cada situación. */
 export const COOLDOWN: Record<string, number> = {
   vencidas: 3 * HOUR, paseo: HOUR, sin_tocar: 6 * HOUR, parcial: 6 * HOUR,
-  racha_riesgo: 2 * HOUR, tarde: 12 * HOUR, hola: 20 * HOUR, hecha: 10 * MIN, meta: 20 * HOUR,
+  racha_riesgo: 2 * HOUR, tarde: 12 * HOUR, hola: 20 * HOUR, hecha: 10 * MIN, meta: 20 * HOUR, rana: 20 * HOUR,
 };
 
 export function initialBrain(talk: TalkMode = 'importa'): BrainState {
@@ -98,6 +98,10 @@ export function react(ev: PetEvent, s: BrainState, sp: Species, now: number, see
         return canSpeak(s, 'tarde', now)
           ? { mood: 'dormido', say: L('tarde'), spontaneous: true, key: 'tarde' }
           : { mood: 'dormido' };
+      }
+      // v27: si dejaste la rana lista, en la mañana lo primero es eso.
+      if (ev.frog && ev.hour < 13 && canSpeak(s, 'rana', now)) {
+        return { say: L('rana', { tarea: ev.frog.title }), actions: ['enfocar'], spontaneous: true, key: 'rana', ms: 9000 };
       }
       if (ev.overdue.length && canSpeak(s, 'vencidas', now)) {
         const t = nextTask(ev.overdue, [])!;
