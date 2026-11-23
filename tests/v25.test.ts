@@ -131,3 +131,13 @@ test('proyectos: el estado que redacta la IA se valida', async () => {
   assert.equal(parseProjectUpdate('nada'), null);
   assert.match(projectUpdatePrompt('# Informe'), /# Informe$/);
 });
+
+// ---------- Fase 4: entradas y clientes ----------
+test('clientes: direcciones de los enlaces', async () => {
+  const src = (await import('node:fs')).readFileSync('lib/clientLinks.ts', 'utf8');
+  const fn = new Function('kind', 'token', 'origin', src.match(/export function linkUrl[^{]*\{([\s\S]*?)\n\}/)![1].replace(/: [A-Za-z]+/g, ''));
+  assert.equal(fn('form', 'abc', 'https://kaderno.app'), 'https://kaderno.app/solicitar/abc');
+  assert.equal(fn('view', 'abc', 'https://kaderno.app'), 'https://kaderno.app/avance/abc');
+  const nav = (await import('node:fs')).readFileSync('components/SideNav.tsx', 'utf8');
+  assert.match(nav, /NO_SIDEBAR = \[[^\]]*'\/solicitar', '\/avance'\]/, 'las páginas públicas no muestran la barra de la app');
+});

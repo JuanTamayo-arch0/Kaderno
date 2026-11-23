@@ -20,6 +20,7 @@ import { BulkAction, BulkBar, BulkDialog, ExportSheet, confirmBulkDelete } from 
 import { ReportSheet } from '../../components/projects/ReportSheet';
 import { BudgetSheet } from '../../components/projects/BudgetSheet';
 import { RulesSheet, StatusSheet } from '../../components/projects/WorkSheets';
+import { ClientLinksSheet } from '../../components/projects/ClientLinksSheet';
 import { HEALTH, PRIORITIES, filterTasks, projectLabels, type TaskFilter } from '../../lib/projectWork';
 import { getUpdates, type ProjectUpdate } from '../../lib/projectWorkDb';
 import { undoProjectBatch } from '../../lib/projectsBulk';
@@ -93,6 +94,7 @@ function ProyectoDetalle() {
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [linksOpen, setLinksOpen] = useState(false);
   const [latest, setLatest] = useState<ProjectUpdate | null>(null);
   const [filter, setFilter] = useState<TaskFilter>({});
   const [cleanupOpen, setCleanupOpen] = useState(false);
@@ -445,6 +447,7 @@ function ProyectoDetalle() {
               { icon: 'download-outline', label: 'Exportar tareas', hint: 'Para editarlas en Excel o pasarlas a una IA', onPress: () => setExportOpen(true) },
               { icon: 'document-text-outline', label: 'Informe semanal', hint: 'Lo hecho, lo que viene y lo atrasado, listo para mandar', onPress: () => setReportOpen(true) },
               { icon: 'pulse-outline', label: 'Estado del proyecto', hint: 'En curso, en riesgo o atrasado, con una nota para el equipo', onPress: () => setStatusOpen(true) },
+              { icon: 'link-outline', label: 'Enlaces para el cliente', hint: 'Formulario de solicitudes y avance de solo lectura', onPress: () => setLinksOpen(true) },
               { icon: 'flash-outline', label: 'Reglas automáticas', hint: 'Asignar o avisar cuando algo pasa', onPress: () => setRulesOpen(true) },
               { icon: 'hourglass-outline', label: 'Presupuesto de horas', hint: 'Cuánto va el equipo y aviso al 80 % y al 100 %', onPress: () => setBudgetOpen(true) },
             ],
@@ -490,6 +493,7 @@ function ProyectoDetalle() {
         <>
         <ExportSheet visible={exportOpen} project={project} members={members} onClose={() => setExportOpen(false)} />
         <StatusSheet visible={statusOpen} project={project} tasks={tasks} members={members} editable={editable} myId={myId} onClose={() => setStatusOpen(false)} onChanged={setLatest} />
+        <ClientLinksSheet visible={linksOpen} projectId={project.id} projectName={project.name} editable={editable} onClose={() => { setLinksOpen(false); load(); }} />
         <RulesSheet visible={rulesOpen} project={project} cols={cols} members={members} editable={editable} onClose={() => setRulesOpen(false)} />
         <BudgetSheet visible={budgetOpen} projectId={project.id} projectName={project.name} editable={editable} onClose={() => setBudgetOpen(false)} />
         <ReportSheet visible={reportOpen} project={project} tasks={tasks} members={members} editable={editable} onClose={() => setReportOpen(false)} />

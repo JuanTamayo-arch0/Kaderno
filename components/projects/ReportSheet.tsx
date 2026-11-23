@@ -7,6 +7,7 @@ import { nameOf, type Member, type PTask, type Project } from '../../lib/project
 import { weeklyReport, weeklyReportMarkdown } from '../../lib/projectReport';
 import { uploadNewFile } from '../../lib/projectFiles';
 import { copyText, saveFile } from '../../lib/fileIO';
+import { openWhatsApp } from '../../lib/clientLinks';
 import { toast, friendlyError } from '../../lib/feedback';
 
 // ============================================================
@@ -35,6 +36,7 @@ export function ReportSheet({ visible, project, tasks, members, editable, onClos
     <Sheet visible={visible} onClose={onClose} title="Informe semanal" subtitle="Para tu jefe, tu cliente o el grupo. Se arma con las tareas del proyecto." maxWidth={680}
       footer={<>
         <Button label="Copiar" icon="copy-outline" onPress={copy} />
+        <Button label="WhatsApp" icon="logo-whatsapp" kind="secondary" onPress={() => openWhatsApp(md.replace(/^#+ /gm, '').replace(/\n{3,}/g, '\n\n').slice(0, 3500))} />
         <Button label="Descargar" icon="download-outline" kind="secondary" onPress={download} />
         {editable && <Button label="Guardar en Archivos" icon="folder-outline" kind="secondary" busy={busy} onPress={toFiles} />}
       </>}>

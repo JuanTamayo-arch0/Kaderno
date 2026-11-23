@@ -29,6 +29,17 @@
 --     proyecto, con Pro 20. project_rules_tick() revisa las vencidas cada hora.
 --   · project_updates: el estado semanal del proyecto (en curso, en riesgo,
 --     atrasado) con una nota; avisa al equipo.
+--
+-- Fase 4 · Entradas y clientes
+--   · project_links: un enlace público por proyecto para el formulario de
+--     solicitudes ('form') y otro para la vista del cliente ('view'). Se
+--     prenden, se apagan y se cambian (el viejo deja de servir).
+--   · public_form_info / public_form_submit (sin sesión): el cliente pide algo
+--     y entra como tarea a la columna "Solicitudes", con tope por hora y por
+--     correo. Avisa a quien edita el proyecto.
+--   · public_project_view (sin sesión): avance, lo que viene, lo entregado y
+--     el último estado. Sin nombres, comentarios, horas ni tareas #interno.
+--   · Con Gratis, enlaces públicos en 1 proyecto.
 -- =====================================================================
 
 
@@ -592,3 +603,153 @@ begin
 end $$;
 drop trigger if exists project_updates_notify_trg on public.project_updates;
 create trigger project_updates_notify_trg after insert on public.project_updates for each row execute function public._project_update_notify();
+
+
+-- =====================================================================
+--  FASE 4 · Entradas y clientes
+-- =====================================================================
+create table if not exists public.project_links (
+  project_id uuid not null references public.projects on delete cascade,
+  kind       text not null check (kind in ('form', 'view')),
+  token      text not null unique check (token ~ '^[A-Za-z0-9_-]{16,64}$'),
+  enabled    boolean not null default true,
+  intro      text check (char_length(intro) <= 500),
+  created_at timestamptz not null default now(),
+  primary key (project_id, kind)
+);
+alter table public.project_links enable row level security;
+drop policy if exists "links read" on public.project_links;
+create policy "links read" on public.project_links for select using (coalesce(can_edit_project(project_id), false));
+revoke insert, update, delete on public.project_links from anon, authenticated;
+grant select on public.project_links to authenticated;
+
+create table if not exists public.project_requests (
+  id         bigserial primary key,
+  project_id uuid not null references public.projects on delete cascade,
+  task_id    uuid references public.project_tasks on delete set null,
+  name       text,
+  email      text,
+  ip_hash    text,
+  created_at timestamptz not null default now()
+);
+create index if not exists project_requests_recent_idx on public.project_requests (project_id, created_at desc);
+alter table public.project_requests enable row level security;
+revoke all on public.project_requests from anon, authenticated;
+
+-- 32 caracteres al azar (gen_random_uuid es del núcleo de Postgres; no depende de pgcrypto).
+create or replace function public._new_token() returns text language sql volatile as $$
+  select left(replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', ''), 32);
+$$;
+
+-- Prender, apagar o cambiar un enlace (quien edita el proyecto).
+create or replace function public.project_link_set(p_project uuid, p_kind text, p_enabled boolean, p_rotate boolean default false, p_intro text default null)
+returns public.project_links
+language plpgsql security definer set search_path = public as $$
+declare r project_links; pr projects; cols jsonb;
+begin
+  if p_kind not in ('form', 'view') then raise exception 'Enlace inválido.' using errcode = 'P0001'; end if;
+  if not coalesce(can_edit_project(p_project), false) then raise exception 'Solo quien edita el proyecto maneja los enlaces.' using errcode = 'P0001'; end if;
+  select * into pr from projects where id = p_project;
+  if p_enabled and plan_of(pr.owner_id) = 'free' and exists (
+      select 1 from project_links l join projects o on o.id = l.project_id where o.owner_id = pr.owner_id and l.enabled and l.project_id <> p_project) then
+    raise exception 'Con el plan Gratis los enlaces para clientes van en 1 proyecto. Con Kaderno Pro, en todos.' using errcode = 'P0001';
+  end if;
+  insert into project_links (project_id, kind, token, enabled, intro)
+  values (p_project, p_kind, _new_token(), p_enabled, left(p_intro, 500))
+  on conflict (project_id, kind) do update set enabled = p_enabled,
+    token = case when p_rotate then _new_token() else project_links.token end,
+    intro = coalesce(left(p_intro, 500), project_links.intro)
+  returning * into r;
+  -- El formulario necesita la columna "Solicitudes" (al principio del tablero).
+  if p_kind = 'form' and p_enabled and not exists (select 1 from jsonb_array_elements(pr.board_columns) c where c ->> 'key' = 'solicitudes') then
+    cols := jsonb_build_array(jsonb_build_object('key', 'solicitudes', 'label', 'Solicitudes', 'color', '#b98cff')) || pr.board_columns;
+    update projects set board_columns = cols where id = p_project;
+  end if;
+  return r;
+end $$;
+revoke all on function public.project_link_set(uuid, text, boolean, boolean, text) from public, anon;
+grant execute on function public.project_link_set(uuid, text, boolean, boolean, text) to authenticated;
+
+-- Lo que muestra el formulario público.
+create or replace function public.public_form_info(p_token text) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare l project_links; pr projects;
+begin
+  select * into l from project_links where token = p_token and kind = 'form' and enabled;
+  if l.project_id is null then return null; end if;
+  select * into pr from projects where id = l.project_id;
+  return jsonb_build_object('name', pr.name, 'icon', pr.icon, 'color', pr.color, 'intro', l.intro);
+end $$;
+
+-- Recibe una solicitud: crea la tarea en "Solicitudes" y avisa a quien edita.
+create or replace function public.public_form_submit(p_token text, p_name text, p_email text, p_title text, p_detail text, p_due date default null, p_trap text default null)
+returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare l project_links; pr projects; tid uuid; ip text; mail text := lower(btrim(coalesce(p_email, ''))); m record;
+begin
+  select * into l from project_links where token = p_token and kind = 'form' and enabled;
+  if l.project_id is null then raise exception 'Este formulario ya no recibe solicitudes.' using errcode = 'P0001'; end if;
+  -- Campo trampa para robots: si viene lleno, se finge éxito y no se guarda nada.
+  if coalesce(btrim(p_trap), '') <> '' then return jsonb_build_object('ok', true); end if;
+  if char_length(btrim(coalesce(p_name, ''))) < 2 then raise exception 'Escribe tu nombre.' using errcode = 'P0001'; end if;
+  if mail !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then raise exception 'Escribe un correo válido para responderte.' using errcode = 'P0001'; end if;
+  if char_length(btrim(coalesce(p_title, ''))) < 3 then raise exception 'Cuenta en pocas palabras qué necesitas.' using errcode = 'P0001'; end if;
+  if p_due is not null and p_due < current_date then raise exception 'La fecha ya pasó.' using errcode = 'P0001'; end if;
+  ip := md5(coalesce(split_part(current_setting('request.headers', true)::json ->> 'x-forwarded-for', ',', 1), '') || l.project_id::text);
+  if (select count(*) from project_requests where project_id = l.project_id and created_at > now() - interval '1 hour') >= 30
+     or (select count(*) from project_requests where project_id = l.project_id and email = mail and created_at > now() - interval '1 day') >= 5
+     or (select count(*) from project_requests where ip_hash = ip and ip <> md5(l.project_id::text) and created_at > now() - interval '1 hour') >= 10 then
+    raise exception 'Llegaron muchas solicitudes seguidas. Intenta más tarde.' using errcode = 'P0001';
+  end if;
+  select * into pr from projects where id = l.project_id;
+  insert into project_tasks (project_id, title, description, status, due_date, labels, created_by, position)
+  values (l.project_id, left(btrim(p_title), 200),
+    'Pedido por ' || left(btrim(p_name), 80) || ' <' || left(mail, 120) || '>' || E'\n\n' || left(coalesce(btrim(p_detail), ''), 3000),
+    case when exists (select 1 from jsonb_array_elements(pr.board_columns) c where c ->> 'key' = 'solicitudes') then 'solicitudes'
+         else coalesce((select c ->> 'key' from jsonb_array_elements(pr.board_columns) c limit 1), 'todo') end,
+    p_due, array['solicitud'], pr.owner_id, extract(epoch from now()))
+  returning id into tid;
+  insert into project_requests (project_id, task_id, name, email, ip_hash) values (l.project_id, tid, left(btrim(p_name), 80), mail, ip);
+  for m in select user_id from project_members where project_id = l.project_id and role in ('owner', 'editor') loop
+    perform _rule_notify(m.user_id, 'request-' || tid, 'Solicitud nueva en ' || pr.name, left(btrim(p_name), 60) || ': ' || left(btrim(p_title), 140), l.project_id);
+  end loop;
+  return jsonb_build_object('ok', true);
+end $$;
+
+-- La vista del cliente: sin nombres, comentarios, horas ni tareas #interno.
+create or replace function public.public_project_view(p_token text) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare l project_links; pr projects; tz text; today date; u project_updates; total int; done int;
+begin
+  select * into l from project_links where token = p_token and kind = 'view' and enabled;
+  if l.project_id is null then return null; end if;
+  select * into pr from projects where id = l.project_id;
+  tz := coalesce(_kaderno_tz(pr.owner_id), 'America/Bogota');
+  today := (now() at time zone tz)::date;
+  select count(*), count(*) filter (where t.done) into total, done
+    from project_tasks t where t.project_id = pr.id and not ('interno' = any(t.labels)) and t.status <> 'solicitudes';
+  select * into u from project_updates where project_id = pr.id order by created_at desc limit 1;
+  return jsonb_build_object(
+    'name', pr.name, 'icon', pr.icon, 'color', pr.color, 'intro', l.intro, 'today', today,
+    'total', total, 'done', done,
+    'columns', (select coalesce(jsonb_agg(jsonb_build_object('label', c ->> 'label', 'color', c ->> 'color', 'done', coalesce((c ->> 'done')::boolean, false),
+                  'count', (select count(*) from project_tasks t where t.project_id = pr.id and t.status = c ->> 'key' and not ('interno' = any(t.labels))))), '[]'::jsonb)
+                from jsonb_array_elements(pr.board_columns) c where c ->> 'key' <> 'solicitudes'),
+    'next', (select coalesce(jsonb_agg(x order by x ->> 'due'), '[]'::jsonb) from (
+               select jsonb_build_object('title', t.title, 'due', coalesce((t.due_at at time zone tz)::date, t.due_date)) x
+                 from project_tasks t where t.project_id = pr.id and not t.done and not ('interno' = any(t.labels)) and t.status <> 'solicitudes'
+                  and coalesce((t.due_at at time zone tz)::date, t.due_date) between today - 30 and today + 21
+                order by coalesce((t.due_at at time zone tz)::date, t.due_date) limit 15) s),
+    'delivered', (select coalesce(jsonb_agg(x order by x ->> 'at' desc), '[]'::jsonb) from (
+               select jsonb_build_object('title', t.title, 'at', (t.done_at at time zone tz)::date) x
+                 from project_tasks t where t.project_id = pr.id and t.done and not ('interno' = any(t.labels)) and t.done_at > now() - interval '30 days'
+                order by t.done_at desc limit 15) s),
+    'update', case when u.id is null then null else jsonb_build_object('health', u.health, 'body', u.body, 'at', (u.created_at at time zone tz)::date) end);
+end $$;
+
+revoke all on function public.public_form_info(text) from public;
+revoke all on function public.public_form_submit(text, text, text, text, text, date, text) from public;
+revoke all on function public.public_project_view(text) from public;
+grant execute on function public.public_form_info(text) to anon, authenticated;
+grant execute on function public.public_form_submit(text, text, text, text, text, date, text) to anon, authenticated;
+grant execute on function public.public_project_view(text) to anon, authenticated;

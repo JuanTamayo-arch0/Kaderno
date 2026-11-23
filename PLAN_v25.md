@@ -130,3 +130,6 @@ Con esto, Pro reemplaza Toggl, Sunsama y un tomador de actas, que juntos pasan d
 10. (Fase 3) Las reglas son frases para escoger (cuándo y qué), no un editor. Asignar solo a gente del proyecto; al vencerse solo se avisa.
 11. (Fase 3) Las tareas bloqueadas se pueden mover igual (no se impide trabajar); solo se marcan y se avisa al desbloquearse.
 12. (Fase 3) El estado del proyecto lo escribe quien edita; la IA usa el cupo de resúmenes.
+13. (Fase 4) Las páginas públicas no piden cuenta y no muestran la barra de la app. Los datos salen de funciones del servidor que devuelven solo lo permitido; nadie sin sesión puede leer las tablas.
+14. (Fase 4) La etiqueta #interno esconde una tarea de la vista del cliente. Las solicitudes tampoco se ven ahí hasta que pasan a otra columna.
+15. (Fase 4) WhatsApp se abre con el texto listo y sin número (la persona escoge el chat). WhatsApp Business queda para después.
