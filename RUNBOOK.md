@@ -1523,3 +1523,26 @@ Corre otra vez `supabase/schema_v24.sql` completo. La fase 2 permite `source = '
 ### 3. Pruebas
 
 `npm test` (reloj, cronómetro olvidado, hoja semanal y cómo se edita una casilla) y `bash tests/run_sql.sh` (incluye `tests/sql/24b_pruebas.sql`: cronómetro, tarea del proyecto, mandar, aprobar, candado de la semana aprobada, devolver y plan Equipo).
+
+## Versión 25 (parte 3): proyectos de trabajo
+
+### 1. Migración y despliegue
+
+Corre otra vez `supabase/schema_v24.sql` completo (la fase 3 requiere también schema_v20). Agrega a `project_tasks` prioridad, etiquetas, "bloqueada por" y repetición; crea `project_rules` y `project_updates`, y `project_rules_tick`. Despliega otra vez `ai` (tarea `project_update`) y `billing-charge` (revisa cada hora las reglas "cuando se venza"):
+
+```
+npx supabase functions deploy ai
+npx supabase functions deploy billing-charge --no-verify-jwt
+```
+
+### 2. Lo que cambia para el usuario
+
+- En la tarea del proyecto, "+ Prioridad, etiquetas, bloqueos y repetir": prioridad (urgente, alta, normal, baja), etiquetas (#cliente), "bloqueada por" otras tareas del proyecto y repetición (como en las tareas personales; necesita fecha).
+- En el tablero y la lista se ven la prioridad, "Espera: …" si está bloqueada, la repetición y las etiquetas. Filtros arriba: lo mío, cada prioridad, bloqueadas y cada etiqueta.
+- Al terminar una tarea que se repite nace la siguiente en la primera columna. Al terminar la última que bloqueaba otra, le avisa a quien la tiene.
+- Opciones > **Reglas automáticas**: "cuando pase a una columna", "cuando se cree una tarea" o "cuando se venza", entonces "asignar a", "avisar a" o "avisar a quien la tiene". Con Gratis, 2 por proyecto; con Pro, 20.
+- Opciones > **Estado del proyecto**: en curso, en riesgo o atrasado, con una nota; "Redactar con IA" la escribe con el informe semanal. Le llega a todo el equipo y se ve en la barra del proyecto.
+
+### 3. Pruebas
+
+`npm test` (etiquetas, bloqueos, filtros, prioridad, reglas, estado sugerido y el de la IA) y `bash tests/run_sql.sh` (incluye `tests/sql/24c_pruebas.sql`).

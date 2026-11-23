@@ -85,3 +85,49 @@ test('hoja semanal: filas por proyecto o área y cómo editar una casilla', asyn
   assert.deepEqual(planCellEdit(cell, 60), { add: 0, updates: [], deletes: ['2'], blocked: 0 });
   assert.deepEqual(planCellEdit(cell, 0), { add: 0, updates: [], deletes: ['2'], blocked: 60 }, 'el cronómetro no se borra desde la hoja');
 });
+
+// ---------- Fase 3: proyectos de trabajo ----------
+test('proyectos: etiquetas, bloqueos, filtros y prioridad', async () => {
+  const { cleanLabels, projectLabels, blockersOf, isBlocked, filterTasks, byPriority, priorityOf } = await import('../lib/projectWork');
+  assert.deepEqual(cleanLabels(' Cliente, cliente;#Urgente, '), ['cliente', 'urgente']);
+  assert.equal(cleanLabels('a,b,c,d,e,f,g,h,i').length, 8);
+  const tasks = [
+    { id: 'a', done: true, priority: 'alta', labels: ['web'] },
+    { id: 'b', done: false, priority: 'baja', labels: ['web', 'cliente'], blocked_by: ['a', 'c'], assignee_id: 'u1' },
+    { id: 'c', done: false, priority: 'urgente', labels: ['cliente'] },
+    { id: 'd', done: false, priority: null, labels: [], blocked_by: ['a'] },
+  ];
+  const byId = Object.fromEntries(tasks.map((t) => [t.id, t]));
+  assert.deepEqual(projectLabels(tasks), ['cliente', 'web']);
+  assert.deepEqual(blockersOf(tasks[1], byId).map((t) => t.id), ['c'], 'la terminada ya no bloquea');
+  assert.ok(isBlocked(tasks[1], byId)); assert.ok(!isBlocked(tasks[3], byId));
+  assert.deepEqual(filterTasks(tasks, { label: 'cliente' }, byId).map((t) => t.id), ['b', 'c']);
+  assert.deepEqual(filterTasks(tasks, { blocked: true }, byId).map((t) => t.id), ['b']);
+  assert.deepEqual(filterTasks(tasks, { priority: 'urgente', mine: null }, byId).map((t) => t.id), ['c']);
+  assert.deepEqual(byPriority(tasks).map((t) => t.id), ['c', 'a', 'b', 'd']);
+  assert.equal(priorityOf('rara'), null);
+});
+
+test('proyectos: reglas y estado sugerido', async () => {
+  const { ruleText, ruleError, suggestHealth } = await import('../lib/projectWork');
+  const cols = [{ key: 'review', label: 'En revisión' }];
+  const name = (id: string) => (id === 'u1' ? 'Ana' : '?');
+  assert.equal(ruleText({ trigger: 'moved', column_key: 'review', action: 'assign', user_id: 'u1' }, cols, name), 'Cuando pase a En revisión, asignar a Ana');
+  assert.equal(ruleText({ trigger: 'created', column_key: null, action: 'notify', user_id: null }, cols, name), 'Cuando se cree una tarea, avisar al dueño del proyecto');
+  assert.equal(ruleText({ trigger: 'overdue', column_key: null, action: 'notify_assignee', user_id: null }, cols, name), 'Cuando se venza una tarea, avisar a quien la tiene');
+  assert.equal(ruleError({ trigger: 'moved', action: 'notify' }), 'Escoge la columna.');
+  assert.equal(ruleError({ trigger: 'overdue', action: 'assign', user_id: 'u1' }), 'Al vencerse solo se puede avisar.');
+  assert.equal(ruleError({ trigger: 'created', action: 'assign', user_id: 'u1' }), null);
+  assert.equal(suggestHealth({ late: [], next: [1], total: 5, doneTotal: 1 }), 'en_curso');
+  assert.equal(suggestHealth({ late: [1], next: [], total: 10, doneTotal: 2 }), 'en_riesgo');
+  assert.equal(suggestHealth({ late: [1, 2, 3], next: [], total: 20, doneTotal: 2 }), 'atrasado');
+});
+
+test('proyectos: el estado que redacta la IA se valida', async () => {
+  const { parseProjectUpdate, projectUpdatePrompt } = await import('../supabase/functions/_shared/projectUpdate');
+  assert.deepEqual(parseProjectUpdate('Listo: {"health":"en_riesgo","body":"Vamos bien — falta el acceso."}'), { health: 'en_riesgo', body: 'Vamos bien, falta el acceso.' }, 'sin rayas largas');
+  assert.equal(parseProjectUpdate('{"health":"raro","body":"x"}')!.health, null);
+  assert.equal(parseProjectUpdate('{"health":"en_curso","body":"  "}'), null);
+  assert.equal(parseProjectUpdate('nada'), null);
+  assert.match(projectUpdatePrompt('# Informe'), /# Informe$/);
+});

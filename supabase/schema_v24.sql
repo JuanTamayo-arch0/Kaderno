@@ -19,6 +19,16 @@
 --     y project_task_id (la tarea del proyecto).
 --   · timesheet_weeks: la semana de horas que cada integrante manda al dueño
 --     del proyecto (plan Equipo); aprobada, ya no se puede cambiar.
+--
+-- Fase 3 · Proyectos de trabajo (requiere schema_v20 para las repeticiones)
+--   · project_tasks gana priority, labels, blocked_by, repeat_rule y
+--     repeat_parent_id. Al terminar una tarea que se repite, nace la siguiente;
+--     al terminar la última que bloqueaba otra, avisa a quien la tiene.
+--   · project_rules: reglas simples por proyecto ("cuando pase a Revisión,
+--     asignar a Ana", "cuando se venza, avisar al dueño"...). Con Gratis 2 por
+--     proyecto, con Pro 20. project_rules_tick() revisa las vencidas cada hora.
+--   · project_updates: el estado semanal del proyecto (en curso, en riesgo,
+--     atrasado) con una nota; avisa al equipo.
 -- =====================================================================
 
 
@@ -365,3 +375,220 @@ revoke all on function public.timesheet_submit(uuid, date, text) from public, an
 revoke all on function public.timesheet_decide(uuid, uuid, date, text, text) from public, anon;
 grant execute on function public.timesheet_submit(uuid, date, text) to authenticated;
 grant execute on function public.timesheet_decide(uuid, uuid, date, text, text) to authenticated;
+
+
+-- =====================================================================
+--  FASE 3 · Proyectos de trabajo
+-- =====================================================================
+alter table public.project_tasks add column if not exists priority text;
+alter table public.project_tasks add column if not exists labels text[] not null default '{}';
+alter table public.project_tasks add column if not exists blocked_by uuid[] not null default '{}';
+alter table public.project_tasks add column if not exists repeat_rule jsonb;
+alter table public.project_tasks add column if not exists repeat_parent_id uuid references public.project_tasks on delete set null;
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'project_tasks_priority_ok') then
+    alter table public.project_tasks add constraint project_tasks_priority_ok check (priority is null or priority in ('urgente', 'alta', 'normal', 'baja'));
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'project_tasks_labels_ok') then
+    alter table public.project_tasks add constraint project_tasks_labels_ok check (cardinality(labels) <= 8 and cardinality(blocked_by) <= 10);
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'project_tasks_repeat_ok') then
+    alter table public.project_tasks add constraint project_tasks_repeat_ok
+      check (repeat_rule is null or (jsonb_typeof(repeat_rule) = 'object' and repeat_rule ->> 'freq' in ('day', 'week', 'month')));
+  end if;
+end $$;
+create index if not exists project_tasks_blocked_idx on public.project_tasks using gin (blocked_by);
+
+-- Limpia etiquetas y bloqueos (mismo proyecto, sin bloquearse a sí misma ni en círculo directo).
+create or replace function public._ptask_clean() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare l text; clean text[] := '{}'; b uuid; ok uuid[] := '{}';
+begin
+  foreach l in array coalesce(new.labels, '{}') loop
+    l := left(lower(btrim(l)), 30);
+    if l <> '' and not l = any(clean) then clean := clean || l; end if;
+  end loop;
+  new.labels := clean[1:8];
+  foreach b in array coalesce(new.blocked_by, '{}') loop
+    if b <> new.id and not b = any(ok) and exists (select 1 from project_tasks t where t.id = b and t.project_id = new.project_id and not (new.id = any(t.blocked_by))) then
+      ok := ok || b;
+    end if;
+  end loop;
+  new.blocked_by := ok[1:10];
+  return new;
+end $$;
+drop trigger if exists project_tasks_clean_trg on public.project_tasks;
+create trigger project_tasks_clean_trg before insert or update of labels, blocked_by on public.project_tasks
+  for each row execute function public._ptask_clean();
+
+-- Reglas simples por proyecto.
+create table if not exists public.project_rules (
+  id         uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects on delete cascade,
+  -- moved: la tarea pasa a la columna `column_key` · created: se crea una tarea · overdue: se vence
+  trigger    text not null check (trigger in ('moved', 'created', 'overdue')),
+  column_key text check (char_length(column_key) <= 40),
+  -- assign: asignar a `user_id` · notify: avisar a `user_id` (o al dueño si es null) · notify_assignee: avisar a quien la tiene
+  action     text not null check (action in ('assign', 'notify', 'notify_assignee')),
+  user_id    uuid references auth.users on delete cascade,
+  enabled    boolean not null default true,
+  created_by uuid references auth.users on delete set null default auth.uid(),
+  created_at timestamptz not null default now(),
+  check (trigger <> 'moved' or column_key is not null),
+  check (action <> 'assign' or user_id is not null),
+  check (not (trigger = 'overdue' and action = 'assign'))
+);
+create index if not exists project_rules_project_idx on public.project_rules (project_id) where enabled;
+alter table public.project_rules enable row level security;
+drop policy if exists "rules read" on public.project_rules;
+create policy "rules read" on public.project_rules for select using (coalesce(is_project_member(project_id), false));
+drop policy if exists "rules write" on public.project_rules;
+create policy "rules write" on public.project_rules for all using (coalesce(can_edit_project(project_id), false)) with check (coalesce(can_edit_project(project_id), false));
+
+create or replace function public._project_rules_cap() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare owner uuid; cap int;
+begin
+  select owner_id into owner from projects where id = new.project_id;
+  cap := case when plan_of(owner) = 'free' then 2 else 20 end;
+  if (select count(*) from project_rules where project_id = new.project_id) >= cap then
+    if cap = 2 then raise exception 'Con el plan Gratis cada proyecto tiene hasta 2 reglas. Con Kaderno Pro, 20.' using errcode = 'P0001'; end if;
+    raise exception 'Máximo 20 reglas por proyecto.' using errcode = 'P0001';
+  end if;
+  if new.user_id is not null and not exists (select 1 from project_members where project_id = new.project_id and user_id = new.user_id) then
+    raise exception 'Esa persona no está en el proyecto.' using errcode = 'P0001';
+  end if;
+  return new;
+end $$;
+drop trigger if exists project_rules_cap_trg on public.project_rules;
+create trigger project_rules_cap_trg before insert on public.project_rules for each row execute function public._project_rules_cap();
+
+create or replace function public._rule_notify(p_user uuid, p_ref text, p_title text, p_body text, p_project uuid)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if p_user is null then return; end if;
+  insert into notification_queue (user_id, kind, ref, title, body, url)
+  values (p_user, 'project_rule', p_ref, left(p_title, 200), left(p_body, 300), '/proyectos/' || p_project) on conflict do nothing;
+exception when undefined_table then null;
+end $$;
+
+-- Antes de guardar: reglas que asignan.
+create or replace function public._ptask_rules_before() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare r project_rules;
+begin
+  for r in select * from project_rules where project_id = new.project_id and enabled and action = 'assign'
+             and ((trigger = 'created' and tg_op = 'INSERT' and new.assignee_id is null)
+               or (trigger = 'moved' and column_key = new.status and (tg_op = 'INSERT' or old.status is distinct from new.status)))
+           order by created_at loop
+    if exists (select 1 from project_members where project_id = new.project_id and user_id = r.user_id) then
+      new.assignee_id := r.user_id;
+    end if;
+  end loop;
+  return new;
+end $$;
+drop trigger if exists project_tasks_rules_before_trg on public.project_tasks;
+create trigger project_tasks_rules_before_trg before insert or update of status on public.project_tasks
+  for each row execute function public._ptask_rules_before();
+
+-- Después de guardar: reglas que avisan, la siguiente repetición y los desbloqueos.
+create or replace function public._ptask_after() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare r project_rules; pr projects; col text; tz text; today date; due date; nd date; nid uuid; t record;
+begin
+  select * into pr from projects where id = new.project_id;
+  -- Avisos de reglas al mover o crear.
+  for r in select * from project_rules where project_id = new.project_id and enabled and action in ('notify', 'notify_assignee')
+             and ((trigger = 'created' and tg_op = 'INSERT')
+               or (trigger = 'moved' and column_key = new.status and (tg_op = 'INSERT' or old.status is distinct from new.status))) loop
+    select coalesce(c ->> 'label', new.status) into col from jsonb_array_elements(pr.board_columns) c where c ->> 'key' = new.status limit 1;
+    perform _rule_notify(case when r.action = 'notify_assignee' then new.assignee_id else coalesce(r.user_id, pr.owner_id) end,
+      'rule-' || r.id || '-' || new.id || '-' || extract(epoch from now())::bigint,
+      case when r.trigger = 'created' then 'Tarea nueva en ' || pr.name else '"' || new.title || '" pasó a ' || coalesce(col, new.status) end,
+      new.title, new.project_id);
+  end loop;
+
+  if tg_op = 'UPDATE' and new.done and not coalesce(old.done, false) then
+    -- La siguiente repetición (una sola vez por tarea).
+    if new.repeat_rule is not null and not exists (select 1 from project_tasks where repeat_parent_id = new.id) then
+      tz := coalesce(_kaderno_tz(coalesce(new.assignee_id, pr.owner_id)), 'America/Bogota');
+      today := (now() at time zone tz)::date;
+      due := coalesce((new.due_at at time zone tz)::date, new.due_date);
+      nd := _repeat_next(new.repeat_rule, due, today, today);
+      if nd is not null then
+        insert into project_tasks (project_id, title, description, status, assignee_id, due_date, due_at, priority, labels, repeat_rule, repeat_parent_id, created_by, position)
+        values (new.project_id, new.title, new.description,
+          coalesce((select c ->> 'key' from jsonb_array_elements(pr.board_columns) c where not coalesce((c ->> 'done')::boolean, false) limit 1), 'todo'),
+          new.assignee_id, nd, case when new.due_at is not null then new.due_at + make_interval(days => nd - coalesce(due, today)) end,
+          new.priority, new.labels, new.repeat_rule, new.id, new.created_by, new.position)
+        returning id into nid;
+      end if;
+    end if;
+    -- Desbloqueos: tareas que esperaban a esta y ya no esperan a ninguna.
+    for t in select pt.id, pt.title, pt.assignee_id from project_tasks pt
+              where pt.project_id = new.project_id and new.id = any(pt.blocked_by) and not pt.done
+                and not exists (select 1 from project_tasks b where b.id = any(pt.blocked_by) and not b.done) loop
+      perform _rule_notify(coalesce(t.assignee_id, pr.owner_id), 'unblock-' || t.id || '-' || new.id,
+        'Ya puedes seguir con "' || t.title || '"', 'Se terminó "' || new.title || '", que la bloqueaba.', new.project_id);
+    end loop;
+  end if;
+  return null;
+end $$;
+drop trigger if exists project_tasks_after_trg on public.project_tasks;
+create trigger project_tasks_after_trg after insert or update on public.project_tasks
+  for each row execute function public._ptask_after();
+
+-- Cada hora (desde billing-charge): avisos de las reglas "cuando se venza".
+create or replace function public.project_rules_tick() returns int
+language plpgsql security definer set search_path = public as $$
+declare r record; n int := 0;
+begin
+  for r in select pr.id as rule_id, pr.action, pr.user_id, p.owner_id, p.name, p.id as project_id, t.id as task_id, t.title, t.assignee_id
+             from project_rules pr join projects p on p.id = pr.project_id
+             join project_tasks t on t.project_id = pr.project_id and not t.done
+            where pr.enabled and pr.trigger = 'overdue'
+              and coalesce(t.due_at, (t.due_date + 1)::timestamp at time zone coalesce(_kaderno_tz(p.owner_id), 'America/Bogota')) < now()
+              and coalesce(t.due_at, (t.due_date + 1)::timestamp at time zone coalesce(_kaderno_tz(p.owner_id), 'America/Bogota')) > now() - interval '3 days' loop
+    perform _rule_notify(case when r.action = 'notify_assignee' then r.assignee_id else coalesce(r.user_id, r.owner_id) end,
+      'overdue-' || r.rule_id || '-' || r.task_id, 'Se venció "' || r.title || '"', 'En ' || r.name || '.', r.project_id);
+    n := n + 1;
+  end loop;
+  return n;
+end $$;
+revoke all on function public.project_rules_tick() from public, anon, authenticated;
+do $$ begin
+  if exists (select 1 from pg_roles where rolname = 'service_role') then grant execute on function public.project_rules_tick() to service_role; end if;
+end $$;
+
+-- Estado semanal del proyecto.
+create table if not exists public.project_updates (
+  id         uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects on delete cascade,
+  author_id  uuid not null references auth.users on delete cascade default auth.uid(),
+  health     text not null check (health in ('en_curso', 'en_riesgo', 'atrasado')),
+  body       text not null check (char_length(btrim(body)) between 1 and 2000),
+  created_at timestamptz not null default now()
+);
+create index if not exists project_updates_project_idx on public.project_updates (project_id, created_at desc);
+alter table public.project_updates enable row level security;
+drop policy if exists "updates read" on public.project_updates;
+create policy "updates read" on public.project_updates for select using (coalesce(is_project_member(project_id), false));
+drop policy if exists "updates write" on public.project_updates;
+create policy "updates write" on public.project_updates for insert with check (author_id = auth.uid() and coalesce(can_edit_project(project_id), false));
+drop policy if exists "updates delete" on public.project_updates;
+create policy "updates delete" on public.project_updates for delete using (author_id = auth.uid());
+
+create or replace function public._project_update_notify() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare m record; pr projects;
+begin
+  select * into pr from projects where id = new.project_id;
+  for m in select user_id from project_members where project_id = new.project_id and user_id <> new.author_id loop
+    perform _rule_notify(m.user_id, 'update-' || new.id,
+      pr.name || ': ' || case new.health when 'en_curso' then 'en curso' when 'en_riesgo' then 'en riesgo' else 'atrasado' end,
+      left(new.body, 200), new.project_id);
+  end loop;
+  return null;
+end $$;
+drop trigger if exists project_updates_notify_trg on public.project_updates;
+create trigger project_updates_notify_trg after insert on public.project_updates for each row execute function public._project_update_notify();

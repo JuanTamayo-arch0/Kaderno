@@ -381,7 +381,7 @@ function lbl() { return { color: C.muted, fontSize: 12.5, fontWeight: '600' as c
 // ---------- Repetir (v21) ----------
 const LETTERS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
 const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];
-function RepeatPicker({ value, onChange, date }: { value: RepeatRule | null; onChange: (r: RepeatRule | null) => void; date: string }) {
+export function RepeatPicker({ value, onChange, date }: { value: RepeatRule | null; onChange: (r: RepeatRule | null) => void; date: string }) {
   const d = new Date(date + 'T12:00:00');
   const kind = !value ? 'none' : value.freq === 'day' ? 'day' : value.freq === 'month' ? 'month'
     : value.days?.join() === '1,2,3,4,5' && value.interval === 1 ? 'weekdays' : value.interval === 2 ? 'week2' : 'week';

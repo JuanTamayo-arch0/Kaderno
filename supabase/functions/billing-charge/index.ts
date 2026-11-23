@@ -8,6 +8,7 @@
 //      (por si el webhook no llegó).
 //   3. Avisa cuando la prueba termina mañana o un plan sin renovación termina
 //      en 3 días.
+//   4. (v25) Avisa las tareas de proyecto vencidas según sus reglas.
 //
 //  Secretos: los de "billing" y NOTIFY_CRON_SECRET (el mismo de "notify").
 //  Desplegar:  npx supabase functions deploy billing-charge --no-verify-jwt
@@ -58,5 +59,8 @@ Deno.serve(async (req) => {
 
   const { data: n } = await db.rpc('billing_reminders');
   out.reminders = Number(n ?? 0);
+  // v25: reglas de proyecto "cuando se venza, avisar" (schema_v24, fase 3).
+  const { data: od, error: odErr } = await db.rpc('project_rules_tick');
+  (out as any).overdue = odErr ? null : Number(od ?? 0);
   return new Response(JSON.stringify({ ...out, wompi: !!cfg }), { headers: { 'content-type': 'application/json' } });
 });

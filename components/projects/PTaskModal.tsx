@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { PRIORITIES, cleanLabels, projectLabels, type Priority } from '../../lib/projectWork';
+import { RepeatPicker } from '../TaskModal';
+import type { RepeatRule } from '../../lib/repeat';
 import { toast } from '../../lib/feedback';
 import { startStopwatch } from '../../lib/stopwatch';
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
@@ -19,8 +22,8 @@ import { TaskComments } from './TaskComments';
 //  comentarios con @menciones (v23, fase 2).
 // ============================================================
 
-export function PTaskModal({ visible, task, projectId, status, cols, members, steps, editable, onClose, onSaved, onStepsChanged, onStepPatch, myId = null, isOwner = false, onCommentCount, defaultDate = null }: {
-  defaultDate?: Date | null; myId?: string | null; isOwner?: boolean; onCommentCount?: (taskId: string, n: number) => void;
+export function PTaskModal({ visible, task, projectId, status, cols, members, steps, editable, onClose, onSaved, onStepsChanged, onStepPatch, myId = null, isOwner = false, onCommentCount, defaultDate = null, allTasks = [] }: {
+  defaultDate?: Date | null; allTasks?: PTask[]; myId?: string | null; isOwner?: boolean; onCommentCount?: (taskId: string, n: number) => void;
   visible: boolean; task: PTask | null; projectId: string; status: string;
   cols: BoardColumn[]; members: Member[]; steps: PStep[]; editable: boolean;
   onClose: () => void; onSaved: () => void; onStepsChanged: () => void;
@@ -38,6 +41,13 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
   const [busy, setBusy] = useState(false);
   const [nuevoPaso, setNuevoPaso] = useState('');
   const [abierta, setAbierta] = useState<string | null>(null);
+  // v25: prioridad, etiquetas, bloqueos y repetición.
+  const [prio, setPrio] = useState<Priority | null>(null);
+  const [labels, setLabels] = useState<string[]>([]);
+  const [labelTxt, setLabelTxt] = useState('');
+  const [blocked, setBlocked] = useState<string[]>([]);
+  const [repeat, setRepeat] = useState<RepeatRule | null>(null);
+  const [more, setMore] = useState(false);
 
   // Rellenar el formulario al abrir. Es el patrón de "ajustar estado durante el
   // render" que React permite, y no un useEffect: así no hay un parpadeo con los
@@ -64,6 +74,12 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
       setNuevoPaso('');
       setShowPicker(false);
       setShowStart(false);
+      setPrio((task?.priority as Priority) ?? null);
+      setLabels(task?.labels ?? []);
+      setLabelTxt('');
+      setBlocked(task?.blocked_by ?? []);
+      setRepeat(task?.repeat_rule ?? null);
+      setMore(!!(task?.priority || task?.labels?.length || task?.blocked_by?.length || task?.repeat_rule));
     }
   }
 
@@ -76,16 +92,18 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
     if (start && date && start > date) { setBusy(false); return notify('El inicio va antes de la entrega'); }
     const startAt = start ? new Date(start.getFullYear(), start.getMonth(), start.getDate(), 8, 0).toISOString() : null;
     const startPatch = start || task?.start_at ? { start_at: startAt } : {};
+    const allLabels = cleanLabels([...labels, ...cleanLabels(labelTxt)]);
+    const v25 = { priority: prio, labels: allLabels, blocked_by: blocked, repeat_rule: due ? repeat : null };
     try {
       if (task) {
         await updateProjectTask(task.id, {
           title: title.trim(), description: desc.trim() || null, status: st,
-          assignee_id: assignee, due_date: due, due_at: dueAt, ...startPatch,
+          assignee_id: assignee, due_date: due, due_at: dueAt, ...startPatch, ...v25,
         });
       } else {
         const creada = await addProjectTask({
           project_id: projectId, title: title.trim(), status: st,
-          description: desc.trim() || null, assignee_id: assignee, due_date: due, due_at: dueAt, ...startPatch,
+          description: desc.trim() || null, assignee_id: assignee, due_date: due, due_at: dueAt, ...startPatch, ...v25,
         });
         await logActivity(projectId, 'task_new', `creó “${creada.title}”`, { task_id: creada.id });
       }
@@ -236,6 +254,69 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
               <Pressable onPress={() => setStart(null)} style={{ alignSelf: 'flex-start', marginTop: 6 }}>
                 <Text style={{ color: C.muted, fontSize: 12 }}>Quitar el inicio</Text>
               </Pressable>
+            )}
+
+            {!more ? (
+              <Pressable onPress={() => setMore(true)} style={{ alignSelf: 'flex-start', marginTop: 14 }} accessibilityRole="button">
+                <Text style={{ color: C.brand, fontSize: 13, fontWeight: '700' }}>+ Prioridad, etiquetas, bloqueos y repetir</Text>
+              </Pressable>
+            ) : (
+              <>
+                <Text style={lbl}>Prioridad</Text>
+                <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                  {[null, ...PRIORITIES].map((p) => {
+                    const on = (p?.key ?? null) === prio;
+                    return (
+                      <Pressable key={p?.key ?? 'none'} onPress={() => editable && setPrio(p?.key ?? null)} accessibilityRole="radio" accessibilityState={{ checked: on }}
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 7, paddingHorizontal: 11, borderRadius: R.pill, borderWidth: 1, borderColor: on ? (p?.color ?? C.brand) : C.line, backgroundColor: on ? (p?.color ?? C.brand) + '22' : 'transparent' }}>
+                        {p && <Ionicons name="flag" size={12} color={p.color} />}
+                        <Text style={{ color: on ? C.text : C.muted, fontSize: 12.5, fontWeight: on ? '700' : '500' }}>{p?.label ?? 'Sin prioridad'}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                <Text style={lbl}>Etiquetas</Text>
+                <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+                  {labels.map((l) => (
+                    <Pressable key={l} onPress={() => editable && setLabels(labels.filter((x) => x !== l))} accessibilityLabel={`Quitar etiqueta ${l}`}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 9, borderRadius: R.pill, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.line }}>
+                      <Text style={{ color: C.text, fontSize: 12 }}>#{l}</Text>{editable && <Ionicons name="close" size={11} color={C.muted} />}
+                    </Pressable>
+                  ))}
+                  {projectLabels(allTasks).filter((l) => !labels.includes(l)).slice(0, 6).map((l) => (
+                    <Pressable key={l} onPress={() => editable && setLabels(cleanLabels([...labels, l]))} accessibilityLabel={`Agregar etiqueta ${l}`}
+                      style={{ paddingVertical: 4, paddingHorizontal: 9, borderRadius: R.pill, borderWidth: 1, borderColor: C.line, borderStyle: 'dashed' }}>
+                      <Text style={{ color: C.muted, fontSize: 12 }}>+ {l}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+                {editable && (
+                  <TextInput value={labelTxt} onChangeText={setLabelTxt} placeholder="Nueva etiqueta (Enter para agregar)" placeholderTextColor={C.muted}
+                    onSubmitEditing={() => { setLabels(cleanLabels([...labels, ...cleanLabels(labelTxt)])); setLabelTxt(''); }} style={input} accessibilityLabel="Nueva etiqueta" />
+                )}
+
+                {(allTasks.length > 1 || blocked.length > 0) && (
+                  <>
+                    <Text style={lbl}>Bloqueada por (espera a que se terminen)</Text>
+                    <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+                      {allTasks.filter((x) => x.id !== task?.id && !x.done && !(x.blocked_by ?? []).includes(task?.id ?? '-')).slice(0, 20).map((x) => {
+                        const on = blocked.includes(x.id);
+                        return (
+                          <Pressable key={x.id} onPress={() => editable && setBlocked(on ? blocked.filter((b) => b !== x.id) : [...blocked, x.id].slice(0, 10))} accessibilityRole="checkbox" accessibilityState={{ checked: on }}
+                            style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 6, paddingHorizontal: 10, borderRadius: R.pill, borderWidth: 1, borderColor: on ? C.warn : C.line, backgroundColor: on ? C.warn + '22' : 'transparent', maxWidth: 240 }}>
+                            <Ionicons name={on ? 'lock-closed' : 'lock-open-outline'} size={12} color={on ? C.warnText : C.muted} />
+                            <Text style={{ color: on ? C.text : C.muted, fontSize: 12 }} numberOfLines={1}>{x.title}</Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </>
+                )}
+
+                {date && <View style={{ marginTop: 12 }}><RepeatPicker value={repeat} onChange={setRepeat} date={`${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`} /></View>}
+                {!date && <Text style={{ color: C.muted, fontSize: 12, marginTop: 10 }}>Para que se repita, ponle fecha de entrega.</Text>}
+              </>
             )}
 
             {/* ---------- Microtareas ---------- */}

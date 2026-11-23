@@ -13,6 +13,7 @@
 //  v24: el tope depende del plan (Gratis o Pro, ver _shared/plans.ts y
 //  schema_v23). Sin schema_v23 se usan los topes de Pro. Nueva tarea:
 //  ACTA DE REUNIÓN (meeting), con decisiones y tareas con responsable.
+//  v25: ESTADO DEL PROYECTO (project_update), con el cupo de resúmenes.
 // ============================================================
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
@@ -22,6 +23,7 @@ import { quizPrompt, parseQuiz, gradePrompt, parseGrades, recallPrompt, parseRec
 import { classSummaryPrompt, parseClassSummary } from '../_shared/classSummary.ts';
 import { limitOf, limitMessage, type LimitKey } from '../_shared/plans.ts';
 import { meetingPrompt, parseMeeting } from '../_shared/meeting.ts';
+import { projectUpdatePrompt, parseProjectUpdate } from '../_shared/projectUpdate.ts';
 
 const TASKS: LimitKey[] = ['flashcards', 'quiz', 'recall', 'grade', 'class_summary', 'meeting', 'summary', 'steps'];
 
@@ -60,7 +62,9 @@ Deno.serve(async (req) => {
     }
 
     const headings: string[] = Array.isArray(body.headings) ? body.headings.map(String).slice(0, 40) : [];
-    const prompt = task === 'meeting'
+    const prompt = task === 'project_update'
+      ? projectUpdatePrompt(String(content))
+      : task === 'meeting'
       ? meetingPrompt(String(content), String(body.notes_md ?? ''), Array.isArray(body.people) ? body.people.map((x: unknown) => String(x).slice(0, 60)).slice(0, 40) : [], /^\d{4}-\d{2}-\d{2}$/.test(String(body.today ?? '')) ? String(body.today) : '')
       : task === 'class_summary'
       ? classSummaryPrompt(String(content), String(body.notes_md ?? ''), body.subject ? String(body.subject) : null)
@@ -94,6 +98,11 @@ Deno.serve(async (req) => {
     const data = await res.json();
     const text = (data.content ?? []).map((b: any) => b.text ?? '').join('').trim();
 
+    if (task === 'project_update') {
+      const up = parseProjectUpdate(text);
+      if (!up) return json({ error: 'La IA no pudo redactar el estado, intenta de nuevo.' }, 502);
+      return json(up);
+    }
     if (task === 'meeting') {
       const minutes = parseMeeting(text);
       if (!minutes) return json({ error: 'La IA no pudo armar el acta, intenta de nuevo.' }, 502);

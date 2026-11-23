@@ -19,6 +19,9 @@ import { play } from '../../lib/sound';
 import { BulkAction, BulkBar, BulkDialog, ExportSheet, confirmBulkDelete } from '../../components/projects/BulkTools';
 import { ReportSheet } from '../../components/projects/ReportSheet';
 import { BudgetSheet } from '../../components/projects/BudgetSheet';
+import { RulesSheet, StatusSheet } from '../../components/projects/WorkSheets';
+import { HEALTH, PRIORITIES, filterTasks, projectLabels, type TaskFilter } from '../../lib/projectWork';
+import { getUpdates, type ProjectUpdate } from '../../lib/projectWorkDb';
 import { undoProjectBatch } from '../../lib/projectsBulk';
 import { Subject, getSubjects } from '../../lib/db';
 import { Activity, Member, PStep, PTask, Profile, Project, ProjectRole, canEdit, columnsOf, getActivity, getMembers, getProject, getProjectSteps, getProjectTasks, logActivity, moveTask, myRole, setBoardColumns, updateProjectTask } from '../../lib/projects';
@@ -88,6 +91,10 @@ function ProyectoDetalle() {
   const [exportOpen, setExportOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [budgetOpen, setBudgetOpen] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const [latest, setLatest] = useState<ProjectUpdate | null>(null);
+  const [filter, setFilter] = useState<TaskFilter>({});
   const [cleanupOpen, setCleanupOpen] = useState(false);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -150,18 +157,26 @@ function ProyectoDetalle() {
   // Tarjetas agrupadas por columna. Las que quedaron con un `status` que ya no
   // existe (porque alguien borró esa columna) se recogen en la primera, para que
   // no desaparezcan del tablero.
+  const byId = useMemo(() => Object.fromEntries(tasks.map((t) => [t.id, t])), [tasks]);
+  const filtering = !!(filter.priority || filter.label || filter.mine || filter.blocked);
+  const shown = useMemo(() => (filtering ? filterTasks(tasks, filter, byId) : tasks), [tasks, filter, byId, filtering]);
+  const labels = useMemo(() => projectLabels(tasks), [tasks]);
+  const usedPrios = useMemo(() => PRIORITIES.filter((p) => p.key !== 'normal' && tasks.some((t) => t.priority === p.key && !t.done)), [tasks]);
+  const anyBlocked = useMemo(() => tasks.some((t) => !t.done && (t.blocked_by ?? []).some((b) => byId[b] && !byId[b].done)), [tasks, byId]);
+  useEffect(() => { if (projectId) getUpdates(projectId).then((l) => setLatest(l?.[0] ?? null)).catch(() => {}); }, [projectId]);
+
   const grouped = useMemo(() => {
     const known = new Set(cols.map((c) => c.key));
     const first = cols[0]?.key ?? 'todo';
     const out: Record<string, PTask[]> = {};
     cols.forEach((c) => { out[c.key] = []; });
-    tasks.forEach((t) => {
+    shown.forEach((t) => {
       const k = known.has(t.status) ? t.status : first;
       (out[k] ??= []).push(t);
     });
     Object.values(out).forEach((arr) => arr.sort((a, b) => a.position - b.position));
     return out;
-  }, [tasks, cols]);
+  }, [shown, cols]);
 
   const doneCount = tasks.filter((t) => t.done).length;
   const myTasksHere = myId ? tasks.filter((t) => t.assignee_id === myId && !t.done).length : 0;
@@ -281,6 +296,13 @@ function ProyectoDetalle() {
               {role === 'viewer' ? ' · solo lectura' : ''}
             </Text>
           </View>
+          {latest && (
+            <Pressable onPress={() => setStatusOpen(true)} accessibilityRole="button" accessibilityLabel={`Estado: ${HEALTH[latest.health].label}`}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 5, paddingHorizontal: 10, borderRadius: R.pill, backgroundColor: HEALTH[latest.health].color + '22' }}>
+              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: HEALTH[latest.health].color }} />
+              {isWide && <Text style={{ color: C.text, fontSize: 12, fontWeight: '700' }}>{HEALTH[latest.health].label}</Text>}
+            </Pressable>
+          )}
           {isWide && editable && isTaskView && !selecting && (
             <HeaderBtn icon="checkbox-outline" label="Seleccionar" wide onPress={() => setSelecting(true)} />
           )}
@@ -303,6 +325,16 @@ function ProyectoDetalle() {
             );
           })}
         </ScrollView>
+        {isTaskView && (labels.length > 0 || usedPrios.length > 0 || anyBlocked || filtering) && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8, flexGrow: 0 }} contentContainerStyle={{ gap: 6, alignItems: 'center' }} accessibilityLabel="Filtros">
+            <Ionicons name="filter-outline" size={14} color={C.muted} />
+            {myId && <FChip label="Lo mío" on={!!filter.mine} onPress={() => setFilter({ ...filter, mine: filter.mine ? null : myId })} />}
+            {usedPrios.map((p) => <FChip key={p.key} label={p.label} color={p.color} on={filter.priority === p.key} onPress={() => setFilter({ ...filter, priority: filter.priority === p.key ? null : p.key })} />)}
+            {anyBlocked && <FChip label="Bloqueadas" on={!!filter.blocked} onPress={() => setFilter({ ...filter, blocked: !filter.blocked })} />}
+            {labels.slice(0, 8).map((l) => <FChip key={l} label={'#' + l} on={filter.label === l} onPress={() => setFilter({ ...filter, label: filter.label === l ? null : l })} />)}
+            {filtering && <Pressable onPress={() => setFilter({})} hitSlop={6}><Text style={{ color: C.brand, fontSize: 12, fontWeight: '700' }}>Quitar filtros ({shown.length} de {tasks.length})</Text></Pressable>}
+          </ScrollView>
+        )}
       </View>
 
       {/* ---------- Cuerpo ---------- */}
@@ -310,7 +342,7 @@ function ProyectoDetalle() {
         <Text style={{ color: C.muted, padding: 24 }}>Cargando…</Text>
       ) : view === 'tablero' ? (
         <Tablero
-          cols={cols} grouped={grouped} steps={steps} members={members} subject={subject} comments={comments}
+          cols={cols} grouped={grouped} steps={steps} members={members} subject={subject} comments={comments} byId={byId}
           editable={editable} isWide={isWide} myId={myId}
           selecting={selecting} selected={selected} onToggleSelect={toggleSelect}
           onOpen={setEditingTask}
@@ -320,7 +352,7 @@ function ProyectoDetalle() {
         />
       ) : view === 'lista' ? (
         <Lista
-          tasks={tasks} cols={cols} steps={steps} members={members} comments={comments}
+          tasks={shown} byId={byId} cols={cols} steps={steps} members={members} comments={comments}
           editable={editable} isWide={isWide}
           selecting={selecting} selected={selected} onToggleSelect={toggleSelect}
           onOpen={setEditingTask}
@@ -355,6 +387,7 @@ function ProyectoDetalle() {
 
       {/* ---------- Ventanas ---------- */}
       <PTaskModal
+        allTasks={tasks}
         visible={!!editingTask || !!newIn}
         task={editingTask}
         projectId={projectId}
@@ -411,6 +444,8 @@ function ProyectoDetalle() {
               ...(editable ? [{ icon: 'cloud-upload-outline', label: 'Importar tareas', hint: 'Desde un CSV, un JSON o una IA', onPress: () => setImportOpen(true) }] : []),
               { icon: 'download-outline', label: 'Exportar tareas', hint: 'Para editarlas en Excel o pasarlas a una IA', onPress: () => setExportOpen(true) },
               { icon: 'document-text-outline', label: 'Informe semanal', hint: 'Lo hecho, lo que viene y lo atrasado, listo para mandar', onPress: () => setReportOpen(true) },
+              { icon: 'pulse-outline', label: 'Estado del proyecto', hint: 'En curso, en riesgo o atrasado, con una nota para el equipo', onPress: () => setStatusOpen(true) },
+              { icon: 'flash-outline', label: 'Reglas automáticas', hint: 'Asignar o avisar cuando algo pasa', onPress: () => setRulesOpen(true) },
               { icon: 'hourglass-outline', label: 'Presupuesto de horas', hint: 'Cuánto va el equipo y aviso al 80 % y al 100 %', onPress: () => setBudgetOpen(true) },
             ],
           },
@@ -454,6 +489,8 @@ function ProyectoDetalle() {
       {project && (
         <>
         <ExportSheet visible={exportOpen} project={project} members={members} onClose={() => setExportOpen(false)} />
+        <StatusSheet visible={statusOpen} project={project} tasks={tasks} members={members} editable={editable} myId={myId} onClose={() => setStatusOpen(false)} onChanged={setLatest} />
+        <RulesSheet visible={rulesOpen} project={project} cols={cols} members={members} editable={editable} onClose={() => setRulesOpen(false)} />
         <BudgetSheet visible={budgetOpen} projectId={project.id} projectName={project.name} editable={editable} onClose={() => setBudgetOpen(false)} />
         <ReportSheet visible={reportOpen} project={project} tasks={tasks} members={members} editable={editable} onClose={() => setReportOpen(false)} />
         </>
@@ -512,5 +549,15 @@ export default function ProyectoDetalleProtegida() {
     <RequireAuth>
       <ProyectoDetalle />
     </RequireAuth>
+  );
+}
+
+function FChip({ label, on, onPress, color }: { label: string; on: boolean; onPress: () => void; color?: string }) {
+  return (
+    <Pressable onPress={onPress} accessibilityRole="checkbox" accessibilityState={{ checked: on }}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 5, paddingHorizontal: 10, borderRadius: R.pill, borderWidth: 1, borderColor: on ? (color ?? C.brand) : C.line, backgroundColor: on ? (color ?? C.brand) + '22' : 'transparent' }}>
+      {color && <Ionicons name="flag" size={11} color={color} />}
+      <Text style={{ color: on ? C.text : C.muted, fontSize: 12, fontWeight: on ? '700' : '500' }}>{label}</Text>
+    </Pressable>
   );
 }
