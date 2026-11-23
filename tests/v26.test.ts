@@ -185,9 +185,10 @@ test('movimiento: Trabajo más recto, transiciones y gestos con respeto a reduci
   }
   const fs = await import('node:fs');
   const motion = fs.readFileSync('lib/motion.ts', 'utf8');
-  assert.match(motion, /::view-transition-old\(root\)/);
-  assert.match(motion, /prefers-reduced-motion: reduce\) \{\s*::view-transition-group/);
-  assert.match(motion, /export function vtNavigate/);
+  // Las transiciones de vista congelaban cada cambio de pantalla hasta 4 s: se navega directo.
+  assert.ok(!/startViewTransition|::view-transition/.test(motion), 'sin transiciones de vista');
+  assert.match(motion, /export function vtNavigate\(go: \(\) => void\): void \{\s*go\(\);\s*\}/);
+  assert.match(motion, /\[data-anim="page"\]/, 'la pantalla nueva entra con CSS');
   assert.match(motion, /Posiciones relativas a la lista/, 'el FLIP no confunde el desplazamiento con un movimiento');
   const row = fs.readFileSync('components/TaskRow.tsx', 'utf8');
   assert.match(row, /Math\.abs\(g\.dx\) > Math\.abs\(g\.dy\) \* 2/, 'deslizar solo con gestos claramente horizontales');

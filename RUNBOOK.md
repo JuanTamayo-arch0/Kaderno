@@ -1788,3 +1788,11 @@ Los 59 KB de más son las funciones de v25 y v26. La tira de la mascota (16 cuad
 ### 5. Pruebas
 
 `npm test` (contraste de todos los temas sobre tarjeta y fondo, documentos sobrios con su pie).
+
+## Arreglo: la página se congelaba al cambiar de pantalla
+
+Desde v26 (parte 4), cada cambio de pantalla dejaba la página quieta unos 4 segundos. La transición del navegador esperaba a que se pintara la pantalla nueva, pero el navegador no pinta mientras arranca una transición: se quedaba esperando hasta su límite de 4 segundos. Ahora se navega directo y la pantalla nueva entra con su animación de CSS, que no bloquea.
+
+Medido con la CPU 4 veces más lenta, ida y vuelta entre Materias, Oráculo, Horario y Hoy: antes 4.124 ms por cambio (mediana), ahora 227 ms.
+
+No hay migración. Se pierde que el ícono de la materia viaje hasta su ficha.
