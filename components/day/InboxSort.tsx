@@ -5,7 +5,7 @@ import { Button } from '../ds';
 import { Sheet } from '../cards/CardForms';
 import { SubjectPicker } from '../SubjectPicker';
 import { DateField } from '../DateTime';
-import { updateTask, deleteTask, addNote, type Task, type Subject } from '../../lib/db';
+import { updateTask, deleteTask, addNote, setSomeday, type Task, type Subject } from '../../lib/db';
 import { isoDate, addDays, startOfDay } from '../../lib/time';
 import { toast, friendlyError } from '../../lib/feedback';
 import { dataChanged } from '../../lib/uiBus';
@@ -36,7 +36,8 @@ export function InboxSort({ visible, items, subjects, onClose }: { visible: bool
   }
   const today = startOfDay(new Date());
   const toDay = (iso: string, label: string) => act(() => updateTask(t.id, { due_date: iso, inbox: false, subject_id: subject }), `Para ${label}`);
-  const someday = () => act(() => updateTask(t.id, { inbox: false, subject_id: subject }), 'A "algún día"');
+  // v27: "Algún día" ya no la saca sin fecha a Hoy: queda aparte en la bandeja (schema_v26).
+  const someday = () => act(() => setSomeday(t.id, true), 'Guardada para algún día');
   const toNote = () => act(async () => { await addNote({ subject_id: subject, title: t.title, content: t.description ?? '', image_path: null }); await deleteTask(t.id); }, 'Convertida en nota');
   const remove = () => act(() => deleteTask(t.id), 'Borrada');
 

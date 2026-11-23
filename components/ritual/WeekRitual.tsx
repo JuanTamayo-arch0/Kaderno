@@ -6,6 +6,8 @@ import { Button } from '../ds';
 import { Sheet } from '../cards/CardForms';
 import { getTasks, getSchedule, updateTask, fetchPrefs, type Task } from '../../lib/db';
 import { balanceLine, cleanUrgentDays, weekBalance } from '../../lib/eisenhower';
+import { SomedayRow } from '../day/SomedaySheet';
+import { sampleSomeday, somedayOf } from '../../lib/someday';
 import { useMode } from '../../lib/mode';
 import { getStudyPrefs, saveStudyPrefs } from '../../lib/cardsDb';
 import { lastWeekData, saveWeekPlan, getGoals, getWeekPlan, type Goal } from '../../lib/ritualsDb';
@@ -63,6 +65,9 @@ export function WeekRitual({ visible, weekStart, onClose, onDone }: { visible: b
 
   const items = useMemo(() => weekItems(tasks ?? [], weekStart), [tasks, weekStart]);
   // v27: cuánto de lo terminado la semana pasada era importante (matriz de Eisenhower).
+  // v27, fase 4: tres de "Algún día" al azar, para rescatar o soltar.
+  const [goneSomeday, setGoneSomeday] = useState<Set<string>>(new Set());
+  const someday = useMemo(() => sampleSomeday(somedayOf(tasks ?? []), 3), [tasks]).filter((t) => !goneSomeday.has(t.id));
   const balance = useMemo(() => balanceLine(weekBalance(tasks ?? [], addDaysISO(weekStart, -7), urgentDays), work), [tasks, weekStart, urgentDays, work]);
   const cands = useMemo(() => suggestPriorities(tasks ?? [], weekStart), [tasks, weekStart]);
 
@@ -122,6 +127,12 @@ export function WeekRitual({ visible, weekStart, onClose, onDone }: { visible: b
       {!summary && !!balance && (
         <View style={{ padding: 12, borderRadius: 12, backgroundColor: C.surface2 }}>
           <Text style={{ color: C.text, fontSize: 13.5 }}>{balance}</Text>
+        </View>
+      )}
+      {someday.length > 0 && (
+        <View style={{ gap: 6 }}>
+          <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700' }}>De "Algún día": ¿rescatas alguna o la sueltas?</Text>
+          {someday.map((t) => <SomedayRow key={t.id} t={t} onDone={(id) => setGoneSomeday((g) => new Set(g).add(id))} />)}
         </View>
       )}
       {diary.length > 0 && (
