@@ -60,7 +60,9 @@ import { InboxSort } from '../../components/day/InboxSort';
 import { DayClose } from '../../components/day/DayClose';
 import { getDayReview } from '../../lib/dayDb';
 import { shouldOfferClose, carryOver, localISO as dayISO } from '../../lib/day';
-import { skipRepeat, updateTask } from '../../lib/db';
+import { skipRepeat, updateTask, setTaskImportant } from '../../lib/db';
+import { cleanUrgentDays, dropChange, quadrantOf, DEFAULT_URGENT_DAYS, type Quadrant } from '../../lib/eisenhower';
+import { EisenhowerMatrix, type MatrixItem } from '../../components/EisenhowerMatrix';
 import { ruleText } from '../../lib/repeat';
 import { openClassNote } from '../../lib/notesDb';
 import { useMode } from '../../lib/mode';
@@ -85,7 +87,7 @@ type HoySnap = { subjects: Subject[]; tasks: Task[]; steps: Record<string, Step[
 export default function Hoy() {
   const router = useRouter();
   const { isWide, width } = useResponsive();
-  const { v: mv, study } = useMode();
+  const { v: mv, study, work } = useMode();
   const sp = useSpaceFilter();
   const { session } = useAuth();
   const counts = useNavCounts();
@@ -139,7 +141,9 @@ export default function Hoy() {
   const [openTerm, setOpenTerm] = useState<Term | null>(null);
   useEffect(() => { if (study) getTerms().then((r) => setOpenTerm(r.terms.find((t) => t.status === 'open') ?? null)).catch(() => {}); }, [study]);
   const termToClose = study && shouldOfferCloseTerm(openTerm, now) ? openTerm : null;
-  const [modo, setModo] = useState<'lista' | 'dia'>('lista');
+  const [modo, setModo] = useState<HoyModo>('lista');
+  // v27: días que cuentan como "urgente" en la Matriz (Ajustes).
+  const [urgentDays, setUrgentDays] = useState(DEFAULT_URGENT_DAYS);
   const [inboxOpen, setInboxOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
   const [reviewed, setReviewed] = useState(true);
@@ -168,6 +172,7 @@ export default function Hoy() {
       setHiddenH({ tasks: Array.isArray(ho.tasks) ? ho.tasks : [], projects: Array.isArray(ho.projects) ? ho.projects : [] });
       setVista(vistaFromPrefs(prefs));
       setCloseHour(Number((prefs as any)?.notif?.close_hour) || 18);
+      setUrgentDays(cleanUrgentDays((prefs as any)?.urgentDays));
       getDayReview(dayISO(new Date())).then((r) => setReviewed(!!r)).catch(() => setReviewed(true));
       // Se traen siempre, aunque la vista sea "Materias", para cambiar de vista al instante.
       ptP.then((pt) => { if (!pt) return; setPtasks(pt); pruneHiddenTasks(pt.map((x) => x.id)).catch(() => {}); });
@@ -196,8 +201,8 @@ export default function Hoy() {
   // Atajo del ícono instalado: "Agregar tarea".
   const params = useLocalSearchParams<{ agregar?: string; semana?: string }>();
   useEffect(() => { if (params.agregar === '1') { openAdd(); router.setParams({ agregar: undefined } as any); } }, [params.agregar]);
-  useEffect(() => { AsyncStorage.getItem('kd:hoyModo').then((v) => { if (v === 'dia') setModo('dia'); }).catch(() => {}); }, []);
-  const changeModo = (m: 'lista' | 'dia') => { setModo(m); AsyncStorage.setItem('kd:hoyModo', m).catch(() => {}); };
+  useEffect(() => { AsyncStorage.getItem('kd:hoyModo').then((v) => { if (v === 'dia' || v === 'matriz') setModo(v); }).catch(() => {}); }, []);
+  const changeModo = (m: HoyModo) => { setModo(m); AsyncStorage.setItem('kd:hoyModo', m).catch(() => {}); };
   // Desde los avisos: cerrar el día y ordenar la bandeja.
   const p2 = useLocalSearchParams<{ cierre?: string; bandeja?: string }>();
   useEffect(() => { if (p2.cierre === '1') { setCloseOpen(true); router.setParams({ cierre: undefined } as any); } }, [p2.cierre]);
@@ -245,6 +250,20 @@ export default function Hoy() {
   function remove(t: Task) {
     removeTask(t, () => setHidden((h) => new Set(h).add(t.id)));
   }
+  // v27: la estrella de "importante" (se ve al instante y se deshace si falla).
+  async function star(t: Task, on = !t.important) {
+    setTasks((xs) => xs?.map((x) => x.id === t.id ? { ...x, important: on } : x) ?? null);
+    try { await setTaskImportant(t.id, on); }
+    catch (e) { setTasks((xs) => xs?.map((x) => x.id === t.id ? { ...x, important: t.important } : x) ?? null); toast(friendlyError(e), { tone: 'bad' }); }
+  }
+  // Soltar en otro cuadrante: cambia la estrella; la fecha se ofrece, no se cambia sola.
+  function dropTo(t: Task, from: Quadrant, to: Quadrant) {
+    const c = dropChange(from, to);
+    if (c.important !== null) star(t, c.important);
+    const today = startOfDay(new Date());
+    if (c.offer === 'hoy') toast(`¿La pasas a hoy? Así queda urgente: ${t.title}`, { actionLabel: 'Mover a hoy', onAction: () => move(t, isoDate(today), 'hoy') });
+    else if (c.offer === 'despues') toast(`Sin afán: ¿la pasas a la próxima semana? ${t.title}`, { actionLabel: 'Mover', onAction: () => move(t, isoDate(addDays(today, 7 - ((today.getDay() + 6) % 7))), 'el lunes') });
+  }
   async function move(t: Task, iso: string | null, label: string) {
     try { await moveTaskDate(t, iso); toast(`Movida a ${label}`); load(); }
     catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
@@ -287,6 +306,7 @@ export default function Hoy() {
       { label: 'Mover a mañana', icon: 'arrow-forward-outline', onPress: () => move(t, isoDate(addDays(today, 1)), 'mañana') },
       { label: 'Mover a la próxima semana', icon: 'play-skip-forward-outline', onPress: () => move(t, isoDate(addDays(today, 7 - ((today.getDay() + 6) % 7))), 'el lunes') },
       { label: t.status === 'done' ? 'Marcar pendiente' : 'Marcar hecha', icon: 'checkmark-circle-outline', onPress: () => toggle(t) },
+      { label: t.important ? 'Quitar importante' : 'Marcar importante', icon: t.important ? 'star' : 'star-outline', onPress: () => star(t) },
       { label: 'Borrar', icon: 'trash-outline', danger: true, onPress: () => remove(t) },
     ];
     return list;
@@ -323,6 +343,24 @@ export default function Hoy() {
     const key = (r: Row) => r.kind === 'task' ? r.t : r.p;
     return BUCKET_ORDER.filter((b) => map.has(b)).map((b) => ({ b, rows: map.get(b)!.sort((x, y) => compareDue(key(x), key(y))) }));
   }, [visibleTasks, visibleProj, filter, vista, now]);
+
+  // v27: la Matriz usa lo mismo que la lista (vista y materia), sin el filtro del día.
+  const todayIso = isoDate(now);
+  const matrixItems: MatrixItem[] = [
+    ...pending.filter((t) => !filter || t.subject_id === filter).map((t): MatrixItem => ({
+      key: 't' + t.id, quadrant: quadrantOf(t, todayIso, urgentDays), draggable: true,
+      node: <TaskRow task={leaving.has(t.id) ? { ...t, status: 'done' } : t} subject={subjOf(t.subject_id)} steps={steps[t.id]} focusMin={focusBy[t.id]} compact
+        onToggle={toggle} onOpen={(x) => openTask(x)} actions={actionsFor(t)} onStar={(x) => star(x)}
+        onStepsChange={(id, next) => setSteps((s) => ({ ...s, [id]: next }))} />,
+    })),
+    ...((!filter || vista === 'proyectos') ? ptasks.filter((p) => !filter || p.project?.id === filter) : []).map((p): MatrixItem => ({
+      key: 'p' + p.id, quadrant: quadrantOf(p as any, todayIso, urgentDays), draggable: false,
+      node: <ProjectRow p={p} onOpen={() => router.push(`/proyectos/${p.project_id}`)} actions={[
+        { label: 'Abrir el proyecto', icon: 'open-outline', onPress: () => router.push(`/proyectos/${p.project_id}`) },
+        { label: 'Ocultar esta tarea de Hoy', icon: 'eye-off-outline', onPress: () => hideProj(p, false) },
+      ]} />,
+    })),
+  ];
 
   const doneRecent = live.filter((t) => vista !== 'proyectos' && t.status === 'done' && (!t.completed_at || dayDiff(new Date(), new Date(t.completed_at)) <= 7))
     .filter((t) => !filter || t.subject_id === filter);
@@ -712,7 +750,17 @@ export default function Hoy() {
       <ModoSwitch value={modo} onChange={changeModo} />
       {modo === 'dia' ? (
         <DayPlanner tasks={live} slots={slots} subjects={subjects} onChanged={load} onToggle={toggle} onFocusTask={startTask} loadEvents={getEvents} />
-      ) : <>
+      ) : modo === 'matriz' ? <>
+      {filters}
+      {tasks === null ? <View style={{ marginTop: 12 }}>{[0, 1, 2].map((i) => <Skeleton key={i} />)}</View> : (
+        <View style={{ marginTop: 10 }}>
+          <EisenhowerMatrix items={matrixItems} work={work} wide={isWide} onDrop={(key, from, to) => {
+            const t = (tasks ?? []).find((x) => 't' + x.id === key);
+            if (t) dropTo(t, from, to);
+          }} />
+        </View>
+      )}
+      </> : <>
       {week}
       {filters}
       {list}
@@ -819,10 +867,12 @@ function ProjectRow({ p, onOpen, actions }: { p: MyProjectTask; onOpen: () => vo
   );
 }
 
-// Lista de siempre o "Mi día" (línea de tiempo). Se recuerda en el dispositivo.
-function ModoSwitch({ value, onChange }: { value: 'lista' | 'dia'; onChange: (v: 'lista' | 'dia') => void }) {
-  const items: { k: 'lista' | 'dia'; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
+// Lista de siempre, "Mi día" (línea de tiempo) o la Matriz (v27). Se recuerda en el dispositivo.
+type HoyModo = 'lista' | 'dia' | 'matriz';
+function ModoSwitch({ value, onChange }: { value: HoyModo; onChange: (v: HoyModo) => void }) {
+  const items: { k: HoyModo; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
     { k: 'lista', label: 'Lista', icon: 'list-outline' }, { k: 'dia', label: 'Mi día', icon: 'time-outline' },
+    { k: 'matriz', label: 'Matriz', icon: 'grid-outline' },
   ];
   return (
     <View accessibilityRole="radiogroup" accessibilityLabel="Cómo ver Hoy" style={{ flexDirection: 'row', alignSelf: 'flex-start', padding: 3, borderRadius: 12, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.line, marginBottom: 10 }}>

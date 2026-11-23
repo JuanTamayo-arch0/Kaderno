@@ -24,6 +24,8 @@ export type Task = {
   // schema_v20 fase 1 (versión 21): repeticiones, bandeja y franjas
   repeat_rule?: import('./repeat').RepeatRule | null; repeat_parent_id?: string | null; inbox?: boolean;
   plan_day?: string | null; plan_band?: 'manana' | 'tarde' | 'noche' | null;
+  // schema_v26 (versión 27): importante (matriz de Eisenhower)
+  important?: boolean;
 };
 export type Note = {
   id: string; subject_id: string | null; title: string | null; content: string | null;
@@ -178,11 +180,12 @@ export type TaskInput = {
   due_at?: string | null; remind_at?: string | null; estimate_min?: number | null;
   plan_at?: string | null; plan_place?: string | null;
   repeat_rule?: import('./repeat').RepeatRule | null; inbox?: boolean; plan_day?: string | null; plan_band?: 'manana' | 'tarde' | 'noche' | null;
+  important?: boolean;
 };
 // Columnas de versiones nuevas (schema_v19 y v20). Si la base no las tiene, se
 // guarda sin ellas y se recuerda cuáles faltan (sin apagar lo de schema_v14).
-const OPT_COLS = ['plan_at', 'plan_place', 'plan_day', 'plan_band', 'repeat_rule', 'inbox'];
-const OPT_RE = /plan_(at|place|day|band)|repeat_rule|inbox|project_id|room_id/;
+const OPT_COLS = ['plan_at', 'plan_place', 'plan_day', 'plan_band', 'repeat_rule', 'inbox', 'important'];
+const OPT_RE = /plan_(at|place|day|band)|repeat_rule|inbox|important|project_id|room_id/;
 const MISSING = new Set<string>();
 export function hasPlanCols(): boolean { return !MISSING.has('plan_at'); }
 export function hasV20Cols(): boolean { return !MISSING.has('repeat_rule') && !MISSING.has('inbox'); }
@@ -211,6 +214,14 @@ export async function addTask(t: TaskInput): Promise<string> {
   if (error) throw error;
   return (data as { id: string }).id;
 }
+/** Marcar o quitar "importante" (schema_v26). Sin la migración avisa qué falta. */
+export async function setTaskImportant(id: string, on: boolean): Promise<void> {
+  if (MISSING.has('important')) throw new Error('Para marcar tareas importantes falta correr supabase/schema_v26.sql.');
+  const { error } = await withPlan({ important: on }, (pp) => supabase.from('assignments').update(pp).eq('id', id));
+  if (MISSING.has('important')) throw new Error('Para marcar tareas importantes falta correr supabase/schema_v26.sql.');
+  if (error) throw error;
+}
+export function hasImportantCol(): boolean { return !MISSING.has('important'); }
 export async function toggleTask(id: string, done: boolean): Promise<void> {
   const { error } = await supabase.from('assignments').update({ status: done ? 'done' : 'pending' }).eq('id', id);
   if (error) throw error;

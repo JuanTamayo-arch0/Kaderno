@@ -8,6 +8,8 @@ import { RequireAuth } from '../components/RequireAuth';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 import { fetchPrefs, savePrefs, exportMyData, hasV14 } from '../lib/db';
+import { DEFAULT_URGENT_DAYS, URGENT_DAY_OPTIONS, cleanUrgentDays } from '../lib/eisenhower';
+import { dataChanged } from '../lib/uiBus';
 import { CalendarCard } from '../components/CalendarCard';
 import { ExternalCalendars } from '../components/ExternalCalendars';
 import { soundEnabled, setSoundEnabled } from '../lib/sound';
@@ -98,6 +100,7 @@ function Ajustes() {
   const { plan } = usePlan();
   const pv = planView(plan);
   const { mode, study } = useMode();
+  const [urgentDays, setUrgentDays] = useState(DEFAULT_URGENT_DAYS);
 
   useFocusEffect(useCallback(() => {
     resetHoyHiddenCache();
@@ -107,6 +110,7 @@ function Ajustes() {
       const ho = p.hoyOcultas ?? {};
       setHiddenN((Array.isArray(ho.tasks) ? ho.tasks.length : 0) + (Array.isArray(ho.projects) ? ho.projects.length : 0));
       setNotif({ ...DEFAULT_NOTIF, ...(p.notif ?? {}) });
+      setUrgentDays(cleanUrgentDays(p.urgentDays));
     }).catch(() => {});
     getPushStatus().then(setPush).catch(() => {});
     getRitualPrefs().then((r) => setMondayRitual(r.monday)).catch(() => {});
@@ -219,6 +223,23 @@ function Ajustes() {
         <Divider />
         <Toggle label="Sonidos" hint="Al completar tareas y pasos, mover tarjetas y borrar. Solo en este dispositivo." value={sound}
           onChange={(v) => { setSound(v); setSoundEnabled(v); }} />
+        <Divider />
+        <View style={{ paddingHorizontal: 16, paddingVertical: 12, gap: 8 }}>
+          <Text style={{ color: C.text, fontSize: 15, fontWeight: '600' }}>Urgente en la Matriz</Text>
+          <Text style={{ color: C.muted, fontSize: 12.5, lineHeight: 17 }}>En la vista Matriz de Hoy, cuenta como urgente lo vencido y lo que vence en estos días.</Text>
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }} accessibilityRole="radiogroup" accessibilityLabel="Días que cuentan como urgente">
+            {URGENT_DAY_OPTIONS.map((n) => {
+              const on = n === urgentDays;
+              return (
+                <Pressable key={n} onPress={() => { setUrgentDays(n); savePrefs({ urgentDays: n }).then(() => { dataChanged(); toast('Preferencia guardada'); }).catch((e) => toast(friendlyError(e), { tone: 'bad' })); }}
+                  accessibilityRole="radio" accessibilityState={{ checked: on }}
+                  style={{ paddingVertical: 7, paddingHorizontal: 12, borderRadius: 99, borderWidth: 1, borderColor: on ? C.brand : C.line, backgroundColor: on ? C.brand : 'transparent' }}>
+                  <Text style={{ color: on ? C.onBrand : C.text, fontSize: 13, fontWeight: '700' }}>{n === 1 ? '1 día' : `${n} días`}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
         <Divider />
         <Toggle label="Tareas de proyectos en Hoy" hint="También se cambia en Hoy con Todo, Materias o Proyectos." value={hoyProy}
           onChange={(v) => { setHoyProy(v); saveHoyVista(v ? 'todo' : 'materias').catch(() => {}); }} />
