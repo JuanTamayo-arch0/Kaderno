@@ -13,7 +13,8 @@
 //  v24: el tope depende del plan (Gratis o Pro, ver _shared/plans.ts y
 //  schema_v23). Sin schema_v23 se usan los topes de Pro. Nueva tarea:
 //  ACTA DE REUNIÓN (meeting), con decisiones y tareas con responsable.
-//  v25: ESTADO DEL PROYECTO (project_update), con el cupo de resúmenes.
+//  v25: ESTADO DEL PROYECTO (project_update), con el cupo de resúmenes. El acta
+//  respeta el formato que eligió la persona y revisa los pendientes anteriores.
 // ============================================================
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
@@ -65,7 +66,8 @@ Deno.serve(async (req) => {
     const prompt = task === 'project_update'
       ? projectUpdatePrompt(String(content))
       : task === 'meeting'
-      ? meetingPrompt(String(content), String(body.notes_md ?? ''), Array.isArray(body.people) ? body.people.map((x: unknown) => String(x).slice(0, 60)).slice(0, 40) : [], /^\d{4}-\d{2}-\d{2}$/.test(String(body.today ?? '')) ? String(body.today) : '')
+      ? meetingPrompt(String(content), String(body.notes_md ?? ''), Array.isArray(body.people) ? body.people.map((x: unknown) => String(x).slice(0, 60)).slice(0, 40) : [], /^\d{4}-\d{2}-\d{2}$/.test(String(body.today ?? '')) ? String(body.today) : '',
+          { style: body.style && typeof body.style === 'object' ? body.style : null, prevOpen: Array.isArray(body.prev_open) ? body.prev_open.map(String) : [] })
       : task === 'class_summary'
       ? classSummaryPrompt(String(content), String(body.notes_md ?? ''), body.subject ? String(body.subject) : null)
       : task === 'quiz'

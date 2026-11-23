@@ -6,6 +6,8 @@ import { supabase, currentUserId } from './supabase';
 import { addNote, isMissingColumn } from './db';
 import { getMode } from './mode';
 import { builtinTemplate, classNoteTitle, diffNoteCards, parseCardLines, type NoteCard } from './noteLinks';
+import { previousMeeting } from './meetingDb';
+import { carryOverMarkdown } from './meeting';
 
 const missing = (e: any) => !!e && (e.code === '42P01' || e.code === 'PGRST205' || e.code === 'PGRST202' || /does not exist|Could not find/i.test(String(e.message ?? '')));
 
@@ -74,7 +76,11 @@ export async function templateContent(key: string | null): Promise<string> {
   return mine?.content ?? '';
 }
 
-/** Abre (o crea) la nota de la clase de hoy en esa materia, con su plantilla. */
+/**
+ * Abre (o crea) la nota de la clase de hoy en esa materia, con su plantilla.
+ * v25: en modo Trabajo, la nota nueva empieza con lo que quedó abierto en la
+ * reunión anterior del área ("Viene de la reunión del ...").
+ */
 export async function openClassNote(subjectId: string, now = new Date()): Promise<{ id: string; created: boolean }> {
   const work = getMode() === 'trabajo';
   const title = classNoteTitle(now, work);
@@ -84,7 +90,12 @@ export async function openClassNote(subjectId: string, now = new Date()): Promis
   const found = (data as { id: string }[] | null)?.[0];
   if (found) return { id: found.id, created: false };
   const key = (await subjectTemplate(subjectId)) ?? (work ? 'acta' : 'cornell');
-  const id = await addNote({ subject_id: subjectId, title, content: await templateContent(key), image_path: null });
+  let content = await templateContent(key);
+  if (work || (getMode() === 'ambos' && key === 'acta')) {
+    const prev = await previousMeeting(subjectId, start).catch(() => null);
+    if (prev) content = carryOverMarkdown(prev, prev.date.toLocaleDateString('es', { day: 'numeric', month: 'short' })) + content;
+  }
+  const id = await addNote({ subject_id: subjectId, title, content, image_path: null });
   return { id, created: true };
 }
 

@@ -3,7 +3,7 @@
 // ============================================================
 import { supabase } from './supabase';
 import type { ClassSummary, Mark, Segment } from './classRec';
-import type { MeetingMinutes } from './meeting';
+import type { MeetingMinutes, MinutesStyle } from './meeting';
 
 export type Transcript = {
   id: string; note_id: string; started_at: string; duration_s: number; lang: string;
@@ -52,10 +52,10 @@ export async function summarizeClass(transcript: string, notesMd: string, subjec
 }
 
 /** v24: el acta de una reunión (resumen, decisiones, tareas con responsable y pendientes). */
-export async function meetingMinutes(transcript: string, notesMd: string, people: string[]): Promise<MeetingMinutes> {
+export async function meetingMinutes(transcript: string, notesMd: string, people: string[], extras: { style?: MinutesStyle | null; prevOpen?: string[] } = {}): Promise<MeetingMinutes> {
   const d = new Date();
   const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  const { data, error } = await supabase.functions.invoke('ai', { body: { task: 'meeting', content: transcript, notes_md: notesMd, people, today } });
+  const { data, error } = await supabase.functions.invoke('ai', { body: { task: 'meeting', content: transcript, notes_md: notesMd, people, today, style: extras.style ?? null, prev_open: extras.prevOpen ?? [] } });
   if (error) {
     let msg = '';
     try { const ctx: any = (error as any).context; const j = ctx?.json ? await ctx.json() : null; msg = j?.error ?? ''; } catch { /* noop */ }

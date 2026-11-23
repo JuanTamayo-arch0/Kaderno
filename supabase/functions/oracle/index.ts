@@ -8,10 +8,18 @@
 //
 //  Degradación elegante: si no hay OPENAI_API_KEY o embeddings, usa las
 //  notas recientes/de la materia como contexto directo (sigue funcionando).
+//
+//  v25: el modo "meetings" responde con las actas de las últimas reuniones
+//  (lo que se decidió, quién quedó con qué). En los demás modos, si una nota
+//  encontrada tiene acta, el acta va junto a la nota.
 // ============================================================
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { minutesPlain, type MeetingMinutes } from '../_shared/meeting.ts';
+
+const isMeeting = (s: unknown): s is MeetingMinutes => !!s && (s as any).kind === 'meeting';
+const dayEs = (iso: string) => new Date(iso).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/Bogota' });
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -91,7 +99,19 @@ Deno.serve(async (req) => {
     let contextNotes: { title: string; content: string; note_id: string }[] = [];
     let usedSemantic = false;
 
-    if (mode === 'note' && noteId) {
+    if (mode === 'meetings') {
+      // Las actas más recientes (de reuniones grabadas), con el título de su nota.
+      const tq = supabase.from('note_transcripts').select('note_id, started_at, summary').not('summary', 'is', null)
+        .order('started_at', { ascending: false }).limit(60);
+      const { data: trs } = await tq;
+      const mins = ((trs ?? []) as any[]).filter((t) => isMeeting(t.summary)).slice(0, 15);
+      const ids = Array.from(new Set(mins.map((t) => t.note_id)));
+      const { data: ns } = ids.length ? await supabase.from('notes').select('id, title, subject_id').in('id', ids) : { data: [] as any[] };
+      const byId = new Map(((ns ?? []) as any[]).map((n) => [n.id, n]));
+      contextNotes = mins
+        .filter((t) => !subjectId || byId.get(t.note_id)?.subject_id === subjectId)
+        .map((t) => ({ note_id: t.note_id, title: byId.get(t.note_id)?.title ?? 'Reunión', content: minutesPlain(t.summary, dayEs(t.started_at)) }));
+    } else if (mode === 'note' && noteId) {
       const { data } = await supabase.from('notes').select('id, title, content').eq('id', noteId).single();
       if (data) contextNotes = [{ note_id: data.id, title: data.title ?? 'Nota', content: data.content ?? '' }];
     } else {
@@ -116,6 +136,19 @@ Deno.serve(async (req) => {
         const { data } = await q;
         contextNotes = (data ?? []).map((d: any) => ({ note_id: d.id, title: d.title ?? 'Nota', content: d.content ?? '' }));
       }
+    }
+
+    // Las notas con reunión grabada llevan su acta (si no está ya pegada en la nota).
+    if (mode !== 'meetings' && contextNotes.length) {
+      try {
+        const { data: trs } = await supabase.from('note_transcripts').select('note_id, started_at, summary')
+          .in('note_id', contextNotes.map((n) => n.note_id)).not('summary', 'is', null).order('started_at', { ascending: false }).limit(20);
+        for (const t of (trs ?? []) as any[]) {
+          if (!isMeeting(t.summary)) continue;
+          const n = contextNotes.find((x) => x.note_id === t.note_id);
+          if (n && !n.content.includes('### Decisiones') && n.content.length < 40000) n.content += '\n\n' + minutesPlain(t.summary, dayEs(t.started_at));
+        }
+      } catch (_) { /* sin actas */ }
     }
 
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
@@ -143,6 +176,7 @@ Deno.serve(async (req) => {
       (ABILITY[ability] ? ability + ': ' + ABILITY[ability] + ' ' : '') +
       'Si las notas no contienen la respuesta, puedes usar tu conocimiento general PERO avisa claramente que eso no salió de sus apuntes. ' +
       'Cuando uses una nota, menciónala por su título. Sé conciso pero completo.\n\n' +
+      (mode === 'meetings' ? 'Las notas de abajo son actas de reuniones de trabajo: cuando respondas, di de qué reunión y fecha sale cada cosa y quién quedó a cargo. ' : '') +
       '=== NOTAS DEL ESTUDIANTE ===\n' + contextBlock;
 
     const messages = [

@@ -12,6 +12,7 @@ import { copyText } from '../../lib/fileIO';
 import { activePet, usePets } from '../../lib/pets/store';
 import { PetImage } from '../../components/pets/PetArt';
 import { PetRoom } from '../../components/pets/PetRoom';
+import { useMode } from '../../lib/mode';
 
 // ============================================================
 //  Oráculo: preguntas a la IA sobre tus apuntes.
@@ -27,13 +28,20 @@ const ABILITIES = [
   { key: 'summary', icon: 'reader-outline', label: 'Guía de estudio', q: 'Dame una guía de estudio de este material.' },
   { key: 'connect', icon: 'git-network-outline', label: 'Conecta temas', q: 'Conecta y relaciona los temas entre mis notas y materias.' },
 ] as const;
+// v25: preguntas sobre las actas de las reuniones (modo Trabajo).
+const MEETING_ABILITIES = [
+  { key: 'decided', icon: 'checkmark-done-outline', label: '¿Qué decidimos?', q: 'Resume lo que se decidió en mis últimas reuniones, con la fecha de cada una.' },
+  { key: 'owners', icon: 'people-outline', label: '¿Quién quedó con qué?', q: 'Lista las tareas que quedaron de mis reuniones recientes, con su responsable y fecha.' },
+  { key: 'open', icon: 'help-buoy-outline', label: 'Lo que sigue abierto', q: '¿Qué temas siguen pendientes de mis reuniones y desde cuándo?' },
+] as const;
 
 export default function Oraculo() {
   const router = useRouter();
   const { isWide } = useResponsive();
   const params = useLocalSearchParams<{ mode?: string; subjectId?: string; noteId?: string; noteTitle?: string; q?: string }>();
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [mode, setMode] = useState<'all' | 'subject' | 'note'>((params.mode as any) || 'all');
+  const [mode, setMode] = useState<'all' | 'subject' | 'note' | 'meetings'>((params.mode as any) || 'all');
+  const { work } = useMode();
   const [subjectId, setSubjectId] = useState<string | null>(params.subjectId || null);
   const noteId = params.noteId || null;
   const [all, setAll] = useState<(Msg & { scope: string | null })[]>([]);
@@ -46,7 +54,7 @@ export default function Oraculo() {
   const pets = usePets();
   const pet = pets.prefs.enabled ? activePet(pets) : null;
 
-  const scopeStr = mode === 'all' ? 'all' : mode === 'subject' ? `subject:${subjectId}` : `note:${noteId}`;
+  const scopeStr = mode === 'all' ? 'all' : mode === 'meetings' ? 'meetings' : mode === 'subject' ? `subject:${subjectId}` : `note:${noteId}`;
   const messages = all.filter((m) => (m.scope ?? 'all') === scopeStr);
 
   useFocusEffect(useCallback(() => {
@@ -66,7 +74,7 @@ export default function Oraculo() {
     saveOracleMessage('user', q, scopeStr).catch(() => {});
     setSending(true);
     try {
-      const res = await askOracle({ question: q, mode, subjectId, noteId, ability, history: hist, pet: pet ? { name: pet.name, species: pet.species } : null });
+      const res = await askOracle({ question: q, mode, subjectId: mode === 'meetings' ? null : subjectId, noteId, ability, history: hist, pet: pet ? { name: pet.name, species: pet.species } : null });
       setAll((xs) => [...xs, { role: 'assistant', content: res.answer, sources: res.sources, scope: scopeStr }]);
       saveOracleMessage('assistant', res.answer, scopeStr).catch(() => {});
     } catch (e) {
@@ -88,7 +96,7 @@ export default function Oraculo() {
     finally { setIndexing(false); }
   }
 
-  const scopeLabel = mode === 'note' ? (params.noteTitle || 'la nota abierta') : mode === 'subject' ? (subjects.find((s) => s.id === subjectId)?.name ?? 'esta materia') : 'todas tus notas';
+  const scopeLabel = mode === 'meetings' ? 'tus actas de reunión' : mode === 'note' ? (params.noteTitle || 'la nota abierta') : mode === 'subject' ? (subjects.find((s) => s.id === subjectId)?.name ?? 'esta materia') : 'todas tus notas';
 
   return (
     <Screen title="Oráculo" subtitle={`Pregúntale a la IA sobre ${scopeLabel}`} scroll={false} padded={false} maxWidth={860} back={isWide ? undefined : '/estudiar'}
@@ -97,6 +105,7 @@ export default function Oraculo() {
         <ChipRow style={{ marginBottom: 8 }}>
           {noteId && <FilterChip label={params.noteTitle || 'Nota abierta'} icon={<Ionicons name="document-text-outline" size={14} color={mode === 'note' ? C.onBrand : C.muted} />} active={mode === 'note'} onPress={() => setMode('note')} />}
           <FilterChip label="Todas mis notas" active={mode === 'all'} onPress={() => setMode('all')} />
+          {work && <FilterChip label="Mis reuniones" icon={<Ionicons name="people-outline" size={14} color={mode === 'meetings' ? C.onBrand : C.muted} />} active={mode === 'meetings'} onPress={() => setMode('meetings')} />}
           {subjects.map((s) => <FilterChip key={s.id} label={s.name} color={s.color} active={mode === 'subject' && subjectId === s.id} onPress={() => { setMode('subject'); setSubjectId(s.id); }} />)}
         </ChipRow>
       }>
@@ -128,7 +137,7 @@ export default function Oraculo() {
               <Text style={{ color: C.text, fontSize: 17, fontWeight: '700' }}>{pet ? `${pet.name} te ayuda a entender` : '¿Qué quieres entender hoy?'}</Text>
               <Text style={{ color: C.muted, fontSize: 13.5, textAlign: 'center', marginTop: 6, lineHeight: 20, maxWidth: 380 }}>Responde con base en {scopeLabel}. Prueba un atajo:</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 16 }}>
-                {ABILITIES.map((a) => (
+                {(mode === 'meetings' ? MEETING_ABILITIES : ABILITIES).map((a) => (
                   <Pressable key={a.key} onPress={() => send(a.q, a.key)} accessibilityRole="button"
                     style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: hovered ? C.surface2 : C.surface, borderColor: C.line, borderWidth: 1, borderRadius: 999, paddingVertical: 9, paddingHorizontal: 14, minHeight: 40 })}>
                     <Ionicons name={a.icon as any} size={15} color={C.brand} />

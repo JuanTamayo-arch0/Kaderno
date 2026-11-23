@@ -141,3 +141,49 @@ test('clientes: direcciones de los enlaces', async () => {
   const nav = (await import('node:fs')).readFileSync('components/SideNav.tsx', 'utf8');
   assert.match(nav, /NO_SIDEBAR = \[[^\]]*'\/solicitar', '\/avance'\]/, 'las páginas públicas no muestran la barra de la app');
 });
+
+test('reuniones: lo que quedó abierto pasa a la siguiente', async () => {
+  const { openItemsFromNote, carryOverMarkdown } = await import('../lib/meeting');
+  const md = '## Asistentes\n\n- Ana\n\n## Tareas\n\n- [x] Hecha\n- [ ] Mandar cotización\n- [ ] \n\n## Pendientes para la próxima\n\n- Definir el precio\n- \n\n## Temas\n\n- No es pendiente\n';
+  assert.deepEqual(openItemsFromNote(md), ['Mandar cotización', 'Definir el precio']);
+  // Lo que ya venía de antes no se vuelve a contar como pendiente propio del título.
+  assert.deepEqual(openItemsFromNote('## Viene de la reunión del 1 nov\n\n- Algo suelto\n- [ ] Sigue\n'), ['Sigue']);
+  const minutes = { kind: 'meeting' as const, title: 'Lanzamiento', summary: ['x'], attendees: [], decisions: [], open: ['Definir el precio', 'Ver el logo'],
+    tasks: [{ title: 'Mandar cotización', owner: 'Ana', due: '2026-11-20', when: null }, { title: 'Llamar al proveedor', owner: null, due: null, when: 'el lunes' }] };
+  const out = carryOverMarkdown({ minutes, noteMd: md }, '15 nov');
+  assert.match(out, /^## Viene de la reunión del 15 nov\n\n/);
+  assert.match(out, /- \[ \] Mandar cotización \(Ana, 20 nov\)/);
+  assert.match(out, /- \[ \] Llamar al proveedor \(sin responsable, el lunes\)/);
+  assert.equal(out.match(/Definir el precio/g)?.length, 1, 'sin repetidos');
+  assert.equal(out.match(/Mandar cotización/g)?.length, 1, 'la tarea de la nota y la del acta son la misma');
+  assert.equal(carryOverMarkdown({ minutes: null, noteMd: '## Temas\n\n- nada\n' }, '1 nov'), '');
+  assert.ok(!/—/.test(out));
+});
+
+test('reuniones: formato del acta y pendientes anteriores en el pedido a la IA', async () => {
+  const { meetingPrompt, cleanMinutesStyle, minutesPlain } = await import('../supabase/functions/_shared/meeting');
+  assert.deepEqual(cleanMinutesStyle({ format: 'raro', extra: '  a\n b ' }), { format: 'completa', extra: 'a b' });
+  assert.equal(cleanMinutesStyle({ extra: 'x'.repeat(400) }).extra.length, 300);
+  const base = meetingPrompt('hola', '', [], '2026-11-22');
+  assert.match(base, /de 3 a 6 frases/);
+  assert.ok(!/reunión anterior/.test(base));
+  const p = meetingPrompt('hola', '', [], '2026-11-22', { style: { format: 'breve', extra: 'Incluir riesgos' }, prevOpen: ['Definir el precio', ''] });
+  assert.match(p, /de 1 a 3 frases/);
+  assert.match(p, /reunión anterior[\s\S]*\* Definir el precio/);
+  assert.match(p, /Incluir riesgos/);
+  const txt = minutesPlain({ kind: 'meeting', title: 'Kickoff', summary: ['Se habló del plan'], attendees: ['Ana'], decisions: ['Lanzar en enero'], open: [],
+    tasks: [{ title: 'Mandar cotización', owner: 'Ana', due: '2026-11-20', when: null }] }, '22 nov', true);
+  assert.match(txt, /^\*Acta: Kickoff \(22 nov\)\*/);
+  assert.match(txt, /\*Decisiones\*\n- Lanzar en enero/);
+  assert.match(txt, /- Mandar cotización \(Ana, 20 nov\)/);
+  assert.ok(!/Pendientes/.test(txt), 'sin secciones vacías');
+});
+
+test('reuniones: correo con el acta sin pasarse de largo', async () => {
+  const { mailtoUrl } = await import('../lib/meeting');
+  const short = mailtoUrl('Acta (1 nov)', 'Hola\nmundo');
+  assert.equal(short, 'mailto:?subject=Acta%20(1%20nov)&body=Hola%0Amundo');
+  const long = mailtoUrl('Acta', 'palabra '.repeat(1000));
+  assert.ok(long.length <= 1800);
+  assert.match(decodeURIComponent(long.split('body=')[1]), /palabra\n\.\.\.$/);
+});
