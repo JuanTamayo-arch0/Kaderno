@@ -1,9 +1,10 @@
 import React from 'react';
-import { Modal, Platform, Pressable, Text, View } from 'react-native';
+import { Animated, Modal, Platform, Pressable, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C } from '../lib/theme';
 import { useResponsive } from '../lib/responsive';
+import { useSheetDrag } from '../lib/sheetDrag';
 import type { IconName } from './ds';
 
 export type MenuAction = { label: string; icon: IconName; onPress: () => void; danger?: boolean; hint?: string };
@@ -12,9 +13,13 @@ export type MenuAction = { label: string; icon: IconName; onPress: () => void; d
 export function ActionMenu({ visible, title, actions, onClose }: { visible: boolean; title?: string; actions: MenuAction[]; onClose: () => void }) {
   const { isWide } = useResponsive();
   const insets = useSafeAreaInsets();
+  // v29: en el celular se cierra arrastrándolo hacia abajo.
+  // El menú no se desplaza: se puede arrastrar desde cualquier parte.
+  const drag = useSheetDrag(visible, onClose, 2000);
   return (
     <Modal visible={visible} transparent animationType={isWide || Platform.OS === 'web' ? 'fade' : 'slide'} onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: isWide ? 'center' : 'flex-end', alignItems: isWide ? 'center' : 'stretch' }}>
+        <Animated.View ref={drag.ref} onLayout={drag.onLayout} style={isWide ? null : drag.style} {...(isWide ? {} : drag.handlers)}>
         <Pressable onPress={() => {}} accessibilityViewIsModal dataSet={{ anim: 'sheet' }}
           style={isWide
             ? { width: 320, backgroundColor: C.surface, borderRadius: 14, borderWidth: 1, borderColor: C.line, paddingVertical: 8 }
@@ -30,6 +35,7 @@ export function ActionMenu({ visible, title, actions, onClose }: { visible: bool
             </Pressable>
           ))}
         </Pressable>
+        </Animated.View>
       </Pressable>
     </Modal>
   );
