@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, Text, View, type LayoutChangeEvent } from 'react-native';
 import { SvgXml } from 'react-native-svg';
 import { C } from '../../lib/theme';
-import { petSheet, type Frame, type Mood, type Outfit, type Species } from '../../lib/pets/art';
+import { petSheet, SHEET_FRAMES, type Frame, type Mood, type Outfit, type Species } from '../../lib/pets/art';
 import { ROOM_H, ROOM_W, roomSvg, type Home } from '../../lib/pets/home';
 import { PatioSim, frameFor, moodFor, hopHeight, ballPos, type PatioMember } from '../../lib/pets/patio';
 import { prefersReducedMotion } from '../../lib/motion';
@@ -17,7 +17,7 @@ import { PetImage } from '../pets/PetArt';
 //  estilo de cada mascota (sin repintar React 60 veces por segundo).
 // ============================================================
 
-const FRAMES: Frame[] = ['quieto', 'respira', 'parpadeo', 'paso1', 'paso2', 'paso3', 'paso4', 'salto', 'sueno1', 'sueno2'];
+const FRAMES: Frame[] = SHEET_FRAMES;
 const sheetCache = new Map<string, string>();
 function sheetUrl(species: Species, mood: Mood, outfit: Outfit | null): string {
   const k = `${species}|${mood}|${JSON.stringify(outfit ?? {})}`;
@@ -180,7 +180,7 @@ export function PetPatio({ members, height, compact, onTapPet, celebrate, greeti
           style={{ position: 'absolute', left: 0, top: 0, width: petSize, height: petSize, alignItems: 'center', cursor: 'pointer' } as any}>
           <View ref={setNode(m.uid, 'sprite')} style={{ width: petSize, height: petSize }} />
           <Text ref={setNode(m.uid, 'bubble')}
-            style={{ display: 'none', position: 'absolute', bottom: petSize + 2, backgroundColor: '#fffaf0', color: '#1f2433', fontSize: compact ? 10 : 11.5, fontWeight: '800', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8, whiteSpace: 'nowrap' } as any} />
+            style={{ display: 'none', position: 'absolute', bottom: petSize + 2, backgroundColor: '#fffaf0', color: '#1B1D3A', fontSize: compact ? 10 : 11.5, fontWeight: '800', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8, whiteSpace: 'nowrap' } as any} />
           <Text ref={setNode(m.uid, 'badge')}
             style={{ display: 'none', position: 'absolute', bottom: petSize - 2, backgroundColor: 'rgba(26,32,54,0.92)', color: '#a9bbff', fontSize: 10, fontWeight: '800', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 6, whiteSpace: 'nowrap' } as any} />
           {!compact && (
@@ -191,7 +191,7 @@ export function PetPatio({ members, height, compact, onTapPet, celebrate, greeti
         </Pressable>
       ))}
       {w > 0 && (
-        <View ref={ballEl as any} style={{ display: 'none', position: 'absolute', left: 0, top: 0, width: Math.max(8, Math.round(4.2 * scale)), height: Math.max(8, Math.round(4.2 * scale)), borderRadius: 99, backgroundColor: '#f5b64c', borderWidth: 1, borderColor: '#1f2433', zIndex: 99 } as any} />
+        <View ref={ballEl as any} style={{ display: 'none', position: 'absolute', left: 0, top: 0, width: Math.max(8, Math.round(4.2 * scale)), height: Math.max(8, Math.round(4.2 * scale)), borderRadius: 99, backgroundColor: '#f5b64c', borderWidth: 1, borderColor: '#1B1D3A', zIndex: 99 } as any} />
       )}
     </View>
   );

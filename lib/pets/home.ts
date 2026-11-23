@@ -87,7 +87,7 @@ function wall(g: Grid, id: Home['papel']) {
     }
     pxa(g, x, y, c);
   }
-  for (let x = 0; x < GW; x++) { pxa(g, x, FLOOR_Y - 2, '#2b2433'); pxa(g, x, FLOOR_Y - 1, '#2b2433'); } // zócalo
+  for (let x = 0; x < GW; x++) { pxa(g, x, FLOOR_Y - 2, '#1B1D3A'); pxa(g, x, FLOOR_Y - 1, '#1B1D3A'); } // zócalo
 }
 
 function floor(g: Grid, id: Home['piso']) {

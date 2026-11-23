@@ -51,6 +51,8 @@ export class PetMotion {
   cornerShift = 0;
   /** Saltó un obstáculo caminando: al caer sigue hacia donde iba. */
   private resume = false;
+  /** Próximo parpadeo (ms); al azar entre 2 y 6 segundos. */
+  private blinkAt = 0;
   private t = 0;
   private until = 1.5;
   private target = 0;
@@ -254,8 +256,15 @@ export class PetMotion {
       case 'sleep': return ANIMS.duerme.frames[Math.floor(s * ANIMS.duerme.fps) % ANIMS.duerme.frames.length];
       default: {
         if (reduceMotion) return 'quieto';
-        const q = ANIMS.quieto;
-        return q.frames[Math.floor(s * q.fps) % q.frames.length];
+        // Recién aterriza: se aplasta un instante.
+        if (this.squash > 0) return 'aterriza';
+        // Parpadea a destiempo y respira despacio (1,3 s arriba y 1,3 s abajo).
+        if (!this.blinkAt) this.blinkAt = nowMs + 2000 + this.rand() * 4000;
+        if (nowMs >= this.blinkAt) {
+          if (nowMs < this.blinkAt + 180) return 'parpadeo';
+          this.blinkAt = nowMs + 2000 + this.rand() * 4000;
+        }
+        return s % 2.6 < 1.3 ? 'quieto' : 'respira';
       }
     }
   }

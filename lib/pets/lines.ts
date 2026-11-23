@@ -8,7 +8,8 @@ export type Situation =
   | 'vencidas' | 'paseo' | 'sin_tocar' | 'hecha' | 'dia_completo' | 'parcial'
   | 'racha_riesgo' | 'tarde' | 'enfoque_inicio' | 'enfoque_fin' | 'enfoque_corto'
   | 'despierta' | 'agarrar' | 'hola' | 'que_hacemos' | 'sugerencia' | 'nada_pendiente'
-  | 'dos_minutos' | 'adoptada' | 'compra' | 'enfoque_activo' | 'logro' | 'repaso_fin' | 'meta';
+  | 'dos_minutos' | 'adoptada' | 'compra' | 'enfoque_activo' | 'logro' | 'repaso_fin' | 'meta'
+  | 'dia_cerrado' | 'que_hacemos_trabajo';
 
 type Lines = Record<Species, string[]>;
 
@@ -36,6 +37,18 @@ export const LINES: Record<Situation, Lines> = {
     gato: ['No está mal. Nada mal.', 'Una menos. Ahora sí me impresionas un poco.'],
     perro: ['¡SÍ! ¡Otra más!', '¡Bien! ¡Eres lo máximo!'],
     loro: ['¡Lista! ¡Lista!', '¡Hecha! ¡Hecha!'],
+  },
+  dia_cerrado: {
+    pinguino: ['Día cerrado. Mañana seguimos.'],
+    gato: ['Cerraste el día. Yo también me retiro.'],
+    perro: ['¡Día cerrado! ¡Buen trabajo hoy!'],
+    loro: ['¡Cerrado! ¡Hasta mañana!'],
+  },
+  que_hacemos_trabajo: {
+    pinguino: ['Aquí estoy, sin hacer ruido.'],
+    gato: ['Trabaja tranquilo. Yo vigilo.'],
+    perro: ['¡Aquí! Calladito, lo prometo.'],
+    loro: ['Shh. Shh. Aquí estoy.'],
   },
   dia_completo: {
     pinguino: ['Día completo. Bien hecho.'],

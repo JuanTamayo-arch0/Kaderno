@@ -24,6 +24,8 @@ export async function saveDayReview(r: DayReview): Promise<void> {
     if (missingTable(error)) { DAY_DB = false; throw new Error('Para cerrar el día falta correr schema_v20.sql en Supabase.'); }
     throw error;
   }
+  // La mascota se despide (también en Trabajo, donde casi no habla).
+  import('./pets/store').then(({ emitPetEvent }) => emitPetEvent({ type: 'dia_cerrado' })).catch(() => {});
 }
 
 /** Las líneas del diario de unos días (para el ritual del lunes). */

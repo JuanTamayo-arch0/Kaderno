@@ -1,13 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  SPECIES, ITEMS, GRID, ANIMS, petGrid, petSvg, petSheet, coinSvg,
+  SPECIES, ITEMS, GRID, ANIMS, SHEET_FRAMES, petGrid, petSvg, petSheet, coinSvg,
   type Species, type Mood, type Frame, type ItemId,
 } from '../lib/pets/art';
 
 const species = Object.keys(SPECIES) as Species[];
-const moods: Mood[] = ['normal', 'feliz', 'dormido', 'preocupado', 'concentrado'];
-const frames: Frame[] = ['quieto', 'respira', 'parpadeo', 'paso1', 'paso2', 'paso3', 'paso4', 'salto', 'agarrado', 'cae', 'sueno1', 'sueno2'];
+const moods: Mood[] = ['normal', 'feliz', 'dormido', 'preocupado', 'concentrado', 'cansado', 'sorprendido'];
+// v26: caminar en 6 cuadros, agacharse y aterrizar (SHEET_FRAMES).
+const frames: Frame[] = SHEET_FRAMES;
 
 test('cada mascota tiene media cuadrícula de 32 x 16 y colores para cada letra', () => {
   for (const s of species) {
@@ -61,7 +62,7 @@ test('mirar a un lado corre las pupilas', () => {
 
 test('la tira de cuadros mide un cuadro por animación', () => {
   const sheet = petSheet('loro', ANIMS.camina.frames);
-  assert.match(sheet, /viewBox="0 0 128 32"/);
+  assert.match(sheet, /viewBox="0 0 192 32"/);
   for (const a of Object.values(ANIMS)) for (const f of a.frames) assert.ok(frames.includes(f));
 });
 

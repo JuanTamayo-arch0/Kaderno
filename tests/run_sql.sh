@@ -92,3 +92,4 @@ $PSQL -d k16 -f tests/sql/24d_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARO
 for f in supabase/schema_v25.sql supabase/schema_v25.sql; do echo "== k16 $f"; $PSQL -d k16 -f $f 2>&1 | grep -v "NOTICE" | grep -v "^$" | head -20; done
 $PSQL -d k16 -f tests/sql/25_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line|WARNING" | grep -v "^ *$"
 $PSQL -d k16 -f tests/sql/25b_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line|WARNING" | grep -v "^ *$"
+$PSQL -d k16 -f tests/sql/25c_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line|WARNING" | grep -v "^ *$"

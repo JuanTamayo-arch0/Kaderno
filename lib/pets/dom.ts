@@ -10,11 +10,11 @@
 //  · El dibujo es una tira de cuadros (petSheet) usada como fondo; cambiar
 //    de cuadro es mover el fondo.
 // ============================================================
-import { petSheet, type Frame, type Mood, type Outfit, type Species } from './art';
+import { petSheet, SHEET_FRAMES, type Frame, type Mood, type Outfit, type Species } from './art';
 import { PetMotion, type Rect, type World } from './motion';
 import type { ActionId } from './brain';
 
-const FRAMES: Frame[] = ['quieto', 'respira', 'parpadeo', 'paso1', 'paso2', 'paso3', 'paso4', 'salto', 'agarrado', 'cae', 'sueno1', 'sueno2'];
+const FRAMES: Frame[] = SHEET_FRAMES;
 export const PET_SIZE = 64;
 const IDLE_SLEEP_MS = 10 * 60_000;
 
@@ -44,11 +44,11 @@ export type ControllerOpts = PetLook & {
 };
 
 const sheetCache = new Map<string, string>();
-function sheetUrl(species: Species, mood: Mood, outfit: Outfit): string {
-  const key = `${species}|${mood}|${JSON.stringify(outfit)}`;
+function sheetUrl(species: Species, mood: Mood, outfit: Outfit, look: -1 | 0 | 1 = 1): string {
+  const key = `${species}|${mood}|${look}|${JSON.stringify(outfit)}`;
   let url = sheetCache.get(key);
   if (!url) {
-    url = `url("data:image/svg+xml,${encodeURIComponent(petSheet(species, FRAMES, { mood, outfit, look: 1 }))}")`;
+    url = `url("data:image/svg+xml,${encodeURIComponent(petSheet(species, FRAMES, { mood, outfit, look }))}")`;
     if (sheetCache.size > 40) sheetCache.clear();
     sheetCache.set(key, url);
   }
@@ -129,6 +129,12 @@ export class PetController {
   private reduce: boolean;
   private off: (() => void)[] = [];
   private destroyed = false;
+  /** Hacia dónde mira dentro del dibujo (1 = hacia adelante). */
+  private look: -1 | 0 | 1 = 1;
+  /** Último puntero cerca (coordenadas locales y cuándo). */
+  private ptr = { x: 0, y: 0, t: 0 };
+  /** En Trabajo: quieta en su esquina. */
+  private discreet = false;
 
   constructor(private opts: ControllerOpts) {
     this.reduce = !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -228,6 +234,9 @@ export class PetController {
       if (overlapX && overlapY) m.moveAwayFrom(r.left, r.right);
     };
     document.addEventListener('focusin', onFocusIn, true);
+    // Mira hacia donde está el puntero cuando está cerca.
+    const onPtr = (e: PointerEvent) => { const z = zoomOf(); this.ptr = { x: e.clientX / z, y: e.clientY / z, t: Date.now() }; };
+    document.addEventListener('pointermove', onPtr, { passive: true });
     const onResize = () => this.measure();
     window.addEventListener('resize', onResize);
     const onVis = () => { if (document.hidden) this.stop(); else this.start(); };
@@ -237,6 +246,7 @@ export class PetController {
       () => document.removeEventListener('keydown', touchDoc, true),
       () => document.removeEventListener('scroll', onScroll, true),
       () => document.removeEventListener('focusin', onFocusIn, true),
+      () => document.removeEventListener('pointermove', onPtr),
       () => window.removeEventListener('resize', onResize),
       () => document.removeEventListener('visibilitychange', onVis),
     );
@@ -285,8 +295,11 @@ export class PetController {
     m.step(dt);
     const f = m.frame(now, this.reduce);
     if (f !== this.curFrame) { this.curFrame = f; this.el.style.backgroundPosition = `${-FRAMES.indexOf(f) * PET_SIZE}px 0`; }
+    this.followPointer(m);
+    // Se estira al subir y se aplasta al caer.
     let sx = 1, sy = 1;
     if (m.squash > 0) { sx = 1.1; sy = 0.86; }
+    else if (m.mode === 'air' && m.vy < -120 && !this.reduce) { sx = 0.93; sy = 1.08; }
     const rot = m.mode === 'held' ? Math.sin(now / 160) * 7 : 0;
     this.el.style.transformOrigin = m.mode === 'held' ? '50% 8%' : '50% 100%';
     this.el.style.transform = `translate(${m.x.toFixed(1)}px,${m.y.toFixed(1)}px) rotate(${rot.toFixed(1)}deg) scale(${sx * m.dir},${sy})`;
@@ -301,6 +314,17 @@ export class PetController {
     if (now - this.lastMeasure < 500) return;
     this.lastMeasure = now;
     this.measure();
+  }
+
+  private followPointer(m: PetMotion) {
+    let want: -1 | 0 | 1 = 1;
+    const p = this.ptr;
+    if (m.resting && m.mode !== 'sleep' && Date.now() - p.t < 2500) {
+      const cx = m.center(), cy = m.y + PET_SIZE / 2;
+      const rel = p.x - cx;
+      if (Math.hypot(rel, p.y - cy) < 360) want = (Math.abs(rel) < 14 ? 0 : (Math.sign(rel) * m.dir)) as -1 | 0 | 1;
+    }
+    if (want !== this.look) { this.look = want; this.applySheet(); }
   }
 
   // ---------- Toques ----------
@@ -344,7 +368,7 @@ export class PetController {
 
   // ---------- Aspecto ----------
   private applySheet() {
-    this.el.style.backgroundImage = sheetUrl(this.opts.species, this.mood, this.opts.outfit);
+    this.el.style.backgroundImage = sheetUrl(this.opts.species, this.mood, this.opts.outfit, this.look);
     this.el.style.backgroundSize = `${FRAMES.length * PET_SIZE}px ${PET_SIZE}px`;
     this.el.setAttribute('aria-label', `${this.opts.name}, tu mascota. Tócala para hablarle o arrástrala para moverla.`);
     this.bName.textContent = this.opts.name;
@@ -362,8 +386,19 @@ export class PetController {
   }
   setMove(move: 'pasea' | 'quieta') {
     this.opts.move = move;
-    this.motion.still = move === 'quieta' || this.reduce;
+    this.motion.still = move === 'quieta' || this.discreet || this.reduce;
     this.start();
+  }
+  /** Modo discreto (Trabajo): se queda en su esquina y no se sube a nada. */
+  setDiscreet(on: boolean) {
+    if (this.discreet === on) return;
+    this.discreet = on;
+    if (on) {
+      this.hideBubble();
+      // Directo a su esquina, sin cruzar la pantalla caminando.
+      if (this.motion.mode !== 'held') this.motion.placeOnFloor(this.motion.corner());
+    }
+    this.setMove(this.opts.move);
   }
   setFocus(on: boolean) {
     if (this.motion.focus === on) return;

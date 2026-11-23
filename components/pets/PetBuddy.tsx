@@ -12,7 +12,7 @@ import { C } from '../../lib/theme';
 import { coinSvg, SPECIES } from '../../lib/pets/art';
 import { PetController, type BubbleAction } from '../../lib/pets/dom';
 import {
-  commit, initialBrain, isWandering, react, suggestion,
+  commit, discreet, initialBrain, isWandering, react, suggestion,
   type ActionId, type BrainState, type PetEvent, type Reaction, type TaskHint,
 } from '../../lib/pets/brain';
 import { lineFor } from '../../lib/pets/lines';
@@ -28,6 +28,11 @@ import { toast, friendlyError } from '../../lib/feedback';
 import { useAuth } from '../../lib/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getGoals } from '../../lib/ritualsDb';
+import { useMode } from '../../lib/mode';
+
+/** Después de 2 horas de enfoque casi seguidas (pausas de menos de 15 min) se ve cansada. */
+const TIRED_MS = 2 * 60 * 60_000;
+const TIRED_GAP_MS = 15 * 60_000;
 
 const LABELS: Record<ActionId, string> = {
   enfocar: 'Enfocarme ya', mover_hoy: 'Mover a hoy', que_hago: '¿Qué hago ahora?', dos_min: 'Regla de 2 min',
@@ -71,6 +76,10 @@ export function PetBuddy() {
   const brain = useRef<BrainState>(initialBrain());
   const ctx = useRef<{ task: Task | null; navTimes: number[]; lastAction: number; opened: boolean }>({ task: null, navTimes: [], lastAction: Date.now(), opened: false });
   const userId = session?.user?.id;
+  // En Trabajo la mascota es discreta: quieta en su esquina y callada.
+  const { work } = useMode();
+  const workRef = useRef(work);
+  workRef.current = work;
 
   // Cargar mascotas y ajustes al iniciar sesión.
   useEffect(() => {
@@ -102,7 +111,8 @@ export function PetBuddy() {
   function handle(ev: PetEvent) {
     if (!pet) return;
     const b = { ...brain.current, talk: s.prefs.talk, mutedUntil: isMutedToday(s.prefs) ? Number.MAX_SAFE_INTEGER : 0 };
-    apply(react(ev, b, pet.species, Date.now()));
+    const r = react(ev, b, pet.species, Date.now());
+    apply(workRef.current ? discreet(ev, r, pet.species) : r);
   }
 
   async function freshHints() {
@@ -155,7 +165,7 @@ export function PetBuddy() {
     brain.current = readBrain();
     const c = new PetController({
       species: pet.species, outfit: pet.outfit ?? {}, name: pet.name, move: s.prefs.move,
-      palette: { paper: '#f6f2ea', ink: '#1f2433', muted: '#5b6475', brand: '#2d3c5a', onBrand: '#ffffff', soft: '#e6e1d3', coin: C.warn },
+      palette: { paper: '#F7F4EE', ink: '#1B1D3A', muted: '#5D5E66', brand: '#1B1D3A', onBrand: '#F7F4EE', soft: '#E9E5DC', coin: C.warn },
       onTap: () => fns.current.handle({ type: 'toque' }),
       onAction: (id) => { fns.current.onAction(id); },
       onGrab: () => fns.current.handle({ type: 'agarrar' }),
@@ -170,18 +180,33 @@ export function PetBuddy() {
   // Aspecto y ajustes.
   useEffect(() => { if (pet) ctl.current?.setLook({ species: pet.species, outfit: pet.outfit ?? {}, name: pet.name }); }, [pet?.species, pet?.name, JSON.stringify(pet?.outfit)]);
   useEffect(() => { ctl.current?.setMove(s.prefs.move); }, [s.prefs.move, show]);
+  useEffect(() => { ctl.current?.setDiscreet(work); }, [work, show]);
 
   // Enfoque: se va a su esquina y se calla.
   useEffect(() => {
     if (!show) return;
     let was = false;
-    return subscribeFocus((f) => {
+    let since = 0, lastOn = 0, tired = false;
+    const checkTired = () => {
+      const now = Date.now();
+      const t = was && since > 0 && now - since >= TIRED_MS;
+      if (t && !tired) ctl.current?.setMood('cansado');
+      tired = t;
+    };
+    const iv = setInterval(checkTired, 60_000);
+    const off = subscribeFocus((f) => {
       const on = f.running && f.mode === 'work';
+      const now = Date.now();
+      if (on && !was) { if (!since || now - lastOn > TIRED_GAP_MS) since = now; }
+      if (on) lastOn = now;
       ctl.current?.setFocus(on);
       brain.current = { ...brain.current, focusing: on };
       if (on && !was) fns.current.handle({ type: 'enfoque_inicio' });
       was = on;
+      if (!on) tired = false;
+      checkTired();
     });
+    return () => { clearInterval(iv); off(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show, pet?.id]);
 

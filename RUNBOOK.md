@@ -1722,3 +1722,31 @@ Ninguna. Es solo de la app.
 ### 3. Pruebas
 
 `npm test` (radios por espacio) y una vuelta a mano en el teléfono: deslizar una tarea en Hoy a cada lado y cerrar una hoja arrastrando.
+
+## Versión 26 (parte 5): mascotas
+
+### 1. Migración
+
+Corre otra vez `supabase/schema_v25.sql` completo. La fase 5:
+- Agrega la ropa nueva al catálogo de la base (`_pet_item`) con dos lugares nuevos: espalda y mano. `pet_buy` y `pet_wear` los aceptan.
+- Cambia los premios: las tareas de Trabajo no pagan (quedan marcadas en 0, así no pagan después) y el enfoque solo paga con el temporizador de Enfoque y en Estudio. Las horas anotadas a mano o con el cronómetro de Trabajo ya no pagan.
+- Qué cuenta como Trabajo: la materia con espacio Trabajo; sin materia, una cuenta que está solo en modo Trabajo.
+
+Sin la migración, la ropa nueva se ve en la tienda pero la base no la vende ("Eso no está en la tienda").
+
+### 2. Lo que cambia para el usuario
+
+- **Dibujo:** contorno en la tinta de la marca en vez de negro y sombra cálida. Los sombreros ya no se cortan arriba en el perro, el loro y el pingüino.
+- **Movimiento:** camina en 6 cuadros, la cola y la cresta se mecen, se agacha antes de saltar y se aplasta al aterrizar, respira y parpadea a destiempo, y mira hacia el puntero cuando está cerca.
+- **Caras nuevas:** cansada después de 2 horas de enfoque casi seguidas y sorprendida con un logro (además de concentrada y contenta).
+- **Ropa nueva, en tres grupos en la tienda:**
+  - Para estudiar: lápiz (mano), lápiz en la oreja, lentes de lectura, mochila (espalda), más las gafas y el birrete.
+  - Para trabajar: taza (mano), carné, corbata, maletín (mano), audífonos con micrófono, más el corbatín.
+  - Para lucirse: la capa (espalda) y lo de siempre.
+  - La bufanda, la corbata, el carné y la capa se quedan un poco atrás al caminar y al saltar.
+- **En Trabajo:** la mascota se queda quieta en su esquina, no saluda ni avisa, no salta, y solo habla al cerrar el día o si la tocas (sin tienda en el globo). No gana monedas allí.
+- **Al cerrar el día** (en Hoy) la mascota se despide, en los dos espacios.
+
+### 3. Pruebas
+
+`npm test` (la ropa cabe en las 4 especies en los 16 cuadros, la bufanda se queda atrás, el catálogo es igual al de la base, modo discreto, parpadeo y aterrizaje) y `bash tests/run_sql.sh` (incluye `tests/sql/25c_pruebas.sql`: espalda y mano, Trabajo no paga, horas a mano no pagan, cuenta solo de Trabajo).

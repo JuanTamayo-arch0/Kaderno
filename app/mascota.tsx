@@ -7,7 +7,7 @@ import { RequireAuth } from '../components/RequireAuth';
 import { Screen, Button, Card, Segmented, SectionLabel, Skeleton, IconButton } from '../components/ds';
 import { useResponsive } from '../lib/responsive';
 import { ITEMS, SPECIES, type ItemId, type Species } from '../lib/pets/art';
-import { ITEM_RULES, ITEM_SHORT, SHOP_ORDER, adoptPrice, coinLabel, homeItemState, itemState, levelProgress, DEFAULT_NAMES, type ItemState } from '../lib/pets/economy';
+import { ITEM_RULES, ITEM_SHORT, SHOP_ORDER, SET_LABEL, SLOT_LABEL, setOf, type ItemSet, adoptPrice, coinLabel, homeItemState, itemState, levelProgress, DEFAULT_NAMES, type ItemState } from '../lib/pets/economy';
 import { activePet, activatePet, adoptPet, buyItem, checkAchievements, loadPets, renamePet, setHome, usePets, wearItem, type Pet } from '../lib/pets/store';
 import { SEASONS, seasonOn, seasonEnd, upcomingSeason, seasonOfItem, nextStart } from '../lib/pets/seasons';
 import { HOME_DEFAULT_NAMES, HOME_DEFAULT_SHORT, HOME_ITEMS, HOME_ORDER, withItem, type HomeItemId } from '../lib/pets/home';
@@ -157,9 +157,9 @@ function Shop({ pet, owned }: { pet: Pet; owned: Set<string> }) {
     const dim = st === 'bloqueada' || st === 'fuera';
     return (
       <Pressable key={id} onPress={() => press(id, st)} disabled={busy === id} dataSet={{ press: '1' }}
-        accessibilityRole="button" accessibilityLabel={`${ITEMS[id].name}. ${st === 'puesta' ? 'Puesta, toca para quitarla' : st === 'tuya' ? 'Tuya, toca para ponerla' : st === 'bloqueada' ? `Nivel ${r.level}` : st === 'fuera' ? `Llega ${extra ?? 'en su temporada'}` : coinLabel(r.price, coin)}`}
+        accessibilityRole="button" accessibilityLabel={`${ITEMS[id].name}, ${SLOT_LABEL[r.slot].toLowerCase()}. ${st === 'puesta' ? 'Puesta, toca para quitarla' : st === 'tuya' ? 'Tuya, toca para ponerla' : st === 'bloqueada' ? `Nivel ${r.level}` : st === 'fuera' ? `Llega ${extra ?? 'en su temporada'}` : coinLabel(r.price, coin)}`}
         style={({ focused }: any) => [{
-          flexBasis: isWide ? '18%' : '30%', flexGrow: 1, maxWidth: isWide ? '20%' : '33%', alignItems: 'center', gap: 2, paddingTop: 8, paddingBottom: 10, paddingHorizontal: 4,
+          flexBasis: isWide ? '14%' : '30%', flexGrow: 1, maxWidth: isWide ? '16%' : '33%', alignItems: 'center', gap: 2, paddingTop: 8, paddingBottom: 10, paddingHorizontal: 4,
           borderRadius: 16, borderWidth: st === 'puesta' ? 2 : 1, borderColor: st === 'puesta' ? C.good : C.line, backgroundColor: C.surface, opacity: dim ? 0.55 : 1,
         }, focused ? ({ outlineColor: C.focus, outlineWidth: 2, outlineStyle: 'solid' } as any) : null]}>
         <PetImage species={pet.species} outfit={{ ...pet.outfit, [r.slot]: id }} size={64} />
@@ -182,9 +182,14 @@ function Shop({ pet, owned }: { pet: Pet; owned: Set<string> }) {
   return (
     <View style={{ gap: 10 }}>
       <Text style={{ color: C.muted, fontSize: 13 }}>Toca una prenda para comprarla, ponerla o quitarla. Se paga con {coin.many} y es solo para {pet.name}.</Text>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-        {SHOP_ORDER.map((id) => card(id))}
-      </View>
+      {(['estudio', 'trabajo', 'lucirse'] as ItemSet[]).map((set) => (
+        <View key={set} style={{ gap: 8, marginTop: 6 }}>
+          <Text style={{ color: C.text, fontSize: 15, fontWeight: '800' }} accessibilityRole="header">{SET_LABEL[set]}</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+            {SHOP_ORDER.filter((id) => setOf(id) === set).map((id) => card(id))}
+          </View>
+        </View>
+      ))}
       <View style={{ marginTop: 10, gap: 4 }} accessibilityRole="header">
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Ionicons name={now ? 'sparkles' : 'calendar-outline'} size={16} color={now ? C.warnText : C.muted} />
@@ -426,7 +431,8 @@ function HowToEarn({ pet }: { pet: Pet }) {
       <Card style={{ gap: 8 }}>
         <Text style={{ color: C.muted, fontSize: 13.5, lineHeight: 20 }}>Gana la mascota activa, en {coin.many}. Lo cuenta el servidor a partir de lo que ya haces en Kaderno.</Text>
         <Text style={{ color: C.muted, fontSize: 13.5, lineHeight: 20 }}>Tope de 300 por día. Cada tarea paga una sola vez, aunque la desmarques y la vuelvas a marcar. Una tarea creada y marcada en menos de un minuto no paga.</Text>
-        <Text style={{ color: C.muted, fontSize: 13.5, lineHeight: 20 }}>El nivel sube con todo lo ganado (gastar no lo baja) y desbloquea ropa: bufanda y boina en el 2, audífonos en el 3, gafas de sol en el 4, birrete en el 6 y corona en el 10.</Text>
+        <Text style={{ color: C.muted, fontSize: 13.5, lineHeight: 20 }}>Se gana estudiando: las tareas y el enfoque de Trabajo, y las horas anotadas a mano o con el cronómetro, no pagan. En Trabajo la mascota se queda quieta en su esquina y solo habla al cerrar el día o si la tocas.</Text>
+        <Text style={{ color: C.muted, fontSize: 13.5, lineHeight: 20 }}>El nivel sube con todo lo ganado (gastar no lo baja) y desbloquea ropa: bufanda, boina, mochila y maletín en el 2; audífonos y diadema en el 3; gafas de sol en el 4; capa en el 5; birrete en el 6 y corona en el 10.</Text>
       </Card>
     </View>
   );

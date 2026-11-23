@@ -199,3 +199,86 @@ test('movimiento: Trabajo más recto, transiciones y gestos con respeto a reduci
   const ds = fs.readFileSync('components/ds.tsx', 'utf8');
   assert.match(ds, /prefersReducedMotion\(\)/, 'los números que cuentan respetan reducir movimiento');
 });
+
+// ---------- Fase 5: mascotas ----------
+test('mascotas: la ropa nueva cabe en las cuatro especies en todos los cuadros', async () => {
+  const { SPECIES, ITEMS, SHEET_FRAMES, GRID, itemPlacement, petGrid } = await import('../lib/pets/art');
+  for (const [id, it] of Object.entries(ITEMS)) {
+    for (const sp of Object.keys(SPECIES) as (keyof typeof SPECIES)[]) {
+      for (const fr of SHEET_FRAMES) {
+        const p = itemPlacement(sp, id as any, fr);
+        const w = it.rows[0].length, h = it.rows.length;
+        assert.ok(p.x >= 0 && p.x + w <= GRID && p.y + h <= GRID, `${id} se sale en ${sp} ${fr}: ${p.x},${p.y}`);
+        // Arriba solo se puede cortar en el aire, y el sombrero de bruja, que es más alto que el lienzo.
+        const air = fr === 'salto' || fr === 'cae';
+        if (!air && id !== 'sombrero_bruja') assert.ok(p.y >= 0, `${id} se corta arriba en ${sp} ${fr}`);
+        if (it.back && p.back) {
+          const bw = it.back.rows[0].length;
+          assert.ok(p.back.x >= 0 && p.back.x + bw <= GRID && p.back.y >= 0, `${id} (atrás) se sale en ${sp} ${fr}`);
+        }
+      }
+      const plain = JSON.stringify(petGrid(sp));
+      assert.notEqual(JSON.stringify(petGrid(sp, { outfit: { [it.slot]: id } as any })), plain, `${id} no se ve en ${sp}`);
+    }
+  }
+});
+
+test('mascotas: la bufanda se queda atrás al caminar y la cola se mece', async () => {
+  const { petGrid } = await import('../lib/pets/art');
+  const diff = (a: (string | null)[][], b: (string | null)[][]) => a.flatMap((row, y) => row.map((c, x) => (c !== b[y][x] ? `${x},${y}` : ''))).filter(Boolean).join(' ');
+  const scarf = (fr: any) => diff(petGrid('gato', { frame: fr, outfit: { cuello: 'bufanda' } }), petGrid('gato', { frame: fr }));
+  assert.notEqual(scarf('paso1'), scarf('paso4'), 'la punta de la bufanda va un cuadro tarde');
+  const tail = (fr: any) => petGrid('perro', { frame: fr }).map((row) => row.slice(24).join('|')).join('/');
+  assert.notEqual(tail('paso1'), tail('paso4'), 'la cola del perro cambia de lado');
+});
+
+test('mascotas: el catálogo de la ropa es el mismo en la app y en la base (fase 5)', async () => {
+  const fs = await import('node:fs');
+  const { ITEM_RULES, ITEM_SETS, SHOP_ORDER, setOf } = await import('../lib/pets/economy');
+  const sql = fs.readFileSync('supabase/schema_v25.sql', 'utf8');
+  const part = sql.slice(sql.indexOf('FASE 5 · Mascotas'));
+  const rows = [...part.matchAll(/\('([a-z_]+)', (\d+), (\d+), '([a-z]+)'\)/g)].map((m) => ({ id: m[1], price: +m[2], level: +m[3], slot: m[4] }));
+  const clothes = rows.filter((r) => ['cabeza', 'ojos', 'cuello', 'espalda', 'mano'].includes(r.slot));
+  assert.deepEqual(clothes.map((r) => r.id).sort(), Object.keys(ITEM_RULES).sort());
+  for (const r of clothes) {
+    const it = ITEM_RULES[r.id as keyof typeof ITEM_RULES];
+    assert.deepEqual([it.price, it.level, it.slot], [r.price, r.level, r.slot], r.id);
+  }
+  assert.match(part, /_pet_wear_slot\(p_slot text\)[\s\S]*'espalda', 'mano'/);
+  const all = [...ITEM_SETS.estudio, ...ITEM_SETS.trabajo];
+  assert.equal(new Set(all).size, all.length, 'una prenda en dos juegos');
+  for (const id of all) assert.ok(SHOP_ORDER.includes(id), id);
+  assert.equal(setOf('taza'), 'trabajo');
+  assert.equal(setOf('mochila'), 'estudio');
+  assert.equal(setOf('corona'), 'lucirse');
+});
+
+test('mascotas: en Trabajo es discreta (no habla salvo al cerrar el día o si la tocas)', async () => {
+  const { react, discreet, initialBrain } = await import('../lib/pets/brain');
+  const b = initialBrain();
+  const T = 1_000_000_000;
+  const done = discreet({ type: 'tarea_hecha', allDone: true }, react({ type: 'tarea_hecha', allDone: true }, b, 'perro', T, 0), 'perro', 0);
+  assert.ok(done && !done.say && !done.celebrate && done.mood === 'feliz');
+  const open = discreet({ type: 'abrir', overdue: [{ id: 'a', title: 'X', overdue: true }], today: [], hour: 10 },
+    react({ type: 'abrir', overdue: [{ id: 'a', title: 'X', overdue: true }], today: [], hour: 10 }, b, 'gato', T, 0), 'gato', 0);
+  assert.ok(!open?.say, 'no avisa vencidas en Trabajo');
+  const closed = discreet({ type: 'dia_cerrado' }, react({ type: 'dia_cerrado' }, b, 'loro', T, 0), 'loro', 0);
+  assert.ok(closed?.say);
+  const tap = discreet({ type: 'toque' }, react({ type: 'toque' }, b, 'pinguino', T, 0), 'pinguino', 0);
+  assert.ok(tap?.say && !tap.actions?.includes('tienda'), 'sin tienda en Trabajo');
+  assert.equal(react({ type: 'logro', title: 'X', reward: 20 }, b, 'gato', T, 0)?.mood, 'sorprendido');
+  const fs = await import('node:fs');
+  assert.match(fs.readFileSync('components/pets/PetBuddy.tsx', 'utf8'), /setDiscreet\(work\)/);
+});
+
+test('mascotas: parpadea a destiempo y se aplasta al aterrizar', async () => {
+  const { PetMotion } = await import('../lib/pets/motion');
+  const w = { minX: 0, maxX: 800, floor: 600, perches: () => [], rectOf: () => null, obstacle: () => null };
+  const m = new PetMotion(w as any, 64, () => 0.5);
+  m.placeOnFloor(100);
+  const seen = new Set<string>();
+  for (let t = 0; t < 8000; t += 40) seen.add(m.frame(t));
+  assert.ok(seen.has('parpadeo') && seen.has('respira') && seen.has('quieto'), [...seen].join(','));
+  m.squash = 0.1;
+  assert.equal(m.frame(9000), 'aterriza');
+});

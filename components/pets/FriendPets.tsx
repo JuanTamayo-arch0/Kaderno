@@ -39,7 +39,7 @@ export function FriendPets() {
   useEffect(() => {
     if (!show) { ctl.current?.destroy(); ctl.current = null; return; }
     if (!ctl.current) {
-      ctl.current = new FriendsController((uid) => { void sendGreeting(uid); }, { paper: '#fffaf0', ink: '#1f2433', brand: C.brand });
+      ctl.current = new FriendsController((uid) => { void sendGreeting(uid); }, { paper: '#F7F4EE', ink: '#1B1D3A', brand: C.brand });
       // Los saludos que ya pasaron no se repiten al aparecer.
       getLiveRoom().greetings.forEach((g) => seen.current.add(g.id));
     }
