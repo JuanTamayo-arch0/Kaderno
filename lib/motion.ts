@@ -55,6 +55,21 @@ const CSS = `
 [data-anim="enter"][data-i="7"] { animation-delay: 155ms; }
 [data-anim="enter"][data-i="8"] { animation-delay: 170ms; }
 [data-anim="page"] { animation: kd-page .22s ${EASE} both; }
+/* v28: entrada en cascada (login y registro) y la raya del margen que se dibuja. */
+@keyframes kd-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes kd-line { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes kd-swap { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: none; } }
+[data-anim="rise"] { animation: kd-rise .6s ${EASE} both; }
+[data-anim="rise"][data-i="1"] { animation-delay: 90ms; }
+[data-anim="rise"][data-i="2"] { animation-delay: 180ms; }
+[data-anim="rise"][data-i="3"] { animation-delay: 270ms; }
+[data-anim="rise"][data-i="4"] { animation-delay: 360ms; }
+[data-anim="rise"][data-i="5"] { animation-delay: 450ms; }
+[data-anim="rise"][data-i="6"] { animation-delay: 540ms; }
+[data-anim="rise"][data-i="7"] { animation-delay: 630ms; }
+[data-anim="rise"][data-i="8"] { animation-delay: 720ms; }
+[data-anim="line"] { animation: kd-line 1s cubic-bezier(.65,0,.35,1) both; transform-origin: top; }
+[data-anim="swap"] { animation: kd-swap .32s ${EASE} both; }
 [data-anim="sheet"] { animation: kd-sheet .24s ${EASE} both; }
 [data-anim="pop"] { animation: kd-pop .34s ${EASE} both; }
 [data-anim="grow"] { animation: kd-grow .16s ${EASE} both; transform-origin: top; }
