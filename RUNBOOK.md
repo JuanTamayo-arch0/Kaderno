@@ -1789,29 +1789,10 @@ Los 59 KB de más son las funciones de v25 y v26. La tira de la mascota (16 cuad
 
 `npm test` (contraste de todos los temas sobre tarjeta y fondo, documentos sobrios con su pie).
 
-## Versión 27 (parte 1): importante y la matriz de Eisenhower
+## Arreglo: la página se congelaba al cambiar de pantalla
 
-### 1. Migración
+Desde v26 (parte 4), cada cambio de pantalla dejaba la página quieta unos 4 segundos. La transición del navegador esperaba a que se pintara la pantalla nueva, pero el navegador no pinta mientras arranca una transición: se quedaba esperando hasta su límite de 4 segundos. Ahora se navega directo y la pantalla nueva entra con su animación de CSS, que no bloquea.
 
-Corre `supabase/schema_v26.sql` (es idempotente). Agrega `assignments.important`. Sin la migración, la vista Matriz se ve igual, pero la estrella avisa que falta este paso.
+Medido con la CPU 4 veces más lenta, ida y vuelta entre Materias, Oráculo, Horario y Hoy: antes 4.124 ms por cambio (mediana), ahora 227 ms.
 
-### 2. Lo que cambia para el usuario
-
-- **Estrella de "importante"** en las tareas:
-  - En la tarea abierta.
-  - En el menú de cada fila ("Marcar importante").
-  - En la vista Matriz, con un toque.
-  - En las demás listas se ve una estrella pequeña junto a la tarea.
-- **Vista Matriz en Hoy**, junto a Lista y Mi día, con cuatro cuadrantes:
-  - Hacer ya.
-  - Planear.
-  - Hacer rápido (en Trabajo: Delegar).
-  - Soltar.
-  - Urgente sale de la fecha: lo vencido y lo que vence en los próximos 2 días (se cambia en Ajustes > Urgente en la Matriz).
-  - En el computador las tareas se arrastran entre cuadrantes. Al cambiar de columna cambia la estrella; al cambiar de fila se ofrece mover la fecha.
-  - Las tareas de proyecto entran por su prioridad.
-- **Ritual del lunes:** lo importante sale primero en las sugerencias, y una línea dice cuánto de lo terminado la semana pasada era importante.
-
-### 3. Pruebas
-
-`npm test` (urgente, importante, cuadrantes, arrastrar, balance de la semana) y `bash tests/run_sql.sh` (incluye `tests/sql/26_pruebas.sql`).
+No hay migración. Se pierde que el ícono de la materia viaje hasta su ficha.

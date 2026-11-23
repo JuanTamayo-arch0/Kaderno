@@ -78,16 +78,7 @@ const CSS = `
 }
 [data-ghost] > * { transform: scale(1.03); transition: transform .15s ${EASE}; }
 
-/* v26, fase 4: paso entre pantallas (View Transitions). La barra lateral
-   tiene su propio nombre, así que se queda quieta; el resto se funde y sube. */
-::view-transition-old(root) { animation: kd-vt-out .16s ${EASE} both; }
-::view-transition-new(root) { animation: kd-vt-in .24s ${EASE} both; }
-::view-transition-group(*) { animation-duration: .3s; animation-timing-function: ${EASE}; }
-@keyframes kd-vt-out { to { opacity: 0; transform: translateY(-3px); } }
-@keyframes kd-vt-in { from { opacity: 0; transform: translateY(6px); } }
-
 @media (prefers-reduced-motion: reduce) {
-  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
   [data-anim], [data-anim]::after, [data-landed] > *, [data-skeleton] { animation: none !important; }
   [data-press], [data-lift], [data-ghost] > * { transition: none !important; transform: none !important; }
 }
@@ -111,35 +102,23 @@ export function prefersReducedMotion(): boolean {
 
 // ---------- v26, fase 4: paso entre pantallas y listas que se reacomodan ----------
 
-const nextPaint = () => new Promise<void>((res) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(res, 40))));
-
 /**
- * Cambia de pantalla con una transición suave (Chrome, Edge y Safari
- * recientes). En los demás navegadores, o con "reducir movimiento", cambia sin
- * más. `go` hace la navegación (router.push, router.back...).
+ * Cambia de pantalla. En v26 (fase 4) esto usaba las transiciones de vista
+ * del navegador, pero congelaba la página: mientras arranca una transición el
+ * navegador no pinta, y la función esperaba a que pintara, así que cada cambio
+ * de pantalla quedaba quieto hasta 4 segundos (el límite del navegador). Ahora
+ * navega directo; la pantalla nueva entra con su animación de CSS
+ * (data-anim="page"), que no bloquea nada. Se deja la función para no tocar a
+ * quienes la llaman.
  */
 export function vtNavigate(go: () => void): void {
-  const doc: any = typeof document !== 'undefined' ? document : null;
-  if (Platform.OS !== 'web' || !doc?.startViewTransition || prefersReducedMotion()) { go(); return; }
-  try {
-    const t = doc.startViewTransition(async () => { go(); await nextPaint(); });
-    // Si la pantalla nueva tarda, el navegador cancela la animación: no es un error.
-    [t?.ready, t?.finished, t?.updateCallbackDone].forEach((pr: Promise<unknown> | undefined) => pr?.catch?.(() => {}));
-  } catch { go(); }
+  go();
 }
 
-/**
- * Da un nombre de transición a un elemento: si en la pantalla siguiente hay
- * otro con el mismo nombre, el navegador lo lleva de un lugar al otro (la
- * tarjeta de la materia crece hasta ser su ficha). Los nombres deben ser
- * únicos en cada pantalla.
- */
-export function vtRef(name: string | null | undefined) {
-  return (node: any) => {
-    if (Platform.OS !== 'web' || !node) return;
-    const el: HTMLElement | null = node instanceof HTMLElement ? node : (node?._nativeTag ?? null);
-    if (el?.style) (el.style as any).viewTransitionName = name ? name.replace(/[^a-zA-Z0-9_-]/g, '-') : '';
-  };
+/** Antes daba un nombre de transición a un elemento; ya no hace nada (ver vtNavigate). */
+export function vtRef(_name: string | null | undefined) {
+  // Sin transiciones de vista no hace falta nombrar elementos.
+  return undefined;
 }
 
 /**
