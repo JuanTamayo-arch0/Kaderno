@@ -8,6 +8,8 @@ export type Subject = {
   teacher?: string | null; room?: string | null; link?: string | null;
   // schema_v25 (v26): Estudio o Trabajo. Vacío = el modo de la persona.
   space?: 'estudio' | 'trabajo' | null; default_template?: string | null;
+  // schema_v25, fase 3: el semestre al que pertenece.
+  term_id?: string | null;
 };
 export type Task = {
   id: string; subject_id: string | null; title: string; description: string | null;

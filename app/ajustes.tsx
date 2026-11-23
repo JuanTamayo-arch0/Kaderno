@@ -97,7 +97,7 @@ function Ajustes() {
   const [semester, setSemester] = useState(false);
   const { plan } = usePlan();
   const pv = planView(plan);
-  const { mode } = useMode();
+  const { mode, study } = useMode();
 
   useFocusEffect(useCallback(() => {
     resetHoyHiddenCache();
@@ -213,6 +213,8 @@ function Ajustes() {
       <Card padded={false}>
         <ListRow title="Tema, fondo y letra" subtitle="Kaderno claro u oscuro, color de acento y más" left={<Ionicons name="color-palette-outline" size={20} color={C.muted} />} onPress={() => router.push('/personalizar')} />
         <Divider />
+        {study && <ListRow title="Historial y escala de notas" subtitle="Tus semestres, el promedio acumulado y la escala de tu institución" left={<Ionicons name="ribbon-outline" size={20} color={C.muted} />} onPress={() => router.push('/historial' as any)} />}
+        {study && <Divider />}
         <ListRow title="Tipos de tarea" subtitle="Laboratorio, exposición, lectura…" left={<Ionicons name="pricetags-outline" size={20} color={C.muted} />} onPress={() => router.push('/tipos')} />
         <Divider />
         <Toggle label="Sonidos" hint="Al completar tareas y pasos, mover tarjetas y borrar. Solo en este dispositivo." value={sound}

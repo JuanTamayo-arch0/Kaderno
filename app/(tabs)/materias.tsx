@@ -15,8 +15,10 @@ import { onDataChanged } from '../../lib/uiBus';
 import { Screen, Button, Card, EmptyState, ErrorState, Segmented, Skeleton } from '../../components/ds';
 import { SubjectIcon } from '../../components/SubjectIcon';
 import { SubjectModal } from '../../components/SubjectModal';
-import { useMode } from '../../lib/mode';
+import { useMode, getMode } from '../../lib/mode';
+import { ensureOpenTerm, useGradeScale } from '../../lib/termsDb';
 import { useSpaceFilter } from '../../lib/useSpace';
+import { fmtGrade } from '../../lib/terms';
 
 // ============================================================
 //  Materias: tarjetas con lo pendiente, la próxima entrega y el promedio.
@@ -27,6 +29,7 @@ import { useSpaceFilter } from '../../lib/useSpace';
 export default function Materias() {
   const router = useRouter();
   const { v: mv, work } = useMode();
+  const scale = useGradeScale();
   const { isWide, width } = useResponsive();
   const { session } = useAuth();
   // Foto de la última visita para pintar al instante.
@@ -48,6 +51,8 @@ export default function Materias() {
       setSubjects(s); setTasks(t); setNotes(n); setGrades(g); setError(null);
       snap.save({ s, t, n, g });
       getSchedule().then(setSlots).catch(() => {});
+      // v26: las materias nuevas de Estudio quedan en el semestre abierto.
+      if (getMode() !== 'trabajo' && s.some((x) => !x.term_id)) ensureOpenTerm().catch(() => {});
     } catch (e) { setError(friendlyError(e)); setSubjects((x) => x ?? []); }
   }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -58,7 +63,10 @@ export default function Materias() {
 
   return (
     <Screen title={mv.subjects} subtitle={subjects?.length ? mv.subjectsCount(subjects.length) : mv.subjectLower === 'área' ? 'Organiza por área o cliente' : 'Organiza por asignatura'} maxWidth={1180}
-      right={isWide ? <Button label={mv.newSubject} icon="add" size="sm" onPress={() => setModal(true)} /> : undefined}
+      right={<View style={{ flexDirection: 'row', gap: 8 }}>
+        {!work && <Button label={isWide ? 'Historial' : ''} icon="ribbon-outline" size="sm" kind="secondary" onPress={() => router.push('/historial' as any)} accessibilityLabel="Historial académico" />}
+        {isWide && <Button label={mv.newSubject} icon="add" size="sm" onPress={() => setModal(true)} />}
+      </View>}
       header={!isWide ? <Segmented value="materias" onChange={(k) => { if (k === 'horario') router.navigate('/horario'); }}
         items={[{ key: 'materias', label: mv.subjectsTab, icon: (mv.subjectIcon + '-outline') as any }, { key: 'horario', label: mv.schedule, icon: 'grid-outline' }]} /> : undefined}>
       {!isWide && <View style={{ height: 14 }} />}
@@ -72,14 +80,14 @@ export default function Materias() {
           action={{ label: mv.newSubject, icon: 'add', onPress: () => setModal(true) }} />
       ) : (
         <>
-        <Summary subjects={subjects} tasks={tasks} grades={grades} slots={slots} isWide={isWide} work={work} onOpen={(id) => router.push(`/materia/${id}`)} />
+        <Summary subjects={subjects} tasks={tasks} grades={grades} slots={slots} isWide={isWide} work={work} scaleMax={scale.max} decimals={scale.decimals} onOpen={(id) => router.push(`/materia/${id}`)} />
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
           {subjects.map((s) => {
             const st = tasks.filter((t) => t.subject_id === s.id && t.status !== 'done').sort(compareDue);
             const next = st.find((t) => t.due_date || t.due_at);
             const overdue = st.filter((t) => bucketOf(t) === 'overdue').length;
             const notesN = notes.filter((n) => n.subject_id === s.id).length;
-            const { avg } = subjectAverage(grades.filter((g) => g.subject_id === s.id));
+            const { avg } = subjectAverage(grades.filter((g) => g.subject_id === s.id), scale.max);
             const days = classDays(slots, s.id).label;
             const nc = nextClass(slots, s.id, SCHEDULE.blocks);
             const soon = nc && (nc.now || dayWord(nc.start) === 'Hoy' || dayWord(nc.start) === 'Mañana');
@@ -99,7 +107,7 @@ export default function Materias() {
                   </View>
                   {!work && (
                     <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={{ color: avg == null ? C.muted : avg < 3 ? C.badText : C.text, fontSize: avg == null ? 12.5 : 18, fontWeight: '800' }}>{avg == null ? 'Sin notas' : avg.toFixed(1)}</Text>
+                      <Text style={{ color: avg == null ? C.muted : avg < scale.pass ? C.badText : C.text, fontSize: avg == null ? 12.5 : 18, fontWeight: '800' }}>{avg == null ? 'Sin notas' : fmtGrade(avg, scale)}</Text>
                       {avg != null && <Text style={{ color: C.muted, fontSize: 11 }}>promedio</Text>}
                     </View>
                   )}
@@ -128,10 +136,10 @@ export default function Materias() {
 
 // Resumen del semestre arriba de las tarjetas: promedio ponderado, pendientes,
 // próxima entrega y próxima clase (de cualquier materia).
-function Summary({ subjects, tasks, grades, slots, isWide, work, onOpen }: {
-  subjects: Subject[]; tasks: Task[]; grades: Grade[]; slots: Slot[]; isWide: boolean; work: boolean; onOpen: (id: string) => void;
+function Summary({ subjects, tasks, grades, slots, isWide, work, scaleMax, decimals, onOpen }: {
+  subjects: Subject[]; tasks: Task[]; grades: Grade[]; slots: Slot[]; isWide: boolean; work: boolean; scaleMax: number; decimals: 1 | 2; onOpen: (id: string) => void;
 }) {
-  const sem = semesterAverage(subjects, grades);
+  const sem = semesterAverage(subjects, grades, scaleMax);
   const pending = tasks.filter((t) => t.status !== 'done' && subjects.some((s) => s.id === t.subject_id));
   const overdue = pending.filter((t) => bucketOf(t) === 'overdue').length;
   const next = [...pending].sort(compareDue).find((t) => bucketOf(t) !== 'overdue' && (t.due_date || t.due_at));
@@ -143,7 +151,7 @@ function Summary({ subjects, tasks, grades, slots, isWide, work, onOpen }: {
     // v26: en Trabajo no hay promedio; se ve cuántas áreas o clientes hay activos.
     work
       ? { k: 'avg', label: 'Áreas y clientes', big: String(subjects.length), sub: `${subjects.filter((s) => tasks.some((t) => t.subject_id === s.id && t.status !== 'done')).length} con pendientes` }
-      : { k: 'avg', label: 'Promedio del semestre', big: sem.avg == null ? '–' : sem.avg.toFixed(2), sub: sem.avg == null ? 'Agrega notas en cada materia' : `Ponderado por créditos (${sem.credits})` },
+      : { k: 'avg', label: 'Promedio del semestre', big: fmtGrade(sem.avg, { decimals }), sub: sem.avg == null ? 'Agrega notas en cada materia' : `Ponderado por créditos (${sem.credits})` },
     { k: 'pend', label: 'Pendientes', big: String(pending.length), sub: overdue ? `${overdue} ${overdue === 1 ? 'vencida' : 'vencidas'}` : 'Ninguna vencida', tone: overdue ? C.badText : undefined },
     { k: 'next', label: 'Próxima entrega', big: next ? next.title : 'Nada pronto', sub: next ? `${nextSub?.name ?? ''} · ${fmtDue(next)}` : 'Todo al día', onPress: next?.subject_id ? () => onOpen(next.subject_id!) : undefined },
     { k: 'class', label: work ? 'Próxima reunión' : 'Próxima clase', big: nc ? nc.s.name : work ? 'Sin agenda' : 'Sin horario', sub: nc ? (nc.n!.now ? 'Ahora' : `${dayWord(nc.n!.start)}, ${fmtHour(hhmm(nc.n!.start))}`) + (nc.s.room ? ` · ${nc.s.room}` : '') : work ? 'Arma tu agenda para verla' : 'Arma tu horario para verla', onPress: nc ? () => onOpen(nc.s.id) : undefined },

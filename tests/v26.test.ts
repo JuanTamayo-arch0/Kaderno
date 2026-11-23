@@ -117,3 +117,63 @@ test('espacios: en Trabajo no aparece lo del estudio', async () => {
   assert.match(hoy, /\{study && <PetInvite \/>\}/);
   assert.match(hoy, /offerSemester = study &&/);
 });
+
+test('semestres: escala propia, nombres y promedio como el servidor', async () => {
+  const t = await import('../lib/terms');
+  assert.deepEqual(t.cleanScale({}), { max: 5, pass: 3, decimals: 1 });
+  assert.deepEqual(t.cleanScale({ max: 100, pass: 60, decimals: 2 }), { max: 100, pass: 60, decimals: 2 });
+  assert.equal(t.cleanScale({ max: 10, pass: 50 }).pass, 6, 'aprobar no puede pasar la máxima');
+  assert.equal(t.suggestTermName(new Date(2026, 10, 22)), '2026-2');
+  assert.equal(t.suggestTermName(new Date(2027, 2, 1)), '2027-1');
+  assert.equal(t.nextTermName('2026-2'), '2027-1');
+  assert.equal(t.nextTermName('2027-1'), '2027-2');
+  assert.equal(t.nextTermName('Semestre de verano'), '');
+  const subs = [
+    { name: 'Cálculo II', credits: 4, grade: 4.4, status: 'aprobada' as const },
+    { name: 'Física', credits: 4, grade: 2.8, status: 'reprobada' as const },
+    { name: 'Inglés IV', credits: 2, grade: 4.0, status: 'homologada' as const },
+    { name: 'Ética', credits: 2, grade: null, status: 'retirada' as const },
+  ];
+  assert.deepEqual(t.termAverage(subs), { avg: 3.6, credits: 6, graded: 8 }, 'igual que _term_summary en SQL');
+  assert.equal(t.bestSubject(subs)?.name, 'Cálculo II');
+  const scale = { max: 5, pass: 3, decimals: 1 as const };
+  assert.equal(t.statusFor(2.9, scale), 'reprobada');
+  assert.equal(t.statusFor(3, scale), 'aprobada');
+  assert.equal(t.fmtGrade(4.25, scale), '4,3');
+  assert.equal(t.fmtGrade(4.25, { decimals: 2 }), '4,25');
+  assert.equal(t.parseGrade('4,3'), 4.3);
+  assert.equal(t.parseGrade(''), null);
+});
+
+test('semestres: acumulado con escalas distintas, racha y cuándo cerrar', async () => {
+  const t = await import('../lib/terms');
+  const scale = { max: 5, pass: 3, decimals: 1 as const };
+  const terms = [
+    { status: 'closed' as const, summary: { subjects: [], avg: 4, credits: 18, credits_graded: 18, max: 5 } },
+    { status: 'closed' as const, summary: { subjects: [], avg: 80, credits: 10, credits_graded: 10, max: 100 } },
+    { status: 'open' as const, summary: null },
+  ];
+  const c = t.cumulative(terms, scale);
+  assert.equal(c.credits, 28);
+  assert.equal(c.terms, 2);
+  assert.ok(Math.abs((c.avg as number) - 4) < 1e-9, 'el 80 de 100 cuenta como 4 de 5');
+  assert.equal(t.longestRun(['2026-03-01', '2026-03-02', '2026-03-02', '2026-03-03', '2026-03-05', '2026-02-28']), 4);
+  assert.equal(t.longestRun([]), 0);
+  assert.ok(t.shouldOfferClose({ status: 'open', ends_on: '2026-11-20', starts_on: null }, new Date(2026, 10, 22)));
+  assert.ok(!t.shouldOfferClose({ status: 'open', ends_on: '2026-12-05', starts_on: null }, new Date(2026, 10, 22)));
+  assert.ok(t.shouldOfferClose({ status: 'open', ends_on: null, starts_on: null }, new Date(2026, 11, 3)), 'sin fecha, en diciembre');
+  assert.ok(!t.shouldOfferClose({ status: 'closed', ends_on: '2026-01-01', starts_on: null }, new Date(2026, 10, 22)));
+});
+
+test('semestres: el historial en PDF es sobrio', async () => {
+  const t = await import('../lib/terms');
+  const html = t.historyHtml({ who: 'Juan', scale: { max: 5, pass: 3, decimals: 1 }, today: new Date(2026, 10, 22), terms: [
+    { id: '1', name: '2026-1', starts_on: '2026-02-02', ends_on: '2026-06-06', status: 'closed', closed_at: null, created_at: '', reflection: null,
+      summary: { subjects: [{ name: 'Cálculo <II>', credits: 4, grade: 4.4, status: 'aprobada' }], avg: 4.4, credits: 4, credits_graded: 4, max: 5 } },
+  ] });
+  assert.match(html, /font-family:'Times New Roman'/);
+  assert.ok(!/color:#(?!000)[0-9a-f]{3,6}/i.test(html), 'todo en negro');
+  assert.match(html, /Cálculo &lt;II&gt;/);
+  assert.match(html, /Promedio acumulado: <b>4,4<\/b>/);
+  assert.ok(!/—/.test(html));
+});

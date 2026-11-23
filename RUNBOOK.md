@@ -1665,3 +1665,38 @@ Corre `supabase/schema_v25.sql` en Supabase (es idempotente). Agrega `subjects.s
 ### 3. Pruebas
 
 `npm test` (contraste del tema de Trabajo con cada acento, qué se ve en cada espacio, lo que sale de Trabajo) y `bash tests/run_sql.sh` (incluye `tests/sql/25_pruebas.sql`).
+
+## Versión 26 (parte 3): semestres e historial académico
+
+### 1. Migración
+
+Corre otra vez `supabase/schema_v25.sql` completo. La fase 3 crea:
+- `terms` (los semestres, uno abierto a la vez, máximo 40 por persona).
+- `subjects.term_id`.
+- Las funciones `term_close` y `term_add_past`. Calculan el promedio y los créditos en el servidor y validan la escala.
+
+Sin la migración, Historial avisa que falta este paso y lo demás sigue igual.
+
+### 2. Lo que cambia para el usuario
+
+- **Historial académico** (barra lateral en Estudio, botón en Materias y en Ajustes):
+  - Promedio acumulado, créditos aprobados y escala de notas.
+  - Los semestres, con el detalle de cada uno y una gráfica del promedio por semestre.
+  - Descarga en PDF, sobrio: Times New Roman, todo en negro.
+- **Semestre abierto:**
+  - Se crea solo con el nombre que toca por la fecha (2026-2), y las materias de Estudio sin semestre quedan en él.
+  - Muestra la nota en curso de cada materia.
+  - "Nombre y fechas" para ponerle inicio y fin.
+- **Cerrar el semestre**, en 3 pasos:
+  1. Nota final de cada materia (sale de las calificaciones y se corrige) y su estado: aprobada, reprobada, homologada o retirada.
+  2. Resumen: promedio, créditos, horas de estudio, tarjetas repasadas, racha más larga y la mejor materia.
+  3. Una línea de lo que te llevas y el nombre del siguiente semestre.
+
+  Al cerrar, el resumen queda guardado tal cual, las materias se archivan con sus apuntes y se abre el siguiente semestre.
+- **Agregar un semestre que ya terminó**, a mano, para que el acumulado esté completo.
+- **Escala de notas propia:** nota máxima, nota para aprobar y decimales. Hay atajos para 0 a 5, 0 a 10, 0 a 100 y 0 a 20. Se usa en los promedios de Materias, en la ficha de cada materia y en el historial. Los semestres con otra escala se convierten para el acumulado.
+- **Recordatorio en Hoy:** "Cierra el semestre" cuando pasa su fecha de fin (o en junio y diciembre si no tiene fecha).
+
+### 3. Pruebas
+
+`npm test` (escala, nombres de semestre, promedio igual al del servidor, acumulado con escalas distintas, racha y el PDF) y `bash tests/run_sql.sh` (incluye `tests/sql/25b_pruebas.sql`).
