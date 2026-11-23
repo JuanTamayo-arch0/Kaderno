@@ -26,7 +26,33 @@ export const ITEM_RULES: Record<ItemId, { price: number; level: number; slot: Sl
   cuernos_reno: { price: 200, level: 2, slot: 'cabeza' },
   sombrero_bruja: { price: 200, level: 2, slot: 'cabeza' },
   sombrero_vueltiao: { price: 220, level: 2, slot: 'cabeza' },
+  // v26: juegos de Estudio y de Trabajo, y la capa.
+  lapiz: { price: 50, level: 1, slot: 'mano' },
+  lapiz_oreja: { price: 70, level: 1, slot: 'cabeza' },
+  taza: { price: 70, level: 1, slot: 'mano' },
+  carne: { price: 80, level: 1, slot: 'cuello' },
+  lentes: { price: 90, level: 1, slot: 'ojos' },
+  corbata: { price: 90, level: 1, slot: 'cuello' },
+  mochila: { price: 140, level: 2, slot: 'espalda' },
+  maletin: { price: 180, level: 2, slot: 'mano' },
+  diadema: { price: 260, level: 3, slot: 'cabeza' },
+  capa: { price: 350, level: 5, slot: 'espalda' },
 };
+
+/** Juegos de la tienda. Lo que no está en ninguno va en "Para lucirse". */
+export type ItemSet = 'estudio' | 'trabajo' | 'lucirse';
+export const ITEM_SETS: Record<Exclude<ItemSet, 'lucirse'>, ItemId[]> = {
+  estudio: ['lapiz', 'lapiz_oreja', 'lentes', 'gafas', 'mochila', 'birrete'],
+  trabajo: ['taza', 'carne', 'corbata', 'corbatin', 'maletin', 'diadema'],
+};
+export const SET_LABEL: Record<ItemSet, string> = { estudio: 'Para estudiar', trabajo: 'Para trabajar', lucirse: 'Para lucirse' };
+export function setOf(id: ItemId): ItemSet {
+  if (ITEM_SETS.estudio.includes(id)) return 'estudio';
+  if (ITEM_SETS.trabajo.includes(id)) return 'trabajo';
+  return 'lucirse';
+}
+/** Nombre de cada lugar, para la tienda. */
+export const SLOT_LABEL: Record<Slot, string> = { cabeza: 'Cabeza', ojos: 'Ojos', cuello: 'Cuello', espalda: 'Espalda', mano: 'Mano' };
 
 /** Nombre corto para las tarjetas de la tienda. */
 export const ITEM_SHORT: Record<ItemId, string> = {
@@ -34,6 +60,8 @@ export const ITEM_SHORT: Record<ItemId, string> = {
   boina: 'Boina', audifonos: 'Audífonos', gafas_sol: 'Gafas de sol', birrete: 'Birrete', corona: 'Corona',
   gorro_navidad: 'Gorro navideño', cuernos_reno: 'Cuernos', luces: 'Luces', antifaz: 'Antifaz',
   gafas_corazon: 'Gafas corazón', sombrero_bruja: 'Bruja', sombrero_vueltiao: 'Vueltiao',
+  lapiz: 'Lápiz', lapiz_oreja: 'Lápiz en oreja', taza: 'Taza', carne: 'Carné', lentes: 'Lentes',
+  corbata: 'Corbata', mochila: 'Mochila', maletin: 'Maletín', diadema: 'Diadema', capa: 'Capa',
 };
 
 /** Orden de la tienda: por precio. Sin las de temporada, que van aparte. */

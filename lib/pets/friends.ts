@@ -10,13 +10,13 @@
 //   · En la sala → pasea como la tuya.  · Fuera → duerme.
 //  Fuera de la pantalla de la sala no hablan y los clics las atraviesan.
 // ============================================================
-import { petSheet, type Frame, type Mood, type Outfit, type Species } from './art';
+import { petSheet, SHEET_FRAMES, type Frame, type Mood, type Outfit, type Species } from './art';
 import { PetMotion, type World } from './motion';
 import { domBounds, domObstacle, domPerches, domRectOf, ownPetBox, ownPetHop } from './dom';
 import type { PatioState } from './patio';
 
 export const FRIEND_SIZE = 56;
-const FRAMES: Frame[] = ['quieto', 'respira', 'parpadeo', 'paso1', 'paso2', 'paso3', 'paso4', 'salto', 'agarrado', 'cae', 'sueno1', 'sueno2'];
+const FRAMES: Frame[] = SHEET_FRAMES;
 const sheets = new Map<string, string>();
 function sheetUrl(species: Species, mood: Mood, outfit: Outfit): string {
   const k = `${species}|${mood}|${JSON.stringify(outfit)}`;
@@ -66,7 +66,7 @@ export class FriendsController {
     Object.assign(L.style, { position: 'fixed', left: '0', top: '0', width: '100%', height: '100%', pointerEvents: 'none', zIndex: '899', overflow: 'hidden' });
     const ball = (this.ballEl = document.createElement('div'));
     ball.setAttribute('aria-hidden', 'true');
-    Object.assign(ball.style, { position: 'absolute', left: '0', top: '0', width: '14px', height: '14px', borderRadius: '50%', background: '#f5b64c', border: '2px solid #1f2433', display: 'none', zIndex: '2000' });
+    Object.assign(ball.style, { position: 'absolute', left: '0', top: '0', width: '14px', height: '14px', borderRadius: '50%', background: '#f5b64c', border: '2px solid #1B1D3A', display: 'none', zIndex: '2000' });
     L.appendChild(ball);
     document.body.appendChild(L);
     const b = domBounds();

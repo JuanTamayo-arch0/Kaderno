@@ -39,7 +39,8 @@ export type PetEvent =
   | { type: 'despierta' }
   | { type: 'adoptada'; name: string }
   | { type: 'compra' }
-  | { type: 'logro'; title: string; reward: number };
+  | { type: 'logro'; title: string; reward: number }
+  | { type: 'dia_cerrado' };
 
 export type Reaction = {
   mood?: Mood;
@@ -155,9 +156,25 @@ export function react(ev: PetEvent, s: BrainState, sp: Species, now: number, see
     case 'compra':
       return { mood: 'feliz', moodMs: 2500, celebrate: true, say: L('compra'), ms: 3000 };
     case 'logro':
-      if (s.focusing) return { mood: 'feliz', moodMs: 3000 };
-      return { mood: 'feliz', moodMs: 4000, celebrate: true, say: `${L('logro')} ${ev.title}. +${ev.reward}`, actions: ['logros'], ms: 7000 };
+      if (s.focusing) return { mood: 'sorprendido', moodMs: 2500 };
+      return { mood: 'sorprendido', moodMs: 2500, celebrate: true, say: `${L('logro')} ${ev.title}. +${ev.reward}`, actions: ['logros'], ms: 7000 };
+    case 'dia_cerrado':
+      return { mood: 'feliz', moodMs: 4000, celebrate: true, say: now < s.mutedUntil ? undefined : L('dia_cerrado'), ms: 6000 };
   }
+}
+
+/**
+ * Modo discreto (espacio Trabajo): pone caras pero no habla, no salta ni
+ * ofrece la tienda. Solo habla al cerrar el día y si la tocas.
+ */
+export function discreet(ev: PetEvent, r: Reaction | null, sp: Species, seed = Math.random()): Reaction | null {
+  if (!r) return null;
+  if (ev.type === 'dia_cerrado') return r;
+  if (ev.type === 'toque') {
+    if (r.actions?.includes('terminar_enfoque')) return r;
+    return { say: lineFor('que_hacemos_trabajo', sp, {}, seed), actions: ['que_hago', 'enfocar'], ms: 6000 };
+  }
+  return r.mood ? { mood: r.mood, moodMs: r.moodMs ?? 3000 } : null;
 }
 
 /** Registra que la mascota habló (para las esperas). */

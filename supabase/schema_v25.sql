@@ -152,3 +152,163 @@ revoke all on function public.term_close(uuid, jsonb, numeric, text, text, date)
 revoke all on function public.term_add_past(text, jsonb, numeric, date, date) from public;
 grant execute on function public.term_close(uuid, jsonb, numeric, text, text, date) to authenticated;
 grant execute on function public.term_add_past(text, jsonb, numeric, date, date) to authenticated;
+
+
+-- =====================================================================
+--  v26 · FASE 5 · Mascotas: ropa nueva y nada de monedas en Trabajo
+-- =====================================================================
+-- Catálogo completo: el de schema_v22 más los juegos de Estudio y de Trabajo,
+-- con dos lugares nuevos: espalda (mochila, capa) y mano (lápiz, taza, maletín).
+create or replace function public._pet_item(p_item text, out price integer, out min_level integer, out slot text)
+language sql immutable as $$
+  select v.p, v.l, v.s from (values
+    ('gorro', 60, 1, 'cabeza'), ('corbatin', 80, 1, 'cuello'), ('collar', 100, 1, 'cuello'),
+    ('gafas', 120, 1, 'ojos'), ('bufanda', 150, 2, 'cuello'), ('boina', 200, 2, 'cabeza'),
+    ('audifonos', 250, 3, 'cabeza'), ('gafas_sol', 300, 4, 'ojos'), ('birrete', 500, 6, 'cabeza'),
+    ('corona', 1000, 10, 'cabeza'),
+    ('luces', 120, 1, 'cuello'), ('gorro_navidad', 150, 1, 'cabeza'), ('gafas_corazon', 160, 1, 'ojos'),
+    ('antifaz', 180, 1, 'ojos'), ('cuernos_reno', 200, 2, 'cabeza'), ('sombrero_bruja', 200, 2, 'cabeza'),
+    ('sombrero_vueltiao', 220, 2, 'cabeza'),
+    ('lapiz', 50, 1, 'mano'), ('lapiz_oreja', 70, 1, 'cabeza'), ('taza', 70, 1, 'mano'),
+    ('carne', 80, 1, 'cuello'), ('lentes', 90, 1, 'ojos'), ('corbata', 90, 1, 'cuello'),
+    ('mochila', 140, 2, 'espalda'), ('maletin', 180, 2, 'mano'), ('diadema', 260, 3, 'cabeza'),
+    ('capa', 350, 5, 'espalda'),
+    ('papel_rayas', 80, 1, 'papel'), ('papel_ladrillo', 120, 1, 'papel'), ('papel_madera', 200, 2, 'papel'),
+    ('papel_estrellas', 250, 3, 'papel'),
+    ('piso_baldosa', 80, 1, 'piso'), ('piso_alfombrado', 120, 1, 'piso'), ('piso_marmol', 250, 3, 'piso'),
+    ('vista_montanas', 150, 1, 'vista'), ('vista_playa', 200, 2, 'vista'), ('vista_espacio', 400, 5, 'vista'),
+    ('lampara', 60, 1, 'mueble'), ('cojin', 60, 1, 'mueble'), ('planta', 70, 1, 'mueble'),
+    ('alfombra', 90, 1, 'mueble'), ('cuadro', 100, 1, 'mueble'), ('estante', 120, 1, 'mueble')
+  ) v(i, p, l, s) where v.i = p_item;
+$$;
+
+-- Lugares de la ropa (los de la casa van aparte).
+create or replace function public._pet_wear_slot(p_slot text) returns boolean
+language sql immutable as $$ select p_slot in ('cabeza', 'ojos', 'cuello', 'espalda', 'mano') $$;
+
+-- Comprar: igual que en schema_v22, con los lugares nuevos.
+create or replace function public.pet_buy(p_item text) returns public.pets
+language plpgsql security definer set search_path = public as $$
+declare v_user uuid := auth.uid(); v_pet public.pets; v_it record; v_day date; v_season record;
+begin
+  if v_user is null then raise exception 'Inicia sesión.' using errcode = '42501'; end if;
+  select * into v_it from public._pet_item(p_item);
+  if v_it.price is null then raise exception 'Eso no está en la tienda.' using errcode = 'P0001'; end if;
+  select * into v_pet from pets where user_id = v_user and active for update;
+  if v_pet.id is null then raise exception 'Primero elige una mascota.' using errcode = 'P0001'; end if;
+  if exists (select 1 from pet_items where pet_id = v_pet.id and item = p_item) then
+    raise exception 'Ya la tienes.' using errcode = 'P0001';
+  end if;
+  v_day := (now() at time zone public._kaderno_tz(v_user))::date;
+  if not public._pet_season_ok(p_item, v_day) then
+    select * into v_season from public._pet_season(p_item);
+    raise exception 'Solo se vende en temporada de %.', v_season.name using errcode = 'P0001';
+  end if;
+  if public.pet_level(v_pet.xp) < v_it.min_level then
+    raise exception 'Se desbloquea en el nivel %.', v_it.min_level using errcode = 'P0001';
+  end if;
+  if v_pet.coins < v_it.price then
+    raise exception 'Te faltan % monedas.', v_it.price - v_pet.coins using errcode = 'P0001';
+  end if;
+  insert into pet_items (pet_id, user_id, item) values (v_pet.id, v_user, p_item);
+  insert into pet_ledger (user_id, pet_id, delta, reason, ref) values (v_user, v_pet.id, -v_it.price, 'compra', v_pet.id::text || ':' || p_item);
+  if public._pet_wear_slot(v_it.slot) then
+    update pets set coins = coins - v_it.price, outfit = outfit || jsonb_build_object(v_it.slot, p_item)
+     where id = v_pet.id returning * into v_pet;
+  elsif v_it.slot = 'mueble' then
+    update pets set coins = coins - v_it.price, home = home || jsonb_build_object(p_item, true)
+     where id = v_pet.id returning * into v_pet;
+  else
+    update pets set coins = coins - v_it.price, home = home || jsonb_build_object(v_it.slot, p_item)
+     where id = v_pet.id returning * into v_pet;
+  end if;
+  return v_pet;
+end $$;
+revoke all on function public.pet_buy(text) from public, anon;
+grant execute on function public.pet_buy(text) to authenticated;
+
+-- Ponerse o quitarse una prenda (p_item null = quitar lo de ese lugar).
+create or replace function public.pet_wear(p_pet uuid, p_slot text, p_item text) returns public.pets
+language plpgsql security definer set search_path = public as $$
+declare v_user uuid := auth.uid(); v_pet public.pets; v_slot text;
+begin
+  if not public._pet_wear_slot(p_slot) then raise exception 'Lugar no válido.' using errcode = 'P0001'; end if;
+  select * into v_pet from pets where id = p_pet and user_id = v_user for update;
+  if v_pet.id is null then raise exception 'No encontré esa mascota.' using errcode = 'P0001'; end if;
+  if p_item is null then
+    update pets set outfit = outfit - p_slot where id = p_pet returning * into v_pet;
+    return v_pet;
+  end if;
+  select slot into v_slot from public._pet_item(p_item);
+  if v_slot is distinct from p_slot then raise exception 'Esa prenda no va ahí.' using errcode = 'P0001'; end if;
+  if not exists (select 1 from pet_items where pet_id = p_pet and item = p_item) then
+    raise exception 'Primero cómprala.' using errcode = 'P0001';
+  end if;
+  update pets set outfit = outfit || jsonb_build_object(p_slot, p_item) where id = p_pet returning * into v_pet;
+  return v_pet;
+end $$;
+
+-- ¿Es de Trabajo? Por el espacio de la materia; sin materia (o sin espacio),
+-- por el modo de la cuenta ("trabajo" solo). En "ambos" sin materia cuenta como Estudio.
+create or replace function public._pet_is_work(p_user uuid, p_subject uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select coalesce(
+    (select s.space = 'trabajo' from public.subjects s where s.id = p_subject and s.space is not null),
+    (select u.settings ->> 'mode' = 'trabajo' from public.user_prefs u where u.user_id = p_user),
+    false);
+$$;
+revoke all on function public._pet_is_work(uuid, uuid) from public, anon, authenticated;
+
+-- Tarea hecha: igual que en schema_v16, pero lo de Trabajo no paga (deja la marca en 0).
+create or replace function public._pet_on_task_done() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare v_tz text; v_day date; v_due timestamptz; v_amt integer; v_task_day date;
+begin
+  if new.status = 'done' and old.status is distinct from 'done' and new.deleted_at is null then
+    begin
+      if public._pet_is_work(new.user_id, new.subject_id) then
+        perform public._pet_award(new.user_id, 'tarea', new.id::text, 0);
+        return new;
+      end if;
+      v_tz := public._kaderno_tz(new.user_id);
+      v_day := (now() at time zone v_tz)::date;
+      v_due := coalesce(new.due_at, case when new.due_date is not null then ((new.due_date + 1)::timestamp at time zone v_tz) end);
+      -- Crear y marcar enseguida no paga (evita crear tareas solo para ganar).
+      if new.created_at is not null and now() - new.created_at < interval '1 minute' then v_amt := 0;
+      elsif v_due is null or now() <= v_due then v_amt := 5;
+      else v_amt := 2; end if;
+      perform public._pet_award(new.user_id, 'tarea', new.id::text, v_amt);
+      -- ¿Era lo último de hoy (o vencido) en Estudio? Premio por terminar el día.
+      v_task_day := coalesce((new.due_at at time zone v_tz)::date, new.due_date);
+      if v_task_day is not null and v_task_day <= v_day and not exists (
+        select 1 from assignments a
+         where a.user_id = new.user_id and a.id <> new.id and a.deleted_at is null
+           and a.status is distinct from 'done'
+           and coalesce((a.due_at at time zone v_tz)::date, a.due_date) <= v_day
+           and not public._pet_is_work(a.user_id, a.subject_id)
+      ) then
+        perform public._pet_award(new.user_id, 'dia', v_day::text, 10);
+      end if;
+    exception when others then
+      raise warning 'mascota: no se pudo premiar la tarea %: %', new.id, sqlerrm;
+    end;
+  end if;
+  return new;
+end $$;
+
+-- Enfoque: paga 1 por minuto (máximo 180) solo con el temporizador de Enfoque
+-- y en Estudio. Las horas anotadas a mano o con el cronómetro de Trabajo no pagan.
+create or replace function public._pet_on_focus() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare v_src text := coalesce(to_jsonb(new) ->> 'source', 'focus');
+begin
+  begin
+    if v_src <> 'focus' or public._pet_is_work(new.user_id, new.subject_id) then
+      return new;
+    end if;
+    perform public._pet_award(new.user_id, 'enfoque', new.id::text, least(greatest(coalesce(new.minutes, 0), 0), 180));
+  exception when others then
+    raise warning 'mascota: no se pudo premiar el enfoque %: %', new.id, sqlerrm;
+  end;
+  return new;
+end $$;

@@ -11,7 +11,7 @@ select set_config('k.tarea', (select id::text from public.project_tasks where pr
 insert into public.project_tasks (project_id, title) select current_setting('k.ajeno')::uuid, 'Tarea ajena'
   where not exists (select 1 from public.project_tasks where project_id = current_setting('k.ajeno')::uuid);
 select set_config('k.tarea_ajena', (select id::text from public.project_tasks where project_id = current_setting('k.ajeno')::uuid limit 1), false);
-select set_config('k.lunes', (date_trunc('week', now() at time zone 'America/Bogota')::date - 7)::text, false);
+select set_config('k.lunes', (date_trunc('week', now() at time zone 'America/Bogota')::date - 14)::text, false);
 
 set role authenticated;
 select set_config('request.jwt.claim.sub', '92000000-0000-4000-8000-000000000002', false);
@@ -25,7 +25,7 @@ do $$ declare r public.focus_sessions; begin
   raise notice 'ok 1 cronómetro: se fecha al parar, máximo 12 horas, toma el proyecto de su tarea y no mezcla proyectos';
 end $$;
 
--- La semana pasada de Ana en Zenit: 2 registros a mano.
+-- La semana antepasada de Ana en Zenit (la pasada puede tener el cronómetro de arriba si hoy es lunes temprano): 2 registros a mano.
 do $$ declare w date := current_setting('k.lunes')::date; t public.timesheet_weeks; begin
   insert into public.focus_sessions (user_id, minutes, project_id, source, created_at) values
     (auth.uid(), 120, current_setting('k.zenit')::uuid, 'manual', (w + 1)::timestamp + interval '15 hours'),

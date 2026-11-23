@@ -231,3 +231,9 @@ La fase 1 se ve de inmediato y no cambia datos. La 2 es la más grande y la que 
 17. (Fase 4) Las transiciones entre pantallas usan la API de transiciones de vista del navegador. No se agregó una librería de animación: donde no existe, la pantalla cambia sin efecto. Si la pantalla tarda en pintarse, la transición se suelta sin error.
 18. (Fase 4) Deslizar una tarea solo está en el teléfono y solo en Hoy. En escritorio se completa con el círculo o el menú, como antes. Tras deslizar se ignora el toque de 400 ms, porque el navegador manda un clic al soltar.
 19. (Fase 4) Los radios cambian por espacio con un solo objeto (RAD) que se actualiza al cambiar de espacio. Espaciado, tamaños de letra e íconos no cambian: así el paso entre Estudio y Trabajo se siente del mismo producto.
+20. (Fase 5) La ropa se sigue dibujando en la cuadrícula de 32: el punto de apoyo es por especie (fila de cada lugar y la mano) y el cuadro mueve la prenda con el cuerpo. La bufanda, la corbata, el carné y la capa tienen una parte que se queda atrás un píxel según el cuadro.
+21. (Fase 5) Lo de la espalda se dibuja detrás del cuerpo (se ve por los lados) y deja delante solo las correas o el broche. Se recorta antes de la sombra.
+22. (Fase 5) Qué es Trabajo para las monedas: la materia con espacio Trabajo; sin materia, solo si la cuenta está en modo Trabajo. En "ambos", lo que no tiene materia cuenta como Estudio. Lo decide la base, no la app.
+23. (Fase 5) Las horas anotadas a mano y las del cronómetro de Trabajo dejan de pagar. Antes pagaban como enfoque, y se podían anotar horas solo para ganar.
+24. (Fase 5) En Trabajo la mascota habla al cerrar el día y si la tocas. Las caras sí cambian (contenta al terminar algo), pero no salta.
+25. (Fase 5) La prueba de SQL de la hoja de horas usa la semana antepasada: el lunes temprano el registro del cronómetro de la prueba caía en la semana pasada y la suma no cuadraba.
