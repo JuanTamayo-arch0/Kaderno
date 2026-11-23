@@ -188,7 +188,7 @@ export function SideNav({ active, onNavigate }: { active: NavKey | null; onNavig
   );
 }
 
-const NO_SIDEBAR = ['/login', '/bienvenida', '/visor'];
+const NO_SIDEBAR = ['/login', '/bienvenida', '/visor', '/solicitar', '/avance'];
 
 /**
  * La barra lateral de computador, montada una sola vez en el layout raíz.

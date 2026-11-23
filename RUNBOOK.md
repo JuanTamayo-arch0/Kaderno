@@ -1546,3 +1546,22 @@ npx supabase functions deploy billing-charge --no-verify-jwt
 ### 3. Pruebas
 
 `npm test` (etiquetas, bloqueos, filtros, prioridad, reglas, estado sugerido y el de la IA) y `bash tests/run_sql.sh` (incluye `tests/sql/24c_pruebas.sql`).
+
+## Versión 25 (parte 4): entradas y clientes
+
+### 1. Migración
+
+Corre otra vez `supabase/schema_v24.sql` completo. La fase 4 crea `project_links` y `project_requests`, y las funciones `project_link_set`, `public_form_info`, `public_form_submit` y `public_project_view` (estas tres se pueden llamar sin sesión, con la llave anónima). No hay que desplegar funciones ni tocar el droplet: las páginas `/solicitar/<enlace>` y `/avance/<enlace>` son de la app web.
+
+### 2. Lo que cambia para el usuario
+
+- En cada proyecto, Opciones > **Enlaces para el cliente**:
+  - **Formulario de solicitudes**: quien tenga el enlace escribe su nombre, correo, qué necesita y para cuándo, sin cuenta. Llega como tarea (#solicitud) a la columna nueva "Solicitudes" y avisa a quien edita. Tiene campo trampa para robots y tope (30 por hora por proyecto, 5 al día por correo).
+  - **Avance para el cliente**: porcentaje terminado, columnas, lo que viene en 3 semanas, lo entregado en 30 días y el último estado del proyecto. No muestra nombres, correos, comentarios, horas ni las tareas con la etiqueta #interno ni las solicitudes.
+  - Para cada uno: prender o apagar, copiar, mandar por WhatsApp, un mensaje propio arriba y "Cambiar enlace" (el viejo deja de servir).
+  - Con Gratis, en 1 proyecto.
+- El informe semanal del proyecto también se manda por WhatsApp.
+
+### 3. Pruebas
+
+`npm test` y `bash tests/run_sql.sh` (incluye `tests/sql/24d_pruebas.sql`: enlaces, quién los maneja, formulario sin sesión con validación, robots y tope, la tarea y su aviso, la vista sin datos internos, cambiar y apagar, y el tope de Gratis).
