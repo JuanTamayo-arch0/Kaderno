@@ -9,6 +9,7 @@ import { countdown, minutesLabel, dayWord, type NextClass, type NextEval } from 
 import { MONTH_SHORT } from '../../lib/time';
 import { focusRingStyle, IconButton, type IconName } from '../ds';
 import { SubjectIcon } from '../SubjectIcon';
+import { useMode } from '../../lib/mode';
 
 // ============================================================
 //  Piezas de la página de la materia: barra de arriba, ficha (grande o
@@ -56,12 +57,13 @@ function MetaChip({ icon, text, onPress, dashed, label }: { icon?: IconName; tex
 export function SubjectTopBar({ onBack, onFocus, onOracle, onNew, onMenu, compact }: {
   onBack: () => void; onFocus: () => void; onOracle: () => void; onNew: () => void; onMenu: () => void; compact?: boolean;
 }) {
+  const { v } = useMode();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-      <Pressable onPress={onBack} accessibilityRole="button" accessibilityLabel="Volver a Materias" dataSet={{ press: '1' }}
+      <Pressable onPress={onBack} accessibilityRole="button" accessibilityLabel={`Volver a ${v.subjects}`} dataSet={{ press: '1' }}
         style={({ focused }: any) => [{ flexDirection: 'row', alignItems: 'center', gap: 4, height: 44, paddingRight: 8, marginLeft: -6 }, focused ? focusRingStyle() : null]}>
         <Ionicons name="chevron-back" size={22} color={C.muted} />
-        {!compact && <Text style={{ color: C.muted, fontSize: 14, fontWeight: '600' }}>Materias</Text>}
+        {!compact && <Text style={{ color: C.muted, fontSize: 14, fontWeight: '600' }}>{v.subjects}</Text>}
       </Pressable>
       <View style={{ flex: 1 }} />
       {compact ? (
@@ -100,20 +102,23 @@ export function SubjectHero({ subject, days, isWide, onEdit, onSchedule }: {
 }) {
   const link = cleanLink(subject.link);
   const missing = !subject.teacher && !subject.room && !link;
+  // v26: en Trabajo no hay créditos ni "profesor": responsable, lugar y enlace.
+  const { work } = useMode();
+  const who = work ? 'Responsable' : 'Profesor';
   const chips = (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-      {subject.teacher ? <MetaChip icon="person-outline" text={subject.teacher} onPress={() => onEdit('teacher')} label={`Profesor: ${subject.teacher}. Editar`} /> : null}
-      {subject.room ? <MetaChip icon="location-outline" text={subject.room} onPress={() => onEdit('room')} label={`Salón: ${subject.room}. Editar`} /> : null}
-      {days === null ? null : days ? <MetaChip icon="time-outline" text={days} onPress={onSchedule} label={`Clases: ${days}. Abrir horario`} />
-        : <MetaChip icon="time-outline" text="Agregar al horario" onPress={onSchedule} dashed />}
-      {subject.credits ? <MetaChip text={`${subject.credits} ${subject.credits === 1 ? 'crédito' : 'créditos'}`} /> : null}
-      {link ? <MetaChip icon="link-outline" text="Aula virtual" onPress={() => Linking.openURL(link).catch(() => {})} label="Abrir el aula virtual" /> : null}
-      {missing ? <MetaChip icon="add" text="Profesor, salón y aula virtual" onPress={() => onEdit('teacher')} dashed />
-        : !subject.teacher ? <MetaChip icon="add" text="Profesor" onPress={() => onEdit('teacher')} dashed />
+      {subject.teacher ? <MetaChip icon="person-outline" text={subject.teacher} onPress={() => onEdit('teacher')} label={`${who}: ${subject.teacher}. Editar`} /> : null}
+      {subject.room ? <MetaChip icon="location-outline" text={subject.room} onPress={() => onEdit('room')} label={`${work ? 'Lugar' : 'Salón'}: ${subject.room}. Editar`} /> : null}
+      {days === null ? null : days ? <MetaChip icon="time-outline" text={days} onPress={onSchedule} label={`${work ? 'Reuniones' : 'Clases'}: ${days}. Abrir ${work ? 'agenda' : 'horario'}`} />
+        : <MetaChip icon="time-outline" text={work ? 'Agregar a la agenda' : 'Agregar al horario'} onPress={onSchedule} dashed />}
+      {subject.credits && !work ? <MetaChip text={`${subject.credits} ${subject.credits === 1 ? 'crédito' : 'créditos'}`} /> : null}
+      {link ? <MetaChip icon="link-outline" text={work ? 'Enlace' : 'Aula virtual'} onPress={() => Linking.openURL(link).catch(() => {})} label={work ? 'Abrir el enlace' : 'Abrir el aula virtual'} /> : null}
+      {missing ? <MetaChip icon="add" text={work ? 'Responsable, lugar y enlace' : 'Profesor, salón y aula virtual'} onPress={() => onEdit('teacher')} dashed />
+        : !subject.teacher ? <MetaChip icon="add" text={who} onPress={() => onEdit('teacher')} dashed />
         : null}
     </View>
   );
-  const name = <Text accessibilityRole="header" style={{ color: C.text, fontSize: isWide ? 34 : 25, fontWeight: '800', letterSpacing: -0.2, flexShrink: 1 }} numberOfLines={2}>{subject.name}</Text>;
+  const name = <Text dataSet={{ head: '1' }} accessibilityRole="header" style={{ color: C.text, fontSize: isWide ? 34 : 25, fontWeight: '800', letterSpacing: -0.2, flexShrink: 1 }} numberOfLines={2}>{subject.name}</Text>;
   if (!isWide) {
     return (
       <View style={{ gap: 12 }}>
@@ -138,9 +143,10 @@ export function SubjectHero({ subject, days, isWide, onEdit, onSchedule }: {
 
 /** Ficha compacta para las notas en pantalla ancha (deja espacio al texto). */
 export function SubjectCompactBar({ subject, summary, onBack, tabs }: { subject: Subject; summary: string; onBack: () => void; tabs: React.ReactNode }) {
+  const { v } = useMode();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-      <IconButton icon="chevron-back" label="Volver a Materias" onPress={onBack} color={C.muted} style={{ marginLeft: -12 }} />
+      <IconButton icon="chevron-back" label={`Volver a ${v.subjects}`} onPress={onBack} color={C.muted} style={{ marginLeft: -12 }} />
       <SubjectAvatar subject={subject} size={36} />
       <Text style={{ color: C.text, fontSize: 18, fontWeight: '800' }} numberOfLines={1}>{subject.name}</Text>
       {!!summary && <Text style={{ color: C.muted, fontSize: 13 }} numberOfLines={1}>{summary}</Text>}
@@ -157,7 +163,9 @@ export const TAB_LABEL: Record<TabKey, string> = { tareas: 'Tareas', notas: 'Not
 export function SubjectTabs({ value, onChange, counts, accent, pills, short }: {
   value: TabKey; onChange: (k: TabKey) => void; counts: Partial<Record<TabKey, number>>; accent: string; pills?: boolean; short?: boolean;
 }) {
-  const keys: TabKey[] = ['tareas', 'notas', 'cal', 'files'];
+  // v26: Calificaciones es solo de Estudio.
+  const { work } = useMode();
+  const keys: TabKey[] = work ? ['tareas', 'notas', 'files'] : ['tareas', 'notas', 'cal', 'files'];
   const label = (k: TabKey) => (short && k === 'cal' ? 'Calif.' : TAB_LABEL[k]);
   if (pills) {
     return (
@@ -227,7 +235,8 @@ export function SubjectStats({ d, accent, isWide, onGrades, onNext, onTasks, onS
   const soon = d.next?.due ? Math.round((d.next.due.getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) / 86400000) <= 3 : false;
   const fmt = (n: number) => n.toFixed(2);
   const w = isWide ? undefined : 156;
-  const tiles = [
+  const { work } = useMode();
+  const allTiles = [
     <Tile key="avg" label="Promedio" onPress={onGrades} a11y="Ver calificaciones" style={isWide ? { flex: 1 } : { width: w }}>
       <Text style={{ color: C.text, ...big }}>{d.avg == null ? '–' : fmt(d.avg)}<Text style={{ color: C.muted, fontSize: 14, fontWeight: '600' }}> / {d.scale}</Text></Text>
       <View style={{ height: 6, borderRadius: 6, backgroundColor: C.surface2 }}>
@@ -260,7 +269,14 @@ export function SubjectStats({ d, accent, isWide, onGrades, onNext, onTasks, onS
       </Text>
     </Tile>,
   ];
-  if (isWide) return <View accessibilityLabel="Resumen de la materia" style={{ flexDirection: 'row', gap: 12 }}>{tiles}</View>;
+  // v26: en Trabajo no hay promedio ni evaluaciones: pendientes y horas.
+  const tiles = work ? allTiles.filter((t) => t.key === 'pend' || t.key === 'study').map((t) => t.key === 'study' ? (
+    <Tile key="study" label="Horas" onPress={onStudy} a11y="Enfocar en esta área" style={isWide ? { flex: 1 } : { width: w }}>
+      <Text style={{ color: C.text, ...big }}>{d.weekMin == null ? '–' : minutesLabel(d.weekMin)}</Text>
+      <Text style={sub} numberOfLines={2}>registradas esta semana</Text>
+    </Tile>
+  ) : t) : allTiles;
+  if (isWide) return <View accessibilityLabel={work ? 'Resumen del área' : 'Resumen de la materia'} style={{ flexDirection: 'row', gap: 12 }}>{tiles}</View>;
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[{ marginHorizontal: -16, flexGrow: 0 }, web({ scrollbarWidth: 'none' })]}
       contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}>

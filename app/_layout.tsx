@@ -9,10 +9,12 @@ import { enableScreens } from 'react-native-screens';
 enableScreens(true);
 import { AuthProvider, useAuth } from '../lib/auth';
 import {
-  PERSONALIZE, DEFAULTS, currentTheme,
+  PERSONALIZE, DEFAULTS, currentTheme, currentPalette, applyAll,
   loadPersonalizeNative, savePersonalize, scaleOf,
 } from '../lib/theme';
 import { migrateBrand } from '../lib/brand';
+import { onSpaceChange } from '../lib/mode';
+import { SpaceSortSheet } from '../components/SpaceSortSheet';
 import { fetchPrefs, savePrefs, getSubjects, updateSubject } from '../lib/db';
 import { shrinkToSquare, BIG_ICON_CHARS } from '../lib/imageResize';
 
@@ -81,10 +83,10 @@ function applyWebChrome() {
   try {
     // "Tamaño de interfaz" = zoom del documento (escala fuentes y espaciado por igual).
     (document.documentElement.style as any).zoom = String(scaleOf(PERSONALIZE.sizeId));
-    document.documentElement.style.background = currentTheme().palette.bg;
-    document.body.style.background = currentTheme().palette.bg;
+    document.documentElement.style.background = currentPalette().bg;
+    document.body.style.background = currentPalette().bg;
     // La barra del navegador (celular) con el fondo del tema.
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', currentTheme().palette.bg);
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', currentPalette().bg);
   } catch { /* noop */ }
 }
 
@@ -93,6 +95,14 @@ function Shell() {
   // `rev` fuerza un remount completo cuando la personalización cambia
   // (así los estilos en línea vuelven a leer la paleta C).
   const [rev, setRev] = useState(0);
+
+  // v26: al cambiar de espacio (Estudio o Trabajo) cambian el tema, la letra
+  // y la navegación: se repinta todo con la paleta del espacio nuevo.
+  useEffect(() => onSpaceChange(() => {
+    applyAll(PERSONALIZE);
+    applyWebChrome();
+    setRev((n) => n + 1);
+  }), []);
 
   useEffect(() => {
     loadFocus();
@@ -177,12 +187,13 @@ function Shell() {
   return (
     <>
       <StatusBar style={scheme === 'light' ? 'dark' : 'light'} />
-      <View key={rev} style={{ flex: 1, backgroundColor: currentTheme().palette.bg }}>
+      <View key={rev} style={{ flex: 1, backgroundColor: currentPalette().bg }}>
         <AppBackground />
         <ThemeProvider value={navTheme}>
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }} />
           <AppSideNav />
           {session ? <GlobalPanels /> : null}
+          {session ? <SpaceSortSheet /> : null}
           {session ? <PetBuddy /> : null}
           {session ? <FriendPets /> : null}
           <FeedbackHost />

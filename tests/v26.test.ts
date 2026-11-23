@@ -63,3 +63,57 @@ test('marca: la letra se sirve desde la app y la pantalla de inicio la precarga'
   assert.match(html, /rel="preload" href="\/fonts\/plus-jakarta-sans\.woff2"/);
   assert.ok(!/—/.test(fs.readFileSync('docs/marca.md', 'utf8')));
 });
+
+test('espacios: Trabajo con sus neutros y acentos se lee bien', async () => {
+  const { WORK_ACCENTS, spacePalette } = await import('../lib/brand');
+  for (const id of ['kaderno-oscuro', 'kaderno-claro', 'bosque', 'papel']) {
+    const t = THEMES[id];
+    for (const a of WORK_ACCENTS) {
+      const p = derive(spacePalette({ themeId: id, scheme: t.scheme, base: t.palette, space: 'trabajo', workAccentId: a.id }));
+      for (const [name, x, y] of [['texto', p.text, p.bg], ['texto/tarjeta', p.text, p.surface], ['tenue', p.muted, p.surface], ['tenue/fondo', p.muted, p.bg],
+        ['onBrand', p.onBrand, p.brand], ['onBad', p.onBad, p.bad], ['verde', p.goodText, p.surface], ['amarillo', p.warnText, p.surface], ['rojo', p.badText, p.surface]] as [string, string, string][]) {
+        assert.ok(contrast(x, y) >= 4.5, `${t.name} en Trabajo + ${a.name}: ${name} = ${contrast(x, y).toFixed(2)}`);
+      }
+      assert.ok(contrast(p.brand, p.surface) >= 3 && contrast(p.brand2, p.surface) >= 3, `${t.name} en Trabajo + ${a.name}: acentos`);
+    }
+  }
+  // Un tema de "Más colores" en Trabajo usa el Kaderno de Trabajo del mismo claro u oscuro.
+  const bosque = spacePalette({ themeId: 'bosque', scheme: 'dark', base: THEMES.bosque.palette, space: 'trabajo' });
+  assert.equal(bosque.bg, '#0F1014');
+  assert.equal(spacePalette({ themeId: 'bosque', scheme: 'dark', base: THEMES.bosque.palette, space: 'estudio' }).bg, THEMES.bosque.palette.bg);
+});
+
+test('espacios: qué se ve en cada uno', async () => {
+  const { spaceOf, filterSubjects, filterBySubject, suggestSpace, needsSorting, otherSpaceLine } = await import('../lib/spaces');
+  const { effectiveMode } = await import('../lib/mode');
+  assert.equal(effectiveMode('ambos', 'trabajo'), 'trabajo');
+  assert.equal(effectiveMode('estudio', 'trabajo'), 'estudio', 'con un modo, el espacio es ese modo');
+  const subs = [{ id: 'calc', space: 'estudio' }, { id: 'acme', space: 'trabajo' }, { id: 'vieja', space: null }];
+  assert.equal(spaceOf(subs[2], 'trabajo'), 'trabajo', 'sin espacio cuenta como el modo');
+  assert.equal(spaceOf(subs[2], 'ambos'), 'estudio');
+  assert.deepEqual(filterSubjects(subs, 'trabajo', 'ambos').map((s) => s.id), ['acme']);
+  assert.deepEqual(filterSubjects(subs, 'estudio', 'ambos').map((s) => s.id), ['calc', 'vieja']);
+  assert.equal(filterSubjects(subs, 'trabajo', 'trabajo').length, 3, 'con un solo modo no se filtra nada');
+  const tasks = [{ id: 1, subject_id: 'calc' }, { id: 2, subject_id: 'acme' }, { id: 3, subject_id: null }, { id: 4, subject_id: 'borrada' }];
+  assert.deepEqual(filterBySubject(tasks, filterSubjects(subs, 'trabajo', 'ambos'), subs, 'ambos').map((t) => t.id), [2, 3, 4], 'las sin materia se ven en los dos');
+  assert.equal(suggestSpace({ id: 'x', credits: 3 }), 'estudio');
+  assert.equal(suggestSpace({ id: 'x', credits: 0 }, { rated: true }), 'trabajo');
+  assert.equal(suggestSpace({ id: 'x', default_template: 'acta' }), 'trabajo');
+  assert.ok(needsSorting(subs, 'ambos') && !needsSorting(subs, 'trabajo'));
+  assert.equal(otherSpaceLine(2, 'trabajo'), 'En Trabajo: 2 cosas para hoy');
+  assert.equal(otherSpaceLine(0, 'estudio'), null);
+});
+
+test('espacios: en Trabajo no aparece lo del estudio', async () => {
+  const fs = await import('node:fs');
+  const parts = fs.readFileSync('components/subject/SubjectParts.tsx', 'utf8');
+  assert.match(parts, /work \? \['tareas', 'notas', 'files'\]/, 'sin pestaña de calificaciones en Trabajo');
+  assert.match(parts, /subject\.credits && !work/, 'sin créditos en Trabajo');
+  const modal = fs.readFileSync('components/SubjectModal.tsx', 'utf8');
+  assert.match(modal, /\{!work && <Field label="Créditos"/);
+  const areas = fs.readFileSync('app/(tabs)/materias.tsx', 'utf8');
+  assert.match(areas, /\{!work && \(/, 'sin promedio en las tarjetas de áreas');
+  const hoy = fs.readFileSync('app/(tabs)/index.tsx', 'utf8');
+  assert.match(hoy, /\{study && <PetInvite \/>\}/);
+  assert.match(hoy, /offerSemester = study &&/);
+});

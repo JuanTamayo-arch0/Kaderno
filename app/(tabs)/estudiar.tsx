@@ -23,7 +23,7 @@ import { useMode } from '../../lib/mode';
 // ============================================================
 
 export default function Estudiar() {
-  const { v: mv, mode } = useMode();
+  const { v: mv } = useMode();
   const router = useRouter();
   const { isWide } = useResponsive();
   const focus = useFocusTimer();
@@ -54,7 +54,7 @@ export default function Estudiar() {
   return (
     <Screen title={mv.studySection === 'Herramientas' ? 'Enfoque' : 'Estudiar'} subtitle={mv.studySection === 'Herramientas' ? 'Enfoque, horas y tu avance' : 'Enfoque, repaso y tu avance'} maxWidth={1100}>
       <Countdown tasks={tasks} />
-      {mv.studySection === 'Herramientas' || mode === 'ambos' ? (
+      {mv.studySection === 'Herramientas' ? (
         <Card onPress={() => router.push('/horas' as any)} accessibilityLabel="Abrir registro de horas" style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 }}>
           <Ionicons name="time-outline" size={22} color={C.brand} />
           <View style={{ flex: 1 }}>

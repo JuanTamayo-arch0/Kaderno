@@ -91,7 +91,7 @@ export async function openClassNote(subjectId: string, now = new Date()): Promis
   if (found) return { id: found.id, created: false };
   const key = (await subjectTemplate(subjectId)) ?? (work ? 'acta' : 'cornell');
   let content = await templateContent(key);
-  if (work || (getMode() === 'ambos' && key === 'acta')) {
+  if (work) {
     const prev = await previousMeeting(subjectId, start).catch(() => null);
     if (prev) content = carryOverMarkdown(prev, prev.date.toLocaleDateString('es', { day: 'numeric', month: 'short' })) + content;
   }

@@ -16,6 +16,7 @@ import { Screen, Button, Card, EmptyState, ErrorState, Segmented, Skeleton } fro
 import { SubjectIcon } from '../../components/SubjectIcon';
 import { SubjectModal } from '../../components/SubjectModal';
 import { useMode } from '../../lib/mode';
+import { useSpaceFilter } from '../../lib/useSpace';
 
 // ============================================================
 //  Materias: tarjetas con lo pendiente, la próxima entrega y el promedio.
@@ -25,12 +26,15 @@ import { useMode } from '../../lib/mode';
 
 export default function Materias() {
   const router = useRouter();
-  const { v: mv } = useMode();
+  const { v: mv, work } = useMode();
   const { isWide, width } = useResponsive();
   const { session } = useAuth();
   // Foto de la última visita para pintar al instante.
   const [snap] = useState(() => snapshotFor<{ s: Subject[]; t: Task[]; n: { id: string; subject_id: string | null }[]; g: Grade[] }>(session ? `materias:${session.user.id}` : null));
-  const [subjects, setSubjects] = useState<Subject[] | null>(snap.initial?.s ?? null);
+  const [allSubjects, setSubjects] = useState<Subject[] | null>(snap.initial?.s ?? null);
+  // v26: con "Los dos", solo las del espacio abierto.
+  const sp = useSpaceFilter();
+  const subjects = allSubjects ? sp.subjects(allSubjects) : null;
   const [tasks, setTasks] = useState<Task[]>(snap.initial?.t ?? []);
   const [notes, setNotes] = useState<{ id: string; subject_id: string | null }[]>(snap.initial?.n ?? []);
   const [grades, setGrades] = useState<Grade[]>(snap.initial?.g ?? []);
@@ -68,7 +72,7 @@ export default function Materias() {
           action={{ label: mv.newSubject, icon: 'add', onPress: () => setModal(true) }} />
       ) : (
         <>
-        <Summary subjects={subjects} tasks={tasks} grades={grades} slots={slots} isWide={isWide} onOpen={(id) => router.push(`/materia/${id}`)} />
+        <Summary subjects={subjects} tasks={tasks} grades={grades} slots={slots} isWide={isWide} work={work} onOpen={(id) => router.push(`/materia/${id}`)} />
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
           {subjects.map((s) => {
             const st = tasks.filter((t) => t.subject_id === s.id && t.status !== 'done').sort(compareDue);
@@ -90,13 +94,15 @@ export default function Materias() {
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={{ color: C.text, fontSize: 16, fontWeight: '700' }} numberOfLines={1}>{s.name}</Text>
                     <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }} numberOfLines={1}>
-                      {who || `${s.credits ? `${s.credits} créditos · ` : ''}${notesN} ${notesN === 1 ? 'nota' : 'notas'}`}
+                      {who || `${s.credits && !work ? `${s.credits} créditos · ` : ''}${notesN} ${notesN === 1 ? 'nota' : 'notas'}`}
                     </Text>
                   </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={{ color: avg == null ? C.muted : avg < 3 ? C.badText : C.text, fontSize: avg == null ? 12.5 : 18, fontWeight: '800' }}>{avg == null ? 'Sin notas' : avg.toFixed(1)}</Text>
-                    {avg != null && <Text style={{ color: C.muted, fontSize: 11 }}>promedio</Text>}
-                  </View>
+                  {!work && (
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={{ color: avg == null ? C.muted : avg < 3 ? C.badText : C.text, fontSize: avg == null ? 12.5 : 18, fontWeight: '800' }}>{avg == null ? 'Sin notas' : avg.toFixed(1)}</Text>
+                      {avg != null && <Text style={{ color: C.muted, fontSize: 11 }}>promedio</Text>}
+                    </View>
+                  )}
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: C.line, flexWrap: 'wrap' }}>
                   <Text style={{ color: st.length ? C.text : C.muted, fontSize: 13, fontWeight: '600' }}>{st.length ? `${st.length} ${st.length === 1 ? 'pendiente' : 'pendientes'}` : 'Nada pendiente'}</Text>
@@ -105,7 +111,7 @@ export default function Materias() {
                 </View>
                 {soon && nc && (
                   <Text style={{ color: nc.now ? C.goodText : C.muted, fontSize: 12.5, fontWeight: '600', marginTop: 8 }} numberOfLines={1}>
-                    {nc.now ? 'En clase ahora' : `Clase ${dayWord(nc.start).toLowerCase()} ${fmtHour(`${String(nc.start.getHours()).padStart(2, '0')}:${String(nc.start.getMinutes()).padStart(2, '0')}`)}`}{s.room ? ` · ${s.room}` : ''}
+                    {nc.now ? (work ? 'En reunión ahora' : 'En clase ahora') : `${work ? 'Reunión' : 'Clase'} ${dayWord(nc.start).toLowerCase()} ${fmtHour(`${String(nc.start.getHours()).padStart(2, '0')}:${String(nc.start.getMinutes()).padStart(2, '0')}`)}`}{s.room ? ` · ${s.room}` : ''}
                   </Text>
                 )}
               </Card>
@@ -122,8 +128,8 @@ export default function Materias() {
 
 // Resumen del semestre arriba de las tarjetas: promedio ponderado, pendientes,
 // próxima entrega y próxima clase (de cualquier materia).
-function Summary({ subjects, tasks, grades, slots, isWide, onOpen }: {
-  subjects: Subject[]; tasks: Task[]; grades: Grade[]; slots: Slot[]; isWide: boolean; onOpen: (id: string) => void;
+function Summary({ subjects, tasks, grades, slots, isWide, work, onOpen }: {
+  subjects: Subject[]; tasks: Task[]; grades: Grade[]; slots: Slot[]; isWide: boolean; work: boolean; onOpen: (id: string) => void;
 }) {
   const sem = semesterAverage(subjects, grades);
   const pending = tasks.filter((t) => t.status !== 'done' && subjects.some((s) => s.id === t.subject_id));
@@ -134,10 +140,13 @@ function Summary({ subjects, tasks, grades, slots, isWide, onOpen }: {
   const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   const nextSub = next ? subjects.find((s) => s.id === next.subject_id) : null;
   const tiles: { k: string; label: string; big: string; sub: string; tone?: string; onPress?: () => void }[] = [
-    { k: 'avg', label: 'Promedio del semestre', big: sem.avg == null ? '–' : sem.avg.toFixed(2), sub: sem.avg == null ? 'Agrega notas en cada materia' : `Ponderado por créditos (${sem.credits})` },
+    // v26: en Trabajo no hay promedio; se ve cuántas áreas o clientes hay activos.
+    work
+      ? { k: 'avg', label: 'Áreas y clientes', big: String(subjects.length), sub: `${subjects.filter((s) => tasks.some((t) => t.subject_id === s.id && t.status !== 'done')).length} con pendientes` }
+      : { k: 'avg', label: 'Promedio del semestre', big: sem.avg == null ? '–' : sem.avg.toFixed(2), sub: sem.avg == null ? 'Agrega notas en cada materia' : `Ponderado por créditos (${sem.credits})` },
     { k: 'pend', label: 'Pendientes', big: String(pending.length), sub: overdue ? `${overdue} ${overdue === 1 ? 'vencida' : 'vencidas'}` : 'Ninguna vencida', tone: overdue ? C.badText : undefined },
     { k: 'next', label: 'Próxima entrega', big: next ? next.title : 'Nada pronto', sub: next ? `${nextSub?.name ?? ''} · ${fmtDue(next)}` : 'Todo al día', onPress: next?.subject_id ? () => onOpen(next.subject_id!) : undefined },
-    { k: 'class', label: 'Próxima clase', big: nc ? nc.s.name : 'Sin horario', sub: nc ? (nc.n!.now ? 'Ahora' : `${dayWord(nc.n!.start)}, ${fmtHour(hhmm(nc.n!.start))}`) + (nc.s.room ? ` · ${nc.s.room}` : '') : 'Arma tu horario para verla', onPress: nc ? () => onOpen(nc.s.id) : undefined },
+    { k: 'class', label: work ? 'Próxima reunión' : 'Próxima clase', big: nc ? nc.s.name : work ? 'Sin agenda' : 'Sin horario', sub: nc ? (nc.n!.now ? 'Ahora' : `${dayWord(nc.n!.start)}, ${fmtHour(hhmm(nc.n!.start))}`) + (nc.s.room ? ` · ${nc.s.room}` : '') : work ? 'Arma tu agenda para verla' : 'Arma tu horario para verla', onPress: nc ? () => onOpen(nc.s.id) : undefined },
   ];
   const tile = (t: typeof tiles[number]) => (
     <Card key={t.k} onPress={t.onPress} accessibilityLabel={t.label} style={isWide ? { flex: 1, padding: 14 } : { width: 168, padding: 14 }}>

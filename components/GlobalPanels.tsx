@@ -32,6 +32,9 @@ import { Button, Dot, EmptyState, IconButton } from './ds';
 import { Kbd } from './SideNav';
 import { SubjectIcon } from './SubjectIcon';
 import { play } from '../lib/sound';
+import { useSpaceFilter } from '../lib/useSpace';
+import { getModeSetting } from '../lib/mode';
+import { switchSpace } from '../lib/spaceSwitch';
 
 // ============================================================
 //  Paneles globales: hoja "Agregar", formulario de tarea, paleta de
@@ -41,7 +44,10 @@ import { play } from '../lib/sound';
 
 export function GlobalPanels() {
   const [p, setP] = useState<Panels | null>(null);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [allSubjects, setSubjects] = useState<Subject[]>([]);
+  // v26: con "Los dos", solo las materias o áreas del espacio abierto.
+  const sp = useSpaceFilter();
+  const subjects = useMemo(() => sp.subjects(allSubjects), [allSubjects, sp.space, sp.both]);
   useEffect(() => subscribePanels(setP), []);
 
   // Materias frescas cada vez que se abre algo que las necesita.
@@ -55,6 +61,10 @@ export function GlobalPanels() {
       const el = e.target as HTMLElement | null;
       const typing = !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openCommand(); return; }
+      // v26: Alt+1 Estudio, Alt+2 Trabajo (con "Los dos").
+      if (e.altKey && !e.ctrlKey && !e.metaKey && (e.code === 'Digit1' || e.code === 'Digit2') && getModeSetting() === 'ambos') {
+        e.preventDefault(); switchSpace(e.code === 'Digit1' ? 'estudio' : 'trabajo'); return;
+      }
       if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.key === 'n' || e.key === 'N') { e.preventDefault(); openAdd(); }
       if (e.key === '/') { e.preventDefault(); openCommand(); }

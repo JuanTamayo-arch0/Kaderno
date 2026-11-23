@@ -8,6 +8,7 @@ import { notePreview, sortNotes, type NextClass } from '../../lib/subjectInfo';
 import { MiniCalendar } from '../MiniCalendar';
 import { focusRingStyle } from '../ds';
 import { classWhen, shortDate } from './SubjectParts';
+import { useMode } from '../../lib/mode';
 
 // ============================================================
 //  Columna derecha de la materia (computador): próxima clase, calendario,
@@ -61,6 +62,7 @@ export function SubjectRail({ subject, nextCls, scheduleLoaded = true, tasks, no
   onOpenNote: (n: Note) => void; onAllNotes: () => void; onQuickNote: () => void; onAllFiles: () => void;
   onTask: (t: Task) => void; onSchedule: () => void;
 }) {
+  const { work } = useMode();
   const router = useRouter();
   const [files, setFiles] = useState<SubjectFile[] | null>(null);
   useEffect(() => { getSubjectFiles(subject.id).then(setFiles).catch(() => setFiles([])); }, [subject.id]);
@@ -73,16 +75,16 @@ export function SubjectRail({ subject, nextCls, scheduleLoaded = true, tasks, no
 
   return (
     <View style={{ gap: 12 }}>
-      <Box title="Próxima clase">
+      <Box title={work ? 'Próxima reunión' : 'Próxima clase'}>
         {!scheduleLoaded ? <Text style={{ color: C.muted, fontSize: 13, marginTop: -4 }}>Cargando…</Text> : nextCls ? (
           <View style={{ gap: 3, marginTop: -4 }}>
             <Text style={{ color: nextCls.now ? C.goodText : C.text, fontSize: 17, fontWeight: '800' }}>{classWhen(nextCls)}</Text>
-            <Text style={{ color: C.muted, fontSize: 13 }}>{[subject.room, nextCls.now ? null : shortDate(nextCls.start)].filter(Boolean).join(' · ') || 'Según tu horario'}</Text>
+            <Text style={{ color: C.muted, fontSize: 13 }}>{[subject.room, nextCls.now ? null : shortDate(nextCls.start)].filter(Boolean).join(' · ') || (work ? 'Según tu agenda' : 'Según tu horario')}</Text>
           </View>
         ) : (
           <View style={{ gap: 6, marginTop: -4 }}>
-            <Text style={{ color: C.muted, fontSize: 13, lineHeight: 18 }}>Esta materia no está en tu horario.</Text>
-            <LinkText text="Agregarla al horario" onPress={onSchedule} />
+            <Text style={{ color: C.muted, fontSize: 13, lineHeight: 18 }}>{work ? 'Esta área no tiene reuniones en tu agenda.' : 'Esta materia no está en tu horario.'}</Text>
+            <LinkText text={work ? 'Agregarla a la agenda' : 'Agregarla al horario'} onPress={onSchedule} />
           </View>
         )}
       </Box>

@@ -20,7 +20,7 @@ export function TemplatePicker({ visible, subjectId, onClose, onPick }: {
   const [mine, setMine] = useState<MyTemplate[]>([]);
   const [def, setDef] = useState<string | null>(null);
   const [always, setAlways] = useState(false);
-  const { mode, v: mv } = useMode();
+  const { space: mode, v: mv } = useMode();
   useEffect(() => {
     if (!visible) return;
     setAlways(false);

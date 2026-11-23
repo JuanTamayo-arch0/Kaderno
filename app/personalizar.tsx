@@ -8,7 +8,8 @@ import {
   C, R, THEMES, derive, inkOn, fontFamilyOf, BRAND_THEMES, MORE_THEMES, BACKGROUNDS, FONTS, SIZES,
   PSettings, PERSONALIZE, DEFAULTS, savePersonalize, loadWebFont, NOTE_FONTS,
 } from '../lib/theme';
-import { STUDY_ACCENTS, isKadernoTheme, withAccent, accentOf } from '../lib/brand';
+import { STUDY_ACCENTS, WORK_ACCENTS, isKadernoTheme, accentOf, workAccentOf, spacePalette } from '../lib/brand';
+import { useMode, getSpace } from '../lib/mode';
 import { fetchPrefs, savePrefs, uploadWallpaperFromUri, cleanOldWallpapers } from '../lib/db';
 import { notify } from '../lib/confirm';
 
@@ -26,6 +27,9 @@ function Personalizar() {
   const [hoyProy, setHoyProy] = useState(true);
   // v26: los temas de antes quedan en "Más colores", abiertos si hay uno elegido.
   const [more, setMore] = useState(!isKadernoTheme(PERSONALIZE.themeId));
+  // v26: el acento, los temas de antes y el fondo dependen del espacio abierto.
+  const { space, both } = useMode();
+  const work = space === 'trabajo';
   // Vista previa de todas las fuentes: se cargan solo al entrar aquí.
   useEffect(() => { loadWebFont('all'); }, []);
   useEffect(() => {
@@ -126,19 +130,19 @@ function Personalizar() {
       right={<Button label="Restablecer" kind="ghost" size="sm" onPress={() => { pickSeq.current++; setUploading(false); setS({ ...DEFAULTS, bgCustom: null }); }} />}>
         <ThemePreview s={s} />
         {/* ---------------- TEMA ---------------- */}
-        <Section title="Tema" subtitle="Los de Kaderno, con el color de acento que quieras. El logo no cambia de color." />
+        <Section title="Tema" subtitle={both ? `Estás ajustando ${work ? 'Trabajo' : 'Estudio'}. Claro u oscuro y la letra valen para los dos espacios; el acento es de cada uno. El logo no cambia de color.` : 'Los de Kaderno, con el color de acento que quieras. El logo no cambia de color.'} />
         <View style={grid}>
-          {BRAND_THEMES.map((t) => <ThemeCard key={t.id} id={t.id} accentId={s.accentId} wide active={s.themeId === t.id} onPress={() => set({ themeId: t.id })} />)}
+          {BRAND_THEMES.map((t) => <ThemeCard key={t.id} id={t.id} accentId={s.accentId} workAccentId={s.workAccentId} work={work} wide active={s.themeId === t.id || (work && !isKadernoTheme(s.themeId) && THEMES[s.themeId]?.scheme === t.scheme)} onPress={() => set({ themeId: t.id })} />)}
         </View>
-        {isKadernoTheme(s.themeId) && (
+        {(isKadernoTheme(s.themeId) || work) && (
           <>
-            <Text style={groupLbl}>Color de acento</Text>
+            <Text style={groupLbl}>Color de acento{both ? (work ? ' en Trabajo' : ' en Estudio') : ''}</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }} accessibilityRole="radiogroup">
-              {STUDY_ACCENTS.map((a) => {
-                const on = accentOf(s.accentId).id === a.id;
+              {(work ? WORK_ACCENTS : STUDY_ACCENTS).map((a) => {
+                const on = (work ? workAccentOf(s.workAccentId) : accentOf(s.accentId)).id === a.id;
                 const col = (THEMES[s.themeId]?.scheme === 'light' ? a.light : a.dark).brand;
                 return (
-                  <Pressable key={a.id} onPress={() => set({ accentId: a.id })} accessibilityRole="radio" accessibilityState={{ checked: on }} accessibilityLabel={a.name}
+                  <Pressable key={a.id} onPress={() => set(work ? { workAccentId: a.id } : { accentId: a.id })} accessibilityRole="radio" accessibilityState={{ checked: on }} accessibilityLabel={a.name}
                     style={{ alignItems: 'center', gap: 6, width: 72 }}>
                     <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: col, borderWidth: 3, borderColor: on ? C.text : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
                       {on && <Ionicons name="checkmark" size={18} color={inkOn(col)} />}
@@ -150,6 +154,8 @@ function Personalizar() {
             </View>
           </>
         )}
+        {work && <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 12 }}>Los temas de colores y los fondos de pantalla son del espacio Estudio.</Text>}
+        {!work && (<>
         <Pressable onPress={() => setMore(!more)} accessibilityRole="button" accessibilityState={{ expanded: more }}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 16, paddingVertical: 6, alignSelf: 'flex-start' }}>
           <Ionicons name={more ? 'chevron-down' : 'chevron-forward'} size={16} color={C.muted} />
@@ -187,6 +193,8 @@ function Personalizar() {
         <Text style={{ color: C.muted, fontSize: 12, marginTop: 8 }}>
           {uploading ? 'Subiendo tu foto… se guardará en tu cuenta.' : 'Tu foto se guarda en tu cuenta, así la ves en cualquier dispositivo.'}
         </Text>
+
+        </>)}
 
         {/* ---------------- FUENTE ---------------- */}
         <Section title="Tipo de letra" subtitle="La fuente de todos los textos" />
@@ -250,8 +258,8 @@ function Section({ title, subtitle }: { title: string; subtitle: string }) {
   );
 }
 
-function ThemeCard({ id, active, onPress, accentId, wide }: { id: string; active: boolean; onPress: () => void; accentId?: string; wide?: boolean }) {
-  const p = withAccent(id, THEMES[id].scheme, THEMES[id].palette, accentId);
+function ThemeCard({ id, active, onPress, accentId, workAccentId, work, wide }: { id: string; active: boolean; onPress: () => void; accentId?: string; workAccentId?: string; work?: boolean; wide?: boolean }) {
+  const p = spacePalette({ themeId: id, scheme: THEMES[id].scheme, base: THEMES[id].palette, space: work ? 'trabajo' : 'estudio', accentId, workAccentId });
   return (
     <Pressable onPress={onPress} accessibilityRole="radio" accessibilityState={{ checked: active }} accessibilityLabel={`Tema ${THEMES[id].name}`} style={[swatchBox, wide ? { width: 150 } : null, { borderColor: active ? p.brand : C.line, borderWidth: active ? 2 : 1, padding: 0, overflow: 'hidden' }]}>
       <View style={{ flex: 1, backgroundColor: p.bg, padding: 8, justifyContent: 'space-between' }}>
@@ -319,7 +327,7 @@ export default function PersonalizarProtegida() {
 // Vista previa en vivo con los colores elegidos, antes de aplicar.
 function ThemePreview({ s }: { s: PSettings }) {
   const theme = THEMES[s.themeId] ?? THEMES['kaderno-oscuro'];
-  const p = derive(withAccent(theme.id, theme.scheme, theme.palette, s.accentId));
+  const p = derive(spacePalette({ themeId: theme.id, scheme: theme.scheme, base: theme.palette, space: getSpace(), accentId: s.accentId, workAccentId: s.workAccentId }));
   const ff = fontFamilyOf(s.fontId);
   const t = (extra: any) => ({ ...(ff ? { fontFamily: ff } : {}), ...extra });
   return (

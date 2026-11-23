@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C, SUBJECT_COLORS, SUBJECT_ICONS } from '../lib/theme';
-import { Subject, Grade, addSubject, updateSubject, cleanLink, archiveSubject, restoreSubject, addGrade, updateGrade } from '../lib/db';
+import { Subject, Grade, addSubject, updateSubject, cleanLink, archiveSubject, restoreSubject, addGrade, updateGrade, setSubjectsSpace } from '../lib/db';
 import { confirm, notify, toast, friendlyError } from '../lib/feedback';
 import { Button, Field, IconButton } from './ds';
 import { SubjectIcon, isPhotoIcon } from './SubjectIcon';
 import { shrinkToSquare } from '../lib/imageResize';
-import { useMode } from '../lib/mode';
+import { useMode, type Space } from '../lib/mode';
+import { spaceOf } from '../lib/spaces';
 
 // Se carga al usarlo: así expo-image-picker no se descarga al abrir la app.
 const loadPicker = () => import('expo-image-picker');
@@ -20,7 +21,9 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
   /** Campo que recibe el foco al abrir (desde "Agregar profesor" en la ficha). */
   focusField?: 'teacher' | 'room' | 'link';
 }) {
-  const { v: mv } = useMode();
+  const { v: mv, work, both, mode, space } = useMode();
+  // v26: con "Los dos", se puede pasar la materia o área al otro espacio.
+  const [spaceSel, setSpaceSel] = useState<Space>(space);
   const [name, setName] = useState('');
   const [color, setColor] = useState(SUBJECT_COLORS[0]);
   const [hexText, setHexText] = useState(SUBJECT_COLORS[0]);
@@ -39,6 +42,7 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
     setName(s?.name ?? ''); setColor(s?.color ?? SUBJECT_COLORS[0]); setHexText(s?.color ?? SUBJECT_COLORS[0]);
     setIcon(s?.icon ?? SUBJECT_ICONS[0]); setCredits(s?.credits ? String(s.credits) : ''); setErr(null);
     setTeacher(s?.teacher ?? ''); setRoom(s?.room ?? ''); setLink(s?.link ?? ''); setLinkErr(null);
+    setSpaceSel(s ? spaceOf(s, mode) : space);
   }, [visible, editSubject]);
 
   function onHex(t: string) {
@@ -65,6 +69,11 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
       if (editSubject) {
         const same = (editSubject.teacher ?? null) === extra.teacher && (editSubject.room ?? null) === extra.room && (editSubject.link ?? null) === extra.link;
         await updateSubject(editSubject.id, { name: name.trim(), color, icon, credits: cr, ...(same ? {} : extra) });
+        if (both && spaceSel !== spaceOf(editSubject, mode)) {
+          const ok = await setSubjectsSpace([editSubject.id], spaceSel);
+          if (!ok) notify('Falta un paso en el servidor', 'Para mover entre Estudio y Trabajo hay que correr schema_v25.sql en Supabase.');
+          else { toast(`${name.trim()} pasó a ${spaceSel === 'trabajo' ? 'Trabajo' : 'Estudio'}`, { tone: 'good' }); onSaved(); return; }
+        }
       } else await addSubject(name.trim(), color, icon, cr, extra);
       toast(editSubject ? `${mv.subject} guardada` : `${mv.subject} creada: ${name.trim()}`, { tone: 'good' });
       onSaved();
@@ -92,12 +101,25 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
             <IconButton icon="close" label="Cerrar" onPress={onClose} />
           </View>
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-            <Field label="Nombre" value={name} onChangeText={(v) => { setName(v); setErr(null); }} placeholder="Ej: Física" error={err} autoFocus={!editSubject} />
-            <Field label="Créditos" value={credits} onChangeText={(v) => setCredits(v.replace(/\D/g, '').slice(0, 2))} keyboardType="number-pad" placeholder="Ej: 3" hint="Se usan para el promedio del semestre." />
-            <Field label="Profesor" value={teacher} onChangeText={setTeacher} placeholder="Ej: Ana Pérez" autoFocus={focusField === 'teacher'} maxLength={120} />
-            <Field label="Salón" value={room} onChangeText={setRoom} placeholder="Ej: Bloque 11, 201" autoFocus={focusField === 'room'} maxLength={80} />
-            <Field label="Enlace del aula virtual" value={link} onChangeText={(v) => { setLink(v); setLinkErr(null); }} placeholder="https://…" autoCapitalize="none" autoCorrect={false} keyboardType="url"
-              error={linkErr} autoFocus={focusField === 'link'} hint="Moodle, Teams, Classroom o la página del curso." />
+            <Field label="Nombre" value={name} onChangeText={(v) => { setName(v); setErr(null); }} placeholder={work ? 'Ej: Acme S.A.S. o Diseño' : 'Ej: Física'} error={err} autoFocus={!editSubject} />
+            {both && editSubject && (
+              <View style={{ marginBottom: 12 }}>
+                <Text style={{ color: C.text, fontSize: 13, fontWeight: '700', marginBottom: 6 }}>Espacio</Text>
+                <View style={{ flexDirection: 'row', gap: 6 }} accessibilityRole="radiogroup">
+                  {(['estudio', 'trabajo'] as Space[]).map((k) => (
+                    <Pressable key={k} onPress={() => setSpaceSel(k)} accessibilityRole="radio" accessibilityState={{ checked: spaceSel === k }}
+                      style={{ flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 10, borderWidth: 1, borderColor: spaceSel === k ? C.brand : C.line, backgroundColor: spaceSel === k ? C.brand + '1f' : 'transparent' }}>
+                      <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{k === 'trabajo' ? 'Trabajo' : 'Estudio'}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            )}
+            {!work && <Field label="Créditos" value={credits} onChangeText={(v) => setCredits(v.replace(/\D/g, '').slice(0, 2))} keyboardType="number-pad" placeholder="Ej: 3" hint="Se usan para el promedio del semestre." />}
+            <Field label={work ? 'Responsable o contacto' : 'Profesor'} value={teacher} onChangeText={setTeacher} placeholder="Ej: Ana Pérez" autoFocus={focusField === 'teacher'} maxLength={120} />
+            <Field label={work ? 'Lugar' : 'Salón'} value={room} onChangeText={setRoom} placeholder={work ? 'Ej: Oficina 3 o remoto' : 'Ej: Bloque 11, 201'} autoFocus={focusField === 'room'} maxLength={80} />
+            <Field label={work ? 'Enlace' : 'Enlace del aula virtual'} value={link} onChangeText={(v) => { setLink(v); setLinkErr(null); }} placeholder="https://…" autoCapitalize="none" autoCorrect={false} keyboardType="url"
+              error={linkErr} autoFocus={focusField === 'link'} hint={work ? 'La carpeta compartida, el tablero o el sitio del cliente.' : 'Moodle, Teams, Classroom o la página del curso.'} />
             <Text style={lbl()}>Color</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
               {SUBJECT_COLORS.map((c) => {

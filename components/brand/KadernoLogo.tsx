@@ -2,6 +2,7 @@ import React from 'react';
 import { Text, View, type StyleProp, type TextStyle } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { C, uiScheme } from '../../lib/theme';
+import { getSpace } from '../../lib/mode';
 import { BRAND_FONT, LOGO, logoColors, logoToneFor, type LogoSpace, type LogoTone } from '../../lib/brand';
 
 // ============================================================
@@ -10,8 +11,9 @@ import { BRAND_FONT, LOGO, logoColors, logoToneFor, type LogoSpace, type LogoTon
 //  Sin `tone`, escoge solo: tinta sobre fondos claros, papel sobre oscuros.
 // ============================================================
 
-export function KadernoMark({ size = 28, tone, space = 'estudio' }: { size?: number; tone?: LogoTone; space?: LogoSpace }) {
-  const c = logoColors(tone ?? logoToneFor(uiScheme()), space);
+export function KadernoMark({ size = 28, tone, space }: { size?: number; tone?: LogoTone; space?: LogoSpace }) {
+  // En Trabajo, la raya del margen es terracota o cobre (v26, fase 2).
+  const c = logoColors(tone ?? logoToneFor(uiScheme()), space ?? getSpace());
   return (
     <Svg width={size} height={size} viewBox={`0 0 ${LOGO.size} ${LOGO.size}`} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       {c.tile ? <Rect width={LOGO.size} height={LOGO.size} rx={LOGO.radius} fill={c.tile} /> : null}
@@ -24,7 +26,7 @@ export function KadernoMark({ size = 28, tone, space = 'estudio' }: { size?: num
 /** "kaderno" en minúscula, con la letra de la marca. */
 export function KadernoWordmark({ size = 20, color, style }: { size?: number; color?: string; style?: StyleProp<TextStyle> }) {
   return (
-    <Text style={[{ color: color ?? C.text, fontSize: size, fontWeight: '800', letterSpacing: -0.03 * size, fontFamily: BRAND_FONT }, style]}>kaderno</Text>
+    <Text dataSet={{ head: '1' }} style={[{ color: color ?? C.text, fontSize: size, fontWeight: '800', letterSpacing: -0.03 * size, fontFamily: BRAND_FONT }, style]}>kaderno</Text>
   );
 }
 

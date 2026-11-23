@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -13,6 +13,7 @@ import { getMode } from '../../lib/mode';
 import { onDataChanged } from '../../lib/uiBus';
 import { useAuth } from '../../lib/auth';
 import { snapshotFor } from '../../lib/snapshot';
+import { useSpaceFilter } from '../../lib/useSpace';
 
 const PROJECT_ICONS = ['📦', '👥', '🧪', '🎤', '🔎', '📊', '🎬', '🏗️', '🎨', '💡', '📚', '⚙️'];
 
@@ -22,8 +23,15 @@ export default function Proyectos() {
   const params = useLocalSearchParams<{ nuevo?: string }>();
   const { session } = useAuth();
   const [snap] = useState(() => snapshotFor<{ o: Overview[]; s: Subject[] }>(session ? `proyectos:${session.user.id}` : null));
-  const [rows, setRows] = useState<Overview[]>(snap.initial?.o ?? []);
+  const [allRows, setRows] = useState<Overview[]>(snap.initial?.o ?? []);
   const [subjects, setSubjects] = useState<Subject[]>(snap.initial?.s ?? []);
+  // v26: con "Los dos", los proyectos de una materia o área del otro espacio no salen aquí.
+  const sp = useSpaceFilter();
+  const rows = useMemo(() => {
+    if (!sp.both) return allRows;
+    const keep = new Set(sp.items(allRows.map((r) => ({ id: r.project.id, subject_id: r.project.subject_id })), subjects).map((x) => x.id));
+    return allRows.filter((r) => keep.has(r.project.id));
+  }, [allRows, subjects, sp.space, sp.both]);
   const [loading, setLoading] = useState(!snap.initial);
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState(false);

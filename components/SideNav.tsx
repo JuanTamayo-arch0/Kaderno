@@ -6,6 +6,7 @@ import { C } from '../lib/theme';
 import { SIDEBAR_W, useResponsive } from '../lib/responsive';
 import { StopwatchPill } from './StopwatchPill';
 import { KadernoLockup } from './brand/KadernoLogo';
+import { SpaceSwitch } from './SpaceSwitch';
 import { useAuth } from '../lib/auth';
 import { useNavCounts } from '../lib/navCounts';
 import { useFocusTimer } from '../lib/focusTimer';
@@ -135,6 +136,7 @@ export function SideNav({ active, onNavigate }: { active: NavKey | null; onNavig
             {counts.unread > 0 && <View style={{ position: 'absolute', top: 7, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: C.bad }} />}
           </Pressable>
         </View>
+        <View style={{ marginBottom: 12 }}><SpaceSwitch /></View>
 
         <Pressable onPress={openCommand} accessibilityRole="search" accessibilityLabel="Buscar o ir a… (Ctrl K)"
           style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, paddingHorizontal: 10, borderRadius: 10, borderWidth: 1, borderColor: C.line, backgroundColor: hovered ? C.surface2 : C.bg, marginBottom: 8 })}>
@@ -167,10 +169,11 @@ export function SideNav({ active, onNavigate }: { active: NavKey | null; onNavig
         {row(STUDY_ITEMS[0], timer)}
         {work && row(HOURS_ITEM)}
         {work && row(COBROS_ITEM)}
-        {row(STUDY_ITEMS[1], badge(counts.repaso))}
+        {/* v26: Repaso y la mascota son del espacio Estudio. */}
+        {!work && row(STUDY_ITEMS[1], badge(counts.repaso))}
         {row(STUDY_ITEMS[2])}
         {row(STUDY_ITEMS[3])}
-        {row(STUDY_ITEMS[4])}
+        {!work && row(STUDY_ITEMS[4])}
 
         <View style={{ flex: 1, minHeight: 16 }} />
         <StopwatchPill inline />

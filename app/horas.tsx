@@ -16,6 +16,7 @@ import { TextInput } from 'react-native';
 import { usePlan } from '../lib/billingDb';
 import { cop } from '../lib/billing';
 import { useMode } from '../lib/mode';
+import { useSpaceFilter } from '../lib/useSpace';
 import { useResponsive } from '../lib/responsive';
 import { useAuth } from '../lib/auth';
 import { saveFile } from '../lib/fileIO';
@@ -36,7 +37,7 @@ function Horas() {
   const [kind, setKind] = useState<'week' | 'month'>('week');
   const [offset, setOffset] = useState(0);
   const [by, setBy] = useState<GroupBy>('project');
-  const [list, setList] = useState<HourSession[] | null>(null);
+  const [allList, setList] = useState<HourSession[] | null>(null);
   const [v5, setV5] = useState(true);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -51,6 +52,9 @@ function Horas() {
   const { sw } = useStopwatch();
   const myId = session?.user?.id ?? null;
   const range = useMemo(() => periodRange(kind, offset), [kind, offset]);
+  // v26: con "Los dos", en Trabajo no se cuentan las horas de las materias de Estudio.
+  const sp = useSpaceFilter();
+  const list = useMemo(() => allList ? sp.items(allList, subjects) : null, [allList, subjects, sp.space, sp.both]);
   // v25: "Anotar horas" desde el cierre del día abre el formulario.
   const params = useLocalSearchParams<{ anotar?: string }>();
   useEffect(() => { if (params.anotar === '1') { setAdding(true); router.setParams({ anotar: undefined } as any); } }, [params.anotar]);
