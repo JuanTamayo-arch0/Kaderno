@@ -1485,3 +1485,23 @@ Corre otra vez `supabase/schema_v23.sql` completo (la fase 5 requiere también s
 ### 3. Pruebas
 
 `npm test` (periodos, duración, sumas con tarifa, CSV, informe y el informe semanal) y `bash tests/run_sql.sh` (incluye `tests/sql/23c_pruebas.sql`: enfoque con su hora real, horas a mano con tope, solo en proyectos propios, y las horas del equipo solo con plan Equipo).
+
+## Versión 25 (parte 1): cobrar
+
+### 1. Migración
+
+Corre `supabase/schema_v24.sql` completo (requiere schema_v12, schema_v14 y schema_v23; es idempotente). Crea `billing_profile`, `clients` e `invoices`, las funciones `invoice_create`, `invoice_set_status`, `project_set_budget` y `project_budget`, la columna `projects.budget_minutes` y el aviso de presupuesto al anotar horas. No hay que desplegar funciones.
+
+### 2. Lo que cambia para el usuario
+
+- **Cobrar** (en Herramientas con modo Trabajo, y desde Horas > Cobrar):
+  - **Tus datos**: nombre, documento, ciudad, dónde te pagan (ahorros, corriente, Nequi o Daviplata), prefijo y siguiente número, y una nota fija (por ejemplo, "no soy responsable de IVA").
+  - **Clientes**: nombre, NIT o cédula, tarifa por hora y los proyectos y áreas que le cobras.
+  - **Nueva cuenta de cobro**: escoges cliente y periodo; Kaderno arma una línea por proyecto con sus horas y la tarifa (la del proyecto, la del área o la del cliente). Puedes cambiar o agregar líneas. Se abre lista para imprimir o guardar en PDF, con el valor en letras.
+  - Marcar pagada, volver a por cobrar, anular (el número no se reusa) y mandar por WhatsApp. Arriba: cuánto está por cobrar y cuánto se cobró este mes.
+  - Con Gratis, 2 cuentas de cobro al mes (las anuladas no cuentan).
+- En cada proyecto, Opciones > **Presupuesto de horas**: cuánto va el equipo y aviso al 80 % y al 100 % (al dueño y a quien anota). Con Gratis, en 1 proyecto.
+
+### 3. Pruebas
+
+`npm test` (número, valor en letras, líneas desde las horas, total igual al del servidor, documento) y `bash tests/run_sql.sh` (incluye `tests/sql/24_pruebas.sql`: pide tus datos, total del servidor, consecutivo, tope de Gratis, nadie ve datos ajenos, presupuesto y sus avisos).

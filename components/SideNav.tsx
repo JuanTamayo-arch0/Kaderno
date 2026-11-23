@@ -48,6 +48,7 @@ export const STUDY_ITEMS: Item[] = [
 ];
 /** v24: solo en modo Trabajo o los dos. */
 export const HOURS_ITEM: Item = { key: 'horas', label: 'Horas', icon: 'time-outline', iconOn: 'time', href: '/horas' };
+export const COBROS_ITEM: Item = { key: 'cobros', label: 'Cobrar', icon: 'receipt-outline', iconOn: 'receipt', href: '/cobros' };
 /** Rutas que son pestañas (se navega con el navegador de pestañas para no perder su estado). */
 export const TAB_KEYS: NavKey[] = ['index', 'materias', 'horario', 'proyectos', 'estudiar', 'enfoque', 'oraculo', 'capturar'];
 
@@ -164,6 +165,7 @@ export function SideNav({ active, onNavigate }: { active: NavKey | null; onNavig
         </Pressable>
         {row(STUDY_ITEMS[0], timer)}
         {work && row(HOURS_ITEM)}
+        {work && row(COBROS_ITEM)}
         {row(STUDY_ITEMS[1], badge(counts.repaso))}
         {row(STUDY_ITEMS[2])}
         {row(STUDY_ITEMS[3])}
@@ -219,7 +221,7 @@ export function KadernoMark({ size = 28 }: { size?: number }) {
 
 // ---------- Barra inferior (celular) ----------
 const SECTION_OF: Partial<Record<NavKey, NavKey>> = {
-  horario: 'materias', enfoque: 'estudiar', repaso: 'estudiar', oraculo: 'estudiar', capturar: 'estudiar', horas: 'estudiar',
+  horario: 'materias', enfoque: 'estudiar', repaso: 'estudiar', oraculo: 'estudiar', capturar: 'estudiar', horas: 'estudiar', cobros: 'estudiar',
 };
 
 export function BottomBar({ active, onNavigate, bottomInset }: { active: NavKey; onNavigate: (k: NavKey) => void; bottomInset: number }) {

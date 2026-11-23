@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../lib/theme';
@@ -27,6 +27,7 @@ import { confirm, friendlyError, notify, toast } from '../lib/feedback';
 
 function Horas() {
   const { session } = useAuth();
+  const router = useRouter();
   const { v: mv } = useMode();
   const { plan } = usePlan();
   const { isWide } = useResponsive();
@@ -114,6 +115,8 @@ function Horas() {
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <Button label="CSV" icon="download-outline" size="sm" kind="secondary" disabled={!list?.length} onPress={csv} accessibilityLabel="Descargar CSV" />
           <Button label="PDF" icon={isPro ? 'document-outline' : 'lock-closed-outline'} size="sm" kind="secondary" disabled={!list?.length} onPress={pdf} accessibilityLabel="Informe en PDF" />
+          <Button label="Cobrar" icon="receipt-outline" size="sm" kind="secondary" accessibilityLabel="Hacer cuenta de cobro"
+            onPress={() => router.push(`/cobros?nueva=1&desde=${isoDay(range.from)}&hasta=${isoDay(new Date(range.to.getTime() - 86_400_000))}` as any)} />
         </View>
       </Card>
 

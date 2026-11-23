@@ -18,6 +18,7 @@ import { readSnap, writeSnap } from '../../lib/snapshot';
 import { play } from '../../lib/sound';
 import { BulkAction, BulkBar, BulkDialog, ExportSheet, confirmBulkDelete } from '../../components/projects/BulkTools';
 import { ReportSheet } from '../../components/projects/ReportSheet';
+import { BudgetSheet } from '../../components/projects/BudgetSheet';
 import { undoProjectBatch } from '../../lib/projectsBulk';
 import { Subject, getSubjects } from '../../lib/db';
 import { Activity, Member, PStep, PTask, Profile, Project, ProjectRole, canEdit, columnsOf, getActivity, getMembers, getProject, getProjectSteps, getProjectTasks, logActivity, moveTask, myRole, setBoardColumns, updateProjectTask } from '../../lib/projects';
@@ -86,6 +87,7 @@ function ProyectoDetalle() {
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [budgetOpen, setBudgetOpen] = useState(false);
   const [cleanupOpen, setCleanupOpen] = useState(false);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -409,6 +411,7 @@ function ProyectoDetalle() {
               ...(editable ? [{ icon: 'cloud-upload-outline', label: 'Importar tareas', hint: 'Desde un CSV, un JSON o una IA', onPress: () => setImportOpen(true) }] : []),
               { icon: 'download-outline', label: 'Exportar tareas', hint: 'Para editarlas en Excel o pasarlas a una IA', onPress: () => setExportOpen(true) },
               { icon: 'document-text-outline', label: 'Informe semanal', hint: 'Lo hecho, lo que viene y lo atrasado, listo para mandar', onPress: () => setReportOpen(true) },
+              { icon: 'hourglass-outline', label: 'Presupuesto de horas', hint: 'Cuánto va el equipo y aviso al 80 % y al 100 %', onPress: () => setBudgetOpen(true) },
             ],
           },
           {
@@ -451,6 +454,7 @@ function ProyectoDetalle() {
       {project && (
         <>
         <ExportSheet visible={exportOpen} project={project} members={members} onClose={() => setExportOpen(false)} />
+        <BudgetSheet visible={budgetOpen} projectId={project.id} projectName={project.name} editable={editable} onClose={() => setBudgetOpen(false)} />
         <ReportSheet visible={reportOpen} project={project} tasks={tasks} members={members} editable={editable} onClose={() => setReportOpen(false)} />
         </>
       )}
