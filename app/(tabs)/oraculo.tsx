@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -13,6 +13,7 @@ import { activePet, usePets } from '../../lib/pets/store';
 import { PetImage } from '../../components/pets/PetArt';
 import { PetRoom } from '../../components/pets/PetRoom';
 import { useMode } from '../../lib/mode';
+import { useSpaceFilter } from '../../lib/useSpace';
 
 // ============================================================
 //  Oráculo: preguntas a la IA sobre tus apuntes.
@@ -39,7 +40,10 @@ export default function Oraculo() {
   const router = useRouter();
   const { isWide } = useResponsive();
   const params = useLocalSearchParams<{ mode?: string; subjectId?: string; noteId?: string; noteTitle?: string; q?: string }>();
-  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [allSubjects, setSubjects] = useState<Subject[]>([]);
+  // v26: con "Los dos", solo las materias o áreas del espacio abierto.
+  const sp = useSpaceFilter();
+  const subjects = useMemo(() => sp.subjects(allSubjects), [allSubjects, sp.space, sp.both]);
   const [mode, setMode] = useState<'all' | 'subject' | 'note' | 'meetings'>((params.mode as any) || 'all');
   const { work } = useMode();
   const [subjectId, setSubjectId] = useState<string | null>(params.subjectId || null);

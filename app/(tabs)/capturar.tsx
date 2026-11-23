@@ -20,6 +20,7 @@ import { noteToHtml } from '../../lib/noteHtml';
 import { openTask, dataChanged } from '../../lib/uiBus';
 import { PhotoEditor } from '../../components/capture/PhotoEditor';
 import { NotePickSheet } from '../../components/capture/NotePickSheet';
+import { useSpaceFilter } from '../../lib/useSpace';
 
 // Se carga al usarlo: así expo-image-picker no se descarga al abrir la app.
 const loadPicker = () => import('expo-image-picker');
@@ -68,7 +69,10 @@ export default function Capturar() {
   const [sel, setSel] = useState(0);
   const [title, setTitle] = useState('');
   const [titleTouched, setTitleTouched] = useState(false);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [allSubjects, setSubjects] = useState<Subject[]>([]);
+  // v26: con "Los dos", solo las materias o áreas del espacio abierto.
+  const sp = useSpaceFilter();
+  const subjects = useMemo(() => sp.subjects(allSubjects), [allSubjects, sp.space, sp.both]);
   const [subjectId, setSubjectId] = useState<string | null>(params.subjectId ?? null);
   const [dest, setDest] = useState<Dest>({ kind: 'new' });
   const [picking, setPicking] = useState(false);

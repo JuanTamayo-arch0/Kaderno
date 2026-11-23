@@ -1629,3 +1629,39 @@ Solo si cambia el logo: `npx tsx scripts/brand-icons.ts` (usa el Chromium de Pla
 ### 4. Pruebas
 
 `npm test` (incluye `tests/v26.test.ts`: contraste de cada acento en los dos temas, el dibujo del logo en todas sus versiones, el paso a la marca una sola vez y la letra servida desde la app).
+
+## Versión 26 (parte 2): espacios Estudio y Trabajo
+
+### 1. Migración
+
+Corre `supabase/schema_v25.sql` en Supabase (es idempotente). Agrega `subjects.space` ('estudio' o 'trabajo'). Vacío cuenta como el modo de la persona, así que quien usa un solo modo no nota nada. Sin la migración la app funciona, pero con "Los dos" todo se ve junto.
+
+### 2. Lo que cambia para el usuario
+
+- **Dos espacios** para quien tiene "Los dos": Estudio y Trabajo.
+  - Se cambia arriba de la barra lateral, en Hoy (celular) o con Alt+1 y Alt+2.
+  - Cada espacio muestra solo sus materias o áreas, sus tareas, su navegación y su tema.
+  - Las tareas sin materia ni área se ven en los dos.
+  - El cambio de espacio se funde en unos 400 ms.
+- **Hoy** avisa en una línea lo del otro espacio que vence hoy o está vencido ("En Trabajo: 2 cosas para hoy"); al tocarla, cambia de espacio.
+- **Primera vez:** a quien ya tenía "Los dos" se le pregunta una sola vez qué es de Estudio y qué de Trabajo, con una sugerencia (créditos es Estudio; tarifa, cliente o plantilla de acta es Trabajo). Después se cambia en cada una con Editar > Espacio.
+- Al pasar de un modo a "Los dos", lo que ya había queda en el espacio de ese modo, sin preguntar.
+- **Lo que sale de Trabajo:**
+  - la pestaña Calificaciones y el promedio de la ficha del área;
+  - los créditos y la meta de nota;
+  - "Ponte a prueba antes del parcial";
+  - el promedio en Áreas;
+  - Repaso y Mascota en la barra;
+  - la invitación a la mascota, el ritual del semestre, "¿Cómo te fue?" y el plan de repaso en Hoy.
+- **Palabras de Trabajo:** "Responsable", "Lugar" y "Enlace" en la ficha; "Reunión de X ahora", "Próxima reunión" y "Agenda".
+- **Tema de Trabajo:**
+  - Neutros fríos (grafito y hueso) con acento a elección: terracota, acero, pino o ciruela.
+  - Texto en Inter y títulos en Newsreader (serif), las dos servidas desde la app.
+  - En el logo, la raya del margen pasa a cobre o terracota.
+  - Los temas de "Más colores" y los fondos de pantalla son de Estudio; en Trabajo se usa el Kaderno claro u oscuro según el tema elegido.
+- **Personalizar** dice qué espacio se está ajustando. Claro u oscuro y la letra valen para los dos; el acento es de cada uno.
+- **Horas y Proyectos** con "Los dos": en Trabajo no se cuentan las horas de las materias de Estudio, y los proyectos de una materia de Estudio no salen en Trabajo (y al revés).
+
+### 3. Pruebas
+
+`npm test` (contraste del tema de Trabajo con cada acento, qué se ve en cada espacio, lo que sale de Trabajo) y `bash tests/run_sql.sh` (incluye `tests/sql/25_pruebas.sql`).

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Platform, Pressable, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -20,6 +20,7 @@ import { useStudyStreak, StreakMini } from '../../components/streaks/Streak';
 import { weeksLabel } from '../../lib/streaks';
 import { useMode } from '../../lib/mode';
 import { getProjects, type Project } from '../../lib/projects';
+import { useSpaceFilter } from '../../lib/useSpace';
 
 // ============================================================
 //  Enfoque (Pomodoro).
@@ -38,7 +39,10 @@ export default function Enfoque() {
   const { isWide } = useResponsive();
   const f = useFocusTimer();
   const s = f.state;
-  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [allSubjects, setSubjects] = useState<Subject[]>([]);
+  // v26: con "Los dos", solo las materias o áreas del espacio abierto.
+  const sp = useSpaceFilter();
+  const subjects = useMemo(() => sp.subjects(allSubjects), [allSubjects, sp.space, sp.both]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [detail, setDetail] = useState<{ todayMin: number; weekMin: number; streak: number; byDay: { label: string; min: number }[]; recent: FocusSession[] }>({ todayMin: 0, weekMin: 0, streak: 0, byDay: [], recent: [] });
   const [pickTask, setPickTask] = useState(false);

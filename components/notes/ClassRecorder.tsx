@@ -168,12 +168,12 @@ export function RecorderBar({ rec }: { rec: Recorder }) {
 /** Botón para empezar, con el idioma de la clase. */
 export function RecordButton({ rec, onStarted }: { rec: Recorder; onStarted: () => void }) {
   const [open, setOpen] = useState(false);
-  const { mode } = useMode();
-  const what = mode === 'trabajo' ? 'reunión' : mode === 'ambos' ? 'clase o reunión' : 'clase';
+  const { space: mode } = useMode();
+  const what = mode === 'trabajo' ? 'reunión' : 'clase';
   if (rec.active || Platform.OS !== 'web') return null;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      <Button label={mode === 'trabajo' ? 'Grabar reunión' : mode === 'ambos' ? 'Grabar' : 'Grabar clase'} icon="mic-outline" size="sm" kind="secondary" onPress={async () => { if (await rec.start()) onStarted(); }} />
+      <Button label={mode === 'trabajo' ? 'Grabar reunión' : 'Grabar clase'} icon="mic-outline" size="sm" kind="secondary" onPress={async () => { if (await rec.start()) onStarted(); }} />
       <Pressable onPress={() => setOpen(!open)} accessibilityRole="button" accessibilityLabel={`Idioma de la ${what}: ${LANGS.find((l) => l.code === rec.lang)?.label ?? rec.lang}`} hitSlop={6}
         style={{ paddingHorizontal: 6, paddingVertical: 6 }}>
         <Text style={{ color: C.muted, fontSize: 11.5, fontWeight: '700' }}>{rec.lang.slice(0, 2).toUpperCase()} ▾</Text>
@@ -183,7 +183,7 @@ export function RecordButton({ rec, onStarted }: { rec: Recorder; onStarted: () 
           {LANGS.map((l) => (
             <Pressable key={l.code} onPress={() => { rec.setLang(l.code); setOpen(false); }} accessibilityRole="menuitem"
               style={({ hovered }: any) => ({ padding: 8, borderRadius: 8, backgroundColor: hovered ? C.surface2 : 'transparent' })}>
-              <Text style={{ color: C.text, fontSize: 13, fontWeight: rec.lang === l.code ? '800' : '500' }}>{mode === 'trabajo' ? 'Reunión' : mode === 'ambos' ? 'Grabación' : 'Clase'} en {l.label.toLowerCase()}</Text>
+              <Text style={{ color: C.text, fontSize: 13, fontWeight: rec.lang === l.code ? '800' : '500' }}>{mode === 'trabajo' ? 'Reunión' : 'Clase'} en {l.label.toLowerCase()}</Text>
             </Pressable>
           ))}
         </View>

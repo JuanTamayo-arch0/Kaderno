@@ -2,7 +2,8 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { derive, type BasePalette, type Palette } from './color';
 import { THEMES, type Theme } from './palettes';
-import { BRAND_FONT, BRAND_FONT_URL, BRAND_VERSION, DEFAULT_ACCENT, isKadernoTheme, migrateBrand, withAccent } from './brand';
+import { BRAND_FONT, BRAND_FONT_FACES, BRAND_VERSION, DEFAULT_ACCENT, DEFAULT_WORK_ACCENT, WORK_FONT, WORK_HEAD_FONT, isKadernoTheme, migrateBrand, spacePalette } from './brand';
+import { getSpace } from './mode';
 export * from './color';
 export { THEMES, type Theme } from './palettes';
 
@@ -43,7 +44,7 @@ export function backgroundOf(id: string): Background | undefined { return BACKGR
 // ---------- Fuentes (Google Fonts, se cargan en web) ----------
 export type FontOpt = { id: string; name: string; family?: string };
 export const FONTS: FontOpt[] = [
-  { id: 'marca', name: 'Plus Jakarta Sans (la de Kaderno)', family: BRAND_FONT },
+  { id: 'marca', name: 'La de Kaderno', family: BRAND_FONT },
   { id: 'system', name: 'Sistema', family: undefined },
   { id: 'inter', name: 'Inter', family: 'Inter' },
   { id: 'nunito', name: 'Nunito', family: 'Nunito' },
@@ -84,7 +85,8 @@ const FONT_QUERY: Record<string, string> = {
 export function loadWebFont(which: string | 'all' | undefined): void {
   if (Platform.OS !== 'web' || typeof document === 'undefined' || !which) return;
   // La letra de la marca se sirve desde el mismo servidor (public/fonts), sin Google.
-  if (which === 'all' || which === BRAND_FONT) loadBrandFont();
+  if (which === 'all' || which === BRAND_FONT || which === WORK_FONT || which === WORK_HEAD_FONT) loadBrandFont();
+  if (which === WORK_FONT) return; // Inter también se sirve desde la app
   const fams = which === 'all' ? Object.keys(FONT_QUERY) : [which].filter((f) => FONT_QUERY[f]);
   fams.forEach((f) => {
     const id = 'kd-font-' + f.replace(/\s+/g, '-');
@@ -100,7 +102,8 @@ export function loadBrandFont(): void {
   if (Platform.OS !== 'web' || typeof document === 'undefined' || document.getElementById('kd-font-brand')) return;
   const st = document.createElement('style');
   st.id = 'kd-font-brand';
-  st.textContent = `@font-face{font-family:'${BRAND_FONT}';font-style:normal;font-display:swap;font-weight:200 800;src:url('${BRAND_FONT_URL}') format('woff2-variations'),url('${BRAND_FONT_URL}') format('woff2');}`;
+  // Cada letra se descarga solo cuando algo la usa.
+  st.textContent = BRAND_FONT_FACES.map((f) => `@font-face{font-family:'${f.family}';font-style:normal;font-display:swap;font-weight:${f.weight};src:url('${f.url}') format('woff2');}`).join('');
   document.head.appendChild(st);
 }
 export const GOOGLE_FONTS_HREF =
@@ -119,8 +122,8 @@ export function scaleOf(id: string): number { return SIZES.find((s) => s.id === 
 // ============================================================
 //  Ajustes de personalización (persistidos por dispositivo)
 // ============================================================
-export type PSettings = { themeId: string; bgId: string; bgCustom: string | null; fontId: string; sizeId: string; noteFontId?: string; accentId?: string; brandV?: number };
-export const DEFAULTS: PSettings = { themeId: 'kaderno-oscuro', bgId: 'none', bgCustom: null, fontId: 'marca', sizeId: 'md', noteFontId: 'serif', accentId: DEFAULT_ACCENT, brandV: BRAND_VERSION };
+export type PSettings = { themeId: string; bgId: string; bgCustom: string | null; fontId: string; sizeId: string; noteFontId?: string; accentId?: string; workAccentId?: string; brandV?: number };
+export const DEFAULTS: PSettings = { themeId: 'kaderno-oscuro', bgId: 'none', bgCustom: null, fontId: 'marca', sizeId: 'md', noteFontId: 'serif', accentId: DEFAULT_ACCENT, workAccentId: DEFAULT_WORK_ACCENT, brandV: BRAND_VERSION };
 export let PERSONALIZE: PSettings = { ...DEFAULTS };
 const STORE_KEY = 'kaderno.personalize';
 
@@ -133,6 +136,8 @@ function hexToRgba(hex: string, alpha: number): string {
 // La foto propia sólo cuenta cuando está elegida (bgId === 'custom'): así se
 // puede conservar guardada aunque ahora mismo esté puesto un degradado.
 export function hasWallpaper(s: PSettings = PERSONALIZE): boolean {
+  // v26: los fondos de pantalla son solo de Estudio.
+  if (getSpace() === 'trabajo') return false;
   return (s.bgId === 'custom' && !!s.bgCustom) || (s.bgId !== 'none' && !!backgroundOf(s.bgId));
 }
 
@@ -140,8 +145,17 @@ export function hasWallpaper(s: PSettings = PERSONALIZE): boolean {
 // los estilos a clases, así que parchear componentes es frágil. La cadena de
 // respaldo incluye las fuentes de íconos: sus glifos viven en área de uso privado,
 // que las fuentes de texto no cubren, así que los íconos siguen intactos.
-function applyWebFont(family: string | undefined): void {
+function applyWebFont(family: string | undefined, headFamily?: string): void {
   if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+  // v26: en Trabajo, los títulos (marcados con dataSet head) van en serif.
+  const HID = 'kaderno-head-css';
+  document.getElementById(HID)?.remove();
+  if (headFamily) {
+    const h = document.createElement('style');
+    h.id = HID;
+    h.textContent = `#root [data-head="1"], #root [data-head="1"] * { font-family: '${headFamily}', Georgia, serif !important; font-weight: 600 !important; letter-spacing: -0.005em; line-height: 1.3 !important; }`; // la serif es más alta: sin esto se cortan las tildes de las mayúsculas
+    document.head.appendChild(h);
+  }
   const ID = 'kaderno-font-css';
   const prev = document.getElementById(ID);
   if (prev) prev.remove();
@@ -160,11 +174,14 @@ function applyWebFont(family: string | undefined): void {
 // Aplica un conjunto de ajustes: muta C (con transparencia si hay fondo) y fija la fuente.
 export function applyAll(s: PSettings): void {
   const theme = THEMES[s.themeId] ?? THEMES[FALLBACK_THEME];
-  const pal: Palette = derive(withAccent(theme.id, theme.scheme, theme.palette, s.accentId));
+  const space = getSpace();
+  const pal: Palette = derive(spacePalette({ themeId: theme.id, scheme: theme.scheme, base: theme.palette, space, accentId: s.accentId, workAccentId: s.workAccentId }));
   if (hasWallpaper(s)) pal.bg = hexToRgba(theme.palette.bg, theme.scheme === 'light' ? 0.82 : 0.76);
   Object.assign(C, pal);
-  applyWebFont(fontFamilyOf(s.fontId));
-  loadWebFont(fontFamilyOf(s.fontId));
+  const family = s.fontId === 'marca' && space === 'trabajo' ? WORK_FONT : fontFamilyOf(s.fontId);
+  applyWebFont(family, s.fontId === 'marca' && space === 'trabajo' ? WORK_HEAD_FONT : undefined);
+  loadWebFont(family);
+  if (s.fontId === 'marca' && space === 'trabajo') loadWebFont(WORK_HEAD_FONT);
   PERSONALIZE = s;
 }
 
@@ -179,7 +196,7 @@ export function currentTheme(): Theme { return THEMES[PERSONALIZE.themeId] ?? TH
 /** La paleta del tema activo ya con su acento (para el fondo inicial y la barra del navegador). */
 export function currentPalette(): BasePalette {
   const t = currentTheme();
-  return withAccent(t.id, t.scheme, t.palette, PERSONALIZE.accentId);
+  return spacePalette({ themeId: t.id, scheme: t.scheme, base: t.palette, space: getSpace(), accentId: PERSONALIZE.accentId, workAccentId: PERSONALIZE.workAccentId });
 }
 
 // Lectura SÍNCRONA en web (localStorage) para que todos los estilos tomen el tema correcto desde el primer render.

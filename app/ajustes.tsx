@@ -194,7 +194,7 @@ function Ajustes() {
           {MODES.map((m) => {
             const on = mode === m.key;
             return (
-              <Pressable key={m.key} onPress={() => saveMode(m.key).then(() => toast(m.key === 'estudio' ? 'Modo Estudio' : m.key === 'trabajo' ? 'Modo Trabajo: materias pasan a ser áreas o clientes' : 'Estudio y trabajo juntos')).catch((e) => notify('No se pudo guardar', friendlyError(e)))}
+              <Pressable key={m.key} onPress={() => saveMode(m.key).then(() => toast(m.key === 'estudio' ? 'Modo Estudio' : m.key === 'trabajo' ? 'Modo Trabajo: materias pasan a ser áreas o clientes' : 'Los dos: cambia entre Estudio y Trabajo arriba de la barra')).catch((e) => notify('No se pudo guardar', friendlyError(e)))}
                 accessibilityRole="radio" accessibilityState={{ checked: on }} accessibilityLabel={`${m.label}: ${m.hint}`}
                 style={({ hovered }: any) => ({ flexGrow: 1, flexBasis: 150, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 12, borderWidth: on ? 2 : 1, borderColor: on ? C.brand : C.line, backgroundColor: hovered ? C.surface2 : 'transparent' })}>
                 <Ionicons name={m.icon as any} size={20} color={on ? C.brand : C.muted} />
@@ -206,12 +206,12 @@ function Ajustes() {
             );
           })}
         </View>
-        <Text style={{ color: C.muted, fontSize: 12 }}>Cambia los nombres (materias o áreas, parciales o entregas, clases o reuniones) y prende la grabación de reuniones y el registro de horas. No borra nada.</Text>
+        <Text style={{ color: C.muted, fontSize: 12 }}>Con Los dos, Kaderno tiene dos espacios: Estudio (materias, calificaciones, repaso) y Trabajo (áreas, proyectos, horas, cobros), cada uno con su tema. Se cambia arriba de la barra o con Alt+1 y Alt+2. No borra nada.</Text>
       </Card>
 
       <SectionLabel text="Apariencia y organización" />
       <Card padded={false}>
-        <ListRow title="Tema, fondo y letra" subtitle="10 temas, claros y oscuros" left={<Ionicons name="color-palette-outline" size={20} color={C.muted} />} onPress={() => router.push('/personalizar')} />
+        <ListRow title="Tema, fondo y letra" subtitle="Kaderno claro u oscuro, color de acento y más" left={<Ionicons name="color-palette-outline" size={20} color={C.muted} />} onPress={() => router.push('/personalizar')} />
         <Divider />
         <ListRow title="Tipos de tarea" subtitle="Laboratorio, exposición, lectura…" left={<Ionicons name="pricetags-outline" size={20} color={C.muted} />} onPress={() => router.push('/tipos')} />
         <Divider />

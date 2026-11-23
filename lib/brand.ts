@@ -32,6 +32,14 @@ export const BRAND = {
 
 export const BRAND_FONT = 'Plus Jakarta Sans';
 export const BRAND_FONT_URL = '/fonts/plus-jakarta-sans.woff2';
+/** Trabajo: texto en Inter y títulos en Newsreader (serif), servidas desde la app. */
+export const WORK_FONT = 'Inter';
+export const WORK_HEAD_FONT = 'Newsreader';
+export const BRAND_FONT_FACES: { family: string; url: string; weight: string }[] = [
+  { family: BRAND_FONT, url: BRAND_FONT_URL, weight: '200 800' },
+  { family: WORK_FONT, url: '/fonts/inter.woff2', weight: '100 900' },
+  { family: WORK_HEAD_FONT, url: '/fonts/newsreader.woff2', weight: '200 800' },
+];
 
 // ---------- Logo ----------
 /** Trazos en una caja de 48 x 48. */
@@ -128,6 +136,37 @@ export function withAccent(themeId: string, scheme: 'dark' | 'light', base: Base
   if (!isKadernoTheme(themeId)) return base;
   const a = accentOf(accentId)[scheme];
   return { ...base, brand: a.brand, brand2: a.brand2 };
+}
+
+// ---------- Trabajo (fase 2) ----------
+/**
+ * El espacio Trabajo usa sus propios neutros (fríos) y acentos sobrios. Con
+ * un tema Kaderno se toma el de Trabajo con el mismo claro u oscuro; los
+ * temas de "Más colores" son solo de Estudio, así que en Trabajo se usa el
+ * Kaderno que corresponde a su claro u oscuro.
+ */
+export const WORK_PALETTES: Record<'dark' | 'light', BasePalette> = {
+  dark: { bg: '#0F1014', surface: '#16171C', surface2: '#1D1F26', line: '#2A2C35', text: '#E9E8E4', muted: '#9C9B95', brand: '#D98A6A', brand2: '#8FA6C8', good: '#4CC38A', warn: '#E0A84A', bad: '#FF6B76' },
+  light: { bg: '#F5F4F1', surface: '#FFFFFF', surface2: '#EEECE7', line: '#DEDBD3', text: '#1A1B22', muted: '#5D5E66', brand: '#A9472F', brand2: '#3F5B85', good: '#12A150', warn: '#B9770A', bad: '#D6334A' },
+};
+export const WORK_ACCENTS: Accent[] = [
+  { id: 'terracota', name: 'Terracota', dark: { brand: '#D98A6A', brand2: '#8FA6C8' }, light: { brand: '#A9472F', brand2: '#3F5B85' } },
+  { id: 'acero', name: 'Acero', dark: { brand: '#8FA6C8', brand2: '#D98A6A' }, light: { brand: '#3F5B85', brand2: '#A9472F' } },
+  { id: 'pino', name: 'Pino', dark: { brand: '#7FBFA6', brand2: '#8FA6C8' }, light: { brand: '#2E6B57', brand2: '#3F5B85' } },
+  { id: 'ciruela', name: 'Ciruela', dark: { brand: '#C39BC0', brand2: '#D98A6A' }, light: { brand: '#6E3F6B', brand2: '#A9472F' } },
+];
+export const DEFAULT_WORK_ACCENT = 'terracota';
+export function workAccentOf(id: string | null | undefined): Accent {
+  return WORK_ACCENTS.find((a) => a.id === id) ?? WORK_ACCENTS[0];
+}
+export type SpaceName = 'estudio' | 'trabajo';
+/** La paleta que se pinta según el espacio abierto. */
+export function spacePalette(o: { themeId: string; scheme: 'dark' | 'light'; base: BasePalette; space: SpaceName; accentId?: string | null; workAccentId?: string | null }): BasePalette {
+  if (o.space === 'trabajo') {
+    const a = workAccentOf(o.workAccentId)[o.scheme];
+    return { ...WORK_PALETTES[o.scheme], brand: a.brand, brand2: a.brand2 };
+  }
+  return withAccent(o.themeId, o.scheme, o.base, o.accentId);
 }
 
 // ---------- Llegada de la marca a quien ya usaba Kaderno ----------

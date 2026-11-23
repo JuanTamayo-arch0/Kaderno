@@ -6,6 +6,8 @@ export type Subject = {
   id: string; name: string; color: string; icon: string; archived: boolean; credits: number | null;
   // schema_v18 (pueden faltar si la migración no se ha corrido)
   teacher?: string | null; room?: string | null; link?: string | null;
+  // schema_v25 (v26): Estudio o Trabajo. Vacío = el modo de la persona.
+  space?: 'estudio' | 'trabajo' | null; default_template?: string | null;
 };
 export type Task = {
   id: string; subject_id: string | null; title: string; description: string | null;
@@ -95,6 +97,13 @@ export async function addSubject(name: string, color: string, icon: string, cred
   extra: { teacher?: string | null; room?: string | null; link?: string | null } = {}): Promise<void> {
   const base = { user_id: await uid(), name, color, icon, credits };
   const clean = Object.fromEntries(Object.entries(extra).filter(([, v]) => v));
+  // v26: con "Los dos", la materia o área nace en el espacio abierto.
+  const { getModeSetting, getSpace } = await import('./mode');
+  if (getModeSetting() === 'ambos') {
+    const r = await supabase.from('subjects').insert({ ...base, ...clean, space: getSpace() });
+    if (!r.error) return;
+    if (!isMissingColumn(r.error)) throw r.error;
+  }
   let { error } = await supabase.from('subjects').insert({ ...base, ...clean });
   if (error && isMissingColumn(error) && Object.keys(clean).length) {
     V18 = false;
@@ -103,6 +112,15 @@ export async function addSubject(name: string, color: string, icon: string, cred
   if (error) throw error;
 }
 export type SubjectPatch = { name?: string; color?: string; icon?: string; credits?: number; teacher?: string | null; room?: string | null; link?: string | null };
+
+/** v26: pasa materias o áreas a un espacio. Devuelve false si falta schema_v25. */
+export async function setSubjectsSpace(ids: string[], space: 'estudio' | 'trabajo'): Promise<boolean> {
+  if (!ids.length) return true;
+  const { error } = await supabase.from('subjects').update({ space }).in('id', ids);
+  if (error && isMissingColumn(error)) return false;
+  if (error) throw error;
+  return true;
+}
 const V18_SUBJECT = ['teacher', 'room', 'link'];
 export async function updateSubject(id: string, patch: SubjectPatch): Promise<void> {
   const { error } = await supabase.from('subjects').update(patch).eq('id', id);

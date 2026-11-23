@@ -218,3 +218,9 @@ La fase 1 se ve de inmediato y no cambia datos. La 2 es la más grande y la que 
 4. (Fase 1) El paso a la marca es una sola vez y solo toca los valores de fábrica de antes (Medianoche y letra del sistema). Se marca con `brandV: 26` en los ajustes.
 5. (Fase 1) La letra se sirve desde el mismo servidor y la página la precarga; las otras letras de Personalizar siguen viniendo de Google Fonts.
 6. (Fase 1) Los íconos salen del mismo dibujo que la app (`lib/brand.ts`) con `scripts/brand-icons.ts`, para que nunca se desalineen.
+7. (Fase 2) Los espacios se apoyan en el modo que ya existía: con "Los dos", el modo que se ve es el del espacio abierto. Así cada pantalla que ya distinguía Estudio de Trabajo se separa sola.
+8. (Fase 2) `subjects.space` vacío cuenta como el modo de la persona: nadie con un solo modo tiene que hacer nada. Las tareas sin materia se ven en los dos espacios.
+9. (Fase 2) El Horario o Agenda sigue mostrando las dos cosas: es una sola semana y no se pueden cruzar una clase y una reunión.
+10. (Fase 2) Al cambiar de espacio se repinta la app con un velo que se desvanece (unos 400 ms), en vez de pasar los colores a variables CSS. Es más simple y se ve igual de suave; las variables quedan para la fase 4 si hacen falta.
+11. (Fase 2) Los radios más rectos de Trabajo quedan para la fase 4 (los radios hoy son constantes en el código).
+12. (Fase 2) La letra de Trabajo es Inter para el texto y Newsreader para los títulos marcados (encabezados de pantalla, nombre del área, logotipo), servidas desde la app.

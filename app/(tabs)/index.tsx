@@ -28,6 +28,7 @@ import { openAdd, openCommand, openInbox, openTask, onDataChanged } from '../../
 import { refreshNavCounts, useNavCounts } from '../../lib/navCounts';
 import { useFocusTimer, startFocus, pauseFocus } from '../../lib/focusTimer';
 import { useAuth } from '../../lib/auth';
+import { SpaceSwitch } from '../../components/SpaceSwitch';
 import { Screen, Button, Card, ChipRow, EmptyState, ErrorState, FilterChip, IconButton, SectionLabel, Skeleton, Dot } from '../../components/ds';
 import { TaskRow } from '../../components/TaskRow';
 import { MiniCalendar } from '../../components/MiniCalendar';
@@ -62,6 +63,9 @@ import { skipRepeat, updateTask } from '../../lib/db';
 import { ruleText } from '../../lib/repeat';
 import { openClassNote } from '../../lib/notesDb';
 import { useMode } from '../../lib/mode';
+import { useSpaceFilter } from '../../lib/useSpace';
+import { otherSpaceLine } from '../../lib/spaces';
+import { switchSpace } from '../../lib/spaceSwitch';
 
 // ============================================================
 //  Hoy.
@@ -78,7 +82,8 @@ type HoySnap = { subjects: Subject[]; tasks: Task[]; steps: Record<string, Step[
 export default function Hoy() {
   const router = useRouter();
   const { isWide, width } = useResponsive();
-  const { v: mv } = useMode();
+  const { v: mv, study } = useMode();
+  const sp = useSpaceFilter();
   const { session } = useAuth();
   const counts = useNavCounts();
   const focus = useFocusTimer();
@@ -86,12 +91,15 @@ export default function Hoy() {
   // Lo de la vez anterior se pinta de inmediato; load() lo reemplaza al llegar.
   const snapKey = session?.user?.id ? `hoy:${session.user.id}` : null;
   const [snap] = useState(() => readSnap<HoySnap>(snapKey));
-  const [subjects, setSubjects] = useState<Subject[]>(snap?.subjects ?? []);
+  const [allSubjects, setSubjects] = useState<Subject[]>(snap?.subjects ?? []);
+  // v26: con "Los dos", Hoy muestra solo lo del espacio abierto.
+  const subjects = useMemo(() => sp.subjects(allSubjects), [allSubjects, sp.space, sp.both]);
   const [tasks, setTasks] = useState<Task[] | null>(snap?.tasks ?? null);
   const [steps, setSteps] = useState<Record<string, Step[]>>(snap?.steps ?? {});
   const [allPtasks, setPtasks] = useState<MyProjectTask[]>(snap?.ptasks ?? []);
   const [hiddenH, setHiddenH] = useState<HoyHidden>(snap?.hiddenH ?? { tasks: [], projects: [] });
-  const [slots, setSlots] = useState<Slot[]>(snap?.slots ?? []);
+  const [allSlots, setSlots] = useState<Slot[]>(snap?.slots ?? []);
+  const slots = useMemo(() => sp.both ? allSlots.filter((x) => subjects.some((s) => s.id === x.subject_id)) : allSlots, [allSlots, subjects, sp.both]);
   const [repaso, setRepaso] = useState(snap?.repaso ?? 0);
   const [repasoSecs, setRepasoSecs] = useState(10);
   const [focusToday, setFocusToday] = useState<{ todayMin: number; streak: number }>({ todayMin: 0, streak: 0 });
@@ -279,7 +287,11 @@ export default function Hoy() {
 
   // ---------- Datos derivados ----------
   const inboxTasks = (tasks ?? []).filter((t) => t.inbox && t.status !== 'done' && !hidden.has(t.id));
-  const live = (tasks ?? []).filter((t) => !t.inbox && !hidden.has(t.id) && (!t.subject_id || !subjects.length || subjects.some((s) => s.id === t.subject_id)));
+  const live = sp.items(tasks ?? [], allSubjects).filter((t) => !t.inbox && !hidden.has(t.id) && (!t.subject_id || !allSubjects.length || allSubjects.some((s) => s.id === t.subject_id)));
+  // v26: lo del otro espacio que vence hoy o está vencido, en una línea.
+  const otherSpace = sp.space === 'trabajo' ? 'estudio' : 'trabajo';
+  const otherDue = sp.both ? (tasks ?? []).filter((t) => t.status !== 'done' && !t.inbox && t.subject_id && !subjects.some((s) => s.id === t.subject_id)
+    && allSubjects.some((s) => s.id === t.subject_id) && dueDay(t) && isoDate(dueDay(t)!) <= isoDate(now)).length : 0;
   const allPending = live.filter((t) => t.status !== 'done');
   // Tareas de proyecto que no se ocultaron de Hoy (por tarea o por proyecto).
   const notHidden = allPtasks.filter((p) => !hiddenH.tasks.includes(p.id) && !hiddenH.projects.includes(p.project_id));
@@ -329,7 +341,7 @@ export default function Hoy() {
 
   // Rituales: planear la semana (lunes o domingo en la noche) y empezar el semestre.
   const offerRitual = ritualPlan !== undefined && !!ritualPrefs && shouldOfferRitual(now, ritualPlan, ritualPrefs.monday);
-  const offerSemester = !!ritualPrefs && !offerRitual && shouldOfferSemester(subjects as any, now, !!ritualPrefs.semesterAt || ritualPrefs.semesterDismissed);
+  const offerSemester = study && !!ritualPrefs && !offerRitual && shouldOfferSemester(subjects as any, now, !!ritualPrefs.semesterAt || ritualPrefs.semesterDismissed);
   const priorities = weekPlan?.done_at ? weekPlan.priorities : [];
   const offerClose = shouldOfferClose(now, reviewed, closeHour);
   const yesterday = (() => { const d = new Date(now); d.setDate(d.getDate() - 1); return dayISO(d); })();
@@ -405,13 +417,13 @@ export default function Hoy() {
       <View style={{ width: 4, alignSelf: 'stretch', borderRadius: 2, backgroundColor: (classNow ?? classNext)!.color }} />
       <View style={{ flex: 1, minWidth: 150 }}>
         <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-          {classNow ? `Ahora · hasta ${minToLabel(classNow.end!)}` : `Siguiente clase · ${minToLabel(classNext!.start)}`}
+          {classNow ? `Ahora · hasta ${minToLabel(classNow.end!)}` : `Siguiente ${mv.klass} · ${minToLabel(classNext!.start)}`}
         </Text>
         <Text style={{ color: C.text, fontSize: 16, fontWeight: '700', marginTop: 2 }}>{(classNow ?? classNext)!.title}</Text>
         {classNow && classNext && <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>Después: {classNext.title}, {minToLabel(classNext.start)}</Text>}
       </View>
       {classNow?.subjectId && (
-        <Button label="Apuntes de hoy" kind="secondary" size="sm" icon="create-outline" onPress={async () => {
+        <Button label={study ? 'Apuntes de hoy' : 'Notas de la reunión'} kind="secondary" size="sm" icon="create-outline" onPress={async () => {
           try { const r = await openClassNote(classNow.subjectId!); router.push({ pathname: '/nota/[id]', params: { id: r.id, edit: '1' } } as any); }
           catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
         }} />
@@ -545,7 +557,7 @@ export default function Hoy() {
     <Card>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
         <Text style={{ color: C.text, fontWeight: '700', fontSize: 14.5, flex: 1 }}>{day ? `Agenda del ${capitalize(fmtLongDate(new Date(day + 'T12:00:00')))}` : 'Agenda de hoy'}</Text>
-        <Pressable onPress={() => router.push('/horario')} accessibilityRole="link"><Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>Horario</Text></Pressable>
+        <Pressable onPress={() => router.push('/horario')} accessibilityRole="link"><Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>{mv.schedule}</Text></Pressable>
       </View>
       {agenda.timed.length === 0 && agenda.allDay.length === 0 ? (
         <Text style={{ color: C.muted, fontSize: 13 }}>Sin clases ni entregas con hora. {slots.length === 0 ? 'Carga tu horario para verlas aquí.' : ''}</Text>
@@ -577,7 +589,16 @@ export default function Hoy() {
 
   const left = (
     <>
+      {!isWide && sp.both && <View style={{ marginTop: -4, marginBottom: 12, alignSelf: 'flex-start' }}><SpaceSwitch /></View>}
       {summaryLine}
+      {otherDue > 0 && (
+        <Pressable onPress={() => switchSpace(otherSpace)} accessibilityRole="button" accessibilityLabel={`${otherSpaceLine(otherDue, otherSpace)}. Cambiar de espacio`}
+          style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', marginTop: -6, marginBottom: 14, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 99, borderWidth: 1, borderColor: C.line, backgroundColor: hovered ? C.surface2 : C.surface })}>
+          <Ionicons name={otherSpace === 'trabajo' ? 'briefcase-outline' : 'school-outline'} size={14} color={C.muted} />
+          <Text style={{ color: C.text, fontSize: 12.5, fontWeight: '600' }}>{otherSpaceLine(otherDue, otherSpace)}</Text>
+          <Ionicons name="arrow-forward" size={13} color={C.muted} />
+        </Pressable>
+      )}
       <Countdown tasks={allPending} />
       {offerClose && (
         <Card style={{ marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap', borderLeftWidth: 4, borderLeftColor: C.brand2 }}>
@@ -651,9 +672,9 @@ export default function Hoy() {
           <Button label="Ahora no" size="sm" kind="ghost" onPress={() => { setRitualPrefs((r) => (r ? { ...r, semesterDismissed: true } : r)); saveRitualPrefs({ semesterDismissed: true }).catch(() => {}); }} />
         </Card>
       )}
-      <ExamReviewCard tasks={tasks ?? []} />
-      {streak.s && <StreakNudge s={streak.s} onFocus={() => { startFocus(); router.push('/enfoque'); }} />}
-      {examOffer && !stalled && (
+      {study && <ExamReviewCard tasks={live} />}
+      {study && streak.s && <StreakNudge s={streak.s} onFocus={() => { startFocus(); router.push('/enfoque'); }} />}
+      {study && examOffer && !stalled && (
         <Card style={{ marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <Ionicons name="calendar-number-outline" size={22} color={C.brand} />
           <View style={{ flex: 1, minWidth: 180 }}>
@@ -665,7 +686,7 @@ export default function Hoy() {
         </Card>
       )}
       {stalled && <StalledPlan t={stalled} onChanged={load} onStart={() => startTask(stalled)} onDismiss={() => setPlanDismissed((x) => new Set(x).add(stalled.id))} />}
-      <PetInvite />
+      {study && <PetInvite />}
       {(!isWide || width < 1100) && (focusCard ?? nowCard)}
       <ModoSwitch value={modo} onChange={changeModo} />
       {modo === 'dia' ? (

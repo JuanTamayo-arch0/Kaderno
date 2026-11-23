@@ -340,7 +340,7 @@ export function Screen({
         {leading ? <View style={{ alignSelf: 'center', marginRight: 4 }}>{leading}</View> : null}
         <View style={{ flex: 1, minWidth: 0 }}>
           {!!eyebrow && <Text style={{ color: C.muted, fontSize: 13, marginBottom: 2 }}>{eyebrow}</Text>}
-          {!!title && <Text style={back && !isWide ? T.title : T.display} numberOfLines={1} accessibilityRole="header">{title}</Text>}
+          {!!title && <Text dataSet={{ head: '1' }} style={back && !isWide ? T.title : T.display} numberOfLines={1} accessibilityRole="header">{title}</Text>}
           {!!subtitle && <Text style={{ color: C.muted, fontSize: 13.5, marginTop: 3 }} numberOfLines={2}>{subtitle}</Text>}
         </View>
         {right ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>{right}</View> : null}

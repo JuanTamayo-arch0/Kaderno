@@ -31,6 +31,7 @@ import {
   SubjectTopBar, SubjectHero, SubjectStats, SubjectTabs, SubjectCompactBar, type TabKey, type StatsData,
 } from '../../components/subject/SubjectParts';
 import { SubjectRail } from '../../components/subject/SubjectRail';
+import { useMode } from '../../lib/mode';
 import { QuickTaskInput, SubjectTaskList } from '../../components/subject/SubjectTasks';
 import { NotesList } from '../../components/notes/NotesList';
 import { NoteDocument } from '../../components/notes/NoteDocument';
@@ -70,6 +71,7 @@ function MateriaDetalle() {
   const [grades, setGrades] = useState<Grade[]>(snap.initial?.g ?? []);
   const [slots, setSlots] = useState<Slot[] | null>(null);
   const [study, setStudy] = useState<{ weekMin: number; dueCards: number } | null>(null);
+  const { work } = useMode();
   const [tab, setTabState] = useState<TabKey>((TABS.includes(tabParam as TabKey) ? tabParam : 'tareas') as TabKey);
   const [openNote, setOpenNote] = useState<string | null>(nota ?? null);
   const [newNoteId, setNewNoteId] = useState<string | null>(null);
@@ -268,11 +270,11 @@ function MateriaDetalle() {
         <NotesList notes={notes} onOpen={pickNote} onNew={newNote} busyNew={busyNew} roomy
           onScan={() => router.push({ pathname: '/capturar', params: { subjectId: id } } as any)} />
       )}
-      {tab === 'cal' && (
+      {tab === 'cal' && !work && (
         <Grades subject={subject} grades={grades} avg={avg} doneWeight={doneWeight} scale={scale} passMark={passMark} target={goal?.target_grade != null ? Number(goal.target_grade) : null}
           onAdd={() => { setEditGrade(null); setGradeModal(true); }} onEdit={(g) => { setEditGrade(g); setGradeModal(true); }} onRemove={removeGrade} />
       )}
-      {tab === 'cal' && <ExamResultsList subjectId={subject.id} />}
+      {tab === 'cal' && !work && <ExamResultsList subjectId={subject.id} />}
       {tab === 'files' && <SubjectFiles subjectId={subject.id} />}
     </>
   );
@@ -288,14 +290,14 @@ function MateriaDetalle() {
         {nextCls?.now && (
           <Pressable onPress={classNote} accessibilityRole="button" style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 14, backgroundColor: hovered ? subject.color + '30' : subject.color + '1c', borderWidth: 1, borderColor: subject.color + '66' })}>
             <Ionicons name="create-outline" size={18} color={subject.color} />
-            <Text style={{ color: C.text, fontSize: 14, fontWeight: '700', flex: 1 }}>Clase de {subject.name} ahora · Abrir apuntes de hoy</Text>
+            <Text style={{ color: C.text, fontSize: 14, fontWeight: '700', flex: 1 }}>{work ? `Reunión de ${subject.name} ahora · Abrir las notas de hoy` : `Clase de ${subject.name} ahora · Abrir apuntes de hoy`}</Text>
             <Ionicons name="chevron-forward" size={16} color={C.muted} />
           </Pressable>
         )}
-        <GoalRow goal={goal} accent={subject.color} onPress={() => setWoop(true)} />
-        <PrepRow text={prepText(quizzes) ?? (notes.length ? 'Ponte a prueba antes del parcial: un simulacro con preguntas de tus notas.' : null)}
+        {!work && <GoalRow goal={goal} accent={subject.color} onPress={() => setWoop(true)} />}
+        {!work && <PrepRow text={prepText(quizzes) ?? (notes.length ? 'Ponte a prueba antes del parcial: un simulacro con preguntas de tus notas.' : null)}
           plan={examSessions.length ? planProgress(examSessions).text : null} accent={subject.color}
-          onSim={() => router.push({ pathname: '/simulacro', params: { materia: subject.id } } as any)} />
+          onSim={() => router.push({ pathname: '/simulacro', params: { materia: subject.id } } as any)} />}
         <SubjectTabs value={tab} onChange={setTab} counts={counts} accent={subject.color} pills={!isWide} short={!isWide} />
         <View style={{ flexDirection: 'row', gap: 24, alignItems: 'flex-start' }}>
           <View style={{ flex: 1, minWidth: 0 }}>{body}</View>
