@@ -13,7 +13,8 @@ export const NEEDS_V23_5 = 'Para el registro de horas por proyecto falta correr 
 /** Sesiones del periodo [from, to). Sin la fase 5, sin proyecto ni nota. */
 export async function getHours(from: Date, to: Date): Promise<{ list: HourSession[]; v5: boolean }> {
   const q = (cols: string) => supabase.from('focus_sessions').select(cols).gte('created_at', from.toISOString()).lt('created_at', to.toISOString()).order('created_at').limit(3000);
-  let { data, error } = await q('id, minutes, created_at, subject_id, project_id, assignment_id, note, source');
+  let { data, error } = await q('id, minutes, created_at, subject_id, project_id, project_task_id, assignment_id, note, source');
+  if (error && missing(error)) ({ data, error } = await q('id, minutes, created_at, subject_id, project_id, assignment_id, note, source')); // sin schema_v24
   if (error && missing(error)) {
     const r = await q('id, minutes, created_at, subject_id, assignment_id');
     if (r.error) throw r.error;
@@ -72,4 +73,43 @@ export async function printReport(html: string, title: string): Promise<void> {
   const Sharing = await import('expo-sharing');
   const { uri } = await Print.printToFileAsync({ html });
   if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: title });
+}
+
+// ---------- v25, fase 2: cronómetro y hoja semanal ----------
+/** Guarda un tramo del cronómetro. Sin schema_v24 se guarda como horas a mano de ahora. */
+export async function addTimerSession(o: { minutes: number; project_id: string | null; project_task_id: string | null; subject_id: string | null; assignment_id: string | null; note: string }): Promise<void> {
+  const { data: u } = await supabase.auth.getUser();
+  const row: Record<string, unknown> = { user_id: u.user?.id, minutes: Math.round(o.minutes), project_id: o.project_id, project_task_id: o.project_task_id,
+    subject_id: o.subject_id, assignment_id: o.assignment_id, note: o.note.slice(0, 300) || null, source: 'timer' };
+  let { error } = await supabase.from('focus_sessions').insert(row);
+  if (error && (missing(error) || error.code === '23514')) {
+    delete row.project_task_id; row.source = 'manual'; row.created_at = new Date().toISOString();
+    ({ error } = await supabase.from('focus_sessions').insert(row));
+  }
+  if (error) throw new Error(String(error.message));
+}
+
+/** Cambia la duración de un registro (solo los anotados a mano). */
+export async function updateHours(id: string, minutes: number): Promise<void> {
+  const { error } = await supabase.from('focus_sessions').update({ minutes: Math.round(minutes) }).eq('id', id);
+  if (error) throw new Error(String(error.message));
+}
+
+export type Timesheet = { project_id: string; user_id: string; week_start: string; status: 'enviada' | 'aprobada' | 'devuelta'; minutes: number; note: string | null; submitted_at: string; decided_at: string | null };
+export async function getTimesheets(weekStart: string, projectId?: string): Promise<Timesheet[]> {
+  let q = supabase.from('timesheet_weeks').select('*').eq('week_start', weekStart);
+  if (projectId) q = q.eq('project_id', projectId);
+  const { data, error } = await q;
+  if (error) return [];
+  return (data as Timesheet[]) ?? [];
+}
+export async function submitWeek(projectId: string, weekStart: string, note?: string): Promise<Timesheet> {
+  const { data, error } = await supabase.rpc('timesheet_submit', { p_project: projectId, p_week: weekStart, p_note: note ?? null });
+  if (error) { if (missing(error)) throw new Error('Para mandar horas falta correr schema_v24.sql en Supabase.'); throw new Error(String(error.message)); }
+  return data as Timesheet;
+}
+export async function decideWeek(projectId: string, userId: string, weekStart: string, status: 'aprobada' | 'devuelta', note?: string): Promise<Timesheet> {
+  const { data, error } = await supabase.rpc('timesheet_decide', { p_project: projectId, p_user: userId, p_week: weekStart, p_status: status, p_note: note ?? null });
+  if (error) throw new Error(String(error.message));
+  return data as Timesheet;
 }

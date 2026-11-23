@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { StopwatchPill } from './StopwatchPill';
 import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -76,6 +77,7 @@ export function GlobalPanels() {
       <InboxPanel visible={p.inbox} />
       <ExamPlanSheet exam={p.examPlan} onClose={closeExamPlan} />
       <ExamReviewSheet exam={p.examReview} onClose={closeExamReview} />
+      <StopwatchPill />
     </>
   );
 }

@@ -123,3 +123,7 @@ Con esto, Pro reemplaza Toggl, Sunsama y un tomador de actas, que juntos pasan d
 3. (Fase 1) El total lo calcula el servidor con las líneas (horas por tarifa, redondeado), no la app. El consecutivo no se repite; anular no libera el número.
 4. (Fase 1) Un cliente agrupa proyectos y áreas; de un área solo cuentan las horas sin proyecto (las del proyecto van con el cliente del proyecto).
 5. (Fase 1) El presupuesto es de horas por proyecto, con las de todo el equipo. Avisa una sola vez al 80 % y una al 100 % por cada presupuesto (si lo cambias, vuelve a avisar).
+6. (Fase 2) El cronómetro vive en el dispositivo hasta que se para; si falla al guardar, sigue corriendo para no perder el tiempo. Máximo 12 horas por tramo.
+7. (Fase 2) El tiempo del cronómetro cuenta también como tiempo de enfoque en las rachas y estadísticas (es tiempo trabajado).
+8. (Fase 2) La hoja semanal solo crea, recorta o borra horas a mano; nunca toca lo del enfoque o el cronómetro sin que la persona lo borre a mano.
+9. (Fase 2) Aprobar horas es del plan Equipo (de quien manda o del dueño del proyecto). Las semanas empiezan el lunes, en la hora local de cada persona.

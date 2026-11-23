@@ -5,7 +5,7 @@
 
 export type HourSession = {
   id: string; minutes: number; created_at: string; subject_id: string | null; project_id: string | null;
-  assignment_id?: string | null; note?: string | null; source?: 'focus' | 'manual' | null;
+  assignment_id?: string | null; note?: string | null; source?: 'focus' | 'manual' | 'timer' | null; project_task_id?: string | null;
 };
 export type Named = { name: string; color?: string };
 export type GroupBy = 'subject' | 'project' | 'day';
@@ -92,7 +92,7 @@ export function hoursCsv(list: HourSession[], names: Record<string, Named>, rate
     const d = new Date(s.created_at), rate = rateFor(s, rates);
     return [isoDay(d), `${pad(d.getHours())}:${pad(d.getMinutes())}`, s.minutes, decHours(s.minutes),
       s.subject_id ? names[s.subject_id]?.name ?? '' : '', s.project_id ? names[s.project_id]?.name ?? '' : '', s.note ?? '',
-      s.source === 'manual' ? 'A mano' : 'Enfoque', rate || '', rate ? amountOf(s.minutes, rate) : ''];
+      s.source === 'manual' ? 'A mano' : s.source === 'timer' ? 'Cronómetro' : 'Enfoque', rate || '', rate ? amountOf(s.minutes, rate) : ''];
   });
   return '﻿' + [head, ...rows].map((r) => r.map(csvCell).join(';')).join('\r\n') + '\r\n';
 }
@@ -147,4 +147,44 @@ export function parseDuration(s: string): number | null {
   if ((m = t.match(/^(\d{1,2})[.,](\d{1,2})$/))) return Math.round(Number(`${m[1]}.${m[2]}`) * 60);
   if ((m = t.match(/^(\d{1,3})$/))) { const n = Number(m[1]); return n <= 12 ? n * 60 : n; }
   return null;
+}
+
+// ---------- v25, fase 2: hoja semanal ----------
+export type WeekRow = { key: string; name: string; color?: string; days: number[]; total: number };
+const dayIndex = (iso: string, from: Date) => Math.floor((new Date(iso).getTime() - from.getTime()) / 86_400_000);
+
+/** Filas de la hoja semanal: proyecto (o área si no hay) por día, de lunes a domingo. */
+export function weekGrid(list: HourSession[], from: Date, names: Record<string, Named>): WeekRow[] {
+  const map = new Map<string, WeekRow>();
+  for (const s of list) {
+    const i = dayIndex(s.created_at, from);
+    if (i < 0 || i > 6) continue;
+    const key = s.project_id ? `p:${s.project_id}` : s.subject_id ? `s:${s.subject_id}` : 'none';
+    const id = key.slice(2);
+    const r = map.get(key) ?? { key, name: key === 'none' ? 'Sin proyecto ni área' : names[id]?.name ?? '…', color: key === 'none' ? undefined : names[id]?.color, days: [0, 0, 0, 0, 0, 0, 0], total: 0 };
+    r.days[i] += s.minutes; r.total += s.minutes;
+    map.set(key, r);
+  }
+  return [...map.values()].sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+}
+/** Totales por día de la hoja. */
+export const weekTotals = (rows: WeekRow[]) => [0, 1, 2, 3, 4, 5, 6].map((i) => rows.reduce((a, r) => a + r.days[i], 0));
+
+/**
+ * Cómo dejar una casilla de la hoja en `target` minutos: si sube, se anota la
+ * diferencia a mano; si baja, se recortan primero los registros a mano (los
+ * del enfoque y el cronómetro no se tocan desde la hoja).
+ */
+export function planCellEdit(cell: HourSession[], target: number): { add: number; updates: { id: string; minutes: number }[]; deletes: string[]; blocked: number } {
+  const cur = cell.reduce((a, s) => a + s.minutes, 0);
+  const t = Math.max(0, Math.round(target));
+  if (t >= cur) return { add: t - cur, updates: [], deletes: [], blocked: 0 };
+  let cut = cur - t;
+  const updates: { id: string; minutes: number }[] = [], deletes: string[] = [];
+  for (const s of [...cell].filter((x) => x.source === 'manual').sort((a, b) => b.created_at.localeCompare(a.created_at))) {
+    if (cut <= 0) break;
+    if (s.minutes <= cut) { deletes.push(s.id); cut -= s.minutes; }
+    else { updates.push({ id: s.id, minutes: s.minutes - cut }); cut = 0; }
+  }
+  return { add: 0, updates, deletes, blocked: cut };
 }

@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { toast } from '../../lib/feedback';
+import { startStopwatch } from '../../lib/stopwatch';
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -304,6 +306,16 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
             {editable && (
               <Pressable onPress={guardar} disabled={busy} style={btnPrimary}>
                 <Text style={{ color: C.onBrand, fontWeight: '700' }}>{busy ? '…' : task ? 'Guardar' : 'Crear tarea'}</Text>
+              </Pressable>
+            )}
+            {task && !task.done && (
+              <Pressable onPress={async () => {
+                const r = await startStopwatch({ title: task.title, projectId, projectTaskId: task.id });
+                toast(r.saved ? `Cronómetro en "${task.title}". El anterior quedó anotado (${r.saved} min).` : `Cronómetro en "${task.title}"`); onClose();
+              }} accessibilityRole="button" accessibilityLabel="Iniciar cronómetro en esta tarea"
+                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 12, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: C.line }}>
+                <Ionicons name="play-circle-outline" size={18} color={C.brand} />
+                <Text style={{ color: C.brand, fontWeight: '700', fontSize: 13.5 }}>Iniciar cronómetro</Text>
               </Pressable>
             )}
             {editable && task && (
