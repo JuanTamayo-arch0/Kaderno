@@ -66,6 +66,7 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
   const [hintOff, setHintOff] = useState(false);
   const [sessions, setSessions] = useState<SessionTask[]>([]);
   const [repeat, setRepeat] = useState<RepeatRule | null>(null);
+  const [important, setImportant] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -90,6 +91,7 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
     getEstimateRatio().then(setRatio).catch(() => setRatio(null));
     setSessions([]);
     setRepeat(cleanRule(t?.repeat_rule));
+    setImportant(!!t?.important);
     if (t && ['examen', 'quiz'].includes(String(t.type))) getSessions(t.id).then(setSessions).catch(() => {});
     loadTaskTypes().then(() => setTypesRev((n) => n + 1)).catch(() => {});
     if (t) getSteps(t.id).then(setSteps).catch(() => {});
@@ -113,6 +115,8 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
         // El plan solo se manda si hay uno (o había y se quitó): así no molesta sin la migración.
         ...(plan.at || editTask?.plan_at ? { plan_at: plan.at, plan_place: plan.at ? plan.place : null } : {}),
         ...(repeat || editTask?.repeat_rule ? { repeat_rule: date ? repeat : null } : {}),
+        // v27: la estrella solo se manda si está puesta (o se quitó), igual que el plan.
+        ...(important || editTask?.important ? { important } : {}),
         // Con fecha o materia sale de la bandeja.
         ...(editTask?.inbox && (date || subjectId) ? { inbox: false } : {}),
       };
@@ -196,6 +200,13 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
 
       <Field value={title} onChangeText={(v) => { setTitle(v); if (titleError) setTitleError(null); }} placeholder="Ej: Taller de cálculo, ejercicios 1 a 10"
         autoFocus={!editTask && Platform.OS === 'web'} error={titleError} onSubmitEditing={save} returnKeyType="done" label="Título" />
+      <Pressable onPress={() => setImportant((v) => !v)} accessibilityRole="checkbox" accessibilityState={{ checked: important }}
+        accessibilityLabel="Importante" accessibilityHint="Lo importante va arriba en la vista Matriz de Hoy"
+        style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6, marginTop: 10, paddingVertical: 7, paddingHorizontal: 12, borderRadius: 99,
+          borderWidth: 1, borderColor: important ? C.warnText : C.line, backgroundColor: important ? C.warn + '1f' : hovered ? C.surface2 : 'transparent' })}>
+        <Ionicons name={important ? 'star' : 'star-outline'} size={15} color={important ? C.warnText : C.muted} />
+        <Text style={{ color: important ? C.text : C.muted, fontSize: 13, fontWeight: '700' }}>Importante</Text>
+      </Pressable>
 
       <Text style={lbl()}>Tipo</Text>
       <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
