@@ -188,7 +188,7 @@ function AddSheet({ visible, subjects, initialText = '' }: { visible: boolean; s
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.surface2, borderWidth: 1, borderColor: text ? C.brand : C.line, borderRadius: 12, paddingLeft: 12, paddingRight: 4, overflow: 'hidden' }}>
         <Ionicons name="add" size={20} color={C.muted} />
-        <TextInput value={text} onChangeText={setText} autoFocus placeholder='Ej: "parcial cálculo viernes 10am"' placeholderTextColor={C.muted}
+        <TextInput value={text} onChangeText={setText} autoFocus enterKeyHint="done" placeholder='Ej: "parcial cálculo viernes 10am"' placeholderTextColor={C.muted}
           onSubmitEditing={quickCreate} returnKeyType="done" accessibilityLabel="Escribe una tarea"
           style={[{ flex: 1, minWidth: 0, color: C.text, fontSize: 15, paddingVertical: 12, minHeight: 46 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
         {!text.trim() && <MicButton onText={(t) => setText(t)} />}

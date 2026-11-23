@@ -1908,3 +1908,23 @@ No hay. Solo cambian la app y los íconos de `public/`, que se suben con el desp
 ### 3. Pruebas
 
 `npm test` (piezas del lápiz sin borrador, silueta de una tinta, orden de los trazos de la animación y login sin cuadro). En el navegador, revisar `/login` en 1440, 1024 y 390 px, y el favicon.
+
+## Versión 29 (parte 1): base táctil para el celular
+
+### 1. Migración
+
+No hay. Cambian la app, `public/index.html`, el manifiesto y las capturas de `public/screenshots/`.
+
+### 2. Lo que cambia para el usuario
+
+- **Más fácil de tocar:** en pantallas táctiles, cada botón tiene al menos 44 px de área, aunque se vea más pequeño. En el computador nada cambia.
+- **Sin zoom al escribir en el iPhone:** Safari ya no acerca la pantalla al tocar un campo. El zoom con dos dedos sigue funcionando. En Android no se toca nada.
+- **Toque inmediato:** sin la espera del doble toque y sin el recuadro gris de Android; lo que se toca se ve presionado.
+- **Teclado:** mientras escribes en el celular se esconde la barra de pestañas; en Android el contenido se acomoda encima del teclado (por ejemplo la caja del Oráculo).
+- **Hojas y diálogos:** al llegar al final del desplazamiento ya no se mueve lo de atrás.
+- **Instalar la app:** el manifiesto trae capturas y categorías. Android muestra la ventana de instalación con imágenes.
+- Campos base y del login con letra de 16 px.
+
+### 3. Pruebas
+
+`npm test` (incluye `tests/v29.test.ts`). En un iPhone: tocar el correo del login no debe acercar la pantalla. En Android: abrir el Oráculo y escribir; la barra de pestañas se esconde y la caja queda encima del teclado.

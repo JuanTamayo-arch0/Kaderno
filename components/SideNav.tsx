@@ -16,6 +16,7 @@ import { useAmbient } from './focus/AmbientControls';
 import { openAdd, openCommand, openInbox } from '../lib/uiBus';
 import { navKeyOf } from '../lib/navKey';
 import { useMode } from '../lib/mode';
+import { useKeyboardOpen } from '../lib/touch';
 export { navKeyOf };
 
 // ============================================================
@@ -251,6 +252,8 @@ export function BottomBar({ active, onNavigate, bottomInset }: { active: NavKey;
     );
   };
   const timerLabel = focus.state.running ? focus.label : undefined;
+  // v29: mientras se escribe en el celular la barra se esconde, como en las apps.
+  const typing = useKeyboardOpen();
   // v26, fase 4: una rayita que se desliza hasta la pestaña activa.
   const idx = ({ index: 0, materias: 1, estudiar: 3, proyectos: 4 } as Record<string, number>)[section] ?? -1;
   const [w, setW] = useState(0);
@@ -260,6 +263,7 @@ export function BottomBar({ active, onNavigate, bottomInset }: { active: NavKey;
     if (prefersReducedMotion()) x.setValue(idx);
     else Animated.spring(x, { toValue: idx, useNativeDriver: false, speed: 18, bounciness: 5 }).start();
   }, [idx]);
+  if (typing) return null;
   return (
     <View ref={vtRef('kd-tabbar')} dataSet={{ petFloor: '1' }} onLayout={(e) => setW(e.nativeEvent.layout.width)} style={{ flexDirection: 'row', backgroundColor: C.surface, borderTopWidth: 1, borderTopColor: C.line, paddingBottom: Math.max(bottomInset, 6) }}>
       {w > 0 && idx >= 0 && (

@@ -109,7 +109,7 @@ export function Field({
           {...rest}
           onFocus={(e) => { setFocus(true); rest.onFocus?.(e); }}
           onBlur={(e) => { setFocus(false); rest.onBlur?.(e); }}
-          style={[{ flex: 1, color: C.text, paddingHorizontal: 12, paddingVertical: 11, fontSize: 15, minHeight: 44 }, webOnly({ outlineStyle: 'none' }), inputStyle]}
+          style={[{ flex: 1, color: C.text, paddingHorizontal: 12, paddingVertical: 11, fontSize: 16, minHeight: 44 }, webOnly({ outlineStyle: 'none' }), inputStyle]}
         />
         {right}
       </View>
