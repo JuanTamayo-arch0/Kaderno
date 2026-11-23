@@ -1,7 +1,7 @@
 // ============================================================
 //  Marca de Kaderno (v26, fase 1): "Margen".
 //
-//  La raya roja del margen del cuaderno junto a una K. Este archivo es puro
+//  La margen del cuaderno, que desde v28 es un lápiz, junto a una K. Este archivo es puro
 //  (sin React Native) para poder probarlo y para generar los íconos de la app
 //  con el mismo dibujo que se ve en pantalla (scripts/brand-icons.mjs).
 //
@@ -42,35 +42,88 @@ export const BRAND_FONT_FACES: { family: string; url: string; weight: string }[]
 ];
 
 // ---------- Logo ----------
-/** Trazos en una caja de 48 x 48. */
+/** Trazos en una caja de 48 x 48. La K va en tres trazos, en el orden en que se escribe a mano. */
 export const LOGO = {
   size: 48,
   radius: 12,
-  margin: 'M13 10v28',
-  marginWidth: 3,
   k: 'M21 12v24M22 25l11-13M25 23l9 13',
+  /** Los trazos de la K, para animarla escribiéndose: [x1, y1, x2, y2]. */
+  kStrokes: [[21, 12, 21, 36], [33, 12, 22, 25], [25, 23, 34, 36]] as [number, number, number, number][],
   kWidth: 4.5,
 } as const;
+
+/**
+ * v28: la margen es un lápiz (sin borrador), del grosor de la K. Medidas en
+ * la caja de 48: centro en x = 13, de y = 9 a la punta en y = 39.
+ */
+export const PENCIL = { cx: 13, w: 4.8, top: 9, bodyEnd: 31.4, tip: 39 } as const;
 
 /**
  * Variantes del logo:
  *  - tinta: cuadro de tinta, K de papel (sobre fondos claros y en los íconos).
  *  - papel: cuadro claro, K de tinta (sobre fondos oscuros).
  *  - una-tinta: todo negro y blanco (documentos e impresos).
- *  - silueta: solo la K y el margen en blanco, sin cuadro (insignia de avisos).
+ *  - silueta: solo la K y el lápiz en blanco, sin cuadro (insignia de avisos).
  */
 export type LogoTone = 'tinta' | 'papel' | 'una-tinta' | 'silueta';
 export type LogoSpace = 'estudio' | 'trabajo';
-export type LogoColors = { tile: string | null; k: string; margin: string };
+/** `margin` es el cuerpo del lápiz; `mono` lo dibuja de un solo color, sin detalles. */
+export type LogoColors = { tile: string | null; k: string; margin: string; facet: string; graphite: string; mono: boolean };
+
+const WOOD = '#F2D2A9', WOOD_SHADE = '#D7AE80';
 
 export function logoColors(tone: LogoTone, space: LogoSpace = 'estudio'): LogoColors {
   const work = space === 'trabajo';
   switch (tone) {
-    case 'papel': return { tile: work ? '#E9E8E4' : '#ECEBF4', k: work ? '#16171C' : BRAND.ink, margin: work ? BRAND.terracotta : BRAND.margin };
-    case 'una-tinta': return { tile: '#111111', k: '#FFFFFF', margin: '#FFFFFF' };
-    case 'silueta': return { tile: null, k: '#FFFFFF', margin: '#FFFFFF' };
-    default: return { tile: work ? '#16171C' : BRAND.ink, k: work ? BRAND.bone : BRAND.paper, margin: work ? BRAND.copper : BRAND.margin };
+    case 'papel': return work
+      ? { tile: '#E9E8E4', k: '#16171C', margin: BRAND.terracotta, facet: '#7E3220', graphite: '#16171C', mono: false }
+      : { tile: '#ECEBF4', k: BRAND.ink, margin: BRAND.margin, facet: BRAND.marginDeep, graphite: BRAND.ink, mono: false };
+    case 'una-tinta': return { tile: '#111111', k: '#FFFFFF', margin: '#FFFFFF', facet: '#FFFFFF', graphite: '#FFFFFF', mono: true };
+    case 'silueta': return { tile: null, k: '#FFFFFF', margin: '#FFFFFF', facet: '#FFFFFF', graphite: '#FFFFFF', mono: true };
+    default: return work
+      ? { tile: '#16171C', k: BRAND.bone, margin: BRAND.copper, facet: BRAND.terracotta, graphite: '#5D5E66', mono: false }
+      : { tile: BRAND.ink, k: BRAND.paper, margin: BRAND.margin, facet: BRAND.marginDeep, graphite: '#5B5F86', mono: false };
   }
+}
+
+/** Las piezas del lápiz, para dibujarlo igual en SVG de texto (íconos) y en la app. */
+export type Shape =
+  | { t: 'rect'; x: number; y: number; w: number; h: number; rx?: number; fill: string; op?: number }
+  | { t: 'path'; d: string; fill?: string; stroke?: string; sw?: number; op?: number };
+
+export function pencilShapes(c: Pick<LogoColors, 'margin' | 'facet' | 'graphite' | 'mono'>): Shape[] {
+  const { cx, w, top, bodyEnd, tip } = PENCIL;
+  const x0 = cx - w / 2, x1 = cx + w / 2;
+  const bodyTop = top + 1.8;
+  const cone = `M${x0} ${bodyEnd}L${x1} ${bodyEnd}L${cx} ${tip}Z`;
+  if (c.mono) {
+    return [
+      { t: 'rect', x: x0, y: top, w, h: 4, rx: 1.6, fill: c.margin },
+      { t: 'rect', x: x0, y: bodyTop, w, h: bodyEnd - bodyTop + 0.2, fill: c.margin },
+      { t: 'path', d: cone, fill: c.margin },
+    ];
+  }
+  // La punta de grafito: el último 38 % del cono.
+  const gy = bodyEnd + (tip - bodyEnd) * 0.62, hw = (w / 2) * (tip - gy) / (tip - bodyEnd);
+  const r = (n: number) => Math.round(n * 100) / 100;
+  return [
+    { t: 'rect', x: x0, y: top, w, h: 4, rx: 1.6, fill: c.margin },
+    { t: 'rect', x: x0, y: bodyTop, w, h: r(bodyEnd - bodyTop), fill: c.margin },
+    { t: 'rect', x: r(x1 - 1.5), y: bodyTop, w: 1.5, h: r(bodyEnd - bodyTop), fill: c.facet, op: 0.6 },
+    { t: 'rect', x: r(x0 + 0.55), y: bodyTop, w: 0.7, h: r(bodyEnd - bodyTop), fill: '#FFFFFF', op: 0.28 },
+    { t: 'path', d: cone, fill: WOOD },
+    { t: 'path', d: `M${cx} ${bodyEnd}L${x1} ${bodyEnd}L${cx} ${tip}Z`, fill: WOOD_SHADE },
+    { t: 'path', d: `M${r(cx - hw)} ${r(gy)}L${r(cx + hw)} ${r(gy)}L${cx} ${tip}Z`, fill: c.graphite },
+    // Borde dentado donde termina la pintura.
+    { t: 'path', d: `M${x0} ${bodyEnd}l1.2 0.9l1.2-0.9l1.2 0.9l1.2-0.9`, stroke: c.margin, sw: 0.7 },
+  ];
+}
+
+/** Una pieza como texto SVG. */
+export function shapeSvg(s: Shape): string {
+  const op = s.op !== undefined ? ` opacity="${s.op}"` : '';
+  if (s.t === 'rect') return `<rect x="${s.x}" y="${s.y}" width="${s.w}" height="${s.h}"${s.rx ? ` rx="${s.rx}"` : ''} fill="${s.fill}"${op}/>`;
+  return `<path d="${s.d}" fill="${s.fill ?? 'none'}"${s.stroke ? ` stroke="${s.stroke}" stroke-width="${s.sw}" stroke-linejoin="round"` : ''}${op}/>`;
 }
 
 /** La variante que se lee sobre un fondo: tinta sobre claro, papel sobre oscuro. */
@@ -96,9 +149,9 @@ export function logoSvg(o: { size: number; tone?: LogoTone; space?: LogoSpace; b
   } else if (c.tile) {
     parts.push(`<rect width="${s}" height="${s}" rx="${LOGO.radius}" fill="${c.tile}"/>`);
   }
-  parts.push(`<g${inner} fill="none" stroke-linecap="round" stroke-linejoin="round">`);
-  parts.push(`<path d="${LOGO.margin}" stroke="${c.margin}" stroke-width="${LOGO.marginWidth}"/>`);
-  parts.push(`<path d="${LOGO.k}" stroke="${c.k}" stroke-width="${LOGO.kWidth}"/>`);
+  parts.push(`<g${inner}>`);
+  parts.push(...pencilShapes(c).map(shapeSvg));
+  parts.push(`<path d="${LOGO.k}" fill="none" stroke="${c.k}" stroke-width="${LOGO.kWidth}" stroke-linecap="round" stroke-linejoin="round"/>`);
   parts.push('</g></svg>');
   return parts.join('');
 }

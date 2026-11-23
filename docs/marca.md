@@ -4,19 +4,26 @@ Guía corta para que todo lo que lleve el nombre de Kaderno se vea igual. El có
 
 ## La idea
 
-La raya roja del margen de los cuadernos de siempre, junto a una K. Kaderno viene de "cuaderno": el logo cuenta eso sin palabras.
+La margen de los cuadernos de siempre, convertida en un lápiz, junto a una K. Kaderno viene de "cuaderno": el logo cuenta eso sin palabras. Desde v28 la raya del margen es un lápiz sin borrador; antes era una raya lisa.
 
 ## Logo
 
-- Un cuadro de 48 x 48 con esquinas de 12, la raya del margen y la K en trazo redondo.
-- **Tinta:** cuadro de tinta, K de papel, margen coral. Va sobre fondos claros, en los íconos de la app y en la pestaña del navegador.
-- **Papel:** cuadro claro, K de tinta, margen coral. Va sobre fondos oscuros.
-- **Una tinta:** todo en negro y blanco, para documentos e impresos.
-- **Silueta:** solo la K y el margen en blanco, para la insignia de los avisos.
+- Un cuadro de 48 x 48 con esquinas de 12, el lápiz de la margen y la K en trazo redondo.
+- **El lápiz:** cuerpo coral con una cara más oscura y un brillo, madera tallada y punta de grafito. Tiene el grosor de la K (4,8) y va de la fila 9 a la punta en la 39. No lleva borrador.
+- **Tinta:** cuadro de tinta, K de papel, lápiz coral. Va sobre fondos claros, en los íconos de la app y en la pestaña del navegador.
+- **Papel:** cuadro claro, K de tinta, lápiz coral. Va sobre fondos oscuros.
+- **Una tinta:** todo en negro y blanco, para documentos e impresos. El lápiz es una silueta, sin detalles.
+- **Silueta:** solo la K y el lápiz en blanco, para la insignia de los avisos.
+- En Trabajo el lápiz es cobre (sobre oscuro) o terracota (sobre claro).
 - El logo no cambia con el tema ni con el color de acento.
 - Espacio libre alrededor: al menos la mitad del ancho del cuadro.
-- No se estira, no se gira, no se le ponen sombras ni degradados, no se cambia el color del margen.
-- Tamaño mínimo: 16 px. Desde 16 px se reconocen la raya y la K.
+- No se estira, no se gira, no se le ponen sombras ni degradados, no se cambia el color del lápiz.
+- Tamaño mínimo: 16 px. A 16 px el lápiz se ve como la raya coral con punta, y se reconoce igual.
+- Las piezas están en `lib/brand.ts` (`pencilShapes`): los íconos y la app las dibujan del mismo lugar.
+
+## El logo que se escribe
+
+En el login, en el registro y en Bienvenida, el lápiz sale de la margen, se inclina, escribe la K en tres trazos (el palo, la diagonal de arriba y la de abajo) y vuelve a su lugar con un rebote corto. Dura unos 2,3 segundos, se repite al tocar el logo y con "reducir movimiento" se ve quieto. No se usa en cada cambio de pantalla.
 
 ## Nombre
 
@@ -28,7 +35,7 @@ La raya roja del margen de los cuadernos de siempre, junto a una K. Kaderno vien
 | --- | --- | --- |
 | Tinta | #1B1D3A | Texto en claro, cuadro del logo |
 | Papel | #F7F4EE | Fondo en claro, K del logo |
-| Margen | #F2674E | Raya del logo, acento en oscuro |
+| Margen | #F2674E | Lápiz del logo, acento en oscuro |
 | Margen hondo | #C93F28 | Acento en claro (con texto blanco) |
 | Lápiz | #2F6FE0 | Color de apoyo |
 

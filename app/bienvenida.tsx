@@ -4,7 +4,7 @@ import { Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimens
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { C, SUBJECT_COLORS, SUBJECT_ICONS, screenBg } from '../lib/theme';
+import { C, SUBJECT_COLORS, SUBJECT_ICONS, screenBg, uiScheme } from '../lib/theme';
 import { RequireAuth } from '../components/RequireAuth';
 import { Subject, getSubjects, addSubject, addTask } from '../lib/db';
 import { parseQuickAdd } from '../lib/quickAdd';
@@ -15,7 +15,9 @@ import { getPushStatus, enablePush, type PushStatus } from '../lib/push';
 import { notify, toast, friendlyError } from '../lib/feedback';
 import { dataChanged } from '../lib/uiBus';
 import { Button, Card, Dot } from '../components/ds';
-import { KadernoLockup } from '../components/brand/KadernoLogo';
+import { KadernoWordmark } from '../components/brand/KadernoLogo';
+import { KadernoWrites } from '../components/brand/KadernoWrites';
+import { logoToneFor } from '../lib/brand';
 import { PetChooser } from '../components/pets/PetChooser';
 import { loadPets, usePets } from '../lib/pets/store';
 import { MODES, saveMode, useMode, type Mode } from '../lib/mode';
@@ -91,7 +93,11 @@ function Bienvenida() {
       <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 20, paddingTop: insets.top + 24, alignItems: 'center' }} keyboardShouldPersistTaps="handled">
         <View style={{ width: '100%', maxWidth: 560, flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 22 }}>
-            <KadernoLockup size={32} flex />
+            {/* v28: al llegar, el lápiz escribe la K. */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }} accessible accessibilityRole="image" accessibilityLabel="Kaderno">
+              <KadernoWrites size={36} tone={logoToneFor(uiScheme())} delay={0.5} />
+              <KadernoWordmark size={26} />
+            </View>
             <Pressable onPress={() => finish()} accessibilityRole="button" style={{ padding: 8 }}><Text style={{ color: C.muted, fontWeight: '600' }}>Saltar</Text></Pressable>
           </View>
           <View style={{ flexDirection: 'row', gap: 6, marginBottom: 22 }} accessibilityLabel={`Paso ${step + 1} de ${steps.length}`}>

@@ -32,9 +32,10 @@ test('marca: el acento solo cambia los temas Kaderno', () => {
 
 test('marca: el logo es el mismo dibujo en todas sus versiones', () => {
   const svg = logoSvg({ size: 32 });
-  assert.ok(svg.includes(LOGO.margin) && svg.includes(LOGO.k));
+  // v28: la margen es un lápiz (cuerpo coral y punta), junto a la K.
+  assert.ok(svg.includes(LOGO.k) && svg.includes(`fill="${BRAND.margin}"`));
   assert.ok(svg.includes(`fill="${BRAND.ink}"`) && svg.includes(`stroke="${BRAND.margin}"`), 'tinta con margen coral');
-  assert.ok(!logoSvg({ size: 72, tone: 'silueta' }).includes('<rect'), 'la silueta no tiene cuadro');
+  assert.ok(!logoSvg({ size: 72, tone: 'silueta' }).includes('<rect width="48"'), 'la silueta no tiene cuadro');
   const mask = logoSvg({ size: 512, bleed: 0.72 });
   assert.match(mask, /<rect width="48" height="48" fill=/, 'el ícono adaptable llena todo el cuadro');
   assert.match(mask, /scale\(0\.72\)/);
@@ -321,4 +322,37 @@ test('documentos: los apuntes en PDF y el historial son sobrios y llevan el pie 
   assert.ok(!/#(?!111111|FFFFFF|ffffff)[0-9a-f]{6}/i.test(f), 'el logo del pie va en una tinta');
   const inv = fs.readFileSync('lib/invoice.ts', 'utf8');
   assert.ok(!/docFooter/.test(inv), 'la cuenta de cobro no lleva la marca de Kaderno');
+});
+
+// ---------- v28: el logo del lápiz que se escribe ----------
+test('logo v28: la margen es un lápiz sin borrador, y en una tinta es una silueta', async () => {
+  const { pencilShapes, logoColors, PENCIL } = await import('../lib/brand');
+  const full = pencilShapes(logoColors('tinta'));
+  assert.ok(full.some((s) => s.t === 'path' && s.fill === logoColors('tinta').graphite), 'tiene punta de grafito');
+  assert.ok(!JSON.stringify(full).includes('#F7A99A'), 'sin borrador');
+  const mono = pencilShapes(logoColors('una-tinta'));
+  assert.ok(mono.every((s) => (s.t === 'rect' ? s.fill : s.fill) === '#FFFFFF'), 'una sola tinta');
+  const xs = full.filter((s) => s.t === 'rect').map((s: any) => [s.x, s.x + s.w]).flat();
+  assert.ok(Math.min(...xs) >= PENCIL.cx - PENCIL.w / 2 - 0.01 && Math.max(...xs) <= PENCIL.cx + PENCIL.w / 2 + 0.01);
+});
+
+test('logo v28: el lápiz escribe los tres trazos en orden y vuelve a su lugar', async () => {
+  const { pencilPoseAt, PENCIL_ANIM_TOTAL, PENCIL_REST } = await import('../lib/pencilAnim');
+  assert.ok(PENCIL_ANIM_TOTAL > 1.8 && PENCIL_ANIM_TOTAL < 2.8, `dura ${PENCIL_ANIM_TOTAL}`);
+  assert.deepEqual(pencilPoseAt(0).k, [0, 0, 0]);
+  let order: number[] = [];
+  for (let t = 0; t <= PENCIL_ANIM_TOTAL; t += 0.02) {
+    const p = pencilPoseAt(t);
+    p.k.forEach((v, i) => { if (v >= 1 && !order.includes(i)) order.push(i); });
+  }
+  assert.deepEqual(order, [0, 1, 2]);
+  const end = pencilPoseAt(PENCIL_ANIM_TOTAL + 0.01);
+  assert.deepEqual([end.x, end.y, end.a, end.k], [PENCIL_REST.x, PENCIL_REST.y, 0, [1, 1, 1]]);
+});
+
+test('login v28: pantalla completa, sin tarjeta en el centro', async () => {
+  const fs = await import('node:fs');
+  const src = fs.readFileSync('app/login.tsx', 'utf8');
+  assert.ok(!/maxWidth: xl \? 1220/.test(src) && !/borderRadius: 26, overflow: 'hidden'/.test(src), 'ya no hay tarjeta');
+  assert.match(src, /<KadernoWrites/);
 });

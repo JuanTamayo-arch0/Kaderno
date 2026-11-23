@@ -1,23 +1,30 @@
 import React from 'react';
 import { Text, View, type StyleProp, type TextStyle } from 'react-native';
-import Svg, { Path, Rect } from 'react-native-svg';
+import Svg, { G, Path, Rect } from 'react-native-svg';
 import { C, uiScheme } from '../../lib/theme';
 import { getSpace } from '../../lib/mode';
-import { BRAND_FONT, LOGO, logoColors, logoToneFor, type LogoSpace, type LogoTone } from '../../lib/brand';
+import { BRAND_FONT, LOGO, logoColors, logoToneFor, pencilShapes, type LogoSpace, type LogoTone, type Shape } from '../../lib/brand';
 
 // ============================================================
-//  Logo de Kaderno (v26): la raya del margen junto a la K. El color del logo
-//  no sigue al tema ni al acento: es siempre el mismo, para que se reconozca.
-//  Sin `tone`, escoge solo: tinta sobre fondos claros, papel sobre oscuros.
+//  Logo de Kaderno: la margen del cuaderno como un lápiz (v28) junto a la K.
+//  El color del logo no sigue al tema ni al acento: es siempre el mismo, para
+//  que se reconozca. Sin `tone`, escoge solo: tinta sobre fondos claros, papel
+//  sobre oscuros. Las piezas salen de lib/brand.ts, igual que los íconos.
 // ============================================================
+
+/** Una pieza del lápiz con react-native-svg. */
+export function ShapeEl({ s }: { s: Shape }) {
+  if (s.t === 'rect') return <Rect x={s.x} y={s.y} width={s.w} height={s.h} rx={s.rx} fill={s.fill} opacity={s.op} />;
+  return <Path d={s.d} fill={s.fill ?? 'none'} stroke={s.stroke} strokeWidth={s.sw} strokeLinejoin="round" opacity={s.op} />;
+}
 
 export function KadernoMark({ size = 28, tone, space }: { size?: number; tone?: LogoTone; space?: LogoSpace }) {
-  // En Trabajo, la raya del margen es terracota o cobre (v26, fase 2).
+  // En Trabajo, el lápiz es cobre o terracota (v26, fase 2).
   const c = logoColors(tone ?? logoToneFor(uiScheme()), space ?? getSpace());
   return (
     <Svg width={size} height={size} viewBox={`0 0 ${LOGO.size} ${LOGO.size}`} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       {c.tile ? <Rect width={LOGO.size} height={LOGO.size} rx={LOGO.radius} fill={c.tile} /> : null}
-      <Path d={LOGO.margin} stroke={c.margin} strokeWidth={LOGO.marginWidth} strokeLinecap="round" fill="none" />
+      <G>{pencilShapes(c).map((s, i) => <ShapeEl key={i} s={s} />)}</G>
       <Path d={LOGO.k} stroke={c.k} strokeWidth={LOGO.kWidth} strokeLinecap="round" strokeLinejoin="round" fill="none" />
     </Svg>
   );

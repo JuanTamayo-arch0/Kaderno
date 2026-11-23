@@ -1887,3 +1887,24 @@ Corre otra vez `supabase/schema_v26.sql`. La fase 4 agrega `assignments.someday`
 ### 3. Pruebas
 
 `npm test` (tandas, dónde caben, Algún día aparte de la bandeja, los 3 al azar del día) y `bash tests/run_sql.sh` (incluye `tests/sql/26c_pruebas.sql`).
+
+## Versión 28: logo del lápiz y nuevo inicio de sesión
+
+### 1. Migración
+
+No hay. Solo cambian la app y los íconos de `public/`, que se suben con el despliegue normal.
+
+### 2. Lo que cambia para el usuario
+
+- **Logo:** la raya del margen ahora es un lápiz coral sin borrador, con madera y punta de grafito. Cambian el ícono de la app, el favicon, la insignia de los avisos y la imagen para compartir (`og.png`).
+  - Los navegadores guardan el favicon un buen rato: si se ve el viejo, basta recargar sin caché.
+  - En el teléfono, quien instaló la app puede seguir viendo el ícono viejo hasta que el sistema la actualice.
+- **El logo que se escribe:** en el login, el registro y Bienvenida, el lápiz escribe la K y vuelve a su lugar. Se repite al tocarlo y con "reducir movimiento" se ve quieto.
+- **Login y registro a pantalla completa:**
+  - En el computador, la pantalla se parte en dos: a la izquierda un cuaderno de tinta con el logo, el titular, la vista de "Hoy" y lo que trae Kaderno; a la derecha el formulario, sin cuadro.
+  - En el teléfono, el cuaderno va arriba como franja y el formulario debajo, a todo el ancho.
+  - Entradas suaves por partes, el selector de Entrar o Crear cuenta se desliza y los campos marcan el foco.
+
+### 3. Pruebas
+
+`npm test` (piezas del lápiz sin borrador, silueta de una tinta, orden de los trazos de la animación y login sin cuadro). En el navegador, revisar `/login` en 1440, 1024 y 390 px, y el favicon.
