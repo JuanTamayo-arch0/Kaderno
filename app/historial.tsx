@@ -4,7 +4,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../lib/theme';
 import { RequireAuth } from '../components/RequireAuth';
-import { Screen, Button, Card, EmptyState, Skeleton } from '../components/ds';
+import { Screen, Button, Card, CountUp, EmptyState, Skeleton } from '../components/ds';
 import { useResponsive } from '../lib/responsive';
 import { useAuth } from '../lib/auth';
 import { getSubjects, getAllGrades, type Subject, type Grade } from '../lib/db';
@@ -68,10 +68,10 @@ function Historial() {
     try { await deleteTerm(t.id); setSel(null); toast(`Semestre ${t.name} borrado`); load(); } catch (e) { notify('No se pudo borrar', friendlyError(e)); }
   }
 
-  const stat = (label: string, value: string, sub?: string) => (
+  const stat = (label: string, value: number | null, format: (n: number) => string, sub?: string) => (
     <Card style={{ flexGrow: 1, flexBasis: isWide ? 0 : 150, padding: 14 }}>
       <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600' }}>{label}</Text>
-      <Text style={{ color: C.text, fontSize: 24, fontWeight: '800', marginTop: 2 }}>{value}</Text>
+      <CountUp value={value} format={format} style={{ color: C.text, fontSize: 24, fontWeight: '800', marginTop: 2 }} />
       {sub ? <Text style={{ color: C.muted, fontSize: 12 }}>{sub}</Text> : null}
     </Card>
   );
@@ -145,17 +145,17 @@ function Historial() {
       )}
       <Text style={{ color: C.muted, fontSize: 12.5 }}>Las notas en curso salen de tus calificaciones. Al cerrar, confirmas la nota final de cada una.</Text>
     </View>
-  ) : (
+  ) : current.summary ? (
     <ClosedDetail t={current} scale={scale} onEdit={() => setEditing(current)} onDelete={() => remove(current)} />
-  )) : null;
+  ) : null) : null;
 
   return (
     <Screen title="Historial académico" subtitle="Tus semestres, sus notas y el promedio acumulado" back="/materias" maxWidth={1180}
       right={<Button label={isWide ? 'Descargar (PDF)' : 'PDF'} icon="download-outline" size="sm" kind="secondary" disabled={!closed.length} onPress={pdf} />}>
       {!ready && <Card style={{ marginBottom: 12 }}><Text style={{ color: C.warnText, fontSize: 13 }}>{NEEDS_V25_3}</Text></Card>}
       <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap', marginBottom: 18 }}>
-        {stat('Promedio acumulado', fmtGrade(cum.avg, scale), cum.terms ? `${cum.terms} ${cum.terms === 1 ? 'semestre cerrado' : 'semestres cerrados'}` : 'Aún sin semestres cerrados')}
-        {stat('Créditos aprobados', String(cum.credits))}
+        {stat('Promedio acumulado', cum.avg, (n) => fmtGrade(Number.isFinite(n) ? n : null, scale), cum.terms ? `${cum.terms} ${cum.terms === 1 ? 'semestre cerrado' : 'semestres cerrados'}` : 'Aún sin semestres cerrados')}
+        {stat('Créditos aprobados', cum.credits, (n) => String(Math.round(n)))}
         <Card onPress={() => setScaleOpen(true)} accessibilityLabel="Cambiar la escala de notas" style={{ flexGrow: 1, flexBasis: isWide ? 0 : 150, padding: 14 }}>
           <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600' }}>Escala de notas</Text>
           <Text style={{ color: C.text, fontSize: 18, fontWeight: '800', marginTop: 4 }}>0 a {String(scale.max).replace('.', ',')}</Text>

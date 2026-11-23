@@ -10,6 +10,7 @@ import { MONTH_SHORT } from '../../lib/time';
 import { focusRingStyle, IconButton, type IconName } from '../ds';
 import { SubjectIcon } from '../SubjectIcon';
 import { useMode } from '../../lib/mode';
+import { vtRef } from '../../lib/motion';
 
 // ============================================================
 //  Piezas de la página de la materia: barra de arriba, ficha (grande o
@@ -25,9 +26,9 @@ export function classWhen(n: NextClass, now = new Date()): string {
 }
 export function shortDate(d: Date): string { return `${d.getDate()} ${MONTH_SHORT[d.getMonth()]}`; }
 
-export function SubjectAvatar({ subject, size }: { subject: Subject; size: number }) {
+export function SubjectAvatar({ subject, size, vt }: { subject: Subject; size: number; vt?: boolean }) {
   return (
-    <View style={{ width: size, height: size, borderRadius: Math.round(size * 0.26), backgroundColor: subject.color + '26', borderWidth: 1, borderColor: subject.color + '55', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+    <View ref={vt ? vtRef(`subj-${subject.id}`) : undefined} style={{ width: size, height: size, borderRadius: Math.round(size * 0.26), backgroundColor: subject.color + '26', borderWidth: 1, borderColor: subject.color + '55', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
       <SubjectIcon icon={subject.icon} box={size} emoji={Math.round(size * 0.48)} />
     </View>
   );
@@ -123,7 +124,7 @@ export function SubjectHero({ subject, days, isWide, onEdit, onSchedule }: {
     return (
       <View style={{ gap: 12 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <SubjectAvatar subject={subject} size={52} />
+          <SubjectAvatar subject={subject} size={52} vt />
           {name}
         </View>
         {chips}
@@ -132,7 +133,7 @@ export function SubjectHero({ subject, days, isWide, onEdit, onSchedule }: {
   }
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
-      <SubjectAvatar subject={subject} size={72} />
+      <SubjectAvatar subject={subject} size={72} vt />
       <View style={{ flex: 1, minWidth: 0, gap: 10 }}>
         {name}
         {chips}

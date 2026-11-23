@@ -177,3 +177,25 @@ test('semestres: el historial en PDF es sobrio', async () => {
   assert.match(html, /Promedio acumulado: <b>4,4<\/b>/);
   assert.ok(!/—/.test(html));
 });
+
+test('movimiento: Trabajo más recto, transiciones y gestos con respeto a reducir movimiento', async () => {
+  const { SPACE_RADII } = await import('../lib/brand');
+  for (const k of Object.keys(SPACE_RADII.estudio) as (keyof typeof SPACE_RADII.estudio)[]) {
+    assert.ok(SPACE_RADII.trabajo[k] < SPACE_RADII.estudio[k], `radio ${k} más recto en Trabajo`);
+  }
+  const fs = await import('node:fs');
+  const motion = fs.readFileSync('lib/motion.ts', 'utf8');
+  assert.match(motion, /::view-transition-old\(root\)/);
+  assert.match(motion, /prefers-reduced-motion: reduce\) \{\s*::view-transition-group/);
+  assert.match(motion, /export function vtNavigate/);
+  assert.match(motion, /Posiciones relativas a la lista/, 'el FLIP no confunde el desplazamiento con un movimiento');
+  const row = fs.readFileSync('components/TaskRow.tsx', 'utf8');
+  assert.match(row, /Math\.abs\(g\.dx\) > Math\.abs\(g\.dy\) \* 2/, 'deslizar solo con gestos claramente horizontales');
+  assert.match(row, /Math\.abs\(g\.dx\) > 96/);
+  const hoy = fs.readFileSync('app/(tabs)/index.tsx', 'utf8');
+  assert.match(hoy, /swipe=\{!isWide && r\.t\.status !== 'done'/, 'deslizar solo en el celular');
+  const sheet = fs.readFileSync('components/cards/CardForms.tsx', 'utf8');
+  assert.match(sheet, /g\.dy > 110 \|\| g\.vy > 1\.1/);
+  const ds = fs.readFileSync('components/ds.tsx', 'utf8');
+  assert.match(ds, /prefersReducedMotion\(\)/, 'los números que cuentan respetan reducir movimiento');
+});

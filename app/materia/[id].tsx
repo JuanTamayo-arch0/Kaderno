@@ -33,6 +33,7 @@ import {
 import { SubjectRail } from '../../components/subject/SubjectRail';
 import { useMode } from '../../lib/mode';
 import { useGradeScale } from '../../lib/termsDb';
+import { vtNavigate } from '../../lib/motion';
 import { QuickTaskInput, SubjectTaskList } from '../../components/subject/SubjectTasks';
 import { NotesList } from '../../components/notes/NotesList';
 import { NoteDocument } from '../../components/notes/NoteDocument';
@@ -124,7 +125,7 @@ function MateriaDetalle() {
 
   function pickNote(n: Note) {
     if (isWide) { setOpenNote(n.id); router.setParams({ tab: 'notas', nota: n.id } as any); }
-    else router.push(`/nota/${n.id}`);
+    else vtNavigate(() => router.push(`/nota/${n.id}`));
   }
   function patchNote(p: Partial<Note> & { id: string }) {
     setNotes((xs) => {

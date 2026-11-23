@@ -5,6 +5,7 @@ import { BottomBar, NavKey } from '../../components/SideNav';
 import { useAuth } from '../../lib/auth';
 import { C } from '../../lib/theme';
 import { useResponsive } from '../../lib/responsive';
+import { vtNavigate } from '../../lib/motion';
 
 // ============================================================
 //  Pestañas.
@@ -18,7 +19,7 @@ function Bar({ state, navigation }: any) {
   const { isWide } = useResponsive();
   const insets = useSafeAreaInsets();
   const current = (state.routes[state.index]?.name ?? 'index') as NavKey;
-  const go = (key: NavKey) => navigation.navigate(key);
+  const go = (key: NavKey) => vtNavigate(() => navigation.navigate(key));
   // En computador la barra lateral es la del layout raíz (AppSideNav).
   if (isWide) return null;
   return <BottomBar active={current} onNavigate={go} bottomInset={insets.bottom} />;

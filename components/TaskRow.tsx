@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import React, { useMemo, useRef, useState } from 'react';
+import { Animated, PanResponder, Pressable, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { slotLabel } from '../lib/planSlots';
 import { ruleText } from '../lib/repeat';
-import { C, inkOn } from '../lib/theme';
+import { C, RAD, inkOn } from '../lib/theme';
 import type { Step, Subject, Task } from '../lib/db';
 import { taskTypeMeta } from '../lib/taskTypes';
 import { fmtDue, isOverdue, bucketOf } from '../lib/time';
@@ -21,11 +21,13 @@ import { play } from '../lib/sound';
 
 export function TaskRow({
   task, subject, steps, showSubject = true, showDue = true, focusMin, onToggle, onOpen, actions,
-  onStepsChange, compact,
+  onStepsChange, compact, swipe,
 }: {
   task: Task; subject?: Subject | null; steps?: Step[]; showSubject?: boolean; showDue?: boolean; focusMin?: number;
   onToggle: (t: Task) => void; onOpen: (t: Task) => void; actions?: MenuAction[];
   onStepsChange?: (taskId: string, next: Step[]) => void; compact?: boolean;
+  /** v26: en el celular, deslizar a la derecha la completa y a la izquierda la pasa a mañana. */
+  swipe?: { onDone: () => void; onLater: () => void };
 }) {
   const [menu, setMenu] = useState(false);
   const [open, setOpen] = useState(false);
@@ -38,17 +40,54 @@ export function TaskRow({
   const dueColor = done ? C.muted : overdue ? C.badText : b === 'today' ? C.warnText : C.muted;
   const due = showDue ? fmtDue(task) : '';
 
+  // ---------- Deslizar (v26) ----------
+  const dx = useRef(new Animated.Value(0)).current;
+  const [dir, setDir] = useState<0 | 1 | -1>(0);
+  const swipeRef = useRef(swipe); swipeRef.current = swipe;
+  // Tras deslizar, el navegador igual manda el clic al soltar: se ignora para no abrir la tarea.
+  const slid = useRef(0);
+  const tapOk = () => Date.now() - slid.current > 400;
+  const pan = useMemo(() => PanResponder.create({
+    // Solo gestos claramente horizontales: el desplazamiento vertical de la lista sigue igual.
+    onMoveShouldSetPanResponder: (_, g) => !!swipeRef.current && Math.abs(g.dx) > 14 && Math.abs(g.dx) > Math.abs(g.dy) * 2,
+    onPanResponderGrant: () => { slid.current = Date.now(); },
+    onPanResponderMove: (_, g) => { slid.current = Date.now(); dx.setValue(g.dx); setDir(g.dx > 0 ? 1 : g.dx < 0 ? -1 : 0); },
+    onPanResponderTerminationRequest: () => false,
+    onPanResponderRelease: (_, g) => {
+      slid.current = Date.now();
+      const sw = swipeRef.current;
+      if (sw && Math.abs(g.dx) > 96) {
+        const right = g.dx > 0;
+        Animated.timing(dx, { toValue: right ? 480 : -480, duration: 180, useNativeDriver: false }).start(() => {
+          if (right) { play('complete'); sw.onDone(); } else sw.onLater();
+          dx.setValue(0); setDir(0);
+        });
+      } else {
+        Animated.spring(dx, { toValue: 0, useNativeDriver: false, bounciness: 6 }).start(() => setDir(0));
+      }
+    },
+    onPanResponderTerminate: () => { Animated.spring(dx, { toValue: 0, useNativeDriver: false }).start(() => setDir(0)); },
+  }), []);
+
   return (
-    <View dataSet={{ petPerch: '1' }} style={{ backgroundColor: C.surface, borderColor: C.line, borderWidth: 1, borderRadius: 12, marginBottom: 8, opacity: done ? 0.75 : 1 }}>
+    <View style={{ marginBottom: 8, borderRadius: RAD.row, overflow: swipe ? 'hidden' : 'visible' }}>
+      {swipe && dir !== 0 && (
+        <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, borderRadius: RAD.row, flexDirection: 'row', alignItems: 'center', justifyContent: dir > 0 ? 'flex-start' : 'flex-end', paddingHorizontal: 18, backgroundColor: dir > 0 ? C.good : C.warn }}
+          accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <Ionicons name={dir > 0 ? 'checkmark-circle' : 'arrow-forward-circle'} size={22} color={inkOn(dir > 0 ? C.good : C.warn)} />
+          <Text style={{ color: inkOn(dir > 0 ? C.good : C.warn), fontSize: 14, fontWeight: '800', marginLeft: 8 }}>{dir > 0 ? 'Hecha' : 'Mañana'}</Text>
+        </View>
+      )}
+    <Animated.View {...(swipe ? pan.panHandlers : {})} dataSet={{ petPerch: '1' }} style={{ backgroundColor: C.surface, borderColor: C.line, borderWidth: 1, borderRadius: RAD.row, opacity: done ? 0.75 : 1, transform: [{ translateX: dx }] }}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-        <Pressable onPress={() => { play(done ? 'uncheck' : 'complete'); onToggle(task); }} accessibilityRole="checkbox" accessibilityState={{ checked: done }}
+        <Pressable onPress={() => { if (!tapOk()) return; play(done ? 'uncheck' : 'complete'); onToggle(task); }} accessibilityRole="checkbox" accessibilityState={{ checked: done }}
           accessibilityLabel={done ? `Marcar "${task.title}" como pendiente` : `Completar "${task.title}"`}
           style={{ width: 48, minHeight: compact ? 46 : 54, alignItems: 'center', justifyContent: 'center' }}>
           <View key={done ? 'hecha' : 'pendiente'} dataSet={done ? { anim: 'pop' } : undefined} style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: done ? C.good : (tm.key !== 'tarea' ? tm.color : C.muted), backgroundColor: done ? C.good : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
             {done && <Ionicons name="checkmark" size={14} color={inkOn(C.good)} />}
           </View>
         </Pressable>
-        <Pressable onPress={() => onOpen(task)} onLongPress={actions?.length ? () => setMenu(true) : undefined} delayLongPress={350}
+        <Pressable onPress={() => { if (tapOk()) onOpen(task); }} onLongPress={actions?.length ? () => { if (tapOk()) setMenu(true); } : undefined} delayLongPress={350}
           accessibilityRole="button" accessibilityLabel={`${task.title}${due ? ', ' + due : ''}`} accessibilityHint="Abre la tarea"
           style={{ flex: 1, minWidth: 0, paddingVertical: compact ? 10 : 12, paddingRight: 4 }}>
           <Text style={{ color: done ? C.muted : C.text, fontSize: 15, fontWeight: '600', lineHeight: 20, textDecorationLine: done ? 'line-through' : 'none' }} numberOfLines={2}>{task.title}</Text>
@@ -107,6 +146,7 @@ export function TaskRow({
         </View>
       )}
       {actions && <ActionMenu visible={menu} title={task.title} actions={actions} onClose={() => setMenu(false)} />}
+    </Animated.View>
     </View>
   );
 }

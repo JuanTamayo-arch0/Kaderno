@@ -1,5 +1,6 @@
-import React from 'react';
-import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { prefersReducedMotion, vtNavigate, vtRef } from '../lib/motion';
 import { usePathname, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../lib/theme';
@@ -85,8 +86,9 @@ export function SideNav({ active, onNavigate }: { active: NavKey | null; onNavig
   const named = (it: Item): Item => it.key === 'materias' ? { ...it, label: v.subjects, icon: v.subjectIcon + '-outline', iconOn: v.subjectIcon } : it.key === 'horario' ? { ...it, label: v.schedule } : it;
 
   const go = (it: { key: NavKey; href: string }) => {
-    if (onNavigate && TAB_KEYS.includes(it.key)) onNavigate(it.key);
-    else router.push(it.href as any);
+    // v26: el cambio de pantalla se funde (View Transitions donde existan).
+    if (onNavigate && TAB_KEYS.includes(it.key)) vtNavigate(() => onNavigate(it.key));
+    else vtNavigate(() => router.push(it.href as any));
   };
 
   const row = (it0: Item, extra?: React.ReactNode) => {
@@ -128,7 +130,7 @@ export function SideNav({ active, onNavigate }: { active: NavKey | null; onNavig
     : null;
 
   return (
-    <View dataSet={{ petSidebar: '1' }} style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: SIDEBAR_W, backgroundColor: C.surface, borderRightWidth: 1, borderRightColor: C.line, zIndex: 10 }}>
+    <View ref={vtRef('kd-sidebar')} dataSet={{ petSidebar: '1' }} style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: SIDEBAR_W, backgroundColor: C.surface, borderRightWidth: 1, borderRightColor: C.line, zIndex: 10 }}>
       <ScrollView contentContainerStyle={{ paddingTop: 22, paddingHorizontal: 12, paddingBottom: 12, flexGrow: 1 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 8, marginBottom: 16 }}>
           <KadernoLockup size={28} flex />
@@ -249,8 +251,22 @@ export function BottomBar({ active, onNavigate, bottomInset }: { active: NavKey;
     );
   };
   const timerLabel = focus.state.running ? focus.label : undefined;
+  // v26, fase 4: una rayita que se desliza hasta la pestaña activa.
+  const idx = ({ index: 0, materias: 1, estudiar: 3, proyectos: 4 } as Record<string, number>)[section] ?? -1;
+  const [w, setW] = useState(0);
+  const x = useRef(new Animated.Value(idx < 0 ? 0 : idx)).current;
+  useEffect(() => {
+    if (idx < 0) return;
+    if (prefersReducedMotion()) x.setValue(idx);
+    else Animated.spring(x, { toValue: idx, useNativeDriver: false, speed: 18, bounciness: 5 }).start();
+  }, [idx]);
   return (
-    <View dataSet={{ petFloor: '1' }} style={{ flexDirection: 'row', backgroundColor: C.surface, borderTopWidth: 1, borderTopColor: C.line, paddingBottom: Math.max(bottomInset, 6) }}>
+    <View ref={vtRef('kd-tabbar')} dataSet={{ petFloor: '1' }} onLayout={(e) => setW(e.nativeEvent.layout.width)} style={{ flexDirection: 'row', backgroundColor: C.surface, borderTopWidth: 1, borderTopColor: C.line, paddingBottom: Math.max(bottomInset, 6) }}>
+      {w > 0 && idx >= 0 && (
+        <Animated.View pointerEvents="none" style={{ position: 'absolute', top: -1, left: 0, width: w / 5, alignItems: 'center', transform: [{ translateX: x.interpolate({ inputRange: [0, 4], outputRange: [0, (w / 5) * 4] }) }] }}>
+          <View style={{ width: 28, height: 3, borderRadius: 2, backgroundColor: C.brand }} />
+        </Animated.View>
+      )}
       {tab('index', 'Hoy', 'today-outline', 'today', counts.today)}
       {tab('materias', v.subjectsTab, v.subjectIcon + '-outline', v.subjectIcon)}
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>

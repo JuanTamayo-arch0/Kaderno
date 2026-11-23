@@ -4,7 +4,7 @@ import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../lib/theme';
 import { RequireAuth } from '../components/RequireAuth';
-import { Screen, Button, Card, Badge, ChipRow, EmptyState, Field, FilterChip, SectionLabel, Segmented, Skeleton } from '../components/ds';
+import { Screen, Button, Card, CountUp, Badge, ChipRow, EmptyState, Field, FilterChip, SectionLabel, Segmented, Skeleton } from '../components/ds';
 import { Sheet } from '../components/cards/CardForms';
 import { SubjectPicker } from '../components/SubjectPicker';
 import { getSubjects, type Subject } from '../lib/db';
@@ -122,7 +122,7 @@ function Horas() {
       <Card style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 18, alignItems: 'center', marginBottom: 14 }} accessibilityLabel="Total del periodo">
         <View style={{ flexGrow: 1 }}>
           <Text style={{ color: C.muted, fontSize: 12.5 }}>Total</Text>
-          <Text style={{ color: C.text, fontSize: 26, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{list ? fmtHours(t.minutes) : '…'}</Text>
+          <CountUp value={list ? t.minutes : null} format={(n) => Number.isFinite(n) ? fmtHours(Math.round(n)) : '…'} style={{ color: C.text, fontSize: 26, fontWeight: '800', fontVariant: ['tabular-nums'] }} />
           <Text style={{ color: C.muted, fontSize: 12.5 }}>{decHours(t.minutes)} horas en {t.days} {t.days === 1 ? 'día' : 'días'}</Text>
         </View>
         {t.amount > 0 && (
