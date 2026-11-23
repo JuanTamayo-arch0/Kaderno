@@ -73,6 +73,11 @@ export type PTask = {
   done_at: string | null;
   created_by: string | null;
   created_at: string;
+  // v25: prioridad, etiquetas, bloqueos y repetición (schema_v24, fase 3).
+  priority?: 'urgente' | 'alta' | 'normal' | 'baja' | null;
+  labels?: string[];
+  blocked_by?: string[];
+  repeat_rule?: import('./repeat').RepeatRule | null;
 };
 
 export type PStep = {
@@ -319,6 +324,16 @@ export async function getProjectTasks(projectId: string): Promise<PTask[]> {
 function missingDueAt(error: { message?: string; code?: string } | null): boolean {
   return !!error && /due_at|start_at/.test(error.message ?? '') && /column|schema cache/i.test(error.message ?? '');
 }
+// Sin schema_v24 (fase 3) no existen prioridad, etiquetas, bloqueos ni repetición.
+const V24_COLS = ['priority', 'labels', 'blocked_by', 'repeat_rule'] as const;
+function missingV24(error: { message?: string; code?: string } | null): boolean {
+  return !!error && /priority|labels|blocked_by|repeat_rule/.test(error.message ?? '') && /column|schema cache/i.test(error.message ?? '');
+}
+function withoutV24<T extends Record<string, any>>(o: T): T {
+  const r: Record<string, any> = { ...o };
+  for (const k of V24_COLS) delete r[k];
+  return r as T;
+}
 // Sin schema_v13 no existen due_at ni start_at: se guarda sin ellas.
 function withoutDueAt<T extends { due_at?: string | null; start_at?: string | null }>(o: T): Omit<T, 'due_at' | 'start_at'> {
   const { due_at: _omit, start_at: _omit2, ...rest } = o;
@@ -329,6 +344,7 @@ export async function addProjectTask(t: {
   project_id: string; title: string; status: string;
   description?: string | null; assignee_id?: string | null; due_date?: string | null;
   due_at?: string | null; start_at?: string | null; position?: number;
+  priority?: PTask['priority']; labels?: string[]; blocked_by?: string[]; repeat_rule?: PTask['repeat_rule'];
 }): Promise<PTask> {
   const row: Record<string, any> = {
     project_id: t.project_id,
@@ -342,8 +358,10 @@ export async function addProjectTask(t: {
   };
   if (t.due_at !== undefined) row.due_at = t.due_at;
   if (t.start_at) row.start_at = t.start_at;
+  for (const k of V24_COLS) if (t[k] !== undefined) row[k] = t[k];
   let { data, error } = await supabase.from('project_tasks').insert(row).select('*').single();
-  if (missingDueAt(error)) ({ data, error } = await supabase.from('project_tasks').insert(withoutDueAt(row)).select('*').single());
+  if (missingV24(error)) ({ data, error } = await supabase.from('project_tasks').insert(withoutV24(row)).select('*').single());
+  if (missingDueAt(error)) ({ data, error } = await supabase.from('project_tasks').insert(withoutDueAt(withoutV24(row))).select('*').single());
   if (error) throw error;
   return data as PTask;
 }
@@ -351,9 +369,11 @@ export async function addProjectTask(t: {
 export async function updateProjectTask(id: string, patch: {
   title?: string; description?: string | null; status?: string;
   assignee_id?: string | null; due_date?: string | null; due_at?: string | null; start_at?: string | null; position?: number;
+  priority?: PTask['priority']; labels?: string[]; blocked_by?: string[]; repeat_rule?: PTask['repeat_rule'];
 }): Promise<void> {
   let { error } = await supabase.from('project_tasks').update(patch).eq('id', id);
-  if (missingDueAt(error)) ({ error } = await supabase.from('project_tasks').update(withoutDueAt(patch)).eq('id', id));
+  if (missingV24(error)) ({ error } = await supabase.from('project_tasks').update(withoutV24(patch)).eq('id', id));
+  if (missingDueAt(error)) ({ error } = await supabase.from('project_tasks').update(withoutDueAt(withoutV24(patch))).eq('id', id));
   if (error) throw error;
 }
 

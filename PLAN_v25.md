@@ -127,3 +127,6 @@ Con esto, Pro reemplaza Toggl, Sunsama y un tomador de actas, que juntos pasan d
 7. (Fase 2) El tiempo del cronómetro cuenta también como tiempo de enfoque en las rachas y estadísticas (es tiempo trabajado).
 8. (Fase 2) La hoja semanal solo crea, recorta o borra horas a mano; nunca toca lo del enfoque o el cronómetro sin que la persona lo borre a mano.
 9. (Fase 2) Aprobar horas es del plan Equipo (de quien manda o del dueño del proyecto). Las semanas empiezan el lunes, en la hora local de cada persona.
+10. (Fase 3) Las reglas son frases para escoger (cuándo y qué), no un editor. Asignar solo a gente del proyecto; al vencerse solo se avisa.
+11. (Fase 3) Las tareas bloqueadas se pueden mover igual (no se impide trabajar); solo se marcan y se avisa al desbloquearse.
+12. (Fase 3) El estado del proyecto lo escribe quien edita; la IA usa el cupo de resúmenes.

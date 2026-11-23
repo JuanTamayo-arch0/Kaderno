@@ -1,4 +1,5 @@
 import React from 'react';
+import { blockersOf, priorityOf } from '../../lib/projectWork';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C, R, shadow } from '../../lib/theme';
@@ -13,7 +14,8 @@ import { COARSE_POINTER, NO_STEPS, SelectBox, dueInfo, isWeb } from './projectUi
 //  (Separado de app/proyectos/[id].tsx en la versión 23.)
 // ============================================================
 
-export function Tablero({ cols, grouped, steps, members, subject, editable, isWide, myId, selecting, selected, onToggleSelect, onOpen, onAdd, onMove, onDrop, comments }: {
+export function Tablero({ cols, grouped, steps, members, subject, editable, isWide, myId, selecting, selected, onToggleSelect, onOpen, onAdd, onMove, onDrop, comments, byId = {} }: {
+  byId?: Record<string, PTask>;
   comments?: Record<string, number>;
   selecting: boolean;
   selected: Set<string>;
@@ -71,7 +73,7 @@ export function Tablero({ cols, grouped, steps, members, subject, editable, isWi
                     {isOver && drag!.beforeId === t.id && placeholder(col)}
                     <DragCard binding={dnd.bind(t.id, col.key, list[i + 1]?.id ?? null)} hidden={drag?.id === t.id} landed={dnd.landed === t.id}>
                       <View dataSet={{ anim: 'enter', i: String(Math.min(i, 8)) }}>
-                        <TaskCard
+                        <TaskCard byId={byId}
                           task={t} steps={steps[t.id] ?? NO_STEPS} members={members} subject={subject} comments={comments?.[t.id] ?? 0}
                           color={col.color} dim={false} mine={!!myId && t.assignee_id === myId}
                           showMove={editable && !selecting && (!isWeb || !isWide || COARSE_POINTER)}
@@ -109,7 +111,7 @@ export function Tablero({ cols, grouped, steps, members, subject, editable, isWi
       <DragGhost drag={drag} ghostRef={dnd.ghostRef}>
         {dragged && draggedCol && (
           <View style={{ borderRadius: 12, ...(isWeb ? { boxShadow: '0 18px 40px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.3)' } as any : null) }}>
-            <TaskCard task={dragged} steps={steps[dragged.id] ?? []} members={members} subject={subject}
+            <TaskCard byId={byId} task={dragged} steps={steps[dragged.id] ?? []} members={members} subject={subject}
               color={draggedCol.color} dim={false} mine={!!myId && dragged.assignee_id === myId}
               showMove={false} selecting={false} selected={false} onPress={() => {}} onMove={() => {}} />
           </View>
@@ -127,9 +129,10 @@ export function Tablero({ cols, grouped, steps, members, subject, editable, isWi
 export const TaskCard = React.memo(TaskCardView, (a, b) =>
   a.task === b.task && a.steps === b.steps && a.members === b.members && a.subject === b.subject && a.color === b.color
   && a.dim === b.dim && a.mine === b.mine && a.showMove === b.showMove && a.selecting === b.selecting && a.selected === b.selected
-  && !!a.onLongPress === !!b.onLongPress && a.comments === b.comments);
+  && !!a.onLongPress === !!b.onLongPress && a.comments === b.comments && a.byId === b.byId);
 
-export function TaskCardView({ task, steps, members, subject, color, dim, mine, showMove, selecting, selected, onPress, onMove, onLongPress, comments = 0 }: {
+export function TaskCardView({ task, steps, members, subject, color, dim, mine, showMove, selecting, selected, onPress, onMove, onLongPress, comments = 0, byId = {} }: {
+  byId?: Record<string, PTask>;
   task: PTask; steps: PStep[]; members: Member[]; subject: Subject | null; comments?: number;
   color: string; dim: boolean; mine: boolean; showMove: boolean;
   selecting: boolean; selected: boolean;
@@ -155,6 +158,8 @@ export function TaskCardView({ task, steps, members, subject, color, dim, mine, 
           </Pressable>
         )}
       </View>
+
+      <WorkBadges task={task} byId={byId} />
 
       {steps.length > 0 && (
         <View style={{ marginTop: 9 }}>
@@ -233,3 +238,24 @@ export function MoveMenu({ task, cols, onClose, onPick }: {
 // ============================================================
 //  Vista LISTA
 // ============================================================
+
+/** v25: prioridad, bloqueada, repetición y etiquetas en la tarjeta. */
+export function WorkBadges({ task, byId }: { task: PTask; byId: Record<string, PTask> }) {
+  // "Normal" es lo de siempre: no se marca en la tarjeta (solo lo que se sale de lo normal).
+  const p = task.priority === 'normal' ? null : priorityOf(task.priority);
+  const blockers = blockersOf(task, byId);
+  const labels = task.labels ?? [];
+  if (!p && !blockers.length && !labels.length && !task.repeat_rule) return null;
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+      {p && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }} accessibilityLabel={`Prioridad ${p.label}`}><Ionicons name="flag" size={11} color={p.color} /><Text style={{ color: p.color, fontSize: 10.5, fontWeight: '800' }}>{p.label}</Text></View>}
+      {!task.done && blockers.length > 0 && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }} accessibilityLabel={`Bloqueada por ${blockers.map((b) => b.title).join(', ')}`}>
+          <Ionicons name="lock-closed" size={11} color={C.warnText} /><Text style={{ color: C.warnText, fontSize: 10.5, fontWeight: '700' }} numberOfLines={1}>Espera: {blockers[0].title}{blockers.length > 1 ? ` y ${blockers.length - 1} más` : ''}</Text>
+        </View>
+      )}
+      {task.repeat_rule && <Ionicons name="repeat" size={12} color={C.muted} accessibilityLabel="Se repite" />}
+      {labels.slice(0, 3).map((l) => <Text key={l} style={{ color: C.muted, fontSize: 10.5, fontWeight: '600' }}>#{l}</Text>)}
+    </View>
+  );
+}

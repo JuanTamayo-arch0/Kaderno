@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { WorkBadges } from './ProjectBoard';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C, R } from '../../lib/theme';
@@ -11,8 +12,8 @@ import { SelectBox, dueInfo } from './projectUi';
 //  (Separado de app/proyectos/[id].tsx en la versión 23.)
 // ============================================================
 
-export function Lista({ tasks, cols, steps, members, editable, isWide, selecting, selected, onToggleSelect, onOpen, onAdd, onToggle, comments }: {
-  comments?: Record<string, number>;
+export function Lista({ tasks, cols, steps, members, editable, isWide, selecting, selected, onToggleSelect, onOpen, onAdd, onToggle, comments, byId = {} }: {
+  comments?: Record<string, number>; byId?: Record<string, PTask>;
   tasks: PTask[]; cols: BoardColumn[]; steps: Record<string, PStep[]>; members: Member[];
   editable: boolean; isWide: boolean;
   selecting: boolean; selected: Set<string>; onToggleSelect: (id: string) => void;
@@ -95,6 +96,7 @@ export function Lista({ tasks, cols, steps, members, editable, isWide, selecting
 
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text numberOfLines={1} style={{ color: C.text, fontSize: 14, fontWeight: '600', textDecorationLine: t.done ? 'line-through' : 'none' }}>{t.title}</Text>
+              <WorkBadges task={t} byId={byId} />
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                   <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: col?.color ?? C.muted }} />
