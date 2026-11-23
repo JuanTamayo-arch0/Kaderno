@@ -133,3 +133,6 @@ Con esto, Pro reemplaza Toggl, Sunsama y un tomador de actas, que juntos pasan d
 13. (Fase 4) Las páginas públicas no piden cuenta y no muestran la barra de la app. Los datos salen de funciones del servidor que devuelven solo lo permitido; nadie sin sesión puede leer las tablas.
 14. (Fase 4) La etiqueta #interno esconde una tarea de la vista del cliente. Las solicitudes tampoco se ven ahí hasta que pasan a otra columna.
 15. (Fase 4) WhatsApp se abre con el texto listo y sin número (la persona escoge el chat). WhatsApp Business queda para después.
+16. (Fase 5) La reunión anterior es la última nota del área con acta; si ninguna la tiene, la última con casillas sin marcar o pendientes. Lo que viene de antes va arriba de la plantilla, como casillas.
+17. (Fase 5) El Oráculo lee las actas guardadas, no solo las que se pegaron en la nota. No se crean vectores nuevos: el modo de reuniones toma las 15 más recientes.
+18. (Fase 5) El correo se abre con el texto listo (mailto) y se corta si pasa de unos 1.800 caracteres, que es lo que aguantan los programas de correo; para el acta completa está "Copiar".

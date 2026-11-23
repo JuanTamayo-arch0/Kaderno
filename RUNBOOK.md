@@ -1565,3 +1565,28 @@ Corre otra vez `supabase/schema_v24.sql` completo. La fase 4 crea `project_links
 ### 3. Pruebas
 
 `npm test` y `bash tests/run_sql.sh` (incluye `tests/sql/24d_pruebas.sql`: enlaces, quién los maneja, formulario sin sesión con validación, robots y tope, la tarea y su aviso, la vista sin datos internos, cambiar y apagar, y el tope de Gratis).
+
+## Versión 25 (parte 5): reuniones encadenadas
+
+### 1. Migración y despliegue
+
+No hay SQL nuevo. Hay que desplegar dos funciones:
+
+```
+npx supabase functions deploy ai
+npx supabase functions deploy oracle
+```
+
+Sin el despliegue, todo sigue funcionando como antes: el acta sale con el formato de siempre y el Oráculo no tiene el modo de reuniones.
+
+### 2. Lo que cambia para el usuario
+
+- En modo Trabajo, la nota nueva de una reunión ("Reunión del ...") empieza con **Viene de la reunión del ...**: las tareas (con responsable y fecha) y los pendientes del acta anterior de la misma área, y las casillas sin marcar de esa nota. Sin repetidos y máximo 15.
+- Al hacer el acta, la IA recibe esos pendientes y dice cuáles se resolvieron y cuáles siguen abiertos.
+- **Formato del acta**: breve, completa o detallada, y una indicación propia de hasta 300 caracteres. Se guarda en la cuenta (`user_prefs.settings.minutes`).
+- El acta se manda por **WhatsApp** (con títulos en negrita), por **correo** (se abre el correo con asunto y texto) o se copia.
+- En el Oráculo, el filtro **Mis reuniones** responde con las últimas 15 actas: qué se decidió, quién quedó con qué y lo que sigue abierto. En los demás filtros, si una nota tiene acta, el Oráculo la lee junto a la nota.
+
+### 3. Pruebas
+
+`npm test` (lo abierto que pasa a la siguiente, el formato y los pendientes en el pedido a la IA, el texto para WhatsApp y el correo).

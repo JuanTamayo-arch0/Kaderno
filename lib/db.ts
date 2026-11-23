@@ -710,7 +710,7 @@ export async function search(q: string): Promise<{ notes: Note[]; tasks: Task[];
 export type OracleMsg = { id: string; role: 'user' | 'assistant'; content: string; scope: string | null; created_at: string };
 
 export async function askOracle(params: {
-  question: string; mode: 'all' | 'subject' | 'note'; subjectId?: string | null; noteId?: string | null;
+  question: string; mode: 'all' | 'subject' | 'note' | 'meetings'; subjectId?: string | null; noteId?: string | null;
   ability?: string | null; history?: { role: string; content: string }[];
   /** Mascota activa: el Oráculo responde con su tono (si la función está al día). */
   pet?: { name: string; species: string } | null;

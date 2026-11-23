@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { C } from '../../lib/theme';
@@ -11,7 +11,11 @@ import {
 } from '../../lib/classRec';
 import { browserSpeechSupported, createBrowserTranscriber, keepAwake, LANGS, type Transcriber, type TranscriberState } from '../../lib/transcribe';
 import { createTranscript, saveTranscript, getTranscripts, deleteTranscript, summarizeClass, meetingMinutes, type Transcript } from '../../lib/transcriptsDb';
-import { isMeeting, minutesMarkdown, meetingTaskQuick, type MeetingMinutes } from '../../lib/meeting';
+import { isMeeting, minutesMarkdown, meetingTaskQuick, minutesPlain, mailtoUrl, type MeetingMinutes } from '../../lib/meeting';
+import { getMinutesStyle, previousOpenFor } from '../../lib/meetingDb';
+import { MinutesStyleSheet } from './MinutesStyleSheet';
+import { openWhatsApp } from '../../lib/clientLinks';
+import { copyText } from '../../lib/fileIO';
 import { MeetingPublish } from './MeetingPublish';
 import { openAdd } from '../../lib/uiBus';
 import { getMode, useMode } from '../../lib/mode';
@@ -226,6 +230,7 @@ function TranscriptCard({ t, open, onToggle, focusT, subjectName, getMd, onInser
   const [q, setQ] = useState('');
   const { v: mv, work, study } = useMode();
   const [publish, setPublish] = useState(false);
+  const [styleOpen, setStyleOpen] = useState(false);
   const cls = t.summary && !isMeeting(t.summary) ? t.summary : null;
   const mtg = isMeeting(t.summary) ? t.summary : null;
   const [mine, setMine] = useState(true);
@@ -259,7 +264,8 @@ function TranscriptCard({ t, open, onToggle, focusT, subjectName, getMd, onInser
   async function minutes() {
     setBusy(true);
     try {
-      const m = await meetingMinutes(transcriptText(segs), getMd(), []);
+      const [style, prevOpen] = await Promise.all([getMinutesStyle().catch(() => null), previousOpenFor(t.note_id).catch(() => [] as string[])]);
+      const m = await meetingMinutes(transcriptText(segs), getMd(), [], { style, prevOpen });
       await saveTranscript(t.id, { summary: m });
       onChanged({ summary: m });
     } catch (e) { notify('No se pudo armar el acta', friendlyError(e)); }
@@ -305,11 +311,12 @@ function TranscriptCard({ t, open, onToggle, focusT, subjectName, getMd, onInser
               </View>
             </View>
           ) : mtg ? (
-            <MinutesBlock m={mtg} dateLabel={dateLabel} busy={busy} onRedo={minutes} onInsert={(md) => { onInsert(md); toast('Acta agregada al final de la nota'); }} onPublish={() => setPublish(true)} />
+            <MinutesBlock m={mtg} dateLabel={dateLabel} busy={busy} onRedo={minutes} onInsert={(md) => { onInsert(md); toast('Acta agregada al final de la nota'); }} onPublish={() => setPublish(true)} onStyle={() => setStyleOpen(true)} />
           ) : (
             <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
               {study && <Button label="Resumir con IA" icon="sparkles-outline" size="sm" busy={busy} disabled={segs.length < 3} onPress={summarize} />}
               {work && <Button label="Hacer acta con IA" icon="document-text-outline" size="sm" kind={study ? 'secondary' : 'primary'} busy={busy} disabled={segs.length < 3} onPress={minutes} />}
+              {work && <Button label="Formato del acta" size="sm" kind="ghost" onPress={() => setStyleOpen(true)} />}
             </View>
           )}
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -349,6 +356,7 @@ function TranscriptCard({ t, open, onToggle, focusT, subjectName, getMd, onInser
           </View>
           <Text style={{ color: C.muted, fontSize: 11.5 }}>Hecha con el reconocimiento del navegador: puede tener palabras mal entendidas. El audio no se guardó.</Text>
           {mtg && <MeetingPublish visible={publish} minutes={mtg} date={new Date(t.started_at)} onClose={() => setPublish(false)} />}
+          {work && <MinutesStyleSheet visible={styleOpen} onClose={() => setStyleOpen(false)} />}
         </View>
       )}
     </View>
@@ -361,9 +369,10 @@ export function whenSaid(marks: NoteMark[], selected: string): NoteMark | null {
 }
 
 /** El acta de la reunión: resumen, decisiones, tareas con responsable y pendientes. */
-function MinutesBlock({ m, dateLabel, busy, onRedo, onInsert, onPublish }: {
-  m: MeetingMinutes; dateLabel: string; busy: boolean; onRedo: () => void; onInsert: (md: string) => void; onPublish: () => void;
+function MinutesBlock({ m, dateLabel, busy, onRedo, onInsert, onPublish, onStyle }: {
+  m: MeetingMinutes; dateLabel: string; busy: boolean; onRedo: () => void; onInsert: (md: string) => void; onPublish: () => void; onStyle: () => void;
 }) {
+  const subject = `Acta${m.title ? `: ${m.title}` : ''} (${dateLabel})`;
   const sec = (title: string, items: string[]) => items.length > 0 && (
     <View style={{ gap: 4 }}>
       <Text style={{ color: C.text, fontSize: 13, fontWeight: '800' }}>{title}</Text>
@@ -383,7 +392,7 @@ function MinutesBlock({ m, dateLabel, busy, onRedo, onInsert, onPublish }: {
             <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: C.text, fontSize: 13.5 }}>{k.title}</Text>
-                <Text style={{ color: C.muted, fontSize: 12 }}>{k.owner ?? 'Sin responsable'}{k.due || k.when ? ` · ${k.when ?? k.due}` : ''}</Text>
+                <Text style={{ color: C.muted, fontSize: 12 }}>{k.owner ?? 'Sin responsable'}{k.when ? ` · ${k.when}` : k.due ? ` · ${new Date(k.due + 'T12:00:00').toLocaleDateString('es', { day: 'numeric', month: 'short' })}` : ''}</Text>
               </View>
               <Button label="Para mí" size="sm" kind="ghost" onPress={() => openAdd(meetingTaskQuick(k))} accessibilityLabel={`Crear "${k.title}" en mis tareas`} />
             </View>
@@ -395,6 +404,13 @@ function MinutesBlock({ m, dateLabel, busy, onRedo, onInsert, onPublish }: {
         <Button label="Publicar en un proyecto" size="sm" icon="people-outline" onPress={onPublish} />
         <Button label="Insertar en la nota" size="sm" kind="secondary" icon="arrow-down-outline" onPress={() => onInsert(minutesMarkdown(m, dateLabel))} />
         <Button label="Rehacer" size="sm" kind="ghost" busy={busy} onPress={onRedo} />
+        <Button label="Formato" size="sm" kind="ghost" onPress={onStyle} accessibilityLabel="Formato del acta" />
+      </View>
+      <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <Text style={{ color: C.muted, fontSize: 12.5 }}>Enviar:</Text>
+        <Button label="WhatsApp" size="sm" kind="secondary" icon="logo-whatsapp" onPress={() => openWhatsApp(minutesPlain(m, dateLabel, true))} accessibilityLabel="Enviar el acta por WhatsApp" />
+        <Button label="Correo" size="sm" kind="secondary" icon="mail-outline" onPress={() => Linking.openURL(mailtoUrl(subject, minutesPlain(m, dateLabel))).catch(() => toast('No se pudo abrir el correo'))} accessibilityLabel="Enviar el acta por correo" />
+        <Button label="Copiar" size="sm" kind="ghost" icon="copy-outline" onPress={async () => toast((await copyText(minutesPlain(m, dateLabel))) ? 'Acta copiada' : 'No se pudo copiar')} accessibilityLabel="Copiar el acta" />
       </View>
     </View>
   );

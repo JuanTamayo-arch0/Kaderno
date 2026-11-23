@@ -2,7 +2,8 @@
 //  Grabar la reunión (v24, fase 4). Puro, con pruebas: quién es el
 //  responsable de cada tarea, el acta en Markdown y su archivo.
 // ============================================================
-export type { MeetingMinutes, MeetingTask } from '../supabase/functions/_shared/meeting';
+export type { MeetingMinutes, MeetingTask, MinutesStyle } from '../supabase/functions/_shared/meeting';
+export { minutesPlain, cleanMinutesStyle, DEFAULT_MINUTES_STYLE } from '../supabase/functions/_shared/meeting';
 import type { MeetingMinutes, MeetingTask } from '../supabase/functions/_shared/meeting';
 
 export const isMeeting = (s: unknown): s is MeetingMinutes => !!s && (s as any).kind === 'meeting';
@@ -57,4 +58,59 @@ export function minutesFileName(m: MeetingMinutes, d: Date): string {
 /** Texto para el "Agregar" rápido (tarea personal). */
 export function meetingTaskQuick(t: MeetingTask): string {
   return t.when && !t.title.toLowerCase().includes(t.when.toLowerCase()) ? `${t.title} ${t.when}` : t.title;
+}
+
+// ---------- v25, fase 5: reuniones encadenadas ----------
+
+/**
+ * Lo que quedó abierto en una nota de reunión: casillas sin marcar y viñetas
+ * bajo un título de pendientes, tareas o acuerdos (sin las vacías).
+ */
+export function openItemsFromNote(md: string): string[] {
+  const out: string[] = [];
+  let inOpen = false;
+  for (const raw of (md ?? '').split('\n')) {
+    const line = raw.trim();
+    const h = line.match(/^#{1,6}\s+(.*)$/);
+    if (h) { inOpen = /pendiente|acuerdo|pr[oó]xima/i.test(h[1]) && !/viene de/i.test(h[1]); continue; }
+    const box = line.match(/^[-*]\s+\[ \]\s+(.+)$/);
+    if (box) { out.push(box[1].trim()); continue; }
+    if (/^[-*]\s+\[[xX]\]/.test(line)) continue;
+    const bullet = inOpen ? line.match(/^[-*]\s+(.+)$/) : null;
+    if (bullet) out.push(bullet[1].trim());
+  }
+  return out;
+}
+
+/** La sección "Viene de la reunión del ..." para la nota nueva. '' si no hay nada abierto. */
+export function carryOverMarkdown(prev: { minutes: MeetingMinutes | null; noteMd: string | null }, dateLabel: string, max = 15): string {
+  const items: string[] = [];
+  const seen = new Set<string>();
+  const add = (x: string) => {
+    const t = x.replace(/\s+/g, ' ').trim();
+    const k = norm(t);
+    if (!t || !k || seen.has(k) || items.length >= max) return;
+    seen.add(k); items.push(t);
+  };
+  if (prev.minutes) {
+    for (const t of prev.minutes.tasks) {
+      const who = t.owner ?? 'sin responsable';
+      const when = t.due ? shortIso(t.due) : t.when ?? '';
+      if (!seen.has(norm(t.title))) { add(`${t.title} (${who}${when ? `, ${when}` : ''})`); seen.add(norm(t.title)); }
+    }
+    prev.minutes.open.forEach(add);
+  }
+  if (prev.noteMd) openItemsFromNote(prev.noteMd).forEach(add);
+  if (!items.length) return '';
+  return [`## Viene de la reunión del ${dateLabel}`, '', ...items.map((x) => `- [ ] ${x}`), '', ''].join('\n');
+}
+
+/** Correo con el acta: mailto con asunto y cuerpo, sin pasar el largo que aguantan los clientes. */
+export function mailtoUrl(subject: string, body: string, max = 1800): string {
+  const enc = encodeURIComponent;
+  const head = `mailto:?subject=${enc(subject)}&body=`;
+  if (head.length + enc(body).length <= max) return head + enc(body);
+  let b = body;
+  while (b.length && head.length + enc(b + '\n...').length > max) b = b.slice(0, Math.floor(b.length * 0.9));
+  return head + enc(b.replace(/\s+\S*$/, '') + '\n...');
 }

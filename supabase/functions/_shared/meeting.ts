@@ -14,7 +14,27 @@ export type MeetingMinutes = {
   open: string[];
 };
 
-export function meetingPrompt(transcript: string, notes: string, people: string[], today: string): string {
+/** v25: cómo quiere la persona sus actas (user_prefs.settings.minutes). */
+export type MinutesStyle = { format: 'completa' | 'breve' | 'detallada'; extra: string };
+export const DEFAULT_MINUTES_STYLE: MinutesStyle = { format: 'completa', extra: '' };
+export function cleanMinutesStyle(x: any): MinutesStyle {
+  const f = String(x?.format ?? '');
+  return {
+    format: f === 'breve' || f === 'detallada' ? f : 'completa',
+    extra: String(x?.extra ?? '').replace(/\s+/g, ' ').trim().slice(0, 300),
+  };
+}
+
+export type MeetingExtras = { style?: Partial<MinutesStyle> | null; prevOpen?: string[] };
+
+export function meetingPrompt(transcript: string, notes: string, people: string[], today: string, extras: MeetingExtras = {}): string {
+  const st = cleanMinutesStyle(extras.style ?? {});
+  const prev = (extras.prevOpen ?? []).map((x) => String(x).replace(/\s+/g, ' ').trim().slice(0, 200)).filter(Boolean).slice(0, 15);
+  const summaryRule = st.format === 'breve'
+    ? '- summary: de 1 a 3 frases cortas, solo lo esencial.'
+    : st.format === 'detallada'
+    ? '- summary: de 5 a 8 frases con los temas en el orden en que se hablaron y los datos concretos que se dieron.'
+    : '- summary: de 3 a 6 frases con lo más importante que se habló.';
   return [
     'Eres un asistente que escribe actas de reunión de trabajo en español. Abajo está la transcripción automática de una reunión,',
     'hecha por el reconocimiento de voz del navegador: puede tener palabras mal entendidas; corrígelas por contexto sin inventar.',
@@ -25,13 +45,16 @@ export function meetingPrompt(transcript: string, notes: string, people: string[
     'Devuelve SOLO un objeto JSON, sin texto antes ni después, con esta forma:',
     '{"title": "...", "summary": ["..."], "attendees": ["..."], "decisions": ["..."], "tasks": [{"title": "...", "owner": "...", "due": "AAAA-MM-DD", "when": "..."}], "open": ["..."]}',
     '- title: un título corto para la reunión (máximo 8 palabras), sin la fecha.',
-    '- summary: de 3 a 6 frases con lo más importante que se habló.',
+    summaryRule,
     '- attendees: los nombres de quienes hablaron o fueron mencionados como presentes (vacío si no se sabe).',
     '- decisions: lo que se decidió o acordó, una frase cada una. No pongas tareas aquí.',
     '- tasks: compromisos concretos. "title" empieza con un verbo (máximo 12 palabras); "owner" es quien quedó a cargo (null si nadie);',
     '  "due" es la fecha en AAAA-MM-DD si se puede saber (null si no); "when" es la fecha tal como se dijo (null si no se dijo).',
     '- open: preguntas o temas que quedaron pendientes para la próxima.',
     'Si algo no aparece, deja la lista vacía. No incluyas nada que no esté en la reunión.',
+    prev.length ? 'Estos temas quedaron pendientes en la reunión anterior. Si en esta se resolvió alguno, dilo en decisions; si se habló y sigue abierto, repítelo en open; si no se habló, no lo pongas:' : '',
+    ...prev.map((x) => `  * ${x}`),
+    st.extra ? `Indicación de la persona sobre cómo quiere sus actas (respétala si no contradice el formato JSON): ${st.extra}` : '',
     '',
     'NOTAS DE LA PERSONA:',
     notes.slice(0, 8000) || '(sin notas)',
@@ -68,4 +91,27 @@ export function parseMeeting(text: string): MeetingMinutes | null {
     decisions: list(j.decisions, 15, 300), tasks, open: list(j.open, 10, 200),
   };
   return out.summary.length || out.decisions.length || out.tasks.length ? out : null;
+}
+
+const MONTHS_ES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const dayLabel = (iso: string) => { const [, m, d] = iso.split('-').map(Number); return `${d} ${MONTHS_ES[m - 1]}`; };
+
+/**
+ * El acta en texto simple, para mandarla por WhatsApp o correo y para que el
+ * Oráculo la lea. Con bold, los títulos van entre asteriscos (WhatsApp).
+ */
+export function minutesPlain(m: MeetingMinutes, dateLabel: string, bold = false): string {
+  const h = (t: string) => (bold ? `*${t}*` : t);
+  const out: string[] = [h(`Acta${m.title ? `: ${m.title}` : ''} (${dateLabel})`)];
+  const block = (t: string, xs: string[]) => { if (xs.length) out.push('', h(t), ...xs.map((x) => `- ${x}`)); };
+  if (m.attendees.length) out.push('', `Asistentes: ${m.attendees.join(', ')}`);
+  block('Resumen', m.summary);
+  block('Decisiones', m.decisions);
+  block('Tareas', m.tasks.map((t) => {
+    const who = t.owner ?? 'sin responsable';
+    const when = t.due ? dayLabel(t.due) : t.when ?? '';
+    return `${t.title} (${who}${when ? `, ${when}` : ''})`;
+  }));
+  block('Pendientes para la próxima', m.open);
+  return out.join('\n');
 }
