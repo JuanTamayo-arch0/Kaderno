@@ -3,6 +3,7 @@ import { ActivityIndicator, Platform, ScrollView, Text, TextInput, View } from '
 import { useLocalSearchParams } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../../lib/theme';
+import { KadernoMark } from '../../components/brand/KadernoLogo';
 import { Button, Field } from '../../components/ds';
 import { publicFormInfo, submitRequest, type FormInfo } from '../../lib/clientLinks';
 
@@ -76,7 +77,10 @@ export default function Solicitar() {
                 <Button label="Enviar solicitud" icon="send" busy={busy} disabled={!name.trim() || !email.trim() || !title.trim()} onPress={send} />
               </View>
             )}
-            <Text style={{ color: C.muted, fontSize: 12, textAlign: 'center', marginTop: 10 }}>Hecho con Kaderno. Tus datos solo los ve el equipo del proyecto.</Text>
+            <View style={{ alignItems: 'center', gap: 6, marginTop: 10 }}>
+              <KadernoMark size={22} />
+              <Text style={{ color: C.muted, fontSize: 12, textAlign: 'center' }}>Hecho con Kaderno. Tus datos solo los ve el equipo del proyecto.</Text>
+            </View>
           </>
         )}
       </View>

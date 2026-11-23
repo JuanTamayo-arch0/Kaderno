@@ -5,9 +5,10 @@ import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Screen, Button } from '../components/ds';
 import {
-  C, R, THEMES, derive, inkOn, fontFamilyOf, DARK_THEMES, LIGHT_THEMES, BACKGROUNDS, FONTS, SIZES,
+  C, R, THEMES, derive, inkOn, fontFamilyOf, BRAND_THEMES, MORE_THEMES, BACKGROUNDS, FONTS, SIZES,
   PSettings, PERSONALIZE, DEFAULTS, savePersonalize, loadWebFont, NOTE_FONTS,
 } from '../lib/theme';
+import { STUDY_ACCENTS, isKadernoTheme, withAccent, accentOf } from '../lib/brand';
 import { fetchPrefs, savePrefs, uploadWallpaperFromUri, cleanOldWallpapers } from '../lib/db';
 import { notify } from '../lib/confirm';
 
@@ -23,6 +24,8 @@ function Personalizar() {
   // también en el teléfono para pintar la app antes de tener red): vive solo en
   // la nube, dentro del mismo jsonb, y por eso se lee aparte.
   const [hoyProy, setHoyProy] = useState(true);
+  // v26: los temas de antes quedan en "Más colores", abiertos si hay uno elegido.
+  const [more, setMore] = useState(!isKadernoTheme(PERSONALIZE.themeId));
   // Vista previa de todas las fuentes: se cargan solo al entrar aquí.
   useEffect(() => { loadWebFont('all'); }, []);
   useEffect(() => {
@@ -119,19 +122,52 @@ function Personalizar() {
   );
 
   return (
-    <Screen title="Apariencia" subtitle="Tema, fondo, letra y tamaño" back="/ajustes" nav="personalizar" maxWidth={900} footer={footer}
+    <Screen title="Apariencia" subtitle="Tema, color, fondo, letra y tamaño" back="/ajustes" nav="personalizar" maxWidth={900} footer={footer}
       right={<Button label="Restablecer" kind="ghost" size="sm" onPress={() => { pickSeq.current++; setUploading(false); setS({ ...DEFAULTS, bgCustom: null }); }} />}>
         <ThemePreview s={s} />
         {/* ---------------- TEMA ---------------- */}
-        <Section title="Tema" subtitle="Colores de la app" />
-        <Text style={groupLbl}>Oscuros</Text>
+        <Section title="Tema" subtitle="Los de Kaderno, con el color de acento que quieras. El logo no cambia de color." />
         <View style={grid}>
-          {DARK_THEMES.map((t) => <ThemeCard key={t.id} id={t.id} active={s.themeId === t.id} onPress={() => set({ themeId: t.id })} />)}
+          {BRAND_THEMES.map((t) => <ThemeCard key={t.id} id={t.id} accentId={s.accentId} wide active={s.themeId === t.id} onPress={() => set({ themeId: t.id })} />)}
         </View>
-        <Text style={groupLbl}>Claros</Text>
-        <View style={grid}>
-          {LIGHT_THEMES.map((t) => <ThemeCard key={t.id} id={t.id} active={s.themeId === t.id} onPress={() => set({ themeId: t.id })} />)}
-        </View>
+        {isKadernoTheme(s.themeId) && (
+          <>
+            <Text style={groupLbl}>Color de acento</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }} accessibilityRole="radiogroup">
+              {STUDY_ACCENTS.map((a) => {
+                const on = accentOf(s.accentId).id === a.id;
+                const col = (THEMES[s.themeId]?.scheme === 'light' ? a.light : a.dark).brand;
+                return (
+                  <Pressable key={a.id} onPress={() => set({ accentId: a.id })} accessibilityRole="radio" accessibilityState={{ checked: on }} accessibilityLabel={a.name}
+                    style={{ alignItems: 'center', gap: 6, width: 72 }}>
+                    <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: col, borderWidth: 3, borderColor: on ? C.text : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+                      {on && <Ionicons name="checkmark" size={18} color={inkOn(col)} />}
+                    </View>
+                    <Text style={{ color: on ? C.text : C.muted, fontSize: 12, fontWeight: on ? '700' : '500', textAlign: 'center' }} numberOfLines={1}>{a.name}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </>
+        )}
+        <Pressable onPress={() => setMore(!more)} accessibilityRole="button" accessibilityState={{ expanded: more }}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 16, paddingVertical: 6, alignSelf: 'flex-start' }}>
+          <Ionicons name={more ? 'chevron-down' : 'chevron-forward'} size={16} color={C.muted} />
+          <Text style={{ color: C.text, fontSize: 14, fontWeight: '700' }}>Más colores</Text>
+          <Text style={{ color: C.muted, fontSize: 12.5 }}>· los temas de antes</Text>
+        </Pressable>
+        {more && (
+          <>
+            <Text style={groupLbl}>Oscuros</Text>
+            <View style={grid}>
+              {MORE_THEMES.filter((t) => t.scheme === 'dark').map((t) => <ThemeCard key={t.id} id={t.id} active={s.themeId === t.id} onPress={() => set({ themeId: t.id })} />)}
+            </View>
+            <Text style={groupLbl}>Claros</Text>
+            <View style={grid}>
+              {MORE_THEMES.filter((t) => t.scheme === 'light').map((t) => <ThemeCard key={t.id} id={t.id} active={s.themeId === t.id} onPress={() => set({ themeId: t.id })} />)}
+            </View>
+          </>
+        )}
 
         {/* ---------------- FONDO ---------------- */}
         <Section title="Fondo de pantalla" subtitle="Detrás de las tarjetas" />
@@ -214,10 +250,10 @@ function Section({ title, subtitle }: { title: string; subtitle: string }) {
   );
 }
 
-function ThemeCard({ id, active, onPress }: { id: string; active: boolean; onPress: () => void }) {
-  const p = THEMES[id].palette;
+function ThemeCard({ id, active, onPress, accentId, wide }: { id: string; active: boolean; onPress: () => void; accentId?: string; wide?: boolean }) {
+  const p = withAccent(id, THEMES[id].scheme, THEMES[id].palette, accentId);
   return (
-    <Pressable onPress={onPress} style={[swatchBox, { borderColor: active ? p.brand : C.line, borderWidth: active ? 2 : 1, padding: 0, overflow: 'hidden' }]}>
+    <Pressable onPress={onPress} accessibilityRole="radio" accessibilityState={{ checked: active }} accessibilityLabel={`Tema ${THEMES[id].name}`} style={[swatchBox, wide ? { width: 150 } : null, { borderColor: active ? p.brand : C.line, borderWidth: active ? 2 : 1, padding: 0, overflow: 'hidden' }]}>
       <View style={{ flex: 1, backgroundColor: p.bg, padding: 8, justifyContent: 'space-between' }}>
         <View style={{ backgroundColor: p.surface, borderRadius: 6, padding: 6, borderWidth: 1, borderColor: p.line }}>
           <View style={{ height: 5, width: '70%', borderRadius: 3, backgroundColor: p.text, opacity: 0.85 }} />
@@ -282,8 +318,8 @@ export default function PersonalizarProtegida() {
 
 // Vista previa en vivo con los colores elegidos, antes de aplicar.
 function ThemePreview({ s }: { s: PSettings }) {
-  const theme = THEMES[s.themeId] ?? THEMES.medianoche;
-  const p = derive(theme.palette);
+  const theme = THEMES[s.themeId] ?? THEMES['kaderno-oscuro'];
+  const p = derive(withAccent(theme.id, theme.scheme, theme.palette, s.accentId));
   const ff = fontFamilyOf(s.fontId);
   const t = (extra: any) => ({ ...(ff ? { fontFamily: ff } : {}), ...extra });
   return (

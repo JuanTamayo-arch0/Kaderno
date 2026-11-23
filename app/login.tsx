@@ -8,6 +8,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase, SUPABASE_READY } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { C, currentTheme, shadow, inkOn } from '../lib/theme';
+import { BRAND } from '../lib/brand';
+import { KadernoLockup } from '../components/brand/KadernoLogo';
 
 type Mode = 'in' | 'up';
 
@@ -140,15 +142,20 @@ export default function Login() {
 
   // Degradado de marca. En web es CSS (con transición al cambiar de modo);
   // en nativo se cae a un color sólido.
+  // v26: el panel es una hoja de cuaderno en tinta, con renglones tenues y la
+  // raya del margen (la marca). Ya no cambia de color entre entrar y crear cuenta.
   const gradient = (extra?: any) => (Platform.OS === 'web'
     ? React.createElement('div', {
       style: {
         position: 'absolute', inset: 0,
-        background: `linear-gradient(160deg, ${accent}, ${mode === 'in' ? C.brand2 : C.brand})`,
-        transition: 'background 400ms ease', ...extra,
+        backgroundColor: BRAND.ink,
+        backgroundImage: `linear-gradient(90deg, transparent 22px, ${BRAND.margin} 22px, ${BRAND.margin} 25px, transparent 25px), repeating-linear-gradient(180deg, transparent 0 31px, rgba(255,255,255,0.06) 31px 32px)`,
+        ...extra,
       },
     })
-    : <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: accent }} />);
+    : <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: BRAND.ink }}>
+        <View style={{ position: 'absolute', top: 0, bottom: 0, left: 22, width: 3, backgroundColor: BRAND.margin }} />
+      </View>);
 
   // Luz ambiental de fondo en pantallas grandes: evita que la tarjeta quede
   // flotando sobre un vacío plano en un monitor de escritorio.
@@ -164,14 +171,6 @@ export default function Login() {
       },
     })
     : null;
-
-  // Círculos decorativos translúcidos del panel.
-  const blobs = (
-    <>
-      <View style={{ position: 'absolute', top: -70, right: -60, width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(255,255,255,0.10)' }} />
-      <View style={{ position: 'absolute', bottom: -90, left: -70, width: 260, height: 260, borderRadius: 130, backgroundColor: 'rgba(255,255,255,0.08)' }} />
-    </>
-  );
 
   // ---------------- Panel de marca lateral (pantallas anchas) ----------------
   // Mini vista previa "de cristal": llena el centro del panel y enseña de un
@@ -218,14 +217,8 @@ export default function Login() {
       justifyContent: 'space-between', overflow: 'hidden',
     }}>
       {gradient()}
-      {blobs}
       <View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <View style={{ width: 38, height: 38, borderRadius: 11, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' }}>
-            <Ionicons name="book" size={20} color="#fff" />
-          </View>
-          <Text style={{ color: '#fff', fontSize: 22, fontWeight: '800' }}>Kaderno</Text>
-        </View>
+        <KadernoLockup size={38} tone="papel" color="#fff" />
         <Text style={{ color: '#fff', fontSize: xl ? 38 : 33, fontWeight: '800', marginTop: xl ? 40 : 30, lineHeight: xl ? 45 : 39 }}>{copy.panelTitle}</Text>
         <Text style={{ color: 'rgba(255,255,255,0.86)', fontSize: 15.5, marginTop: 12, lineHeight: 22 }}>{copy.panelSub}</Text>
       </View>
@@ -249,13 +242,7 @@ export default function Login() {
   const bannerTop = (
     <View style={{ padding: 26, overflow: 'hidden' }}>
       {gradient()}
-      {blobs}
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="book" size={18} color="#fff" />
-        </View>
-        <Text style={{ color: '#fff', fontSize: 19, fontWeight: '800' }}>Kaderno</Text>
-      </View>
+      <KadernoLockup size={34} tone="papel" color="#fff" />
       <Text style={{ color: '#fff', fontSize: 24, fontWeight: '800', marginTop: 18, lineHeight: 29 }}>{copy.panelTitle}</Text>
       <Text style={{ color: 'rgba(255,255,255,0.88)', fontSize: 14, marginTop: 6 }}>{copy.panelSub}</Text>
     </View>
@@ -282,12 +269,7 @@ export default function Login() {
   const form = (
     <View style={{ width: '100%', maxWidth: 420, alignSelf: 'center' }}>
       {compact && (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 26 }}>
-          <View style={{ width: 36, height: 36, borderRadius: 11, backgroundColor: accent, alignItems: 'center', justifyContent: 'center' }}>
-            <Ionicons name="book" size={19} color="#fff" />
-          </View>
-          <Text style={{ color: C.text, fontSize: 21, fontWeight: '800' }}>Kaderno</Text>
-        </View>
+        <View style={{ marginBottom: 26 }}><KadernoLockup size={36} /></View>
       )}
 
       {/* Selector Entrar / Crear cuenta */}

@@ -5,6 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../lib/theme';
 import { SIDEBAR_W, useResponsive } from '../lib/responsive';
 import { StopwatchPill } from './StopwatchPill';
+import { KadernoLockup } from './brand/KadernoLogo';
 import { useAuth } from '../lib/auth';
 import { useNavCounts } from '../lib/navCounts';
 import { useFocusTimer } from '../lib/focusTimer';
@@ -127,8 +128,7 @@ export function SideNav({ active, onNavigate }: { active: NavKey | null; onNavig
     <View dataSet={{ petSidebar: '1' }} style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: SIDEBAR_W, backgroundColor: C.surface, borderRightWidth: 1, borderRightColor: C.line, zIndex: 10 }}>
       <ScrollView contentContainerStyle={{ paddingTop: 22, paddingHorizontal: 12, paddingBottom: 12, flexGrow: 1 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 8, marginBottom: 16 }}>
-          <KadernoMark size={28} />
-          <Text style={{ color: C.text, fontSize: 20, fontWeight: '800', flex: 1 }}>Kaderno</Text>
+          <KadernoLockup size={28} flex />
           <Pressable onPress={openInbox} accessibilityRole="button" accessibilityLabel={counts.unread ? `Avisos, ${counts.unread} sin leer` : 'Avisos'}
             style={({ hovered }: any) => ({ width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: hovered ? C.surface2 : 'transparent' })}>
             <Ionicons name={counts.unread ? 'notifications' : 'notifications-outline'} size={19} color={counts.unread ? C.brand : C.muted} />
@@ -212,14 +212,8 @@ export function Kbd({ text }: { text: string }) {
   );
 }
 
-/** Marca de Kaderno: un cuaderno con una línea. */
-export function KadernoMark({ size = 28 }: { size?: number }) {
-  return (
-    <View style={{ width: size, height: size, borderRadius: size * 0.28, backgroundColor: C.brand, alignItems: 'center', justifyContent: 'center' }}>
-      <Ionicons name="book" size={size * 0.56} color={C.onBrand} />
-    </View>
-  );
-}
+/** El logo vive en components/brand/KadernoLogo (v26); se reexporta aquí por compatibilidad. */
+export { KadernoMark } from './brand/KadernoLogo';
 
 // ---------- Barra inferior (celular) ----------
 const SECTION_OF: Partial<Record<NavKey, NavKey>> = {

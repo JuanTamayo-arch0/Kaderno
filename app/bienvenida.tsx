@@ -15,7 +15,7 @@ import { getPushStatus, enablePush, type PushStatus } from '../lib/push';
 import { notify, toast, friendlyError } from '../lib/feedback';
 import { dataChanged } from '../lib/uiBus';
 import { Button, Card, Dot } from '../components/ds';
-import { KadernoMark } from '../components/SideNav';
+import { KadernoLockup } from '../components/brand/KadernoLogo';
 import { PetChooser } from '../components/pets/PetChooser';
 import { loadPets, usePets } from '../lib/pets/store';
 import { MODES, saveMode, useMode, type Mode } from '../lib/mode';
@@ -89,8 +89,7 @@ function Bienvenida() {
       <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 20, paddingTop: insets.top + 24, alignItems: 'center' }} keyboardShouldPersistTaps="handled">
         <View style={{ width: '100%', maxWidth: 560, flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 22 }}>
-            <KadernoMark size={32} />
-            <Text style={{ color: C.text, fontSize: 20, fontWeight: '800', flex: 1 }}>Kaderno</Text>
+            <KadernoLockup size={32} flex />
             <Pressable onPress={() => finish()} accessibilityRole="button" style={{ padding: 8 }}><Text style={{ color: C.muted, fontWeight: '600' }}>Saltar</Text></Pressable>
           </View>
           <View style={{ flexDirection: 'row', gap: 6, marginBottom: 22 }} accessibilityLabel={`Paso ${step + 1} de ${steps.length}`}>

@@ -3,6 +3,7 @@ import { ActivityIndicator, Platform, ScrollView, Text, View } from 'react-nativ
 import { useLocalSearchParams } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../../lib/theme';
+import { KadernoMark } from '../../components/brand/KadernoLogo';
 import { publicView, type PublicView } from '../../lib/clientLinks';
 import { HEALTH } from '../../lib/projectWork';
 
@@ -86,7 +87,10 @@ export default function Avance() {
                 </View>
               ))}
             </View>
-            <Text style={{ color: C.muted, fontSize: 12, textAlign: 'center' }}>Actualizado en tiempo real con Kaderno.</Text>
+            <View style={{ alignItems: 'center', gap: 6 }}>
+              <KadernoMark size={22} />
+              <Text style={{ color: C.muted, fontSize: 12, textAlign: 'center' }}>Actualizado en tiempo real con Kaderno.</Text>
+            </View>
           </>
         )}
       </View>

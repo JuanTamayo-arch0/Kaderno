@@ -3,7 +3,7 @@
    - Recibe las notificaciones push y las muestra.
    No toca las peticiones a Supabase (son de otro dominio). */
 const VERSION = 'kaderno-v12-1';
-const SHELL = ['/', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/favicon.png'];
+const SHELL = ['/', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/favicon.png', '/fonts/plus-jakarta-sans.woff2'];
 
 // VERSION la cambia deploy/postbuild.mjs en cada build (huella de los archivos).
 

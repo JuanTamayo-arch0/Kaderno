@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { derive, type BasePalette, type Palette } from './color';
 import { THEMES, type Theme } from './palettes';
+import { BRAND_FONT, BRAND_FONT_URL, BRAND_VERSION, DEFAULT_ACCENT, isKadernoTheme, migrateBrand, withAccent } from './brand';
 export * from './color';
 export { THEMES, type Theme } from './palettes';
 
@@ -19,6 +20,10 @@ export const C: Palette = {
 
 export const DARK_THEMES = Object.values(THEMES).filter((t) => t.scheme === 'dark');
 export const LIGHT_THEMES = Object.values(THEMES).filter((t) => t.scheme === 'light');
+/** v26: los dos temas de la marca y, aparte, "Más colores" (los de antes). */
+export const BRAND_THEMES = Object.values(THEMES).filter((t) => isKadernoTheme(t.id));
+export const MORE_THEMES = Object.values(THEMES).filter((t) => !isKadernoTheme(t.id));
+const FALLBACK_THEME = 'kaderno-oscuro';
 
 // ---------- Fondos de pantalla por defecto (degradados) ----------
 // En web se pintan con CSS; en nativo se usa el color sólido de respaldo.
@@ -38,6 +43,7 @@ export function backgroundOf(id: string): Background | undefined { return BACKGR
 // ---------- Fuentes (Google Fonts, se cargan en web) ----------
 export type FontOpt = { id: string; name: string; family?: string };
 export const FONTS: FontOpt[] = [
+  { id: 'marca', name: 'Plus Jakarta Sans (la de Kaderno)', family: BRAND_FONT },
   { id: 'system', name: 'Sistema', family: undefined },
   { id: 'inter', name: 'Inter', family: 'Inter' },
   { id: 'nunito', name: 'Nunito', family: 'Nunito' },
@@ -77,6 +83,8 @@ const FONT_QUERY: Record<string, string> = {
  */
 export function loadWebFont(which: string | 'all' | undefined): void {
   if (Platform.OS !== 'web' || typeof document === 'undefined' || !which) return;
+  // La letra de la marca se sirve desde el mismo servidor (public/fonts), sin Google.
+  if (which === 'all' || which === BRAND_FONT) loadBrandFont();
   const fams = which === 'all' ? Object.keys(FONT_QUERY) : [which].filter((f) => FONT_QUERY[f]);
   fams.forEach((f) => {
     const id = 'kd-font-' + f.replace(/\s+/g, '-');
@@ -86,6 +94,14 @@ export function loadWebFont(which: string | 'all' | undefined): void {
     link.href = `https://fonts.googleapis.com/css2?family=${FONT_QUERY[f]}&display=swap`;
     document.head.appendChild(link);
   });
+}
+/** @font-face de la letra de la marca (una sola vez). index.html ya la precarga. */
+export function loadBrandFont(): void {
+  if (Platform.OS !== 'web' || typeof document === 'undefined' || document.getElementById('kd-font-brand')) return;
+  const st = document.createElement('style');
+  st.id = 'kd-font-brand';
+  st.textContent = `@font-face{font-family:'${BRAND_FONT}';font-style:normal;font-display:swap;font-weight:200 800;src:url('${BRAND_FONT_URL}') format('woff2-variations'),url('${BRAND_FONT_URL}') format('woff2');}`;
+  document.head.appendChild(st);
 }
 export const GOOGLE_FONTS_HREF =
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@400;600;700;800&family=Poppins:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Lora:wght@400;500;600;700&display=swap';
@@ -103,8 +119,8 @@ export function scaleOf(id: string): number { return SIZES.find((s) => s.id === 
 // ============================================================
 //  Ajustes de personalización (persistidos por dispositivo)
 // ============================================================
-export type PSettings = { themeId: string; bgId: string; bgCustom: string | null; fontId: string; sizeId: string; noteFontId?: string };
-export const DEFAULTS: PSettings = { themeId: 'medianoche', bgId: 'none', bgCustom: null, fontId: 'system', sizeId: 'md', noteFontId: 'serif' };
+export type PSettings = { themeId: string; bgId: string; bgCustom: string | null; fontId: string; sizeId: string; noteFontId?: string; accentId?: string; brandV?: number };
+export const DEFAULTS: PSettings = { themeId: 'kaderno-oscuro', bgId: 'none', bgCustom: null, fontId: 'marca', sizeId: 'md', noteFontId: 'serif', accentId: DEFAULT_ACCENT, brandV: BRAND_VERSION };
 export let PERSONALIZE: PSettings = { ...DEFAULTS };
 const STORE_KEY = 'kaderno.personalize';
 
@@ -143,8 +159,8 @@ function applyWebFont(family: string | undefined): void {
 
 // Aplica un conjunto de ajustes: muta C (con transparencia si hay fondo) y fija la fuente.
 export function applyAll(s: PSettings): void {
-  const theme = THEMES[s.themeId] ?? THEMES.medianoche;
-  const pal: Palette = derive(theme.palette);
+  const theme = THEMES[s.themeId] ?? THEMES[FALLBACK_THEME];
+  const pal: Palette = derive(withAccent(theme.id, theme.scheme, theme.palette, s.accentId));
   if (hasWallpaper(s)) pal.bg = hexToRgba(theme.palette.bg, theme.scheme === 'light' ? 0.82 : 0.76);
   Object.assign(C, pal);
   applyWebFont(fontFamilyOf(s.fontId));
@@ -159,18 +175,23 @@ export function applyAll(s: PSettings): void {
  */
 export function screenBg(): string { return hasWallpaper() ? 'transparent' : C.bg; }
 
-export function currentTheme(): Theme { return THEMES[PERSONALIZE.themeId] ?? THEMES.medianoche; }
+export function currentTheme(): Theme { return THEMES[PERSONALIZE.themeId] ?? THEMES[FALLBACK_THEME]; }
+/** La paleta del tema activo ya con su acento (para el fondo inicial y la barra del navegador). */
+export function currentPalette(): BasePalette {
+  const t = currentTheme();
+  return withAccent(t.id, t.scheme, t.palette, PERSONALIZE.accentId);
+}
 
 // Lectura SÍNCRONA en web (localStorage) para que todos los estilos tomen el tema correcto desde el primer render.
 if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
-  try { const raw = localStorage.getItem(STORE_KEY); if (raw) PERSONALIZE = { ...DEFAULTS, ...JSON.parse(raw) }; } catch { /* noop */ }
+  try { const raw = localStorage.getItem(STORE_KEY); if (raw) PERSONALIZE = migrateBrand({ ...DEFAULTS, brandV: 0, ...JSON.parse(raw) }); } catch { /* noop */ }
 }
 applyAll(PERSONALIZE);
 
 // Carga asíncrona en nativo (se llama desde el layout raíz).
 export async function loadPersonalizeNative(): Promise<PSettings> {
   if (Platform.OS === 'web') return PERSONALIZE;
-  try { const raw = await AsyncStorage.getItem(STORE_KEY); if (raw) { applyAll({ ...DEFAULTS, ...JSON.parse(raw) }); } } catch { /* noop */ }
+  try { const raw = await AsyncStorage.getItem(STORE_KEY); if (raw) { applyAll(migrateBrand({ ...DEFAULTS, brandV: 0, ...JSON.parse(raw) })); } } catch { /* noop */ }
   return PERSONALIZE;
 }
 

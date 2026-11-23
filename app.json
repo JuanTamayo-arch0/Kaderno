@@ -8,7 +8,7 @@
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
-      "backgroundColor": "#0f1115",
+      "backgroundColor": "#12131F",
       "resizeMode": "contain"
     },
     "ios": {
@@ -22,7 +22,7 @@
     "android": {
       "package": "com.tuusuario.kaderno",
       "adaptiveIcon": {
-        "backgroundColor": "#0f1115"
+        "backgroundColor": "#12131F"
       }
     },
     "plugins": [
