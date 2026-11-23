@@ -189,6 +189,16 @@ export function migrateBrand<T extends Persisted>(s: T): T & { accentId?: string
   };
 }
 
+// ---------- Documentos (fase 6) ----------
+/**
+ * Pie de los documentos personales (historial, apuntes): el logo en una tinta
+ * y "Hecho con Kaderno". Sobrio: negro sobre blanco, en la letra del documento.
+ * Las cuentas de cobro y los informes para clientes no lo llevan.
+ */
+export function docFooter(): string {
+  return `<p class="kd-marca" style="margin-top:28px;font-size:9pt;display:flex;align-items:center;gap:6px">${logoSvg({ size: 14, tone: 'una-tinta' })}<span>Hecho con Kaderno</span></p>`;
+}
+
 // ---------- Radios por espacio (fase 4) ----------
 /** Estudio es más redondo y Trabajo más recto; lo demás (espaciado, íconos) es igual. */
 export const SPACE_RADII = {

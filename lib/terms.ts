@@ -3,6 +3,7 @@
 //  El servidor (term_close, term_add_past) vuelve a calcular el promedio;
 //  aquí se calcula igual para mostrarlo antes de cerrar.
 // ============================================================
+import { docFooter } from './brand';
 
 export type GradeScale = { max: number; pass: number; decimals: 1 | 2 };
 export const DEFAULT_SCALE: GradeScale = { max: 5, pass: 3, decimals: 1 };
@@ -121,6 +122,7 @@ export function historyHtml(o: { who: string; terms: Term[]; scale: GradeScale; 
     <p class="meta">${esc(o.who)} · Generado el ${longDate((o.today ?? new Date()).toISOString())}</p>
     <p class="resumen">Promedio acumulado: <b>${fmtGrade(cum.avg, o.scale)}</b> (escala de 0 a ${o.scale.max}) · Créditos aprobados: <b>${cum.credits}</b> · Semestres: <b>${cum.terms}</b></p>
     ${blocks || '<p>Aún no hay semestres cerrados.</p>'}
+    ${docFooter()}
   </body></html>`;
 }
 

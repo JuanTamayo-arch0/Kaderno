@@ -49,15 +49,29 @@ export function readableOn(color: string, bg: string, need = 4.5): string {
 function toHex(r: number, g: number, b: number): string {
   return '#' + [r, g, b].map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
 }
+/** Ajusta el color hasta que se lea (4,5:1) sobre todos esos fondos. */
+export function readableOnAll(color: string, bgs: string[], need = 4.5): string {
+  return bgs.reduce((c, bg) => readableOn(c, bg, need), color);
+}
+
+/**
+ * Colores que se calculan del tema. v26 (fase 6): el acento y los textos de
+ * estado se leen sobre la tarjeta y también sobre el fondo, porque se usan en
+ * los dos (enlaces, "Vencidas" en Hoy). En los temas claros de "Más colores" el
+ * acento se oscurece un poco; en los demás no cambia.
+ */
 export function derive(p: BasePalette): Palette {
+  const on = [p.surface, p.bg];
+  const brand = readableOnAll(p.brand, on);
   return {
     ...p,
-    onBrand: inkOn(p.brand),
+    brand,
+    onBrand: inkOn(brand),
     onBad: inkOn(p.bad),
-    goodText: readableOn(p.good, p.surface),
-    warnText: readableOn(p.warn, p.surface),
-    badText: readableOn(p.bad, p.surface),
-    focus: p.brand,
+    goodText: readableOnAll(p.good, on),
+    warnText: readableOnAll(p.warn, on),
+    badText: readableOnAll(p.bad, on),
+    focus: brand,
   };
 }
 

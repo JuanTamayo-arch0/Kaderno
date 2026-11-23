@@ -1750,3 +1750,41 @@ Sin la migración, la ropa nueva se ve en la tienda pero la base no la vende ("E
 ### 3. Pruebas
 
 `npm test` (la ropa cabe en las 4 especies en los 16 cuadros, la bufanda se queda atrás, el catálogo es igual al de la base, modo discreto, parpadeo y aterrizaje) y `bash tests/run_sql.sh` (incluye `tests/sql/25c_pruebas.sql`: espalda y mano, Trabajo no paga, horas a mano no pagan, cuenta solo de Trabajo).
+
+## Versión 26 (parte 6): pulido
+
+### 1. Migración
+
+Ninguna. Es solo de la app.
+
+### 2. Lo que cambia para el usuario
+
+- **Nota compartida** (la página pública): encabezado con el logo y pie "Escrita en Kaderno". Si el enlace ya no funciona, la hoja de cuaderno del estado vacío.
+- **Bienvenida en el teléfono:** solo el paso actual lleva nombre (antes se partían las palabras, "Compañer o").
+- **Documentos:**
+  - Los apuntes en PDF quedan como los demás documentos: Times New Roman, todo en negro, sin cajas de color.
+  - Los apuntes y el historial académico llevan al final el logo en una tinta y "Hecho con Kaderno".
+  - Las cuentas de cobro y los informes de horas no llevan la marca: son documentos de quien los manda.
+- **Contraste:** el acento y los textos de estado (verde, amarillo, rojo) se leen a 4,5:1 sobre la tarjeta y sobre el fondo en todos los temas. En los temas claros de "Más colores" el acento quedó un poco más oscuro; los temas Kaderno no cambian.
+
+### 3. Rendimiento
+
+Medido con el mismo juego de datos, la CPU 4 veces más lenta y la mediana de 5 cargas de Hoy, contra `main` (v24):
+
+| | v24 | v26 |
+|---|---|---|
+| Primer contenido pintado | 988 ms | 1.008 ms |
+| Contenido principal pintado | 2.028 ms | 2.016 ms |
+| Tareas largas al cargar | 909 ms | 921 ms |
+| Tareas largas en 10 s quieta (con la mascota) | 0 ms | 0 ms |
+| JS de arranque (gzip) | 631 KB | 690 KB |
+
+Los 59 KB de más son las funciones de v25 y v26. La tira de la mascota (16 cuadros) se arma en unos 2 ms y se guarda.
+
+### 4. Pendiente
+
+- `og:image` en `public/index.html` es relativo (`/og.png`). Cuando el dominio sea definitivo hay que ponerlo completo (`https://<dominio>/og.png`), porque algunas redes no leen rutas relativas.
+
+### 5. Pruebas
+
+`npm test` (contraste de todos los temas sobre tarjeta y fondo, documentos sobrios con su pie).

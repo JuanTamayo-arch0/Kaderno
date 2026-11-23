@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -74,6 +74,8 @@ function Bienvenida() {
   }
 
   const steps = ['Uso', mv.subjectsTab, 'Entregas', 'Compañero', 'Avisos'];
+  // En el teléfono solo el paso actual lleva nombre: los demás, su número (antes se partían las palabras).
+  const narrow = useWindowDimensions().width < 520;
   const LAST = steps.length - 1;
   const input = (value: string, set: (v: string) => void, ph: string, onSubmit: () => void, label: string) => (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.line, borderRadius: 12, paddingLeft: 12 }}>
@@ -94,9 +96,9 @@ function Bienvenida() {
           </View>
           <View style={{ flexDirection: 'row', gap: 6, marginBottom: 22 }} accessibilityLabel={`Paso ${step + 1} de ${steps.length}`}>
             {steps.map((s, i) => (
-              <View key={s} style={{ flex: 1 }}>
+              <View key={s} style={{ flex: narrow && i === step ? 2.4 : 1, minWidth: 0 }}>
                 <View style={{ height: 4, borderRadius: 2, backgroundColor: i <= step ? C.brand : C.line }} />
-                <Text style={{ color: i === step ? C.text : C.muted, fontSize: 12, fontWeight: '700', marginTop: 6 }}>{i + 1}. {s}</Text>
+                <Text numberOfLines={1} style={{ color: i === step ? C.text : C.muted, fontSize: 12, fontWeight: '700', marginTop: 6 }}>{narrow && i !== step ? `${i + 1}` : `${i + 1}. ${s}`}</Text>
               </View>
             ))}
           </View>
