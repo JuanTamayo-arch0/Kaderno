@@ -8,7 +8,10 @@ import { DateField } from '../DateTime';
 import { updateTask, moveTaskDate, type Task } from '../../lib/db';
 import { getStreakSummary } from '../../lib/studyDb';
 import { saveDayReview } from '../../lib/dayDb';
-import { leftovers, localISO, fmtHours } from '../../lib/day';
+import { leftovers, localISO, fmtHours, hoursNudge } from '../../lib/day';
+import { getHours } from '../../lib/hoursDb';
+import { useMode } from '../../lib/mode';
+import { useRouter } from 'expo-router';
 import { toast, notify, friendlyError } from '../../lib/feedback';
 import { dataChanged } from '../../lib/uiBus';
 import { refreshNavCounts } from '../../lib/navCounts';
@@ -27,13 +30,22 @@ export function DayClose({ visible, tasks, onClose, onDone }: { visible: boolean
   const [picking, setPicking] = useState<string | null>(null);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
+  const [logged, setLogged] = useState<number | null>(null);
+  const { work } = useMode();
+  const router = useRouter();
   const today = localISO(new Date());
   const tomorrow = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return localISO(d); })();
   useEffect(() => {
     if (!visible) return;
     setStep(0); setMoved({}); setNote(''); setPicking(null);
     getStreakSummary().then((s) => setStats(s ? { focus: s.today.focus, cards: s.today.cards } : { focus: 0, cards: 0 })).catch(() => setStats({ focus: 0, cards: 0 }));
-  }, [visible]);
+    // v25: en modo Trabajo, las horas registradas hoy (enfoque, cronómetro y a mano).
+    if (work) {
+      const from = new Date(); from.setHours(0, 0, 0, 0);
+      const to = new Date(from); to.setDate(to.getDate() + 1);
+      getHours(from, to).then((r) => setLogged(r.list.reduce((a, x) => a + (x.minutes || 0), 0))).catch(() => setLogged(null));
+    } else setLogged(null);
+  }, [visible, work]);
 
   const doneToday = tasks.filter((t) => t.status === 'done' && t.completed_at && localISO(new Date(t.completed_at)) === today);
   const left = leftovers(tasks, today);
@@ -66,10 +78,19 @@ export function DayClose({ visible, tasks, onClose, onDone }: { visible: boolean
       <>
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <Stat n={String(doneToday.length)} label={doneToday.length === 1 ? 'tarea' : 'tareas'} />
-          <Stat n={fmtHours(stats?.focus ?? 0)} label="de enfoque" />
-          <Stat n={String(stats?.cards ?? 0)} label="tarjetas" />
+          {work && logged != null
+            ? <Stat n={fmtHours(logged)} label="registradas" />
+            : <Stat n={fmtHours(stats?.focus ?? 0)} label="de enfoque" />}
+          {!work && <Stat n={String(stats?.cards ?? 0)} label="tarjetas" />}
         </View>
-        <Text style={{ color: C.text, fontSize: 14 }}>{nothing ? 'Hoy no hubo estudio, y está bien. Mañana es otro día.' : doneToday.length >= 3 || (stats?.focus ?? 0) >= 60 ? 'Buen día. Lo que hiciste cuenta.' : 'Algo hiciste hoy, y eso suma.'}</Text>
+        <Text style={{ color: C.text, fontSize: 14 }}>{nothing && !logged ? (work ? 'Hoy no hubo nada registrado, y está bien. Mañana es otro día.' : 'Hoy no hubo estudio, y está bien. Mañana es otro día.') : doneToday.length >= 3 || (stats?.focus ?? 0) >= 60 || (logged ?? 0) >= 240 ? 'Buen día. Lo que hiciste cuenta.' : 'Algo hiciste hoy, y eso suma.'}</Text>
+        {work && logged != null && hoursNudge(logged, doneToday.length) && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: 12, backgroundColor: C.surface2, flexWrap: 'wrap' }}>
+            <Ionicons name="time-outline" size={16} color={C.brand} />
+            <Text style={{ color: C.text, fontSize: 13, flex: 1, minWidth: 180 }}>{hoursNudge(logged, doneToday.length)}</Text>
+            <Button label="Anotar horas" size="sm" kind="secondary" onPress={() => { onClose(); router.push({ pathname: '/horas', params: { anotar: '1' } } as any); }} />
+          </View>
+        )}
         {doneToday.slice(0, 8).map((t) => (
           <View key={t.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Ionicons name="checkmark-circle" size={16} color={C.good} />

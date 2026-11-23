@@ -187,3 +187,39 @@ test('reuniones: correo con el acta sin pasarse de largo', async () => {
   assert.ok(long.length <= 1800);
   assert.match(decodeURIComponent(long.split('body=')[1]), /palabra\n\.\.\.$/);
 });
+
+test('día: sugerir horario en los huecos libres', async () => {
+  const { freeGaps, suggestSchedule, clockLabel } = await import('../lib/day');
+  const h = (x: number) => x * 60;
+  assert.deepEqual(freeGaps(h(8), h(12), [{ start: h(9), end: h(10) }, { start: h(9.5), end: h(10.5) }]), [{ start: h(8), end: h(9) }, { start: h(10.5), end: h(12) }]);
+  const tasks = [
+    { id: 'largo', due_date: '2026-11-25', minutes: 120 },
+    { id: 'vencida', due_date: '2026-11-20', minutes: 45 },
+    { id: 'urgente', due_date: '2026-11-22', priority: 'urgente', minutes: 30 },
+    { id: 'normal', due_date: '2026-11-22', minutes: 30 },
+    { id: 'enorme', due_date: '2026-11-30', minutes: 600 },
+  ];
+  const r = suggestSchedule(tasks, (t) => t.minutes, [{ start: h(9), end: h(10) }], { from: h(8) + 7, to: h(13) });
+  // Empieza a las 8:15 (cuarto de hora siguiente), con 5 minutos de aire entre tareas.
+  assert.deepEqual(r.placed.map((p) => [p.id, clockLabel(p.start), clockLabel(p.end)]), [
+    ['vencida', '8:15', '9:00'],
+    ['urgente', '10:00', '10:30'],
+    ['normal', '10:45', '11:15'],
+  ]);
+  assert.deepEqual(r.left.sort(), ['enorme', 'largo']);
+  // Nada se cruza con lo ocupado ni entre sí.
+  const all = [...r.placed, { id: 'x', start: h(9), end: h(10) }].sort((a, b) => a.start - b.start);
+  for (let i = 1; i < all.length; i++) assert.ok(all[i].start >= all[i - 1].end);
+  assert.deepEqual(suggestSchedule(tasks, (t) => t.minutes, [], { from: h(23), to: h(22) }).placed, []);
+});
+
+test('día: recordatorio de anotar horas al cerrar', async () => {
+  const { hoursNudge } = await import('../lib/day');
+  assert.match(hoursNudge(0, 2)!, /Terminaste 2 tareas y no hay horas/);
+  assert.match(hoursNudge(0, 0)!, /No hay horas registradas/);
+  assert.match(hoursNudge(90, 1)!, /Llevas 1 h 30 registradas/);
+  assert.equal(hoursNudge(7 * 60, 0), null);
+  const src = (await import('node:fs')).readFileSync('components/day/DayClose.tsx', 'utf8');
+  assert.match(src, /pathname: '\/horas', params: \{ anotar: '1' \}/);
+  assert.match((await import('node:fs')).readFileSync('app/horas.tsx', 'utf8'), /params\.anotar === '1'/);
+});

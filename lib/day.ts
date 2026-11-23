@@ -141,3 +141,59 @@ export function examCountdown(tasks: (T & { title: string })[], todayISO: string
 export function goesToInbox(p: { dueDate: string | null; subjectId: string | null }): boolean {
   return !p.dueDate && !p.subjectId;
 }
+
+// ---------- Sugerir horario (v25, fase 6) ----------
+export type Suggested = { id: string; start: number; end: number };
+
+/** Huecos libres entre "from" y "to", fuera de lo ocupado (minutos del día). */
+export function freeGaps(from: number, to: number, busy: { start: number; end: number }[]): { start: number; end: number }[] {
+  const parts = busy.map((b) => ({ start: Math.max(b.start, from), end: Math.min(b.end, to) })).filter((b) => b.end > b.start).sort((a, b) => a.start - b.start);
+  const out: { start: number; end: number }[] = [];
+  let cur = from;
+  for (const p of parts) { if (p.start > cur) out.push({ start: cur, end: p.start }); cur = Math.max(cur, p.end); }
+  if (to > cur) out.push({ start: cur, end: to });
+  return out;
+}
+
+/**
+ * Acomoda lo pendiente sin hora en los huecos del día: primero lo vencido y
+ * lo que vence antes, luego lo urgente; cada tarea en el primer hueco donde
+ * cabe, empezando en un cuarto de hora y con 5 minutos de aire entre una y
+ * otra. Lo que no cabe queda en "left" (no se parte en pedazos).
+ */
+export function suggestSchedule<X extends { id: string; due_date?: string | null; priority?: string | null; type?: string | null }>(
+  tasks: X[], minutesOf: (t: X) => number, busy: { start: number; end: number }[],
+  o: { from: number; to: number; snap?: number; gap?: number },
+): { placed: Suggested[]; left: string[] } {
+  const snap = o.snap ?? 15, gap = o.gap ?? 5;
+  const start0 = Math.ceil(Math.max(o.from, DAY_START) / snap) * snap;
+  const rank = (t: X) => (t.priority === 'urgente' ? 0 : t.priority === 'alta' ? 1 : ['examen', 'quiz', 'entrega'].includes(String(t.type)) ? 1 : 2);
+  const order = [...tasks].sort((a, b) => String(a.due_date ?? '9999').localeCompare(String(b.due_date ?? '9999')) || rank(a) - rank(b) || minutesOf(b) - minutesOf(a));
+  let gaps = freeGaps(start0, o.to, busy);
+  const placed: Suggested[] = [], left: string[] = [];
+  for (const t of order) {
+    const len = Math.max(5, Math.round(minutesOf(t)));
+    let done = false;
+    for (let i = 0; i < gaps.length && !done; i++) {
+      const g = gaps[i];
+      const s = Math.ceil(g.start / snap) * snap;
+      if (s + len > g.end) continue;
+      placed.push({ id: t.id, start: s, end: s + len });
+      const rest = { start: s + len + gap, end: g.end };
+      gaps = [...gaps.slice(0, i), ...(s > g.start ? [{ start: g.start, end: s }] : []), ...(rest.end > rest.start ? [rest] : []), ...gaps.slice(i + 1)];
+      done = true;
+    }
+    if (!done) left.push(t.id);
+  }
+  placed.sort((a, b) => a.start - b.start);
+  return { placed, left };
+}
+
+export const clockLabel = (min: number) => `${Math.floor(min / 60)}:${String(min % 60).padStart(2, '0')}`;
+
+/** Cierre del día en modo Trabajo: el recordatorio de anotar horas (null si no hace falta). */
+export function hoursNudge(loggedMin: number, doneTasks: number): string | null {
+  if (loggedMin >= 6 * 60) return null;
+  if (loggedMin === 0) return doneTasks ? `Terminaste ${doneTasks} ${doneTasks === 1 ? 'tarea' : 'tareas'} y no hay horas registradas hoy. ¿Las anotas?` : 'No hay horas registradas hoy. Si trabajaste fuera de Kaderno, anótalas.';
+  return `Llevas ${fmtHours(loggedMin)} registradas hoy. ¿Falta anotar alguna reunión o llamada?`;
+}

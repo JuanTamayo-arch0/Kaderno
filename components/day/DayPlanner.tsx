@@ -8,7 +8,8 @@ import { supabase } from '../../lib/supabase';
 import { updateTask, type Task, type Slot, type Subject, type FocusSession } from '../../lib/db';
 import { getEstimateRatio } from '../../lib/studyDb';
 import { SCHEDULE, toMinutes } from '../../lib/schedule';
-import { dayParts, plannedMinutes, freeMinutes, overloadText, moveCandidates, localISO, taskMinutes, fmtHours } from '../../lib/day';
+import { dayParts, plannedMinutes, freeMinutes, overloadText, moveCandidates, localISO, taskMinutes, fmtHours, suggestSchedule, clockLabel, type Suggested } from '../../lib/day';
+import { useMode } from '../../lib/mode';
 import { Timeline, useDraggableTask, type ExtEvent } from './Timeline';
 import { toast, friendlyError } from '../../lib/feedback';
 
@@ -33,6 +34,9 @@ export function DayPlanner({ tasks, slots, subjects, onChanged, onToggle, onFocu
   const [events, setEvents] = useState<ExtEvent[]>([]);
   const [ratio, setRatio] = useState<number | null>(null);
   const [placing, setPlacing] = useState<Task | null>(null);
+  const [plan, setPlan] = useState<{ day: string; placed: Suggested[]; left: string[] } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const { work } = useMode();
   const week = mode === 'week' && isWide && width >= 900;
   const days = useMemo(() => {
     if (!week) return [day];
@@ -65,6 +69,37 @@ export function DayPlanner({ tasks, slots, subjects, onChanged, onToggle, onFocu
   const free = freeMinutes(now.getHours() * 60 + now.getMinutes(), busy);
   const over = isToday ? overloadText(planned, free) : null;
   const cand = over ? moveCandidates(tasks, todayISO, todayISO)[0] : undefined;
+
+  // v25: "Sugerir horario" acomoda lo que no tiene hora en los huecos del día elegido.
+  function suggest() {
+    const ddow = (day.getDay() + 6) % 7;
+    const dayBusy = [
+      ...slots.filter((s) => s.day === ddow && SCHEDULE.blocks[s.slot]).map((s) => ({ start: toMinutes(SCHEDULE.blocks[s.slot].start), end: toMinutes(SCHEDULE.blocks[s.slot].end) })),
+      ...events.filter((e) => !e.all_day && localISO(new Date(e.start)) === dayISO).map((e) => { const s = new Date(e.start), en = new Date(e.end); return { start: s.getHours() * 60 + s.getMinutes(), end: en.getHours() * 60 + en.getMinutes() }; }),
+      ...parts.timed.map((t) => { const d = new Date(t.plan_at!); const st = d.getHours() * 60 + d.getMinutes(); return { start: st, end: st + taskMinutes(t.estimate_min, ratio) }; }),
+    ];
+    const n = new Date();
+    const from = isToday ? n.getHours() * 60 + n.getMinutes() : (work ? 8 : 7) * 60;
+    const r = suggestSchedule(parts.loose, (t) => taskMinutes(t.estimate_min, ratio), dayBusy, { from, to: (work ? 19 : 22) * 60 });
+    if (!r.placed.length) { toast(r.left.length ? 'No quedan huecos libres para lo que falta hoy.' : 'No hay nada sin hora para acomodar.'); return; }
+    setPlan({ day: dayISO, ...r });
+  }
+  async function acceptPlan() {
+    if (!plan) return;
+    setSaving(true);
+    let ok = 0;
+    try {
+      for (const p of plan.placed) {
+        const at = new Date(day); at.setHours(Math.floor(p.start / 60), p.start % 60, 0, 0);
+        await updateTask(p.id, { plan_at: at.toISOString() });
+        ok++;
+      }
+      toast(`${ok} ${ok === 1 ? 'tarea quedó' : 'tareas quedaron'} con hora`, { tone: 'good' });
+    } catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
+    finally { setSaving(false); setPlan(null); onChanged(); }
+  }
+  const byId = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks]);
+  useEffect(() => { if (plan && plan.day !== dayISO) setPlan(null); }, [dayISO]);
 
   async function moveToTomorrow(t: Task) {
     try {
@@ -101,7 +136,26 @@ export function DayPlanner({ tasks, slots, subjects, onChanged, onToggle, onFocu
       {parts.loose.length === 0 && <Text style={{ color: C.muted, fontSize: 12.5 }}>Nada pendiente sin hora.</Text>}
       {parts.loose.map((t) => <LooseRow key={t.id} t={t} ratio={ratio} active={placing?.id === t.id} onPlace={() => setPlacing(placing?.id === t.id ? null : t)} onToggle={() => onToggle(t)} />)}
       {parts.loose.length > 0 && <Text style={{ color: C.muted, fontSize: 11.5 }}>{isWide ? 'Arrástrala a una hora, o toca "Poner hora" y luego la hora.' : 'Toca "Poner hora" y luego la hora en la línea.'}</Text>}
+      {parts.loose.length > 0 && dayISO >= todayISO && !plan && <Button label="Sugerir horario" icon="sparkles-outline" size="sm" kind="secondary" onPress={suggest} />}
     </View>
+  );
+
+  const suggestion = plan && (
+    <Card style={{ marginBottom: 10, borderLeftWidth: 4, borderLeftColor: C.brand, gap: 8 }} accessibilityLabel="Horario sugerido">
+      <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>Horario sugerido</Text>
+      <Text style={{ color: C.muted, fontSize: 12.5 }}>En los huecos libres, primero lo que vence antes. Nada se guarda hasta que aceptes.</Text>
+      {plan.placed.map((p) => (
+        <View key={p.id} style={{ flexDirection: 'row', gap: 10, alignItems: 'baseline' }}>
+          <Text style={{ width: 92, color: C.text, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] }}>{clockLabel(p.start)} a {clockLabel(p.end)}</Text>
+          <Text style={{ flex: 1, color: C.text, fontSize: 13.5 }} numberOfLines={2}>{byId.get(p.id)?.title ?? 'Tarea'}</Text>
+        </View>
+      ))}
+      {plan.left.length > 0 && <Text style={{ color: C.warnText, fontSize: 12.5 }}>No caben: {plan.left.map((id) => `"${byId.get(id)?.title ?? 'Tarea'}"`).join(', ')}. Pásalas a otro día o acorta algo.</Text>}
+      <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+        <Button label="Aceptar" icon="checkmark" size="sm" busy={saving} onPress={acceptPlan} />
+        <Button label="Cancelar" size="sm" kind="ghost" onPress={() => setPlan(null)} />
+      </View>
+    </Card>
   );
 
   return (
@@ -118,6 +172,7 @@ export function DayPlanner({ tasks, slots, subjects, onChanged, onToggle, onFocu
           )}
         </Card>
       )}
+      {suggestion}
       {placing && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: 10, backgroundColor: C.brand + '18', marginBottom: 10 }} accessibilityLiveRegion="polite">
           <Ionicons name="hand-left-outline" size={16} color={C.brand} />
