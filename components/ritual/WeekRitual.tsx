@@ -4,7 +4,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../../lib/theme';
 import { Button } from '../ds';
 import { Sheet } from '../cards/CardForms';
-import { getTasks, getSchedule, updateTask, type Task } from '../../lib/db';
+import { getTasks, getSchedule, updateTask, fetchPrefs, type Task } from '../../lib/db';
+import { balanceLine, cleanUrgentDays, weekBalance } from '../../lib/eisenhower';
+import { useMode } from '../../lib/mode';
 import { getStudyPrefs, saveStudyPrefs } from '../../lib/cardsDb';
 import { lastWeekData, saveWeekPlan, getGoals, getWeekPlan, type Goal } from '../../lib/ritualsDb';
 import { suggestSlots } from '../../lib/planHelpers';
@@ -37,11 +39,14 @@ export function WeekRitual({ visible, weekStart, onClose, onDone }: { visible: b
   const [goal, setGoal] = useState(4);
   const [busy, setBusy] = useState(false);
   const [diary, setDiary] = useState<{ day: string; note: string }[]>([]);
+  const [urgentDays, setUrgentDays] = useState(2);
+  const { work } = useMode();
 
   useEffect(() => {
     if (!visible) return;
     setStep(0); setPrio([]); setTimes({}); setOpts({}); setText(''); setTasks(null);
     getDiary(addDaysISO(weekStart, -7), weekStart).then(setDiary).catch(() => setDiary([]));
+    fetchPrefs().then((p) => setUrgentDays(cleanUrgentDays(p?.urgentDays))).catch(() => {});
     Promise.all([getTasks(), getSchedule().catch(() => []), getStudyPrefs(), lastWeekData(weekStart).catch(() => null), getGoals().catch(() => []), getWeekPlan(weekStart).catch(() => null)])
       .then(([t, sc, prefs, lw, g, prev]) => {
         setTasks(t); setClasses(sc.length); setGoal(prev?.goal_days ?? prefs.weeklyGoal); setGoals(g);
@@ -57,6 +62,8 @@ export function WeekRitual({ visible, weekStart, onClose, onDone }: { visible: b
   }, [visible, weekStart]);
 
   const items = useMemo(() => weekItems(tasks ?? [], weekStart), [tasks, weekStart]);
+  // v27: cuánto de lo terminado la semana pasada era importante (matriz de Eisenhower).
+  const balance = useMemo(() => balanceLine(weekBalance(tasks ?? [], addDaysISO(weekStart, -7), urgentDays), work), [tasks, weekStart, urgentDays, work]);
   const cands = useMemo(() => suggestPriorities(tasks ?? [], weekStart), [tasks, weekStart]);
 
   // Al llegar a "¿Cuándo?": tres horarios para cada prioridad.
@@ -109,6 +116,12 @@ export function WeekRitual({ visible, weekStart, onClose, onDone }: { visible: b
           <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>La semana pasada</Text>
           <Text style={{ color: C.text, fontSize: 13.5 }}>{summary.text}</Text>
           {!!summary.vs && <Text style={{ color: C.muted, fontSize: 13 }}>{summary.vs}</Text>}
+          {!!balance && <Text style={{ color: C.muted, fontSize: 13 }}>{balance}</Text>}
+        </View>
+      )}
+      {!summary && !!balance && (
+        <View style={{ padding: 12, borderRadius: 12, backgroundColor: C.surface2 }}>
+          <Text style={{ color: C.text, fontSize: 13.5 }}>{balance}</Text>
         </View>
       )}
       {diary.length > 0 && (

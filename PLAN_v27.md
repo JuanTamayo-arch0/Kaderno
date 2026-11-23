@@ -104,3 +104,15 @@ Lo que falta es una forma de separar lo **importante** de lo **urgente** en las 
 2. **La matriz:** ¿vista dentro de Hoy, o pantalla propia en la barra lateral?
 3. **Urgente:** ¿2 días por defecto está bien?
 4. **Alcance:** ¿las 4 fases o solo algunas? La fase 1 es la que más cambia el día a día; la 4 es la menos necesaria.
+
+## F. Decisiones (23 de noviembre)
+1. **Importancia:** estrella de sí o no. Urgente ya sale de la fecha, y una prioridad de 4 niveles la repetiría ("Urgente" es uno de sus niveles).
+2. **La matriz:** vista dentro de Hoy, junto a Lista y Mi día.
+3. **Urgente:** 2 días por defecto, y se cambia en Ajustes (1, 2, 3 o 5).
+4. **Alcance:** las 4 fases, una PR cada una.
+
+## G. Decisiones tomadas al construir
+1. (Fase 1) Arrastrar entre cuadrantes solo cambia la estrella. Si la tarea cambia de fila (urgente o no), se ofrece mover la fecha en el aviso, pero no se cambia sola: la fecha suele ser real (una entrega).
+2. (Fase 1) Arrastrar funciona en el computador. En el teléfono se cambia con la estrella de la fila y con la fecha.
+3. (Fase 1) Las tareas de proyecto entran en la matriz con su prioridad (alta o urgente cuenta como importante) y no se arrastran: su prioridad es del equipo.
+4. (Fase 1) El ritual del lunes pone primero lo que tiene estrella entre las sugerencias, y dice cuánto de lo terminado la semana anterior era importante (desde 5 tareas terminadas).

@@ -32,7 +32,7 @@ export function shouldOfferRitual(now: Date, plan: Pick<WeekPlan, 'done_at' | 's
 
 export function tomorrowISO(now: Date): string { return addDaysISO(localISO(now), 1); }
 
-type TaskLike = { id: string; title: string; type?: string | null; status?: string | null; due_date?: string | null; estimate_min?: number | null; parent_id?: string | null };
+type TaskLike = { id: string; title: string; type?: string | null; status?: string | null; due_date?: string | null; estimate_min?: number | null; parent_id?: string | null; important?: boolean | null };
 
 /** Entregas y exámenes de la semana que se planea y de la siguiente. */
 export function weekItems<T extends TaskLike>(tasks: T[], weekStart: string): { thisWeek: T[]; nextWeek: T[] } {
@@ -50,8 +50,10 @@ export function suggestPriorities<T extends TaskLike>(tasks: T[], weekStart: str
   const end = addDaysISO(weekStart, 13);
   return tasks.filter((t) => t.status !== 'done' && !t.parent_id && (!t.due_date || t.due_date <= end))
     .sort((a, b) => {
+      // v27: lo marcado como importante va primero; luego exámenes y lo que vence antes.
+      const ia = a.important ? 0 : 1, ib = b.important ? 0 : 1;
       const ea = ['examen', 'quiz'].includes(String(a.type)) ? 0 : 1, eb = ['examen', 'quiz'].includes(String(b.type)) ? 0 : 1;
-      return ea - eb || String(a.due_date ?? '9999').localeCompare(String(b.due_date ?? '9999'));
+      return ia - ib || ea - eb || String(a.due_date ?? '9999').localeCompare(String(b.due_date ?? '9999'));
     })
     .slice(0, max);
 }

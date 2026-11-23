@@ -21,13 +21,15 @@ import { play } from '../lib/sound';
 
 export function TaskRow({
   task, subject, steps, showSubject = true, showDue = true, focusMin, onToggle, onOpen, actions,
-  onStepsChange, compact, swipe,
+  onStepsChange, compact, swipe, onStar,
 }: {
   task: Task; subject?: Subject | null; steps?: Step[]; showSubject?: boolean; showDue?: boolean; focusMin?: number;
   onToggle: (t: Task) => void; onOpen: (t: Task) => void; actions?: MenuAction[];
   onStepsChange?: (taskId: string, next: Step[]) => void; compact?: boolean;
   /** v26: en el celular, deslizar a la derecha la completa y a la izquierda la pasa a mañana. */
   swipe?: { onDone: () => void; onLater: () => void };
+  /** v27: botón de estrella para marcar importante (en la vista Matriz). */
+  onStar?: (t: Task) => void;
 }) {
   const [menu, setMenu] = useState(false);
   const [open, setOpen] = useState(false);
@@ -92,6 +94,7 @@ export function TaskRow({
           style={{ flex: 1, minWidth: 0, paddingVertical: compact ? 10 : 12, paddingRight: 4 }}>
           <Text style={{ color: done ? C.muted : C.text, fontSize: 15, fontWeight: '600', lineHeight: 20, textDecorationLine: done ? 'line-through' : 'none' }} numberOfLines={2}>{task.title}</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 10, rowGap: 4, marginTop: 4 }}>
+            {!!task.important && !onStar && <Ionicons name="star" size={13} color={C.warnText} accessibilityLabel="Importante" />}
             {showSubject && subject && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                 <Dot color={subject.color} />
@@ -133,6 +136,13 @@ export function TaskRow({
             {!!task.description?.trim() && !compact && <Ionicons name="reader-outline" size={13} color={C.muted} accessibilityLabel="Tiene descripción" />}
           </View>
         </Pressable>
+        {onStar && (
+          <Pressable onPress={() => onStar(task)} accessibilityRole="checkbox" accessibilityState={{ checked: !!task.important }}
+            accessibilityLabel={task.important ? `Quitar importante a "${task.title}"` : `Marcar "${task.title}" como importante`}
+            style={({ hovered }: any) => ({ width: 40, minHeight: compact ? 46 : 54, alignItems: 'center', justifyContent: 'center', borderRadius: 10, backgroundColor: hovered ? C.surface2 : 'transparent' })}>
+            <Ionicons name={task.important ? 'star' : 'star-outline'} size={18} color={task.important ? C.warnText : C.muted} />
+          </Pressable>
+        )}
         {!!actions?.length && (
           <Pressable onPress={() => setMenu(true)} accessibilityRole="button" accessibilityLabel={`Más acciones para "${task.title}"`}
             style={({ hovered }: any) => ({ width: 44, minHeight: compact ? 46 : 54, alignItems: 'center', justifyContent: 'center', borderRadius: 10, backgroundColor: hovered ? C.surface2 : 'transparent' })}>
