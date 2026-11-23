@@ -102,7 +102,13 @@ Con la dirección elegida:
    - Radios por espacio.
    - Sombras.
    - Duraciones del movimiento.
-4. **Temas:** "Kaderno claro" y "Kaderno oscuro" en cada espacio, más 3 o 4 acentos alternativos que respetan la marca. El logo no cambia de color con el tema. Los 11 temas actuales quedan en Personalizar > Más colores, solo en Estudio, y quien ya tenga uno elegido lo conserva.
+4. **Personalizar sigue existiendo, por espacio.** La marca fija el logo (forma y colores), la tinta del texto y dónde está cada cosa; lo demás lo elige cada quien:
+   - Claro, oscuro o como el sistema.
+   - Color de acento. Estudio: coral (el de la marca), lápiz azul, hoja verde, uva, mostaza y rosa. Trabajo: terracota (el de la marca), acero, pino y ciruela. Cada uno trae su versión para claro y para oscuro, ya revisada en contraste.
+   - Letra: la de la marca u otras dos por espacio.
+   - Fondo de pantalla, solo en Estudio.
+   - Los 11 temas actuales quedan en Personalizar > Más colores, solo en Estudio, y quien ya tenga uno elegido lo conserva.
+   - El logo no cambia de color con el tema.
 5. **Letras de la marca por defecto**, servidas desde el mismo servidor (no desde Google Fonts): carga más rápida y sin terceros.
 6. **Documentos y páginas públicas** (cuenta de cobro, informes, solicitudes, avance) con el logo en negro y formato sobrio.
 7. Una guía corta en `docs/marca.md`: logo, colores, letras, tono (cercano en Estudio, directo en Trabajo) y qué no hacer.
@@ -196,10 +202,10 @@ La fase 1 se ve de inmediato y no cambia datos. La 2 es la más grande y la que 
 - Fondos con degradados en Trabajo: los fondos de pantalla actuales se quedan solo en Estudio.
 - Cambiar el nombre: Kaderno ya tiene historia; lo que falta es la marca alrededor.
 
-## J. Lo que hay que decidir
+## J. Decisiones (22 de noviembre)
 
-1. Dirección de marca: A (recomendada), B o C, o una mezcla (por ejemplo, el logo de A con colores de C).
-2. Los 11 temas de colores: dejarlos como "Más colores" en Estudio (recomendado) o quitarlos.
-3. Escala de notas: 0 a 5 con 3,0 para aprobar por defecto y que se pueda cambiar (recomendado).
-4. Mascota en Trabajo: discreta (recomendado), igual que en Estudio, o apagada.
-5. Orden de las fases: el de arriba, o empezar por semestres si lo quieres antes del próximo semestre.
+1. Marca: el estilo A (tinta, papel y margen). El logo está por elegir entre seis ideas en ese estilo (lienzo: "Seis logos en el estilo A").
+2. Los 11 temas de colores quedan en "Más colores", solo en Estudio. Personalizar sigue existiendo en los dos espacios, como se describe en D.4.
+3. Escala de notas: la ajusta cada persona según su institución (nota máxima, nota para aprobar y decimales). Se pregunta al crear el primer semestre, con 0 a 5 y 3,0 como sugerencia.
+4. Mascota en Trabajo: discreta.
+5. Orden de las fases: el de H.
