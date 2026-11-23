@@ -136,3 +136,5 @@ Con esto, Pro reemplaza Toggl, Sunsama y un tomador de actas, que juntos pasan d
 16. (Fase 5) La reunión anterior es la última nota del área con acta; si ninguna la tiene, la última con casillas sin marcar o pendientes. Lo que viene de antes va arriba de la plantilla, como casillas.
 17. (Fase 5) El Oráculo lee las actas guardadas, no solo las que se pegaron en la nota. No se crean vectores nuevos: el modo de reuniones toma las 15 más recientes.
 18. (Fase 5) El correo se abre con el texto listo (mailto) y se corta si pasa de unos 1.800 caracteres, que es lo que aguantan los programas de correo; para el acta completa está "Copiar".
+19. (Fase 6) "Sugerir horario" no usa IA: es un acomodo con reglas claras (vence antes, luego urgente, luego lo más largo) y la persona lo ve antes de aceptarlo. Una tarea que no cabe entera no se parte.
+20. (Fase 6) El recordatorio de horas sale solo en modo Trabajo y desaparece desde 6 horas registradas en el día.

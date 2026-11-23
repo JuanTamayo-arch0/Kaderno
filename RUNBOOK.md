@@ -1590,3 +1590,18 @@ Sin el despliegue, todo sigue funcionando como antes: el acta sale con el format
 ### 3. Pruebas
 
 `npm test` (lo abierto que pasa a la siguiente, el formato y los pendientes en el pedido a la IA, el texto para WhatsApp y el correo).
+
+## Versión 25 (parte 6): planear el día
+
+### 1. Migración y despliegue
+
+Nada. Es solo de la app.
+
+### 2. Lo que cambia para el usuario
+
+- En Hoy > Mi día, debajo de lo que no tiene hora: **Sugerir horario**. Acomoda esas tareas en los huecos libres del día (fuera del horario, los eventos y lo que ya tiene hora), primero lo vencido y lo que vence antes, luego lo urgente. Empieza en el siguiente cuarto de hora y deja 5 minutos entre una y otra. Hasta las 7 p. m. en modo Trabajo y las 10 p. m. en los demás. Muestra la propuesta y lo que no cabe; nada se guarda hasta que se acepta.
+- En modo Trabajo, **Cerrar el día** muestra las horas registradas hoy (enfoque, cronómetro y a mano) y, si son pocas, recuerda anotarlas con un botón que abre "Anotar horas".
+
+### 3. Pruebas
+
+`npm test` (huecos libres, orden y acomodo sin cruces, lo que no cabe, el recordatorio de horas).

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../lib/theme';
@@ -51,6 +51,9 @@ function Horas() {
   const { sw } = useStopwatch();
   const myId = session?.user?.id ?? null;
   const range = useMemo(() => periodRange(kind, offset), [kind, offset]);
+  // v25: "Anotar horas" desde el cierre del día abre el formulario.
+  const params = useLocalSearchParams<{ anotar?: string }>();
+  useEffect(() => { if (params.anotar === '1') { setAdding(true); router.setParams({ anotar: undefined } as any); } }, [params.anotar]);
 
   const load = useCallback(() => {
     setList(null);

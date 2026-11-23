@@ -401,9 +401,9 @@ export default function Hoy() {
   ) : null;
 
   const nowCard = !focusCard && (classNow || classNext) ? (
-    <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+    <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
       <View style={{ width: 4, alignSelf: 'stretch', borderRadius: 2, backgroundColor: (classNow ?? classNext)!.color }} />
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, minWidth: 150 }}>
         <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>
           {classNow ? `Ahora · hasta ${minToLabel(classNow.end!)}` : `Siguiente clase · ${minToLabel(classNext!.start)}`}
         </Text>
