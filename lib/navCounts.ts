@@ -30,8 +30,12 @@ export function refreshNavCounts(force = false): Promise<void> {
         tq(),
         countToday().then((c) => c.total).catch(() => 0),
         supabase.from('notification_queue').select('id', { count: 'exact', head: true }).is('read_at', null),
-        // Bandeja (schema_v20): si la columna no existe, cuenta 0.
-        supabase.from('assignments').select('id', { count: 'exact', head: true }).eq('inbox', true).neq('status', 'done').is('deleted_at', null),
+        // Bandeja (schema_v20): si la columna no existe, cuenta 0. Sin lo de "Algún día" (schema_v26).
+        (async () => {
+          const q = () => supabase.from('assignments').select('id', { count: 'exact', head: true }).eq('inbox', true).neq('status', 'done').is('deleted_at', null);
+          const r = await q().or('someday.is.null,someday.eq.false');
+          return r.error && isMissingColumn(r.error) ? q() : r;
+        })(),
       ]);
       const now = new Date();
       const rows = ((t.data as any[]) ?? []).filter((x) => !x.deleted_at && !x.inbox);

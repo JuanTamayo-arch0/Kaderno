@@ -26,6 +26,8 @@ export type Task = {
   plan_day?: string | null; plan_band?: 'manana' | 'tarde' | 'noche' | null;
   // schema_v26 (versión 27): importante (matriz de Eisenhower), la rana y el orden del día
   important?: boolean; frog?: boolean; plan_order?: number | null;
+  // Algún día (fase 4): queda en la bandeja, aparte, sin compromiso.
+  someday?: boolean;
 };
 export type Note = {
   id: string; subject_id: string | null; title: string | null; content: string | null;
@@ -180,12 +182,12 @@ export type TaskInput = {
   due_at?: string | null; remind_at?: string | null; estimate_min?: number | null;
   plan_at?: string | null; plan_place?: string | null;
   repeat_rule?: import('./repeat').RepeatRule | null; inbox?: boolean; plan_day?: string | null; plan_band?: 'manana' | 'tarde' | 'noche' | null;
-  important?: boolean;
+  important?: boolean; someday?: boolean;
 };
 // Columnas de versiones nuevas (schema_v19 y v20). Si la base no las tiene, se
 // guarda sin ellas y se recuerda cuáles faltan (sin apagar lo de schema_v14).
-const OPT_COLS = ['plan_at', 'plan_place', 'plan_day', 'plan_band', 'repeat_rule', 'inbox', 'important'];
-const OPT_RE = /plan_(at|place|day|band)|repeat_rule|inbox|important|project_id|room_id/;
+const OPT_COLS = ['plan_at', 'plan_place', 'plan_day', 'plan_band', 'repeat_rule', 'inbox', 'important', 'someday'];
+const OPT_RE = /plan_(at|place|day|band)|repeat_rule|inbox|important|someday|project_id|room_id/;
 const MISSING = new Set<string>();
 export function hasPlanCols(): boolean { return !MISSING.has('plan_at'); }
 export function hasV20Cols(): boolean { return !MISSING.has('repeat_rule') && !MISSING.has('inbox'); }
@@ -222,6 +224,14 @@ export async function setTaskImportant(id: string, on: boolean): Promise<void> {
   if (error) throw error;
 }
 export function hasImportantCol(): boolean { return !MISSING.has('important'); }
+/** Mandar a "Algún día" (queda en la bandeja, aparte) o rescatarla (vuelve a la bandeja para ordenarla). */
+export async function setSomeday(id: string, on: boolean): Promise<void> {
+  if (MISSING.has('someday')) throw new Error('Para "Algún día" falta correr supabase/schema_v26.sql.');
+  const { error } = await withPlan({ someday: on, inbox: true, due_date: null, due_at: null, plan_at: null, plan_day: null, plan_band: null, plan_order: null, frog: false } as any,
+    (pp) => supabase.from('assignments').update(pp).eq('id', id));
+  if (MISSING.has('someday')) throw new Error('Para "Algún día" falta correr supabase/schema_v26.sql.');
+  if (error) throw error;
+}
 function needsV26_2(err: any): Error | null {
   const m = String(err?.message ?? '');
   return err?.code === 'PGRST202' || err?.code === '42883' || /Could not find the function|function .* does not exist/i.test(m)

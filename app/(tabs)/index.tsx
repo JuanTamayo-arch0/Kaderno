@@ -63,6 +63,9 @@ import { shouldOfferClose, carryOver, localISO as dayISO } from '../../lib/day';
 import { skipRepeat, updateTask, setTaskImportant } from '../../lib/db';
 import { cleanUrgentDays, dropChange, quadrantOf, DEFAULT_URGENT_DAYS, type Quadrant } from '../../lib/eisenhower';
 import { EisenhowerMatrix, type MatrixItem } from '../../components/EisenhowerMatrix';
+import { SomedaySheet } from '../../components/day/SomedaySheet';
+import { somedayOf, toSort } from '../../lib/someday';
+import { setSomeday } from '../../lib/db';
 import { ruleText } from '../../lib/repeat';
 import { openClassNote } from '../../lib/notesDb';
 import { useMode } from '../../lib/mode';
@@ -145,6 +148,7 @@ export default function Hoy() {
   // v27: días que cuentan como "urgente" en la Matriz (Ajustes).
   const [urgentDays, setUrgentDays] = useState(DEFAULT_URGENT_DAYS);
   const [inboxOpen, setInboxOpen] = useState(false);
+  const [somedayOpen, setSomedayOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
   const [reviewed, setReviewed] = useState(true);
   const [closeHour, setCloseHour] = useState(18);
@@ -256,12 +260,23 @@ export default function Hoy() {
     try { await setTaskImportant(t.id, on); }
     catch (e) { setTasks((xs) => xs?.map((x) => x.id === t.id ? { ...x, important: t.important } : x) ?? null); toast(friendlyError(e), { tone: 'bad' }); }
   }
+  // v27, fase 4: "Algún día" (sale de Hoy, queda aparte en la bandeja).
+  async function toSomeday(t: Task) {
+    setHidden((h) => new Set(h).add(t.id));
+    try {
+      await setSomeday(t.id, true);
+      setHidden((h) => { const n = new Set(h); n.delete(t.id); return n; });
+      setTasks((xs) => xs?.map((x) => x.id === t.id ? { ...x, someday: true, inbox: true, due_date: null, due_at: null } : x) ?? null);
+      toast(`"${t.title}" quedó para algún día`, { tone: 'good' }); refreshNavCounts(true);
+    } catch (e) { setHidden((h) => { const n = new Set(h); n.delete(t.id); return n; }); toast(friendlyError(e), { tone: 'bad' }); }
+  }
   // Soltar en otro cuadrante: cambia la estrella; la fecha se ofrece, no se cambia sola.
   function dropTo(t: Task, from: Quadrant, to: Quadrant) {
     const c = dropChange(from, to);
     if (c.important !== null) star(t, c.important);
     const today = startOfDay(new Date());
-    if (c.offer === 'hoy') toast(`¿La pasas a hoy? Así queda urgente: ${t.title}`, { actionLabel: 'Mover a hoy', onAction: () => move(t, isoDate(today), 'hoy') });
+    if (to === 'soltar') toast(`¿Ni urgente ni importante? Puedes mandarla a Algún día: ${t.title}`, { actionLabel: 'Algún día', onAction: () => toSomeday(t) });
+    else if (c.offer === 'hoy') toast(`¿La pasas a hoy? Así queda urgente: ${t.title}`, { actionLabel: 'Mover a hoy', onAction: () => move(t, isoDate(today), 'hoy') });
     else if (c.offer === 'despues') toast(`Sin afán: ¿la pasas a la próxima semana? ${t.title}`, { actionLabel: 'Mover', onAction: () => move(t, isoDate(addDays(today, 7 - ((today.getDay() + 6) % 7))), 'el lunes') });
   }
   async function move(t: Task, iso: string | null, label: string) {
@@ -307,13 +322,16 @@ export default function Hoy() {
       { label: 'Mover a la próxima semana', icon: 'play-skip-forward-outline', onPress: () => move(t, isoDate(addDays(today, 7 - ((today.getDay() + 6) % 7))), 'el lunes') },
       { label: t.status === 'done' ? 'Marcar pendiente' : 'Marcar hecha', icon: 'checkmark-circle-outline', onPress: () => toggle(t) },
       { label: t.important ? 'Quitar importante' : 'Marcar importante', icon: t.important ? 'star' : 'star-outline', onPress: () => star(t) },
+      { label: 'Mandar a Algún día', icon: 'cloud-outline', onPress: () => toSomeday(t) },
       { label: 'Borrar', icon: 'trash-outline', danger: true, onPress: () => remove(t) },
     ];
     return list;
   };
 
   // ---------- Datos derivados ----------
-  const inboxTasks = (tasks ?? []).filter((t) => t.inbox && t.status !== 'done' && !hidden.has(t.id));
+  // v27: "Algún día" vive en la bandeja pero aparte; no cuenta como por ordenar.
+  const inboxTasks = toSort(tasks ?? []).filter((t) => !hidden.has(t.id));
+  const somedayTasks = somedayOf(tasks ?? []).filter((t) => !hidden.has(t.id));
   const live = sp.items(tasks ?? [], allSubjects).filter((t) => !t.inbox && !hidden.has(t.id) && (!t.subject_id || !allSubjects.length || allSubjects.some((s) => s.id === t.subject_id)));
   // v26: lo del otro espacio que vence hoy o está vencido, en una línea.
   const otherSpace = sp.space === 'trabajo' ? 'estudio' : 'trabajo';
@@ -680,6 +698,13 @@ export default function Hoy() {
           <Text style={{ color: C.brand, fontSize: 13, fontWeight: '700' }}>Ordenar</Text>
         </Pressable>
       )}
+      {somedayTasks.length > 0 && modo !== 'dia' && (
+        <Pressable onPress={() => setSomedayOpen(true)} accessibilityRole="button" accessibilityLabel={`Algún día: ${somedayTasks.length}`}
+          style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12, backgroundColor: hovered ? C.surface2 : 'transparent', marginBottom: 8, alignSelf: 'flex-start' })}>
+          <Ionicons name="cloud-outline" size={17} color={C.muted} />
+          <Text style={{ color: C.muted, fontSize: 13, fontWeight: '700' }}>Algún día: {somedayTasks.length}</Text>
+        </Pressable>
+      )}
       {priorities.length > 0 && (
         <Card style={{ marginBottom: 12, gap: 8 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -797,6 +822,7 @@ export default function Hoy() {
         </View>
       ) : left}
       <InboxSort visible={inboxOpen} items={inboxTasks} subjects={subjects} onClose={() => { setInboxOpen(false); load(); }} />
+      <SomedaySheet visible={somedayOpen} items={somedayTasks} onClose={() => { setSomedayOpen(false); load(); }} />
       <DayClose visible={closeOpen} tasks={live} onClose={() => setCloseOpen(false)} onDone={() => { setReviewed(true); load(); }} />
       <WeekRitual visible={ritualOpen} weekStart={ritualWeekStart(now)} onClose={() => setRitualOpen(false)} onDone={loadWeek} />
       <SemesterRitual visible={semesterOpen} onClose={() => { setSemesterOpen(false); getRitualPrefs().then(setRitualPrefs).catch(() => {}); }} />

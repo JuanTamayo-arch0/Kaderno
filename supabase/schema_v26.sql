@@ -11,6 +11,10 @@
 -- Fase 2 · La rana y la lista para mañana
 --   · assignments.frog y assignments.plan_order, con day_set_frog y
 --     day_plan_list (una rana por día; la lista de hasta 6 en orden).
+--
+-- Fase 4 · Algún día
+--   · assignments.someday: ideas sin compromiso. Quedan en la bandeja
+--     (inbox = true) pero aparte, y no cuentan como "por ordenar".
 -- =====================================================================
 
 alter table public.assignments add column if not exists important boolean not null default false;
@@ -71,3 +75,10 @@ revoke all on function public.day_set_frog(uuid, date) from public, anon;
 revoke all on function public.day_plan_list(uuid[], date) from public, anon;
 grant execute on function public.day_set_frog(uuid, date) to authenticated;
 grant execute on function public.day_plan_list(uuid[], date) to authenticated;
+
+-- =====================================================================
+--  Fase 4 · Algún día
+-- =====================================================================
+alter table public.assignments add column if not exists someday boolean not null default false;
+-- Lo de "Algún día" vive en la bandeja: si se marca, se asegura inbox.
+update public.assignments set inbox = true where someday and not inbox;

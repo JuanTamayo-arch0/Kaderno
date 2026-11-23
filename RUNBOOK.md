@@ -1866,3 +1866,24 @@ Ninguna.
 ### 3. Pruebas
 
 `npm test` (pausa de Flujo, pausa según la forma, tiempos de cada forma y el aviso del bloque). En el navegador, con el reloj adelantado, 40 min en Flujo dan una sesión de 40 min y una pausa de 8.
+
+## Versión 27 (parte 4): Algún día y tandas
+
+### 1. Migración
+
+Corre otra vez `supabase/schema_v26.sql`. La fase 4 agrega `assignments.someday`. Sin la migración, "Mandar a Algún día" avisa qué falta.
+
+### 2. Lo que cambia para el usuario
+
+- **Algún día:** ideas sin compromiso, aparte de la bandeja.
+  - No salen en Hoy ni cuentan como "por ordenar".
+  - Se mandan desde el menú de una tarea, desde la bandeja ("Algún día (A)") o al soltarlas en el cuadrante "Soltar" de la Matriz.
+  - En Hoy, "Algún día: N" abre la lista con "Rescatar" (vuelve a la bandeja) y "Borrar".
+  - El ritual del lunes muestra 3 al azar para rescatar o soltar.
+- **Tandas en Mi día:** si hay 2 o más tareas cortas (30 min o menos) del mismo tipo o de la misma materia, aparece "Tanda de ...: N cortas" con "Juntar".
+  - Las pone seguidas en el primer hueco donde caben.
+  - No se guarda nada hasta aceptar.
+
+### 3. Pruebas
+
+`npm test` (tandas, dónde caben, Algún día aparte de la bandeja, los 3 al azar del día) y `bash tests/run_sql.sh` (incluye `tests/sql/26c_pruebas.sql`).

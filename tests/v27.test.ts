@@ -163,3 +163,36 @@ test('enfoque: el aviso del bloque que se pasa y la pausa en curso', async () =>
   const lay = fs.readFileSync('app/_layout.tsx', 'utf8');
   assert.match(lay, /Se acabó el bloque de/);
 });
+
+// ---------- Fase 4: Algún día y tandas ----------
+import { findBatches, placeBatch } from '../lib/batch';
+import { sampleSomeday, somedayOf, toSort } from '../lib/someday';
+
+test('tandas: cortas del mismo tipo o materia, al menos 2', () => {
+  const mins: Record<string, number> = { c1: 10, c2: 15, c3: 20, larga: 60, m1: 20, m2: 25, sola: 10, t1: 15 };
+  const tasks = [
+    { id: 'c1', type: 'correo' }, { id: 'c2', type: 'correo' }, { id: 'c3', type: 'correo' }, { id: 'larga', type: 'correo' },
+    { id: 'm1', type: 'tarea', subject_id: 'calc' }, { id: 'm2', subject_id: 'calc' }, { id: 'sola', subject_id: 'fis' }, { id: 't1' },
+  ];
+  const b = findBatches(tasks, (t) => mins[t.id], { type: (k) => k === 'correo' ? 'Correo' : k, subject: (id) => id === 'calc' ? 'Cálculo' : null });
+  assert.deepEqual(b.map((x) => [x.label, x.ids, x.minutes]), [['Correo', ['c1', 'c2', 'c3'], 45], ['Cálculo', ['m1', 'm2'], 45]]);
+});
+
+test('tandas: se ponen seguidas en el primer hueco donde caben enteras', () => {
+  const m = (id: string) => ({ a: 20, b: 20, c: 20 } as Record<string, number>)[id];
+  const busy = [{ start: 9 * 60 + 30, end: 10 * 60 }];
+  const p = placeBatch(['a', 'b', 'c'], m, busy, 9 * 60, 12 * 60)!;
+  assert.deepEqual(p.map((x) => [x.id, x.start, x.end]), [['a', 600, 620], ['b', 620, 640], ['c', 640, 660]], 'el hueco de 30 min no alcanza');
+  assert.equal(placeBatch(['a', 'b', 'c'], m, [], 9 * 60, 9 * 60 + 50), null);
+});
+
+test('algún día: aparte de la bandeja, y tres al azar estables en el día', () => {
+  const tasks = [{ id: 'a', inbox: true }, { id: 'b', inbox: true, someday: true }, { id: 'c', inbox: true, someday: true, status: 'done' }, { id: 'd', someday: true, inbox: true }];
+  assert.deepEqual(toSort(tasks).map((x) => x.id), ['a']);
+  assert.deepEqual(somedayOf(tasks).map((x) => x.id), ['b', 'd']);
+  const many = Array.from({ length: 10 }, (_, i) => ({ id: 'x' + i }));
+  const s1 = sampleSomeday(many, 3, 'Mon Nov 23 2026'), s2 = sampleSomeday(many, 3, 'Mon Nov 23 2026');
+  assert.equal(s1.length, 3);
+  assert.deepEqual(s1, s2, 'el mismo día salen las mismas');
+  assert.notDeepEqual(sampleSomeday(many, 3, 'Tue Nov 24 2026'), s1);
+});

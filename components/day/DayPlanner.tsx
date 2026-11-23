@@ -7,6 +7,8 @@ import { Card, Button } from '../ds';
 import { supabase } from '../../lib/supabase';
 import { updateTask, setFrog, fetchPrefs, type Task, type Slot, type Subject, type FocusSession } from '../../lib/db';
 import { check135, frogOf, orderLoose, suggestFrog } from '../../lib/frog';
+import { findBatches, placeBatch, type Batch } from '../../lib/batch';
+import { taskTypeExists, taskTypeMeta } from '../../lib/taskTypes';
 import { getEstimateRatio } from '../../lib/studyDb';
 import { SCHEDULE, toMinutes } from '../../lib/schedule';
 import { dayParts, plannedMinutes, freeMinutes, overloadText, moveCandidates, localISO, taskMinutes, fmtHours, suggestSchedule, clockLabel, type Suggested } from '../../lib/day';
@@ -35,7 +37,7 @@ export function DayPlanner({ tasks, slots, subjects, onChanged, onToggle, onFocu
   const [events, setEvents] = useState<ExtEvent[]>([]);
   const [ratio, setRatio] = useState<number | null>(null);
   const [placing, setPlacing] = useState<Task | null>(null);
-  const [plan, setPlan] = useState<{ day: string; placed: Suggested[]; left: string[] } | null>(null);
+  const [plan, setPlan] = useState<{ day: string; placed: Suggested[]; left: string[]; title?: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [limit135, setLimit135] = useState(false);
   const { work } = useMode();
@@ -84,19 +86,34 @@ export function DayPlanner({ tasks, slots, subjects, onChanged, onToggle, onFocu
   const cand = over ? moveCandidates(tasks, todayISO, todayISO)[0] : undefined;
 
   // v25: "Sugerir horario" acomoda lo que no tiene hora en los huecos del día elegido.
-  function suggest() {
+  function busyOfDay() {
     const ddow = (day.getDay() + 6) % 7;
-    const dayBusy = [
+    return [
       ...slots.filter((s) => s.day === ddow && SCHEDULE.blocks[s.slot]).map((s) => ({ start: toMinutes(SCHEDULE.blocks[s.slot].start), end: toMinutes(SCHEDULE.blocks[s.slot].end) })),
       ...events.filter((e) => !e.all_day && localISO(new Date(e.start)) === dayISO).map((e) => { const s = new Date(e.start), en = new Date(e.end); return { start: s.getHours() * 60 + s.getMinutes(), end: en.getHours() * 60 + en.getMinutes() }; }),
       ...parts.timed.map((t) => { const d = new Date(t.plan_at!); const st = d.getHours() * 60 + d.getMinutes(); return { start: st, end: st + taskMinutes(t.estimate_min, ratio) }; }),
     ];
+  }
+  function suggest() {
+    const dayBusy = busyOfDay();
     const n = new Date();
     const from = isToday ? n.getHours() * 60 + n.getMinutes() : (work ? 8 : 7) * 60;
     const r = suggestSchedule(parts.loose, (t) => taskMinutes(t.estimate_min, ratio), dayBusy, { from, to: (work ? 19 : 22) * 60 });
     if (!r.placed.length) { toast(r.left.length ? 'No quedan huecos libres para lo que falta hoy.' : 'No hay nada sin hora para acomodar.'); return; }
     setPlan({ day: dayISO, ...r });
   }
+  // v27, fase 4: juntar una tanda en un solo bloque, en el primer hueco donde quepa.
+  function suggestBatch(b: Batch) {
+    const n = new Date();
+    // Empieza en un minuto redondo (de 5 en 5).
+    const from = isToday ? Math.ceil((n.getHours() * 60 + n.getMinutes()) / 5) * 5 : (work ? 8 : 7) * 60;
+    const minOf = (id: string) => taskMinutes(byId.get(id)?.estimate_min, ratio);
+    const placed = placeBatch(b.ids, minOf, busyOfDay(), from, (work ? 19 : 22) * 60);
+    if (!placed) { toast(`No hay un hueco de ${fmtHours(b.minutes)} seguido para la tanda.`); return; }
+    setPlan({ day: dayISO, placed, left: [], title: `Tanda: ${b.label}` });
+  }
+  const batches = dayISO >= todayISO ? findBatches(parts.loose, (t) => taskMinutes(t.estimate_min, ratio),
+    { type: (k) => (taskTypeExists(k) ? taskTypeMeta(k).label : k).toLowerCase(), subject: (id) => subjects.find((x) => x.id === id)?.name ?? null }) : [];
   async function acceptPlan() {
     if (!plan) return;
     setSaving(true);
@@ -151,13 +168,20 @@ export function DayPlanner({ tasks, slots, subjects, onChanged, onToggle, onFocu
         mark={t.id === frog?.id ? 'rana' : t.plan_day === dayISO && t.plan_order ? t.plan_order : null} />)}
       {parts.loose.length > 0 && <Text style={{ color: C.muted, fontSize: 11.5 }}>{isWide ? 'Arrástrala a una hora, o toca "Poner hora" y luego la hora.' : 'Toca "Poner hora" y luego la hora en la línea.'}</Text>}
       {parts.loose.length > 0 && dayISO >= todayISO && !plan && <Button label="Sugerir horario" icon="sparkles-outline" size="sm" kind="secondary" onPress={suggest} />}
+      {!plan && batches.slice(0, 2).map((b) => (
+        <View key={b.key} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', borderColor: C.line }}>
+          <Ionicons name="albums-outline" size={16} color={C.brand2} />
+          <Text style={{ color: C.text, fontSize: 12.5, flex: 1 }}>Tanda de {b.label}: {b.ids.length} cortas, {fmtHours(b.minutes)}</Text>
+          <Button label="Juntar" size="sm" kind="secondary" onPress={() => suggestBatch(b)} accessibilityLabel={`Juntar la tanda de ${b.label} en un bloque`} />
+        </View>
+      ))}
     </View>
   );
 
   const suggestion = plan && (
     <Card style={{ marginBottom: 10, borderLeftWidth: 4, borderLeftColor: C.brand, gap: 8 }} accessibilityLabel="Horario sugerido">
-      <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>Horario sugerido</Text>
-      <Text style={{ color: C.muted, fontSize: 12.5 }}>En los huecos libres, primero lo que vence antes. Nada se guarda hasta que aceptes.</Text>
+      <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>{plan.title ?? 'Horario sugerido'}</Text>
+      <Text style={{ color: C.muted, fontSize: 12.5 }}>{plan.title ? 'Una tras otra, en un solo bloque: cambiar de tema cuesta menos así.' : 'En los huecos libres, primero lo que vence antes.'} Nada se guarda hasta que aceptes.</Text>
       {plan.placed.map((p) => (
         <View key={p.id} style={{ flexDirection: 'row', gap: 10, alignItems: 'baseline' }}>
           <Text style={{ width: 92, color: C.text, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] }}>{clockLabel(p.start)} a {clockLabel(p.end)}</Text>
