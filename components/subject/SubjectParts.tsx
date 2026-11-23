@@ -1,7 +1,8 @@
 import React from 'react';
-import { Linking, Platform, Pressable, ScrollView, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Linking, Platform, Pressable, ScrollView, Text, View, useWindowDimensions, type StyleProp, type ViewStyle } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../../lib/theme';
+import { tileWidth } from '../../lib/mobileLayout';
 import { Subject } from '../../lib/db';
 import { cleanLink } from '../../lib/linkCheck';
 import { fmtHour } from '../../lib/schedule';
@@ -235,7 +236,9 @@ export function SubjectStats({ d, accent, isWide, onGrades, onNext, onTasks, onS
   const now = new Date();
   const soon = d.next?.due ? Math.round((d.next.due.getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) / 86400000) <= 3 : false;
   const fmt = (n: number) => n.toFixed(2);
-  const w = isWide ? undefined : 156;
+  // v29: en el celular, cuadrícula de 2 (4 en tableta) en vez de una fila cortada.
+  const { width: winW } = useWindowDimensions();
+  const w = isWide ? undefined : tileWidth(winW);
   const { work } = useMode();
   const allTiles = [
     <Tile key="avg" label="Promedio" onPress={onGrades} a11y="Ver calificaciones" style={isWide ? { flex: 1 } : { width: w }}>
@@ -278,10 +281,5 @@ export function SubjectStats({ d, accent, isWide, onGrades, onNext, onTasks, onS
     </Tile>
   ) : t) : allTiles;
   if (isWide) return <View accessibilityLabel={work ? 'Resumen del área' : 'Resumen de la materia'} style={{ flexDirection: 'row', gap: 12 }}>{tiles}</View>;
-  return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[{ marginHorizontal: -16, flexGrow: 0 }, web({ scrollbarWidth: 'none' })]}
-      contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}>
-      {tiles}
-    </ScrollView>
-  );
+  return <View accessibilityLabel={work ? 'Resumen del área' : 'Resumen de la materia'} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>{tiles}</View>;
 }

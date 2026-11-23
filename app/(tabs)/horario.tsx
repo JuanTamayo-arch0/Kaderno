@@ -170,7 +170,7 @@ export default function Horario() {
   const tight = days.length > 5;
 
   const grid = (
-    <View style={{ flex: 1, minWidth: 0 }}>
+    <View style={isWide ? { flex: 1, minWidth: 0 } : { width: '100%' }}>
       <View style={{ flexDirection: 'row', gap: 4 }}>
         <View style={{ width: isWide ? 78 : tight ? 50 : 56 }} />
         {days.map((d, di) => (
@@ -179,7 +179,7 @@ export default function Horario() {
       </View>
       {blocks.map((b, si) => (
         <View key={b.id} style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
-          <Text style={{ width: isWide ? 78 : tight ? 50 : 56, fontSize: isWide ? 12 : 10.5, color: si === nowBlock ? C.brand : C.muted, fontWeight: si === nowBlock ? '800' : '400', paddingTop: isWide ? 16 : 12, paddingRight: 6, textAlign: isWide ? 'left' : 'right' }} numberOfLines={2}>{blockLabel(b, fmt24)}</Text>
+          <Text style={{ width: isWide ? 78 : tight ? 50 : 56, fontSize: isWide ? 12 : 11.5, color: si === nowBlock ? C.brand : C.muted, fontWeight: si === nowBlock ? '800' : '400', paddingTop: isWide ? 16 : 12, paddingRight: 6, textAlign: isWide ? 'left' : 'right' }} numberOfLines={2}>{blockLabel(b, fmt24)}</Text>
           {days.map((_, di) => {
             const cell = at(di, si); const sub = cell ? subjOf(cell.subject_id) : null;
             const live = di === todayIdx && si === nowBlock;
@@ -187,13 +187,13 @@ export default function Horario() {
               <Pressable key={di} onPress={() => setEdit({ day: di, slot: si })}
                 accessibilityRole="button" accessibilityLabel={`${DAY_NAMES[di]} ${blockLabelLong(b, fmt24)}: ${sub ? sub.name : 'libre'}`}
                 style={({ hovered }: any) => ({
-                  flex: 1, minHeight: isWide ? 52 : 46, borderRadius: 9, alignItems: 'center', justifyContent: 'center', padding: 4,
+                  flex: 1, minHeight: isWide ? 52 : 50, borderRadius: 9, alignItems: 'center', justifyContent: 'center', padding: 4,
                   borderWidth: live ? 2 : 1, borderStyle: sub ? 'solid' : 'dashed',
                   borderColor: live ? C.brand : sub ? sub.color : C.line,
                   backgroundColor: sub ? sub.color : hovered ? C.surface2 : 'transparent',
                 })}>
                 {sub ? (
-                  <Text style={{ color: inkOn(sub.color), fontSize: isWide ? 13 : tight ? 9.5 : 10.5, fontWeight: '700', textAlign: 'center' }} numberOfLines={2}>{isWide ? sub.name : shortName(sub.name)}</Text>
+                  <Text style={{ color: inkOn(sub.color), fontSize: isWide ? 13 : tight ? 10.5 : 12, fontWeight: '700', textAlign: 'center' }} numberOfLines={2}>{isWide ? sub.name : shortName(sub.name)}</Text>
                 ) : <Ionicons name="add" size={14} color={C.line} />}
               </Pressable>
             );
@@ -242,7 +242,8 @@ export default function Horario() {
       {subjects.length === 0 ? (
         <EmptyState icon="book-outline" title="Primero crea tus materias" text="El horario se arma con tus materias." action={{ label: 'Ir a Materias', onPress: () => router.navigate('/materias') }} />
       ) : (
-        <View style={{ flexDirection: isWide ? 'row' : 'column', gap: 20, alignItems: 'flex-start' }}>
+        // v29: en el celular la cuadrícula ocupa todo el ancho (antes se encogía a celdas de 24 px).
+        <View style={{ flexDirection: isWide ? 'row' : 'column', gap: 20, alignItems: isWide ? 'flex-start' : 'stretch' }}>
           {grid}
           {today}
         </View>

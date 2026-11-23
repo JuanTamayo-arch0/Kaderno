@@ -115,7 +115,7 @@ function Avatars({ members, size = 26 }: { members: Member[]; size?: number }) {
     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
       {shown.map((m, i) => (
         <View key={m.id} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: colorOf(m.user_id), alignItems: 'center', justifyContent: 'center', marginLeft: i === 0 ? 0 : -8, borderWidth: 2, borderColor: C.surface }}>
-          <Text style={{ color: '#0f1115', fontSize: size * 0.38, fontWeight: '800' }}>{initialsOf(m.profile)}</Text>
+          <Text style={{ color: '#0f1115', fontSize: Math.max(10, size * 0.4), fontWeight: '800' }}>{initialsOf(m.profile)}</Text>
         </View>
       ))}
       {rest > 0 && (

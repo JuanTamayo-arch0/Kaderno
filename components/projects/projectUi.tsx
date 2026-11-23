@@ -57,7 +57,7 @@ export function SelectBox({ on }: { on: boolean }) {
 export function Pill({ text, color }: { text: string; color: string }) {
   return (
     <View style={{ paddingVertical: 2, paddingHorizontal: 8, borderRadius: R.pill, backgroundColor: color + '22' }}>
-      <Text style={{ color, fontSize: 10.5, fontWeight: '700' }}>{text}</Text>
+      <Text style={{ color, fontSize: 11.5, fontWeight: '700' }}>{text}</Text>
     </View>
   );
 }

@@ -73,7 +73,7 @@ export function OptionsButton({ wide, open, onPress }: { wide: boolean; open: bo
   }
   return (
     <Pressable ref={ref} onPress={press} hitSlop={6} accessibilityRole="button" accessibilityLabel="Opciones del proyecto" accessibilityState={{ expanded: open }}
-      style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: open ? C.brand : C.line, backgroundColor: open ? C.brand + '18' : C.surface2, borderRadius: R.pill, paddingVertical: 7, paddingHorizontal: wide ? 12 : 9 }}>
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: open ? C.brand : C.line, backgroundColor: open ? C.brand + '18' : C.surface2, borderRadius: R.pill, paddingVertical: wide ? 7 : 10, paddingHorizontal: wide ? 12 : 11 }}>
       <Ionicons name={wide ? 'options-outline' : 'ellipsis-horizontal'} size={15} color={open ? C.brand : C.muted} />
       {wide && <Text style={{ color: C.text, fontSize: 12.5, fontWeight: '600' }}>Opciones</Text>}
       {wide && <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={13} color={C.muted} />}
@@ -84,7 +84,7 @@ export function OptionsButton({ wide, open, onPress }: { wide: boolean; open: bo
 export function HeaderBtn({ icon, label, wide, onPress }: { icon: string; label: string; wide: boolean; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} hitSlop={6} accessibilityLabel={label}
-      style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: C.line, backgroundColor: C.surface2, borderRadius: R.pill, paddingVertical: 7, paddingHorizontal: wide ? 12 : 9 }}>
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: C.line, backgroundColor: C.surface2, borderRadius: R.pill, paddingVertical: wide ? 7 : 10, paddingHorizontal: wide ? 12 : 11 }}>
       <Ionicons name={icon as any} size={15} color={C.muted} />
       {wide && <Text style={{ color: C.text, fontSize: 12.5, fontWeight: '600' }}>{label}</Text>}
     </Pressable>

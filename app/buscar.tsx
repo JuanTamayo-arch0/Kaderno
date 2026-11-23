@@ -36,7 +36,7 @@ function Buscar() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.surface2, borderRadius: 12, borderWidth: 1, borderColor: C.line, paddingHorizontal: 12, marginBottom: 6 }}>
           <Ionicons name="search" size={18} color={C.muted} />
           <TextInput value={q} onChangeText={setQ} autoFocus enterKeyHint="search" inputMode="search" placeholder="Notas, tareas, materias, proyectos, flashcards…" placeholderTextColor={C.muted} accessibilityLabel="Buscar"
-            style={[{ flex: 1, color: C.text, paddingVertical: 12, fontSize: 15, minHeight: 46 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
+            style={[{ flex: 1, minWidth: 0, color: C.text, paddingVertical: 12, fontSize: 15, minHeight: 46 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
           {busy && <ActivityIndicator size="small" color={C.brand} />}
         </View>
       }>

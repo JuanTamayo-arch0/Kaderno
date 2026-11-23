@@ -1928,3 +1928,34 @@ No hay. Cambian la app, `public/index.html`, el manifiesto y las capturas de `pu
 ### 3. Pruebas
 
 `npm test` (incluye `tests/v29.test.ts`). En un iPhone: tocar el correo del login no debe acercar la pantalla. En Android: abrir el Oráculo y escribir; la barra de pestañas se esconde y la caja queda encima del teclado.
+
+## Versión 29 (parte 2): pantallas en el celular
+
+### 1. Migración
+
+No hay.
+
+### 2. Lo que cambia para el usuario
+
+- **Horario:** la cuadrícula ocupa todo el ancho. Antes las celdas medían 24 px y quedaba media pantalla vacía.
+- **Encabezados:** si los botones de la derecha no caben, bajan debajo del título ("Tipos de tarea", "Horas" en un celular angosto). "Hoy" conserva sus íconos al lado.
+- **Resúmenes de Materias y de cada materia:** cuadrícula de 2 (4 en tableta) en vez de una fila cortada.
+- **Hoy:** en la tarjeta de la mascota los botones bajan en un celular angosto; el título ya no se parte a mitad de palabra.
+- **Cifras:** "0 semanas", "45 min" con el número grande y la unidad más pequeña; ya no se cortan ("0 sem...").
+- **Enfoque:** el reloj se achica en celulares bajos (iPhone SE) para que "Empezar" se vea sin desplazar.
+- **Estudiar:** el botón de enviar del Oráculo ya no se sale de su caja a 320 px.
+- **Horas:** la semana va en su propia línea en un celular angosto; flechas, tarifas y borrar con más área.
+- **Cobrar:** el estado va junto a la fecha y las acciones tienen más área.
+- **Tablero del proyecto:**
+  - la columna casi llena la pantalla y se asoma la siguiente;
+  - al deslizar se acomoda sola;
+  - mover y agregar tarjeta tienen botones más grandes.
+  - Las pestañas y los filtros se desvanecen en el borde cuando hay más.
+- **Proyecto:** el encabezado respeta la zona de la hora en la app instalada.
+- **Tipos de tarea:** subir, bajar y restablecer con botones de 40 px. En un celular angosto se toca la fila para editar.
+- **Login en celulares bajos:** franja más pequeña, el formulario se ve sin desplazar y respeta la zona de la hora.
+- **Letras diminutas:** iniciales y datos de las tarjetas del tablero, y letras de la racha, a 9,5 a 11,5 px como mínimo.
+
+### 3. Pruebas
+
+`npm test` (reglas de `lib/mobileLayout.ts` en `tests/v29.test.ts`). En el navegador, revisar a 320 x 568 y 390 x 844: Horario, Tipos de tarea, Horas, Enfoque, Materias, una materia, un proyecto y el login.

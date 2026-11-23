@@ -97,13 +97,16 @@ function Cobros() {
                   <View key={inv.id} style={{ paddingHorizontal: 14, paddingVertical: 12, gap: 8, borderBottomWidth: i < invoices.length - 1 ? 1 : 0, borderBottomColor: C.line, opacity: inv.status === 'anulada' ? 0.6 : 1 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={{ color: C.text, fontSize: 14, fontWeight: '700' }} numberOfLines={1}>{numberLabel(inv.prefix, inv.number)} · {inv.client.name}</Text>
-                        <Text style={{ color: C.muted, fontSize: 12.5 }}>{inv.issued_on}{inv.paid_on ? ` · pagada el ${inv.paid_on}` : ''}</Text>
+                        <Text style={{ color: C.text, fontSize: 14, fontWeight: '700' }} numberOfLines={2}>{numberLabel(inv.prefix, inv.number)} · {inv.client.name}</Text>
+                        {/* v29: el estado va junto a la fecha; en el celular apretaba el nombre del cliente. */}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: 3 }}>
+                          <Text style={{ color: C.muted, fontSize: 12.5 }}>{inv.issued_on}{inv.paid_on ? ` · pagada el ${inv.paid_on}` : ''}</Text>
+                          <Badge text={st.text} color={st.color} />
+                        </View>
                       </View>
-                      <Badge text={st.text} color={st.color} />
                       <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{pesos(inv.total)}</Text>
                     </View>
-                    <View style={{ flexDirection: 'row', gap: 14, flexWrap: 'wrap' }}>
+                    <View style={{ flexDirection: 'row', columnGap: 18, rowGap: 0, flexWrap: 'wrap', marginVertical: -6 }}>
                       <Link label="Ver o imprimir" onPress={() => open(inv)} />
                       {inv.status !== 'anulada' && <Link label="Mandar por WhatsApp" onPress={() => share(inv)} />}
                       {inv.status === 'emitida' && <Link label="Marcar pagada" onPress={() => setStatus(inv, 'pagada')} />}
@@ -157,7 +160,7 @@ function Cobros() {
 }
 
 function Link({ label, onPress, muted }: { label: string; onPress: () => void; muted?: boolean }) {
-  return <Pressable onPress={onPress} accessibilityRole="button" hitSlop={4}><Text style={{ color: muted ? C.muted : C.brand, fontSize: 12.5, fontWeight: '700' }}>{label}</Text></Pressable>;
+  return <Pressable onPress={onPress} accessibilityRole="button" hitSlop={4} style={{ paddingVertical: 10 }}><Text style={{ color: muted ? C.muted : C.brand, fontSize: 13, fontWeight: '700' }}>{label}</Text></Pressable>;
 }
 
 function NewInvoice({ visible, initial, clients, projects, subjects, missing, onNeedProfile, onNeedClient, onClose, onCreated }: {

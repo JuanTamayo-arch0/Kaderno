@@ -181,7 +181,7 @@ export default function Oraculo() {
         </ScrollView>
         <View style={{ borderTopWidth: 1, borderTopColor: C.line, paddingHorizontal: isWide ? 40 : 12, paddingVertical: 10 }}>
           <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-end', maxWidth: 860, width: '100%', alignSelf: 'center' }}>
-            <TextInput value={input} onChangeText={setInput} placeholder="Escribe tu pregunta…" placeholderTextColor={C.muted} multiline accessibilityLabel="Pregunta"
+            <TextInput value={input} onChangeText={setInput} placeholder="Escribe tu pregunta…" placeholderTextColor={C.muted} multiline enterKeyHint="send" accessibilityLabel="Pregunta"
               onKeyPress={(e: any) => { if (Platform.OS === 'web' && e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) { e.preventDefault(); send(input, null); } }}
               style={[{ flex: 1, backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 14, color: C.text, paddingHorizontal: 14, paddingVertical: 11, fontSize: 15, maxHeight: 140, minHeight: 46 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
             <Pressable onPress={() => send(input, null)} disabled={sending || !input.trim()} accessibilityRole="button" accessibilityLabel="Enviar pregunta"

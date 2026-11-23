@@ -50,7 +50,7 @@ export function WeekDots({ s, size = 26 }: { s: StreakSummary; size?: number }) 
             style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: st.bg, borderWidth: w.state === 'today' ? 2 : 1, borderColor: st.border, borderStyle: w.state === 'future' ? 'dashed' : 'solid', alignItems: 'center', justifyContent: 'center' }}>
             {w.state === 'protected'
               ? <Ionicons name="shield" size={size * 0.5} color={C.brand} />
-              : <Text style={{ color: st.fg, fontSize: size * 0.42, fontWeight: '800' }}>{w.letter}</Text>}
+              : <Text style={{ color: st.fg, fontSize: Math.max(10.5, size * 0.42), fontWeight: '800' }}>{w.letter}</Text>}
           </View>
         );
       })}

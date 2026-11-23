@@ -90,7 +90,7 @@ export function ParkButton({ s, active }: { s: FocusState; active: boolean }) {
           accessibilityLabel="Anotar para después" maxLength={200} returnKeyType="done" blurOnSubmit
           onSubmitEditing={commit}
           onKeyPress={(e: any) => { if (e.nativeEvent?.key === 'Escape') { setText(''); setOpen(false); } }}
-          style={{ flex: 1, color: C.text, fontSize: 14.5, minHeight: 40, outlineStyle: 'none' } as any} />
+          style={{ flex: 1, minWidth: 0, color: C.text, fontSize: 14.5, minHeight: 40, outlineStyle: 'none' } as any} />
         <Pressable onPress={commit} accessibilityRole="button" accessibilityLabel="Guardar"
           style={{ height: 34, paddingHorizontal: 12, borderRadius: 9, backgroundColor: C.brand, alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ color: C.onBrand, fontWeight: '800', fontSize: 13 }}>Guardar</Text>

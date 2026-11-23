@@ -1,8 +1,9 @@
 import React from 'react';
 import { blockersOf, priorityOf } from '../../lib/projectWork';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C, R, shadow } from '../../lib/theme';
+import { boardColumnWidth } from '../../lib/mobileLayout';
 import { ProgressBar } from '../ProgressBar';
 import { DragCard, DragGhost, useBoardDrag } from './BoardDrag';
 import { Subject } from '../../lib/db';
@@ -35,7 +36,11 @@ export function Tablero({ cols, grouped, steps, members, subject, editable, isWi
 }) {
   const dnd = useBoardDrag({ enabled: editable && !selecting, onDrop });
   const drag = dnd.drag;
-  const width = isWide ? 300 : 270;
+  // v29: en el celular la columna casi llena la pantalla, se ve el borde de la
+  // siguiente y al deslizar se acomoda sola (snap).
+  const win = useWindowDimensions();
+  const width = isWide ? 300 : boardColumnWidth(win.width);
+  const listMax = isWide ? 620 : Math.max(320, win.height - 330);
   const dragged = drag ? Object.values(grouped).flat().find((t) => t.id === drag.id) ?? null : null;
   const draggedCol = drag ? cols.find((c) => c.key === drag.fromCol) : null;
 
@@ -47,27 +52,28 @@ export function Tablero({ cols, grouped, steps, members, subject, editable, isWi
   return (
     <View style={{ flex: 1 }}>
       <ScrollView ref={dnd.boardRef} horizontal showsHorizontalScrollIndicator={isWide}
-        style={{ flex: 1 }}
+        style={[{ flex: 1 }, !isWide && isWeb && !drag ? ({ scrollSnapType: 'x proximity', scrollPaddingLeft: 12 } as any) : null]}
         contentContainerStyle={{ padding: isWide ? 24 : 12, gap: 12, alignItems: 'stretch' }}>
         {cols.map((col) => {
           const list = grouped[col.key] ?? [];
           const isOver = !!drag && drag.overCol === col.key;
           return (
             <View key={col.key} ref={dnd.colRef(col.key)}
-              style={{ width, backgroundColor: isOver ? col.color + '10' : C.surface + 'cc', borderRadius: R.lg, borderWidth: 1, borderColor: isOver ? col.color : C.line, padding: 10, ...(isWeb ? { transitionProperty: 'background-color, border-color', transitionDuration: '150ms' } as any : null) }}>
+              style={{ width, ...(!isWide && isWeb ? { scrollSnapAlign: 'start' } as any : null), backgroundColor: isOver ? col.color + '10' : C.surface + 'cc', borderRadius: R.lg, borderWidth: 1, borderColor: isOver ? col.color : C.line, padding: 10, ...(isWeb ? { transitionProperty: 'background-color, border-color', transitionDuration: '150ms' } as any : null) }}>
               {/* cabecera de columna */}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10, paddingHorizontal: 2 }}>
                 <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: col.color }} />
                 <Text numberOfLines={1} style={{ color: C.text, fontSize: 13.5, fontWeight: '700', flex: 1 }}>{col.label}</Text>
                 <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700' }}>{list.length}</Text>
                 {editable && (
-                  <Pressable onPress={() => onAdd(col.key)} hitSlop={8} accessibilityLabel={`Agregar tarjeta en ${col.label}`}>
+                  <Pressable onPress={() => onAdd(col.key)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Agregar tarjeta en ${col.label}`}
+                    style={{ width: 34, height: 34, margin: -8, alignItems: 'center', justifyContent: 'center' }}>
                     <Ionicons name="add" size={17} color={C.muted} />
                   </Pressable>
                 )}
               </View>
 
-              <ScrollView ref={dnd.listRef(col.key)} style={{ maxHeight: isWide ? 620 : 460 }} showsVerticalScrollIndicator={false}>
+              <ScrollView ref={dnd.listRef(col.key)} style={{ maxHeight: listMax }} showsVerticalScrollIndicator={false}>
                 {list.map((t, i) => (
                   <React.Fragment key={t.id}>
                     {isOver && drag!.beforeId === t.id && placeholder(col)}
@@ -153,7 +159,8 @@ export function TaskCardView({ task, steps, members, subject, color, dim, mine, 
           {task.title}
         </Text>
         {showMove && (
-          <Pressable onPress={onMove} hitSlop={8} dataSet={{ nodrag: '1' }} accessibilityLabel={`Mover "${task.title}" a otra columna`}>
+          <Pressable onPress={onMove} hitSlop={8} dataSet={{ nodrag: '1' }} accessibilityRole="button" accessibilityLabel={`Mover "${task.title}" a otra columna`}
+            style={{ width: 34, height: 34, margin: -8, alignItems: 'center', justifyContent: 'center' }}>
             <Ionicons name="swap-horizontal" size={16} color={C.muted} />
           </Pressable>
         )}
@@ -170,8 +177,8 @@ export function TaskCardView({ task, steps, members, subject, color, dim, mine, 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
         {who ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-            <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: colorOf(who.user_id), alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ color: '#0f1115', fontSize: 8.5, fontWeight: '800' }}>{initialsOf(who.profile)}</Text>
+            <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: colorOf(who.user_id), alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ color: '#0f1115', fontSize: 9.5, fontWeight: '800' }}>{initialsOf(who.profile)}</Text>
             </View>
             <Text style={{ color: C.muted, fontSize: 11 }}>{nameOf(who.profile)}</Text>
           </View>
@@ -188,14 +195,14 @@ export function TaskCardView({ task, steps, members, subject, color, dim, mine, 
         {comments > 0 && (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }} accessibilityLabel={`${comments} comentarios`}>
             <Ionicons name="chatbubble-outline" size={11} color={C.muted} />
-            <Text style={{ color: C.muted, fontSize: 10.5, fontWeight: '700' }}>{comments}</Text>
+            <Text style={{ color: C.muted, fontSize: 11.5, fontWeight: '700' }}>{comments}</Text>
           </View>
         )}
 
         {due && (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
             <Ionicons name="calendar-outline" size={11} color={due.color} />
-            <Text style={{ color: due.color, fontSize: 10.5, fontWeight: '700' }}>{due.label}</Text>
+            <Text style={{ color: due.color, fontSize: 11.5, fontWeight: '700' }}>{due.label}</Text>
           </View>
         )}
       </View>
@@ -248,14 +255,14 @@ export function WorkBadges({ task, byId }: { task: PTask; byId: Record<string, P
   if (!p && !blockers.length && !labels.length && !task.repeat_rule) return null;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-      {p && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }} accessibilityLabel={`Prioridad ${p.label}`}><Ionicons name="flag" size={11} color={p.color} /><Text style={{ color: p.color, fontSize: 10.5, fontWeight: '800' }}>{p.label}</Text></View>}
+      {p && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }} accessibilityLabel={`Prioridad ${p.label}`}><Ionicons name="flag" size={11} color={p.color} /><Text style={{ color: p.color, fontSize: 11.5, fontWeight: '800' }}>{p.label}</Text></View>}
       {!task.done && blockers.length > 0 && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }} accessibilityLabel={`Bloqueada por ${blockers.map((b) => b.title).join(', ')}`}>
-          <Ionicons name="lock-closed" size={11} color={C.warnText} /><Text style={{ color: C.warnText, fontSize: 10.5, fontWeight: '700' }} numberOfLines={1}>Espera: {blockers[0].title}{blockers.length > 1 ? ` y ${blockers.length - 1} más` : ''}</Text>
+          <Ionicons name="lock-closed" size={11} color={C.warnText} /><Text style={{ color: C.warnText, fontSize: 11.5, fontWeight: '700' }} numberOfLines={1}>Espera: {blockers[0].title}{blockers.length > 1 ? ` y ${blockers.length - 1} más` : ''}</Text>
         </View>
       )}
       {task.repeat_rule && <Ionicons name="repeat" size={12} color={C.muted} accessibilityLabel="Se repite" />}
-      {labels.slice(0, 3).map((l) => <Text key={l} style={{ color: C.muted, fontSize: 10.5, fontWeight: '600' }}>#{l}</Text>)}
+      {labels.slice(0, 3).map((l) => <Text key={l} style={{ color: C.muted, fontSize: 11.5, fontWeight: '600' }}>#{l}</Text>)}
     </View>
   );
 }

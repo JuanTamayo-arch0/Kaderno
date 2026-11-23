@@ -9,7 +9,7 @@ import { Subject, Grade, getSubjects, getAllGrades, getFocusDetail, getFocusStat
 import { countToday } from '../../lib/cardsDb';
 import { semesterAverage } from '../../lib/grades';
 import { useFocusTimer, startFocus, pauseFocus, resetFocus } from '../../lib/focusTimer';
-import { Screen, Button, Card, SectionLabel, Dot } from '../../components/ds';
+import { Screen, Button, Card, SectionLabel, Dot, StatValue } from '../../components/ds';
 import { fmtMin } from '../../components/TaskRow';
 import { useStudyStreak, StreakCard } from '../../components/streaks/Streak';
 import { weeksLabel } from '../../lib/streaks';
@@ -110,11 +110,11 @@ export default function Estudiar() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <Ionicons name="sparkles-outline" size={20} color={C.brand} />
             <Text style={{ color: C.text, fontSize: 16, fontWeight: '700', flex: 1 }}>Oráculo</Text>
-            <Pressable onPress={() => router.push('/oraculo')} accessibilityRole="link"><Text style={{ color: C.brand, fontWeight: '700', fontSize: 13 }}>Abrir</Text></Pressable>
+            <Pressable onPress={() => router.push('/oraculo')} accessibilityRole="link" style={{ paddingVertical: 10, paddingHorizontal: 8, marginVertical: -10, marginRight: -8 }}><Text style={{ color: C.brand, fontWeight: '700', fontSize: 13 }}>Abrir</Text></Pressable>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.surface2, borderRadius: 12, borderWidth: 1, borderColor: C.line, paddingLeft: 12 }}>
             <TextInput value={q} onChangeText={setQ} onSubmitEditing={ask} enterKeyHint="send" placeholder="Pregunta algo sobre tus apuntes…" placeholderTextColor={C.muted} accessibilityLabel="Pregunta para el Oráculo"
-              style={[{ flex: 1, color: C.text, fontSize: 14.5, paddingVertical: 11, minHeight: 44 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
+              style={[{ flex: 1, minWidth: 0, color: C.text, fontSize: 15, paddingVertical: 11, minHeight: 44 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
             <Pressable onPress={ask} accessibilityLabel="Preguntar" style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
               <Ionicons name="arrow-up-circle" size={26} color={q.trim() ? C.brand : C.muted} />
             </Pressable>
@@ -203,7 +203,7 @@ export default function Estudiar() {
 function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
     <View style={{ flex: 1, backgroundColor: C.surface2, borderRadius: 12, padding: 12 }}>
-      <Text style={{ color: tone ?? C.text, fontSize: 18, fontWeight: '800' }} numberOfLines={1}>{value}</Text>
+      <StatValue value={value} color={tone ?? C.text} size={18} />
       <Text style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>{label}</Text>
     </View>
   );
