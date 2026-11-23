@@ -282,3 +282,42 @@ test('mascotas: parpadea a destiempo y se aplasta al aterrizar', async () => {
   m.squash = 0.1;
   assert.equal(m.frame(9000), 'aterriza');
 });
+
+// ---------- Fase 6: pulido ----------
+test('contraste: todos los temas y acentos leen a 4,5:1 sobre la tarjeta y sobre el fondo', async () => {
+  const { WORK_ACCENTS, spacePalette } = await import('../lib/brand');
+  const check = (label: string, p: ReturnType<typeof derive>) => {
+    const pairs: [string, string, string][] = [
+      ['texto/fondo', p.text, p.bg], ['texto/tarjeta 2', p.text, p.surface2], ['tenue/tarjeta', p.muted, p.surface], ['tenue/tarjeta 2', p.muted, p.surface2],
+      ['acento como texto/tarjeta', p.brand, p.surface], ['acento como texto/fondo', p.brand, p.bg], ['texto sobre acento', p.onBrand, p.brand],
+      ['verde/fondo', p.goodText, p.bg], ['amarillo/fondo', p.warnText, p.bg], ['rojo/fondo', p.badText, p.bg],
+      ['verde/tarjeta', p.goodText, p.surface], ['amarillo/tarjeta', p.warnText, p.surface], ['rojo/tarjeta', p.badText, p.surface],
+    ];
+    for (const [n, a, b] of pairs) assert.ok(contrast(a, b) >= 4.5, `${label}: ${n} = ${contrast(a, b).toFixed(2)}`);
+  };
+  for (const [id, t] of Object.entries(THEMES)) {
+    const accents = isKadernoTheme(id) ? STUDY_ACCENTS.map((a) => a.id) : [undefined];
+    for (const a of accents) check(`${id} ${a ?? ''}`, derive(spacePalette({ themeId: id, scheme: t.scheme, base: t.palette, space: 'estudio', accentId: a })));
+  }
+  for (const sc of ['dark', 'light'] as const) {
+    const id = sc === 'dark' ? 'kaderno-oscuro' : 'kaderno-claro';
+    for (const a of WORK_ACCENTS) check(`Trabajo ${sc} ${a.id}`, derive(spacePalette({ themeId: id, scheme: sc, base: THEMES[id].palette, space: 'trabajo', workAccentId: a.id })));
+  }
+  // Los acentos de la marca no se tocan: ya cumplen.
+  const k = derive(spacePalette({ themeId: 'kaderno-claro', scheme: 'light', base: THEMES['kaderno-claro'].palette, space: 'estudio', accentId: 'coral' }));
+  assert.equal(k.brand.toLowerCase(), BRAND.marginDeep.toLowerCase());
+});
+
+test('documentos: los apuntes en PDF y el historial son sobrios y llevan el pie de Kaderno', async () => {
+  const fs = await import('node:fs');
+  const pdf = fs.readFileSync('lib/exportPdf.ts', 'utf8');
+  assert.match(pdf, /font-family: 'Times New Roman'/);
+  assert.ok(!/(?:color|background|border[a-z-]*): ?[^;]*#(?!000\b)[0-9a-f]{3,6}/i.test(pdf.slice(pdf.indexOf('<style>'), pdf.indexOf('</style>'))), 'apuntes todo en negro');
+  assert.match(pdf, /docFooter\(\)/);
+  const { docFooter } = await import('../lib/brand');
+  const f = docFooter();
+  assert.match(f, /Hecho con Kaderno/);
+  assert.ok(!/#(?!111111|FFFFFF|ffffff)[0-9a-f]{6}/i.test(f), 'el logo del pie va en una tinta');
+  const inv = fs.readFileSync('lib/invoice.ts', 'utf8');
+  assert.ok(!/docFooter/.test(inv), 'la cuenta de cobro no lleva la marca de Kaderno');
+});

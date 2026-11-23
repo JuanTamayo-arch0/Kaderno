@@ -237,3 +237,6 @@ La fase 1 se ve de inmediato y no cambia datos. La 2 es la más grande y la que 
 23. (Fase 5) Las horas anotadas a mano y las del cronómetro de Trabajo dejan de pagar. Antes pagaban como enfoque, y se podían anotar horas solo para ganar.
 24. (Fase 5) En Trabajo la mascota habla al cerrar el día y si la tocas. Las caras sí cambian (contenta al terminar algo), pero no salta.
 25. (Fase 5) La prueba de SQL de la hoja de horas usa la semana antepasada: el lunes temprano el registro del cronómetro de la prueba caía en la semana pasada y la suma no cuadraba.
+26. (Fase 6) El contraste se arregla al calcular los colores del tema (derive), no tema por tema: el acento y los textos de estado se ajustan hasta leerse sobre la tarjeta y el fondo. Solo cambian los temas que no cumplían.
+27. (Fase 6) Los documentos personales (apuntes, historial) llevan el pie de Kaderno en una tinta. Los que van a un cliente (cuenta de cobro, informe de horas) no.
+28. (Fase 6) La prueba de rendimiento se hizo contra main (v24) con la CPU 4 veces más lenta: la carga no empeoró y la mascota no deja tareas largas en reposo. El og:image absoluto queda para cuando el dominio sea definitivo.

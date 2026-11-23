@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../../lib/theme';
-import { Button } from '../../components/ds';
+import { Button, EmptyState } from '../../components/ds';
+import { KadernoLockup, KadernoMark } from '../../components/brand/KadernoLogo';
 import { fetchSharedNote, type SharedNote } from '../../lib/calendarsDb';
 import { noteToHtml } from '../../lib/noteHtml';
 import { useAuth } from '../../lib/auth';
@@ -43,6 +43,7 @@ export default function NotaCompartida() {
   const [note, setNote] = useState<SharedNote | null>(null);
   const [html, setHtml] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const narrow = useWindowDimensions().width < 480;
   useKatexCss();
 
   useEffect(() => {
@@ -62,22 +63,20 @@ export default function NotaCompartida() {
   return (
     <ScrollView style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ alignItems: 'center', padding: 16, paddingBottom: 48 }}>
       <View style={{ width: '100%', maxWidth: 760 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 18 }}>
-          <Ionicons name="book-outline" size={18} color={C.brand} />
-          <Text style={{ color: C.muted, fontSize: 13, fontWeight: '700', flex: 1 }}>Kaderno · nota compartida</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 22, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: C.line }}>
+          <KadernoLockup size={26} />
+          <Text numberOfLines={1} style={{ color: C.muted, fontSize: 13, fontWeight: '700', flex: 1 }}>{narrow ? '' : '· nota compartida'}</Text>
           <Button label={session ? 'Ir a Kaderno' : 'Probar Kaderno'} size="sm" kind="ghost" onPress={() => router.replace(session ? '/' : '/login')} />
         </View>
         {!note && !error && <ActivityIndicator color={C.brand} style={{ marginTop: 40 }} />}
         {error && (
-          <View style={{ alignItems: 'center', gap: 10, marginTop: 40 }} accessibilityLiveRegion="polite">
-            <Ionicons name="link-outline" size={36} color={C.muted} />
-            <Text style={{ color: C.text, fontSize: 17, fontWeight: '800' }}>Este enlace ya no funciona</Text>
-            <Text style={{ color: C.muted, fontSize: 13.5, textAlign: 'center' }}>Quien lo compartió pudo desactivarlo o cambiarlo. Pídele uno nuevo.</Text>
+          <View accessibilityLiveRegion="polite">
+            <EmptyState icon="link-outline" title="Este enlace ya no funciona" text="Quien lo compartió pudo desactivarlo o cambiarlo. Pídele uno nuevo." />
           </View>
         )}
         {note && (
           <>
-            <Text accessibilityRole="header" style={{ color: C.text, fontSize: 28, fontWeight: '800', lineHeight: 34 }}>{note.title}</Text>
+            <Text accessibilityRole="header" dataSet={{ head: '1' }} style={{ color: C.text, fontSize: 28, fontWeight: '800', lineHeight: 34 }}>{note.title}</Text>
             {updated && <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 6 }}>Actualizada el {updated}</Text>}
             {Platform.OS === 'web' ? (
               <>
@@ -87,6 +86,10 @@ export default function NotaCompartida() {
             ) : (
               <Text style={{ color: C.text, fontSize: 15, marginTop: 16 }}>{note.content}</Text>
             )}
+            <View style={{ alignItems: 'center', gap: 6, marginTop: 36 }}>
+              <KadernoMark size={22} />
+              <Text style={{ color: C.muted, fontSize: 12, textAlign: 'center' }}>Escrita en Kaderno. Solo se puede leer; quien la compartió puede apagar el enlace.</Text>
+            </View>
           </>
         )}
       </View>
