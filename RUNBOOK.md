@@ -1847,3 +1847,22 @@ Corre otra vez `supabase/schema_v26.sql`. La fase 2 agrega `assignments.frog` y 
 ### 3. Pruebas
 
 `npm test` (sugerencia de la rana, orden de Mi día, 1-3-5, candidatas de la lista, recordatorio de la mascota) y `bash tests/run_sql.sh` (incluye `tests/sql/26b_pruebas.sql`: una rana por día, la lista en orden, máximo 6, tareas ajenas).
+
+## Versión 27 (parte 3): más formas de enfocarse
+
+### 1. Migración
+
+Ninguna.
+
+### 2. Lo que cambia para el usuario
+
+- **Enfoque, tres formas** (arriba del reloj):
+  - Pomodoro: como antes, con tus tiempos.
+  - 52/17: 52 minutos de trabajo y 17 de pausa.
+  - Flujo: el reloj cuenta hacia arriba hasta que pares (máximo 90 min). Al terminar, la pausa es un quinto de lo trabajado, entre 5 y 20 min.
+  - Se cambia con el reloj quieto. Las monedas de la mascota cuentan igual en las tres.
+- **Bloque que se pasa:** si empiezas el enfoque desde una tarea con hora, al pasar la hora de fin de su bloque (hora más estimado) sale un aviso: "Se acabó el bloque. ¿La cierras aquí?", con "Terminar". Si sigues, vuelve a avisar en 15 min.
+
+### 3. Pruebas
+
+`npm test` (pausa de Flujo, pausa según la forma, tiempos de cada forma y el aviso del bloque). En el navegador, con el reloj adelantado, 40 min en Flujo dan una sesión de 40 min y una pausa de 8.

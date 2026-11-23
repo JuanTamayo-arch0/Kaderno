@@ -34,7 +34,7 @@ import { GlobalPanels } from '../components/GlobalPanels';
 import { AppSideNav } from '../components/SideNav';
 import { preloadScreens } from '../lib/preload';
 import { toast } from '../lib/feedback';
-import { beep, loadFocus, setFocusCompleteHandler, getFocus } from '../lib/focusTimer';
+import { beep, loadFocus, setFocusCompleteHandler, setBlockOverHandler, skipFocus, getFocus } from '../lib/focusTimer';
 import { duckAmbient, initAmbient } from '../lib/ambient';
 import { initRooms } from '../lib/rooms';
 import { FriendPets } from '../components/pets/FriendPets';
@@ -48,14 +48,21 @@ import { emitPetEvent, refreshCoinsSoon } from '../lib/pets/store';
 // Animaciones CSS (solo web): se inyectan una vez, antes del primer render.
 installMotion();
 
+// v27 (ley de Parkinson): se pasó la hora de fin del bloque planeado de la tarea.
+setBlockOverHandler((s) => {
+  toast(`Se acabó el bloque de "${s.taskTitle ?? 'la tarea'}". ¿La cierras aquí? Si sigues, te aviso otra vez en 15 min.`,
+    { duration: 12000, actionLabel: 'Terminar', onAction: () => skipFocus() });
+});
+
 // Al terminar un pomodoro o un descanso: sonido, aviso del navegador y mensaje.
 setFocusCompleteHandler((mode, s) => {
   if (s.sound) { duckAmbient(); beep(); }
-  const title = mode === 'work' ? 'Pomodoro terminado' : 'Fin del descanso';
-  const body = mode === 'work' ? `Buen trabajo. Descanso de ${s.cycle === 0 ? s.longBreakMin : s.breakMin} min.` : 'Cuando quieras, empieza el siguiente pomodoro.';
+  const pomo = (s.style ?? 'pomodoro') === 'pomodoro';
+  const title = mode === 'work' ? (pomo ? 'Pomodoro terminado' : 'Bloque terminado') : 'Fin del descanso';
+  const body = mode === 'work' ? `Buen trabajo. Descanso de ${s.brkMin ?? (s.cycle === 0 ? s.longBreakMin : s.breakMin)} min.` : (pomo ? 'Cuando quieras, empieza el siguiente pomodoro.' : 'Cuando quieras, empieza el siguiente bloque.');
   toast(`${title}. ${body}`, { tone: 'good', duration: 8000 });
   if (mode === 'work') {
-    emitPetEvent({ type: 'enfoque_fin', minutes: Math.max(1, s.workMin) }); refreshCoinsSoon(1500);
+    emitPetEvent({ type: 'enfoque_fin', minutes: Math.max(1, s.last?.minutes ?? s.workMin) }); refreshCoinsSoon(1500);
     // Después de felicitar, la mascota sugiere qué hacer en la pausa.
     const tipId = s.tipId;
     setTimeout(() => {
