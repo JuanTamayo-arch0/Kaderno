@@ -9,7 +9,7 @@ export type Situation =
   | 'racha_riesgo' | 'tarde' | 'enfoque_inicio' | 'enfoque_fin' | 'enfoque_corto'
   | 'despierta' | 'agarrar' | 'hola' | 'que_hacemos' | 'sugerencia' | 'nada_pendiente'
   | 'dos_minutos' | 'adoptada' | 'compra' | 'enfoque_activo' | 'logro' | 'repaso_fin' | 'meta'
-  | 'dia_cerrado' | 'que_hacemos_trabajo';
+  | 'dia_cerrado' | 'que_hacemos_trabajo' | 'rana';
 
 type Lines = Record<Species, string[]>;
 
@@ -37,6 +37,12 @@ export const LINES: Record<Situation, Lines> = {
     gato: ['No está mal. Nada mal.', 'Una menos. Ahora sí me impresionas un poco.'],
     perro: ['¡SÍ! ¡Otra más!', '¡Bien! ¡Eres lo máximo!'],
     loro: ['¡Lista! ¡Lista!', '¡Hecha! ¡Hecha!'],
+  },
+  rana: {
+    pinguino: ['Primero lo primero: {tarea}.'],
+    gato: ['{tarea} no se va a hacer sola. Empieza por ahí.'],
+    perro: ['¡Primero {tarea}! ¡Después todo es más fácil!'],
+    loro: ['¿{tarea}? ¿Primero? ¡Primero!'],
   },
   dia_cerrado: {
     pinguino: ['Día cerrado. Mañana seguimos.'],

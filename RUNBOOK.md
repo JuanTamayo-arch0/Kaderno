@@ -1796,3 +1796,54 @@ Desde v26 (parte 4), cada cambio de pantalla dejaba la página quieta unos 4 seg
 Medido con la CPU 4 veces más lenta, ida y vuelta entre Materias, Oráculo, Horario y Hoy: antes 4.124 ms por cambio (mediana), ahora 227 ms.
 
 No hay migración. Se pierde que el ícono de la materia viaje hasta su ficha.
+
+## Versión 27 (parte 1): importante y la matriz de Eisenhower
+
+### 1. Migración
+
+Corre `supabase/schema_v26.sql` (es idempotente). Agrega `assignments.important`. Sin la migración, la vista Matriz se ve igual, pero la estrella avisa que falta este paso.
+
+### 2. Lo que cambia para el usuario
+
+- **Estrella de "importante"** en las tareas:
+  - En la tarea abierta.
+  - En el menú de cada fila ("Marcar importante").
+  - En la vista Matriz, con un toque.
+  - En las demás listas se ve una estrella pequeña junto a la tarea.
+- **Vista Matriz en Hoy**, junto a Lista y Mi día, con cuatro cuadrantes:
+  - Hacer ya.
+  - Planear.
+  - Hacer rápido (en Trabajo: Delegar).
+  - Soltar.
+  - Urgente sale de la fecha: lo vencido y lo que vence en los próximos 2 días (se cambia en Ajustes > Urgente en la Matriz).
+  - En el computador las tareas se arrastran entre cuadrantes. Al cambiar de columna cambia la estrella; al cambiar de fila se ofrece mover la fecha.
+  - Las tareas de proyecto entran por su prioridad.
+- **Ritual del lunes:** lo importante sale primero en las sugerencias, y una línea dice cuánto de lo terminado la semana pasada era importante.
+
+### 3. Pruebas
+
+`npm test` (urgente, importante, cuadrantes, arrastrar, balance de la semana) y `bash tests/run_sql.sh` (incluye `tests/sql/26_pruebas.sql`).
+
+## Versión 27 (parte 2): la rana y la lista para mañana
+
+### 1. Migración
+
+Corre otra vez `supabase/schema_v26.sql`. La fase 2 agrega `assignments.frog` y `assignments.plan_order`, y las funciones `day_set_frog` (una rana por día) y `day_plan_list` (hasta 6 en orden). Sin la migración, la tarjeta de la rana y la lista avisan qué falta.
+
+### 2. Lo que cambia para el usuario
+
+- **La rana en Mi día:** una tarjeta arriba propone lo más pesado e importante del día (importante, largo y lo que más lleva esperando).
+  - Se acepta con "Esa", o se elige otra.
+  - Hoy tiene "Empezar", que abre el enfoque con esa tarea.
+  - Va primero en "Sin hora" y en la lista de Hoy se marca como "Primero".
+  - En Trabajo la tarjeta se llama "Lo primero de hoy".
+- **Cerrar el día, nuevo paso "Mañana"** (método Ivy Lee): se escogen hasta 6 tareas en orden.
+  - Quedan planeadas para mañana en ese orden, y la primera es la rana.
+  - Es opcional ("Seguir sin lista").
+- **La mascota** recuerda la rana en la mañana (antes de la 1 p. m.).
+- **Regla 1-3-5** (Ajustes, apagada por defecto): Mi día avisa si el día tiene más de 1 tarea grande, 3 medianas o 5 pequeñas, según el tiempo estimado.
+- **Arreglo:** una tarea pasada a otro día sin hora (por ejemplo con "Pasarla a mañana") ya no desaparece de Mi día.
+
+### 3. Pruebas
+
+`npm test` (sugerencia de la rana, orden de Mi día, 1-3-5, candidatas de la lista, recordatorio de la mascota) y `bash tests/run_sql.sh` (incluye `tests/sql/26b_pruebas.sql`: una rana por día, la lista en orden, máximo 6, tareas ajenas).

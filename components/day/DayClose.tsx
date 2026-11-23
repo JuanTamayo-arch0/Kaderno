@@ -5,7 +5,8 @@ import { C } from '../../lib/theme';
 import { Button } from '../ds';
 import { Sheet } from '../cards/CardForms';
 import { DateField } from '../DateTime';
-import { updateTask, moveTaskDate, type Task } from '../../lib/db';
+import { updateTask, moveTaskDate, planDayList, type Task } from '../../lib/db';
+import { IVY_MAX, ivyCandidates, togglePick } from '../../lib/frog';
 import { getStreakSummary } from '../../lib/studyDb';
 import { saveDayReview } from '../../lib/dayDb';
 import { leftovers, localISO, fmtHours, hoursNudge } from '../../lib/day';
@@ -18,10 +19,12 @@ import { refreshNavCounts } from '../../lib/navCounts';
 
 // ============================================================
 //  Cerrar el día (v21, sección 4), 1 minuto: lo que hiciste, lo que
-//  quedó (mañana, otro día o a la bandeja) y una línea de diario.
+//  quedó (mañana, otro día o a la bandeja), la lista para mañana (v27,
+//  método Ivy Lee: hasta 6 en orden, la primera es la rana) y una línea.
 // ============================================================
 
-const STEPS = ['Lo que hiciste', 'Lo que quedó', 'Una línea'];
+const STEPS = ['Lo que hiciste', 'Lo que quedó', 'Mañana', 'Una línea'];
+const LAST = STEPS.length - 1;
 
 export function DayClose({ visible, tasks, onClose, onDone }: { visible: boolean; tasks: Task[]; onClose: () => void; onDone: () => void }) {
   const [step, setStep] = useState(0);
@@ -31,6 +34,7 @@ export function DayClose({ visible, tasks, onClose, onDone }: { visible: boolean
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [logged, setLogged] = useState<number | null>(null);
+  const [picks, setPicks] = useState<string[]>([]);
   const { work } = useMode();
   const router = useRouter();
   const today = localISO(new Date());
@@ -38,6 +42,9 @@ export function DayClose({ visible, tasks, onClose, onDone }: { visible: boolean
   useEffect(() => {
     if (!visible) return;
     setStep(0); setMoved({}); setNote(''); setPicking(null);
+    // Si ya había lista para mañana, se parte de ella.
+    const tmw = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return localISO(d); })();
+    setPicks(tasks.filter((t) => t.plan_day === tmw && t.plan_order && t.status !== 'done').sort((a, b) => (a.plan_order ?? 0) - (b.plan_order ?? 0)).map((t) => t.id));
     getStreakSummary().then((s) => setStats(s ? { focus: s.today.focus, cards: s.today.cards } : { focus: 0, cards: 0 })).catch(() => setStats({ focus: 0, cards: 0 }));
     // v25: en modo Trabajo, las horas registradas hoy (enfoque, cronómetro y a mano).
     if (work) {
@@ -64,8 +71,13 @@ export function DayClose({ visible, tasks, onClose, onDone }: { visible: boolean
   async function finish() {
     setBusy(true);
     try {
+      if (picks.length) {
+        try { await planDayList(picks, tomorrow); }
+        catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
+      }
       await saveDayReview({ day: today, done: { tasks: doneToday.length, focus: stats?.focus ?? 0, cards: stats?.cards ?? 0 }, moved: Object.entries(moved).map(([id, to]) => ({ id, to })), note: note || null });
-      toast('Día cerrado. Mañana empiezas con lo que dejaste listo.', { tone: 'good' });
+      const first = picks.length ? tasks.find((t) => t.id === picks[0])?.title : null;
+      toast(first ? `Día cerrado. Mañana empiezas por "${first}".` : 'Día cerrado. Mañana empiezas con lo que dejaste listo.', { tone: 'good' });
       dataChanged(); refreshNavCounts(true); onDone(); onClose();
     } catch (e) { notify('No se pudo guardar', friendlyError(e)); }
     finally { setBusy(false); }
@@ -123,6 +135,29 @@ export function DayClose({ visible, tasks, onClose, onDone }: { visible: boolean
         })}
       </>
     );
+  } else if (step === 2) {
+    const cands = ivyCandidates(tasks, tomorrow);
+    body = (
+      <>
+        <Text style={{ color: C.text, fontSize: 14 }}>Escoge hasta {IVY_MAX} para mañana, en el orden en que las vas a hacer. La primera es lo primero del día.</Text>
+        <Text style={{ color: C.muted, fontSize: 12.5 }}>Mañana las haces en ese orden, una a la vez. Es opcional: puedes seguir sin lista.</Text>
+        {cands.length === 0 && <Text style={{ color: C.muted, fontSize: 13.5 }}>No hay tareas pendientes para escoger.</Text>}
+        {cands.map((t) => {
+          const n = picks.indexOf(t.id) + 1;
+          return (
+            <Pressable key={t.id} onPress={() => { const r = togglePick(picks, t.id); if (r.full) toast(`Máximo ${IVY_MAX}: lo importante es poco.`); setPicks(r.list); }}
+              accessibilityRole="checkbox" accessibilityState={{ checked: n > 0 }} accessibilityLabel={n ? `${t.title}, número ${n} de la lista` : `Agregar "${t.title}" a la lista de mañana`}
+              style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, borderRadius: 12, borderWidth: 1, borderColor: n ? C.brand : C.line, backgroundColor: hovered ? C.surface2 : 'transparent' })}>
+              <View style={{ width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: n ? C.brand : 'transparent', borderWidth: n ? 0 : 1.5, borderColor: C.muted }}>
+                {n > 0 && <Text style={{ color: C.onBrand, fontSize: 12.5, fontWeight: '800' }}>{n}</Text>}
+              </View>
+              <Text style={{ color: C.text, fontSize: 14, flex: 1 }} numberOfLines={2}>{t.title}</Text>
+              {!!t.important && <Ionicons name="star" size={14} color={C.warnText} />}
+            </Pressable>
+          );
+        })}
+      </>
+    );
   } else {
     body = (
       <>
@@ -135,11 +170,11 @@ export function DayClose({ visible, tasks, onClose, onDone }: { visible: boolean
   }
   const pendingLeft = step === 1 && left.some((t) => !moved[t.id]);
   return (
-    <Sheet visible={visible} onClose={onClose} title="Cerrar el día" subtitle={`Paso ${step + 1} de 3 · ${STEPS[step]}`}
+    <Sheet visible={visible} onClose={onClose} title="Cerrar el día" subtitle={`Paso ${step + 1} de ${STEPS.length} · ${STEPS[step]}`}
       footer={<>
         <Button label={step === 0 ? 'Cerrar' : 'Atrás'} kind="secondary" onPress={() => (step === 0 ? onClose() : setStep(step - 1))} style={{ flex: 1 }} />
-        {step < 2
-          ? <Button label={pendingLeft ? 'Dejarlas así' : 'Siguiente'} icon="arrow-forward" onPress={() => setStep(step + 1)} style={{ flex: 2 }} />
+        {step < LAST
+          ? <Button label={pendingLeft ? 'Dejarlas así' : step === 2 && !picks.length ? 'Seguir sin lista' : 'Siguiente'} icon="arrow-forward" onPress={() => setStep(step + 1)} style={{ flex: 2 }} />
           : <Button label="Cerrar el día" icon="moon-outline" onPress={finish} busy={busy} style={{ flex: 2 }} />}
       </>}>
       {body}

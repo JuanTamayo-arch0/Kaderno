@@ -254,8 +254,13 @@ export function PetBuddy() {
           if (Date.now() - last > 30 * 86_400_000) { goal = withPlan[0]; AsyncStorage.setItem('kd:goalNudge', String(Date.now())).catch(() => {}); }
         }
         const goalHint = goal ? { materia: subs.find((x) => x.id === goal!.subject_id)?.name ?? 'el semestre', plan: String(goal.plan).slice(0, 140) } : null;
+        // v27: la rana de hoy, si la dejaste lista al cerrar el día.
+        const todayIso = isoDate(startOfDay(now));
+        const frogTask = h.all.find((t) => t.frog && t.plan_day === todayIso && t.status !== 'done' && !t.deleted_at);
+        if (frogTask) ctx.current.task = frogTask;
         fns.current.handle({
           type: 'abrir', overdue: h.overdue, today: h.today, hour: now.getHours(), goal: goalHint,
+          frog: frogTask ? { id: frogTask.id, title: frogTask.title } : null,
           exam: exam ? { materia: subs.find((x) => x.id === exam.t.subject_id)?.name ?? exam.t.title, dias: exam.dias } : null,
           streakAtRisk: !!focus && focus.streak > 0 && focus.todayMin === 0,
         });

@@ -24,8 +24,8 @@ export type Task = {
   // schema_v20 fase 1 (versión 21): repeticiones, bandeja y franjas
   repeat_rule?: import('./repeat').RepeatRule | null; repeat_parent_id?: string | null; inbox?: boolean;
   plan_day?: string | null; plan_band?: 'manana' | 'tarde' | 'noche' | null;
-  // schema_v26 (versión 27): importante (matriz de Eisenhower)
-  important?: boolean;
+  // schema_v26 (versión 27): importante (matriz de Eisenhower), la rana y el orden del día
+  important?: boolean; frog?: boolean; plan_order?: number | null;
 };
 export type Note = {
   id: string; subject_id: string | null; title: string | null; content: string | null;
@@ -222,6 +222,21 @@ export async function setTaskImportant(id: string, on: boolean): Promise<void> {
   if (error) throw error;
 }
 export function hasImportantCol(): boolean { return !MISSING.has('important'); }
+function needsV26_2(err: any): Error | null {
+  const m = String(err?.message ?? '');
+  return err?.code === 'PGRST202' || err?.code === '42883' || /Could not find the function|function .* does not exist/i.test(m)
+    ? new Error('Para la rana y la lista para mañana falta correr supabase/schema_v26.sql.') : null;
+}
+/** La rana de un día (null la quita). */
+export async function setFrog(taskId: string | null, dayISO: string): Promise<void> {
+  const { error } = await supabase.rpc('day_set_frog', { p_task: taskId, p_day: dayISO });
+  if (error) throw needsV26_2(error) ?? error;
+}
+/** La lista para un día (hasta 6, en orden); la primera queda como la rana. */
+export async function planDayList(ids: string[], dayISO: string): Promise<void> {
+  const { error } = await supabase.rpc('day_plan_list', { p_ids: ids, p_day: dayISO });
+  if (error) throw needsV26_2(error) ?? error;
+}
 export async function toggleTask(id: string, done: boolean): Promise<void> {
   const { error } = await supabase.from('assignments').update({ status: done ? 'done' : 'pending' }).eq('id', id);
   if (error) throw error;

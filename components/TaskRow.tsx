@@ -95,6 +95,7 @@ export function TaskRow({
           <Text style={{ color: done ? C.muted : C.text, fontSize: 15, fontWeight: '600', lineHeight: 20, textDecorationLine: done ? 'line-through' : 'none' }} numberOfLines={2}>{task.title}</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 10, rowGap: 4, marginTop: 4 }}>
             {!!task.important && !onStar && <Ionicons name="star" size={13} color={C.warnText} accessibilityLabel="Importante" />}
+            {!!task.frog && !done && task.plan_day === todayLocal() && <Text style={{ color: C.brand, fontSize: 12, fontWeight: '800' }}>Primero</Text>}
             {showSubject && subject && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                 <Dot color={subject.color} />
@@ -165,4 +166,10 @@ export function fmtMin(m: number): string {
   if (m < 60) return `${m} min`;
   const h = Math.floor(m / 60), r = m % 60;
   return r ? `${h} h ${r} min` : `${h} h`;
+}
+
+/** Hoy en AAAA-MM-DD (hora local), para saber si la rana es de hoy. */
+function todayLocal(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
