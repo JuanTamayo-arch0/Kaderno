@@ -224,3 +224,7 @@ La fase 1 se ve de inmediato y no cambia datos. La 2 es la más grande y la que 
 10. (Fase 2) Al cambiar de espacio se repinta la app con un velo que se desvanece (unos 400 ms), en vez de pasar los colores a variables CSS. Es más simple y se ve igual de suave; las variables quedan para la fase 4 si hacen falta.
 11. (Fase 2) Los radios más rectos de Trabajo quedan para la fase 4 (los radios hoy son constantes en el código).
 12. (Fase 2) La letra de Trabajo es Inter para el texto y Newsreader para los títulos marcados (encabezados de pantalla, nombre del área, logotipo), servidas desde la app.
+13. (Fase 3) El promedio del semestre se pondera por créditos con las materias aprobadas o reprobadas que tienen nota. Los créditos aprobados suman aprobadas y homologadas. Las retiradas no cuentan. El servidor lo vuelve a calcular al cerrar.
+14. (Fase 3) El resumen de cada semestre se guarda como foto (jsonb) y no cambia aunque después se borren materias o notas. No guarda los identificadores de las materias, solo sus datos.
+15. (Fase 3) La escala la pone cada persona (nota máxima, para aprobar y decimales) en sus ajustes. Cada semestre guarda la escala con la que se cerró, y el acumulado los convierte a la escala actual.
+16. (Fase 3) El semestre abierto se crea solo, con el nombre por la fecha. No se pregunta la escala al empezar: queda 0 a 5 con 3,0 y se cambia en Historial o Ajustes.

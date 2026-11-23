@@ -32,6 +32,7 @@ import {
 } from '../../components/subject/SubjectParts';
 import { SubjectRail } from '../../components/subject/SubjectRail';
 import { useMode } from '../../lib/mode';
+import { useGradeScale } from '../../lib/termsDb';
 import { QuickTaskInput, SubjectTaskList } from '../../components/subject/SubjectTasks';
 import { NotesList } from '../../components/notes/NotesList';
 import { NoteDocument } from '../../components/notes/NoteDocument';
@@ -72,6 +73,7 @@ function MateriaDetalle() {
   const [slots, setSlots] = useState<Slot[] | null>(null);
   const [study, setStudy] = useState<{ weekMin: number; dueCards: number } | null>(null);
   const { work } = useMode();
+  const gScale = useGradeScale();
   const [tab, setTabState] = useState<TabKey>((TABS.includes(tabParam as TabKey) ? tabParam : 'tareas') as TabKey);
   const [openNote, setOpenNote] = useState<string | null>(nota ?? null);
   const [newNoteId, setNewNoteId] = useState<string | null>(null);
@@ -176,9 +178,10 @@ function MateriaDetalle() {
   const live = tasks.filter((t) => !hidden.has(t.id));
   const pending = live.filter((t) => t.status !== 'done');
   const done = live.filter((t) => t.status === 'done');
-  const scale = grades[0]?.max_score ?? 5;
+  // v26: la escala la pone la persona según su institución (Historial > Escala de notas).
+  const scale = gScale.max;
   const { avg, doneWeight } = subjectAverage(grades, scale);
-  const passMark = scale === 100 ? 60 : scale * 0.6;
+  const passMark = gScale.pass;
   const { needed, remainingWeight } = neededFor(grades, passMark, scale);
   const fmt = (n: number) => n.toFixed(2);
   const neededText = !grades.length ? 'Agrega tus evaluaciones con su peso'

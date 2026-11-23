@@ -64,6 +64,8 @@ import { ruleText } from '../../lib/repeat';
 import { openClassNote } from '../../lib/notesDb';
 import { useMode } from '../../lib/mode';
 import { useSpaceFilter } from '../../lib/useSpace';
+import { getTerms } from '../../lib/termsDb';
+import { shouldOfferClose as shouldOfferCloseTerm, type Term } from '../../lib/terms';
 import { otherSpaceLine } from '../../lib/spaces';
 import { switchSpace } from '../../lib/spaceSwitch';
 
@@ -132,6 +134,10 @@ export default function Hoy() {
   const [ritualPrefs, setRitualPrefs] = useState<RitualPrefs | null>(null);
   const [ritualOpen, setRitualOpen] = useState(false);
   const [semesterOpen, setSemesterOpen] = useState(false);
+  // v26: el semestre abierto, para recordar cerrarlo cuando termine.
+  const [openTerm, setOpenTerm] = useState<Term | null>(null);
+  useEffect(() => { if (study) getTerms().then((r) => setOpenTerm(r.terms.find((t) => t.status === 'open') ?? null)).catch(() => {}); }, [study]);
+  const termToClose = study && shouldOfferCloseTerm(openTerm, now) ? openTerm : null;
   const [modo, setModo] = useState<'lista' | 'dia'>('lista');
   const [inboxOpen, setInboxOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
@@ -341,7 +347,7 @@ export default function Hoy() {
 
   // Rituales: planear la semana (lunes o domingo en la noche) y empezar el semestre.
   const offerRitual = ritualPlan !== undefined && !!ritualPrefs && shouldOfferRitual(now, ritualPlan, ritualPrefs.monday);
-  const offerSemester = study && !!ritualPrefs && !offerRitual && shouldOfferSemester(subjects as any, now, !!ritualPrefs.semesterAt || ritualPrefs.semesterDismissed);
+  const offerSemester = study && !termToClose && !!ritualPrefs && !offerRitual && shouldOfferSemester(subjects as any, now, !!ritualPrefs.semesterAt || ritualPrefs.semesterDismissed);
   const priorities = weekPlan?.done_at ? weekPlan.priorities : [];
   const offerClose = shouldOfferClose(now, reviewed, closeHour);
   const yesterday = (() => { const d = new Date(now); d.setDate(d.getDate() - 1); return dayISO(d); })();
@@ -659,6 +665,16 @@ export default function Hoy() {
           </View>
           <Button label="Empezar" size="sm" onPress={() => setRitualOpen(true)} />
           <Button label="Mañana" size="sm" kind="ghost" onPress={() => { const rw = ritualWeekStart(now); const until = tomorrowISO(now); setRitualPlan((p) => ({ ...(p ?? { week_start: rw, priorities: [], goal_days: null, done_at: null }), snoozed_until: until })); saveWeekPlan(rw, { snoozed_until: until }).catch(() => {}); }} />
+        </Card>
+      )}
+      {study && termToClose && (
+        <Card style={{ marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <Ionicons name="ribbon-outline" size={22} color={C.brand} />
+          <View style={{ flex: 1, minWidth: 180 }}>
+            <Text style={{ color: C.text, fontWeight: '700', fontSize: 14 }}>Cierra el semestre {termToClose.name}</Text>
+            <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>Con las notas finales queda tu resumen en el historial y empiezas el siguiente.</Text>
+          </View>
+          <Button label="Cerrar semestre" size="sm" onPress={() => router.push('/historial' as any)} />
         </Card>
       )}
       {offerSemester && (
