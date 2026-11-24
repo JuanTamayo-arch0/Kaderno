@@ -214,7 +214,7 @@ function onProposal(p: Proposal | null) {
   if (viewing === live.room?.id) return; // la pantalla de la sala ya lo muestra con su botón
   const f = getFocus();
   const busy = f.running && f.mode === 'work';
-  toast(t('{name} propone empezar juntos un pomodoro de {workMin} min{v}.', { name: p.name, workMin: p.workMin, v: busy ? ' (reinicia tu reloj)' : '' }), {
+  toast(t('{name} propone empezar juntos un pomodoro de {workMin} min{v}.', { name: p.name, workMin: p.workMin, v: busy ? t(' (reinicia tu reloj)') : '' }), {
     actionLabel: t('Me uno'), onAction: () => { acceptProposal(p); }, duration: Math.max(9000, Math.min(60000, p.startAt - now + 20000)),
   });
 }
@@ -289,7 +289,7 @@ function onGreeting(g: Greeting | null) {
   if (g.to !== me.uid || viewing === live.room?.id) return; // el patio ya lo muestra
   const f = getFocus();
   if (f.running && f.mode === 'work') { pending.push(g); return; } // no interrumpir el enfoque
-  toast(t('{fromName} te saludó desde {v}.', { fromName: g.fromName, v: live.room?.name ?? 'la sala' }));
+  toast(t('{fromName} te saludó desde {v}.', { fromName: g.fromName, v: live.room?.name ?? t('la sala') }));
 }
 
 /** Al terminar el enfoque, los saludos que llegaron mientras tanto. */

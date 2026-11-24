@@ -26,7 +26,7 @@ export function planView(mp: MyPlan | null | undefined, now = new Date()): PlanV
     const ended = mp?.own_plan && mp.own_plan !== 'free' && mp.period_end && new Date(mp.period_end) <= now;
     return {
       name: t('Gratis'), badge: 'free', daysLeft: null, canPay: true, isPaid: false,
-      line: ended ? t('Tu plan {v}terminó el {shortDate}. Todo lo tuyo sigue aquí.', { v: mp!.status === 'trial' ? 'de prueba ' : '', shortDate: shortDate(mp!.period_end!) }) : mp?.trial_available !== false ? t('Puedes probar Pro 7 días sin tarjeta.') : t('Todo lo básico, con topes diarios de IA.'),
+      line: ended ? t('Tu plan {v}terminó el {shortDate}. Todo lo tuyo sigue aquí.', { v: mp!.status === 'trial' ? t('de prueba ') : '', shortDate: shortDate(mp!.period_end!) }) : mp?.trial_available !== false ? t('Puedes probar Pro 7 días sin tarjeta.') : t('Todo lo básico, con topes diarios de IA.'),
     };
   }
   if (mp?.via_team) {
@@ -36,7 +36,7 @@ export function planView(mp: MyPlan | null | undefined, now = new Date()): PlanV
   const left = end ? daysUntil(end, now) : null;
   const name = plan === 'team' ? t('Equipo') : 'Pro';
   if (mp?.status === 'trial') {
-    return { name: t('Pro'), badge: 'trial', daysLeft: left, canPay: true, isPaid: false, line: left != null ? t('Prueba gratis: {v} (hasta el {shortDate}).', { v: left <= 1 ? 'termina mañana' : `te quedan ${left} días`, shortDate: shortDate(end!) }) : t('Prueba gratis.') };
+    return { name: t('Pro'), badge: 'trial', daysLeft: left, canPay: true, isPaid: false, line: left != null ? t('Prueba gratis: {v} (hasta el {shortDate}).', { v: left <= 1 ? t('termina mañana') : t('te quedan {left} días', { left }), shortDate: shortDate(end!) }) : t('Prueba gratis.') };
   }
   if (mp?.status === 'past_due') {
     const next = mp.next_charge_at ? t(' Lo intentamos de nuevo el {next_charge_at}.', { next_charge_at: shortDate(mp.next_charge_at) }) : '';

@@ -475,7 +475,7 @@ function ProyectoDetalle() {
             items: [{
               icon: hiddenInHoy ? 'eye-outline' : 'eye-off-outline',
               label: hiddenInHoy ? t('Volver a mostrar mis tareas en Hoy') : t('No mostrar mis tareas en Hoy'),
-              hint: hiddenInHoy ? t('Ahora están ocultas en tu pantalla Hoy') : t('Tienes {myTasksHere} {v} aquí. Solo cambia tu vista.', { myTasksHere, v: myTasksHere === 1 ? 'tarea asignada' : 'tareas asignadas' }),
+              hint: hiddenInHoy ? t('Ahora están ocultas en tu pantalla Hoy') : t('Tienes {myTasksHere} {v} aquí. Solo cambia tu vista.', { myTasksHere, v: myTasksHere === 1 ? t('tarea asignada') : t('tareas asignadas') }),
               onPress: toggleHoy,
             }],
           }] : []),

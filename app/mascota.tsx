@@ -17,7 +17,7 @@ import { confirm, friendlyError, notify, toast } from '../lib/feedback';
 import { PetChooser, PERSONALITY } from '../components/pets/PetChooser';
 import { PetSettings } from '../components/pets/PetSettings';
 import { CoinIcon, PetImage, PetSprite } from '../components/pets/PetArt';
-import { t } from '../lib/i18n';
+import { t, locale } from '../lib/i18n';
 
 // ============================================================
 //  Mascota: verla en grande, su nivel y monedas, la tienda de ropa,
@@ -145,7 +145,7 @@ function Shop({ pet, owned }: { pet: Pet; owned: Set<string> }) {
     try {
       if (st === 'puesta') await wearItem(pet.id, r.slot, null);
       else if (st === 'tuya') await wearItem(pet.id, r.slot, id);
-      else if (await confirm(t('¿Comprar {toLowerCase}?', { toLowerCase: ITEMS[id].name.toLowerCase() }), t('Cuesta {price}. Es solo para {name}.{v}', { price: coinLabel(r.price, coin), name: pet.name, v: seasonOfItem(id) ? ' Es de temporada: después de la temporada sigue siendo tuya.' : '' }), t('Comprar'))) {
+      else if (await confirm(t('¿Comprar {toLowerCase}?', { toLowerCase: ITEMS[id].name.toLowerCase() }), t('Cuesta {price}. Es solo para {name}.{v}', { price: coinLabel(r.price, coin), name: pet.name, v: seasonOfItem(id) ? t(' Es de temporada: después de la temporada sigue siendo tuya.') : '' }), t('Comprar'))) {
         await buyItem(id);
         toast(`${pet.name} estrena ${ITEMS[id].name.toLowerCase()}`, { tone: 'good' });
       }
@@ -171,7 +171,7 @@ function Shop({ pet, owned }: { pet: Pet; owned: Set<string> }) {
             ? <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700' }}>{extra ?? t('En su temporada')}</Text>
             : st === 'bloqueada'
               ? <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700' }}>{t('Nivel {level}', { level: r.level })}</Text>
-              : <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}><CoinIcon species={pet.species} size={14} /><Text style={{ color: st === 'cara' ? C.muted : C.warnText, fontSize: 12.5, fontWeight: '900', fontVariant: ['tabular-nums'] }}>{r.price.toLocaleString(t('es-CO'))}</Text></View>}
+              : <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}><CoinIcon species={pet.species} size={14} /><Text style={{ color: st === 'cara' ? C.muted : C.warnText, fontSize: 12.5, fontWeight: '900', fontVariant: ['tabular-nums'] }}>{r.price.toLocaleString(locale())}</Text></View>}
       </Pressable>
     );
   };
@@ -199,7 +199,7 @@ function Shop({ pet, owned }: { pet: Pet; owned: Set<string> }) {
         <Text style={{ color: C.muted, fontSize: 13 }}>
           {now
             ? t('Estas prendas se venden hasta el {dayLabel}. Lo que compres se queda contigo todo el año.', { dayLabel: dayLabel(seasonEnd(now, today)) })
-            : t('Llega el {starts} (en {days} {v}). Ve ahorrando: solo se venden en su temporada.', { starts: dayLabel(next.starts), days: next.days, v: next.days === 1 ? 'día' : 'días' })}
+            : t('Llega el {starts} (en {days} {v}). Ve ahorrando: solo se venden en su temporada.', { starts: dayLabel(next.starts), days: next.days, v: next.days === 1 ? t('día') : t('días') })}
         </Text>
       </View>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
@@ -338,7 +338,7 @@ function Pets({ pets, active }: { pets: Pet[]; active: Pet }) {
                 <Text style={{ color: C.muted, fontSize: 13 }}>{t('{trait} · gana {many}', { trait: PERSONALITY[sp].trait, many: SPECIES[sp].coin.many })}</Text>
               </View>
               {adopting !== sp && (
-                <Button label={can ? t('Adoptar') : `Faltan ${(price - active.coins).toLocaleString(t('es-CO'))}`} size="sm" kind={can ? 'primary' : 'secondary'} disabled={!can}
+                <Button label={can ? t('Adoptar') : `Faltan ${(price - active.coins).toLocaleString(locale())}`} size="sm" kind={can ? 'primary' : 'secondary'} disabled={!can}
                   onPress={() => { setAdopting(sp); setName(DEFAULT_NAMES[sp]); }} />
               )}
             </View>
@@ -347,7 +347,7 @@ function Pets({ pets, active }: { pets: Pet[]; active: Pet }) {
                 <TextInput value={name} onChangeText={(v) => setName(v.slice(0, 24))} autoFocus maxLength={24} accessibilityLabel={t('Nombre para el {toLowerCase}', { toLowerCase: SPECIES[sp].name.toLowerCase() })}
                   onSubmitEditing={() => adopt(sp)}
                   style={[{ flex: 1, minWidth: 0, color: C.text, fontSize: 15, fontWeight: '700', backgroundColor: C.surface2, borderWidth: 1, borderColor: C.line, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
-                <Button label={t('Pagar {toLocaleString}', { toLocaleString: price.toLocaleString('es-CO') })} size="sm" busy={busy} onPress={() => adopt(sp)} />
+                <Button label={t('Pagar {toLocaleString}', { toLocaleString: price.toLocaleString(locale()) })} size="sm" busy={busy} onPress={() => adopt(sp)} />
                 <IconButton icon="close" label={t('Cancelar')} onPress={() => setAdopting(null)} />
               </View>
             )}

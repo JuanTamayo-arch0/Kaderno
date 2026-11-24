@@ -111,8 +111,8 @@ export function SubjectHero({ subject, days, isWide, onEdit, onSchedule }: {
   const chips = (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
       {subject.teacher ? <MetaChip icon="person-outline" text={subject.teacher} onPress={() => onEdit('teacher')} label={t('{who}: {teacher}. Editar', { who, teacher: subject.teacher })} /> : null}
-      {subject.room ? <MetaChip icon="location-outline" text={subject.room} onPress={() => onEdit('room')} label={t('{v}: {room}. Editar', { v: work ? 'Lugar' : 'Salón', room: subject.room })} /> : null}
-      {days === null ? null : days ? <MetaChip icon="time-outline" text={days} onPress={onSchedule} label={t('{v}: {days}. Abrir {v2}', { v: work ? 'Reuniones' : 'Clases', days, v2: work ? 'agenda' : 'horario' })} />
+      {subject.room ? <MetaChip icon="location-outline" text={subject.room} onPress={() => onEdit('room')} label={t('{v}: {room}. Editar', { v: work ? t('Lugar') : t('Salón'), room: subject.room })} /> : null}
+      {days === null ? null : days ? <MetaChip icon="time-outline" text={days} onPress={onSchedule} label={t('{v}: {days}. Abrir {v2}', { v: work ? t('Reuniones') : t('Clases'), days, v2: work ? t('agenda') : t('horario') })} />
         : <MetaChip icon="time-outline" text={work ? t('Agregar a la agenda') : t('Agregar al horario')} onPress={onSchedule} dashed />}
       {subject.credits && !work ? <MetaChip text={`${subject.credits} ${subject.credits === 1 ? t('crédito') : t('créditos')}`} /> : null}
       {link ? <MetaChip icon="link-outline" text={work ? t('Enlace') : t('Aula virtual')} onPress={() => Linking.openURL(link).catch(() => {})} label={work ? t('Abrir el enlace') : t('Abrir el aula virtual')} /> : null}
@@ -269,7 +269,7 @@ export function SubjectStats({ d, accent, isWide, onGrades, onNext, onTasks, onS
     </Tile>,
     <Tile key="study" label={t('Estudio')} onPress={onStudy} a11y={d.dueCards ? 'Repasar tarjetas' : 'Enfocar en esta materia'} style={isWide ? { flex: 1 } : { width: w }}>
       <Text style={{ color: C.text, ...big }}>{d.weekMin == null ? '–' : minutesLabel(d.weekMin)}</Text>
-      <Text style={sub} numberOfLines={2}>{t('de enfoque esta semana{v}', { v: d.dueCards ? ` · ${d.dueCards} ${d.dueCards === 1 ? 'tarjeta' : 'tarjetas'} para hoy` : '' })}</Text>
+      <Text style={sub} numberOfLines={2}>{t('de enfoque esta semana{v}', { v: d.dueCards ? t(' · {dueCards} {v} para hoy', { dueCards: d.dueCards, v: d.dueCards === 1 ? t('tarjeta') : t('tarjetas') }) : '' })}</Text>
     </Tile>,
   ];
   // v26: en Trabajo no hay promedio ni evaluaciones: pendientes y horas.

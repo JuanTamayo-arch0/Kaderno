@@ -1,5 +1,5 @@
-
-import { t } from '../i18n';// ============================================================
+import { t } from '../i18n';
+// ============================================================
 //  Logros de la mascota. La base (pet_achievements en schema_v16.sql) los
 //  calcula, paga y devuelve con su avance; aquí solo están los textos.
 //  Cuentan desde que adoptaste tu primera mascota.

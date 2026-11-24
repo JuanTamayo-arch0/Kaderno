@@ -1,5 +1,5 @@
-
-import { t } from '../i18n';// ============================================================
+import { t } from '../i18n';
+// ============================================================
 //  Arte de las mascotas de Kaderno: pixel art.
 //
 //  Cada mascota es una cuadrícula de 32 x 32 píxeles. Se dibuja solo la mitad

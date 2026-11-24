@@ -130,10 +130,36 @@ export function inNonUiPosition(node: ts.Node): boolean {
   return false;
 }
 
-/** ¿El nodo es un argumento de t/tc/tp? */
+/** ¿El nodo es la llave de un t/trn/tc/tp? (las variables de adentro sí se revisan: se muestran). */
 export function insideT(node: ts.Node): boolean {
-  for (let p = node.parent; p; p = p.parent) {
-    if (ts.isCallExpression(p)) { const n = calleeName(p.expression); if (n === 't' || n === 'tc' || n === 'tp' || n === 'trn') return true; }
+  let child: ts.Node = node;
+  for (let p = node.parent; p; child = p, p = p.parent) {
+    if (ts.isCallExpression(p)) {
+      const n = calleeName(p.expression);
+      if (n === 't' || n === 'trn' || n === 'tc' || n === 'tp') {
+        const i = p.arguments.indexOf(child as ts.Expression);
+        if (n === 't' || n === 'trn') return i === 0;
+        if (n === 'tc') return i === 0 || i === 1;
+        return i === 1 || i === 2;
+      }
+    }
+    if (ts.isFunctionLike(p) || ts.isSourceFile(p)) return false;
+  }
+  return false;
+}
+
+/** ¿El nodo es el valor de una variable de t()? (`{ v: n === 1 ? 'tarea' : 'tareas' }`). */
+export function inTVars(node: ts.Node): boolean {
+  let child: ts.Node = node;
+  for (let p = node.parent; p; child = p, p = p.parent) {
+    if (ts.isCallExpression(p)) {
+      const n = calleeName(p.expression);
+      if (n === 't' || n === 'trn' || n === 'tc' || n === 'tp') {
+        const i = p.arguments.indexOf(child as ts.Expression);
+        return (n === 'tc' ? i === 2 : n === 'tp' ? i === 3 : i === 1);
+      }
+      return false; // otra llamada en medio (fmt(x)): no es texto directo
+    }
     if (ts.isFunctionLike(p) || ts.isSourceFile(p)) return false;
   }
   return false;

@@ -122,7 +122,7 @@ export function prepText(quizzes: { score: number | null; scale: number | null; 
   const done = quizzes.filter((q) => q.score != null).sort((a, b) => b.created_at.localeCompare(a.created_at));
   if (!done.length) return null;
   const s = (q: (typeof done)[number]) => fmtGrade(Number(q.score), Number(q.scale) || 5).split(' / ')[0];
-  return t('Preparación: último simulacro {s}{v}', { s: s(done[0]), v: done[1] ? ` (antes ${s(done[1])})` : '' });
+  return t('Preparación: último simulacro {s}{v}', { s: s(done[0]), v: done[1] ? t(' (antes {s})', { s: s(done[1]) }) : '' });
 }
 
 /** "Probada hace 3 días · 70%". */

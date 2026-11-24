@@ -13,6 +13,8 @@ import { BRAND } from '../lib/brand';
 import { KadernoWordmark } from '../components/brand/KadernoLogo';
 import { KadernoWrites } from '../components/brand/KadernoWrites';
 import { t } from '../lib/i18n';
+import { LangPicker } from '../components/LangPicker';
+import { showLangPicker } from '../lib/i18nApp';
 
 type Mode = 'in' | 'up';
 
@@ -357,6 +359,12 @@ export default function Login() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: currentTheme().palette.bg }}>
       {body}
+      {/* v30: idioma, arriba a la derecha (sobre la franja de tinta en el celular). */}
+      {showLangPicker() && (
+        <View style={{ position: 'absolute', top: insets.top + (wide ? 20 : 12), right: wide ? 24 : 14 }}>
+          <LangPicker compact onDark={!wide} />
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }

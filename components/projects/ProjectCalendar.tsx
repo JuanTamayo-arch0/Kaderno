@@ -42,7 +42,7 @@ export function ProjectCalendar({ projectId, tasks, cols, members, editable, isW
 
   // ---------- Camino a la entrega final ----------
   const finalDay = road.final ? dueDayOf(road.final) : null;
-  const paceText = road.pace === 'late' ? (road.late ? t('{late} {v}: pónganse al día', { late: road.late, v: road.late === 1 ? 'tarea vencida' : 'tareas vencidas' }) : t('La entrega final ya pasó'))
+  const paceText = road.pace === 'late' ? (road.late ? t('{late} {v}: pónganse al día', { late: road.late, v: road.late === 1 ? t('tarea vencida') : t('tareas vencidas') }) : t('La entrega final ya pasó'))
     : road.pace === 'tight' ? t('Apretado: quedan {v} tareas para {max} días', { v: road.total - road.done, max: Math.max(0, road.daysLeft ?? 0) })
     : road.pace === 'ok' ? t('Van a buen ritmo') : t('Pongan fecha a las tareas para ver el camino');
   const paceColor = road.pace === 'late' ? C.bad : road.pace === 'tight' ? C.warn : road.pace === 'ok' ? C.good : C.muted;

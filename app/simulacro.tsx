@@ -261,7 +261,7 @@ function Simulacro() {
             <Text style={{ color: grade / scale >= 0.6 ? C.goodText : C.badText, fontSize: 44, fontWeight: '800' }} accessibilityLabel={t('Nota {grade}', { grade: fmtGrade(grade, scale) })}>{fmtGrade(grade, scale)}</Text>
             <Text style={{ color: C.text, fontSize: 15, fontWeight: '600' }}>{t('{pct}% · {v} de {length} bien · {duration}', { pct, v: qs.length - errs.length, length: qs.length, duration: fmtClock(duration) })}</Text>
             {prev && <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 6 }}>{t('Antes: {fmtGrade}', { fmtGrade: fmtGrade(Number(prev.score), Number(prev.scale) || scale) })}</Text>}
-            {target != null && <Text style={{ color: grade >= target ? C.goodText : C.muted, fontSize: 12.5, marginTop: 2 }}>{t('Tu meta: {v}{v2}', { v: fmtGrade(target, scale).split(' / ')[0], v2: grade >= target ? ' · ¡la alcanzaste!' : '' })}</Text>}
+            {target != null && <Text style={{ color: grade >= target ? C.goodText : C.muted, fontSize: 12.5, marginTop: 2 }}>{t('Tu meta: {v}{v2}', { v: fmtGrade(target, scale).split(' / ')[0], v2: grade >= target ? t(' · ¡la alcanzaste!') : '' })}</Text>}
           </Card>
           <Card style={{ flex: 1, gap: 10 }}>
             <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '700' }}>{t('Por nota')}</Text>
@@ -280,7 +280,7 @@ function Simulacro() {
         </View>
 
         <View style={{ flexDirection: 'row', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
-          {errs.length > 0 && <Button label={t('Convertir {length} {v} en tarjetas', { length: errs.length, v: errs.length === 1 ? 'error' : 'errores' })} icon="albums-outline"
+          {errs.length > 0 && <Button label={t('Convertir {length} {v} en tarjetas', { length: errs.length, v: errs.length === 1 ? t('error') : t('errores') })} icon="albums-outline"
             onPress={() => maker.review(errorDrafts(qs, answers), { noteId: used.length === 1 ? used[0].id : null, subjectId, title: t('Errores del simulacro'), from: 'quiz' })} />}
           <Button label={t('Otro simulacro')} kind="secondary" icon="refresh" onPress={() => setPhase('config')} />
           <Button label={t('Listo')} kind="ghost" onPress={() => router.back()} />

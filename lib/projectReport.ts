@@ -1,5 +1,5 @@
-
-import { t } from './i18n';// ============================================================
+import { t } from './i18n';
+// ============================================================
 //  Informe semanal del proyecto (v24, fase 5). Puro, con pruebas: lo hecho
 //  en los últimos 7 días, lo que viene en los próximos 7, lo atrasado y la
 //  carga de cada quien, listo para mandarle al jefe o al cliente.

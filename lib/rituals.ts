@@ -80,7 +80,7 @@ export function lastWeekSummary(rows: StudyDayRow[], weekStart: string, goal: nu
   const met = days >= goal;
   const h = Math.floor(focusMin / 60), m = focusMin % 60;
   const hours = focusMin ? `${h ? `${h} h ` : ''}${m ? `${m} min` : ''}`.trim() : '0 min';
-  const text = t('{v}: estudiaste {days} de {goal} días, {hours} de enfoque.', { v: met ? 'Cumpliste la meta' : 'No alcanzaste la meta', days, goal, hours });
+  const text = t('{v}: estudiaste {days} de {goal} días, {hours} de enfoque.', { v: met ? t('Cumpliste la meta') : t('No alcanzaste la meta'), days, goal, hours });
   return { days, met, text, vs: planVsReal(plannedMin, focusMin) };
 }
 

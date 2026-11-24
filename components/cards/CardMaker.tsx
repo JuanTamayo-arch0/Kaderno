@@ -75,7 +75,7 @@ export function useCardMaker() {
       const prefs = await getStudyPrefs();
       setOpen(false); setDrafts([]);
       refreshNavCounts(true);
-      toast(t('{n} {v}. Entran poco a poco: {newPerDay} nuevas por día.', { n, v: n === 1 ? 'tarjeta guardada' : 'tarjetas guardadas', newPerDay: prefs.newPerDay }), { tone: 'good', actionLabel: t('Repasar ahora'), onAction: () => router.push('/repaso') });
+      toast(t('{n} {v}. Entran poco a poco: {newPerDay} nuevas por día.', { n, v: n === 1 ? t('tarjeta guardada') : t('tarjetas guardadas'), newPerDay: prefs.newPerDay }), { tone: 'good', actionLabel: t('Repasar ahora'), onAction: () => router.push('/repaso') });
     } catch (e) { notify(t('No se pudieron guardar'), friendlyError(e)); }
     finally { setSaving(false); }
   }, [ctx, router]);

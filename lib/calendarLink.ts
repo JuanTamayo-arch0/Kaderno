@@ -1,5 +1,5 @@
-
-import { t } from './i18n';// ============================================================
+import { t } from './i18n';
+// ============================================================
 //  Enlace del calendario (.ics) y diagnóstico cuando falla.
 //
 //  Por qué existe: el iPhone muestra "No se puede conectar mediante SSL"
@@ -41,7 +41,7 @@ export function diagnoseCalendar(status: number, body: string, viaKaderno: boole
   const b = (body ?? '').slice(0, 400);
   if (status === 200 && b.trimStart().startsWith('BEGIN:VCALENDAR')) {
     const n = (body.match(/BEGIN:VEVENT/g) ?? []).length;
-    return { ok: true, title: t('El enlace funciona'), detail: t('Devuelve un calendario con {n} {v}. Si tu calendario aún no lo muestra, espera unos minutos: Google tarda en actualizar.', { n, v: n === 1 ? 'evento' : 'eventos' }) };
+    return { ok: true, title: t('El enlace funciona'), detail: t('Devuelve un calendario con {n} {v}. Si tu calendario aún no lo muestra, espera unos minutos: Google tarda en actualizar.', { n, v: n === 1 ? t('evento') : t('eventos') }) };
   }
   if (status === 200) {
     return { ok: false, title: t('La respuesta no es un calendario'), detail: viaKaderno

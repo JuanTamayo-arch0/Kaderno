@@ -217,7 +217,7 @@ export function WorkloadPanel({ loads, unassigned, balanced, myId }: {
                 {balanced
                   ? t('El trabajo está bastante parejo')
                   : sinNada > 0
-                    ? t('El reparto está disparejo: {v} sin nada pendiente', { v: sinNada === 1 ? 'hay 1 integrante' : `hay ${sinNada} integrantes` })
+                    ? t('El reparto está disparejo: {v} sin nada pendiente', { v: sinNada === 1 ? t('hay 1 integrante') : t('hay {sinNada} integrantes', { sinNada }) })
                     : t('El reparto está disparejo: a alguien le tocó bastante más que al resto')}
               </Text>
             </View>

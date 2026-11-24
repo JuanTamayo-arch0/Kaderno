@@ -60,7 +60,7 @@ export function check135(tasks: { estimate_min?: number | null }[], ratio?: numb
   const over = counts.grande > 1 || counts.mediana > 3 || counts.pequena > 5;
   const part = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
   const text = over
-    ? t('Hoy hay {grande}, {mediana} y {pequena}. Un día realista tiene 1 grande, 3 medianas y 5 pequeñas: ¿pasas algo a mañana?', { grande: part(counts.grande, 'grande', 'grandes'), mediana: part(counts.mediana, 'mediana', 'medianas'), pequena: part(counts.pequena, 'pequeña', 'pequeñas') })
+    ? t('Hoy hay {grande}, {mediana} y {pequena}. Un día realista tiene 1 grande, 3 medianas y 5 pequeñas: ¿pasas algo a mañana?', { grande: part(counts.grande, 'grande', 'grandes'), mediana: part(counts.mediana, 'mediana', 'medianas'), pequena: part(counts.pequena, t('pequeña'), t('pequeñas')) })
     : null;
   return { counts, text };
 }

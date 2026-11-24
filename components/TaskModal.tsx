@@ -33,7 +33,7 @@ import { confirm } from '../lib/feedback';
 import { useRouter } from 'expo-router';
 import { cleanRule, ruleText, type RepeatRule } from '../lib/repeat';
 import { hasV20Cols } from '../lib/db';
-import { t } from '../lib/i18n';
+import { t, locale } from '../lib/i18n';
 
 // ============================================================
 //  Crear / editar tarea personal.
@@ -147,7 +147,7 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
       const pendingSessions = sessions.filter((x) => x.status !== 'done');
       if (isExam && id && date && dateChanged && pendingSessions.length && editTask?.due_date) {
         const delta = Math.round((new Date(date + 'T12:00:00').getTime() - new Date(editTask.due_date + 'T12:00:00').getTime()) / 86_400_000);
-        if (delta && await confirm(t('¿Muevo las sesiones que faltan?'), t('El examen se movió {delta} {v}. Las sesiones de repaso pendientes se corren igual.', { delta: Math.abs(delta), v: Math.abs(delta) === 1 ? 'día' : 'días' }), t('Moverlas'))) {
+        if (delta && await confirm(t('¿Muevo las sesiones que faltan?'), t('El examen se movió {delta} {v}. Las sesiones de repaso pendientes se corren igual.', { delta: Math.abs(delta), v: Math.abs(delta) === 1 ? t('día') : t('días') }), t('Moverlas'))) {
           const r = shiftSessions(pendingSessions, delta, new Date(), new Date(date + 'T12:00:00'));
           try { await applyShift(r.move); await trashTasks(r.drop); dataChanged(); toast(`Sesiones movidas${r.drop.length ? t('; {length} ya no cabían y se quitaron', { length: r.drop.length }) : ''}`, { tone: 'good' }); }
           catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
@@ -300,7 +300,7 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
               <Text style={{ color: x.status === 'done' ? C.muted : C.text, fontSize: 13, flex: 1, textDecorationLine: x.status === 'done' ? 'line-through' : 'none' }} numberOfLines={1}>
                 {x.session_kind ? KIND_TEXT[x.session_kind].short : x.title.split(' · ')[0]}
               </Text>
-              <Text style={{ color: C.muted, fontSize: 12 }}>{x.due_date ? x.due_date.slice(8, 10) + '/' + x.due_date.slice(5, 7) : ''}{x.plan_at ? ' · ' + new Date(x.plan_at).toLocaleTimeString(t('es-CO'), { hour: 'numeric', minute: '2-digit' }) : ''}</Text>
+              <Text style={{ color: C.muted, fontSize: 12 }}>{x.due_date ? x.due_date.slice(8, 10) + '/' + x.due_date.slice(5, 7) : ''}{x.plan_at ? ' · ' + new Date(x.plan_at).toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' }) : ''}</Text>
             </Pressable>
           ))}
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>

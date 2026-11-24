@@ -1984,3 +1984,30 @@ No hay.
 ## Versión 29 (arreglo): franja negra abajo en el computador
 
 No hay migración. Con "Tamaño de interfaz" en Pequeño aparecía una franja negra abajo, y con Grande o Muy grande se cortaba el final de la pantalla. Lo causaba el alto `100dvh` de la parte 1, que no respeta ese zoom. La raíz vuelve a medir el 100 % del alto. Para revisarlo, cambia el tamaño en Personalizar: la app debe llenar la ventana exacta en los cuatro tamaños.
+
+## Versión 30 (parte 1): base para inglés y español
+
+### 1. Migración
+
+No hay. El idioma de cada cuenta se guarda en `user_prefs.settings.lang`, que ya existe.
+
+### 2. Lo que cambia para el usuario
+
+Nada visible todavía: la app sigue en español, idéntica.
+- Por dentro, cada texto pasa por `t()` (`lib/i18n.ts`): unos 4.000 textos en 220 archivos.
+- El inglés está escondido (`I18N_READY = false`) hasta que esté traducido completo. Para probarlo antes, en la consola del navegador: `localStorage.setItem('kd-lang', 'en'); location.reload()`. Con eso aparece el selector de idioma en Ajustes y en el login.
+
+### 3. Para quien programa
+
+- **Textos nuevos:** escríbelos en español dentro de `t('...')`.
+- **Variables:** `t('Hola, {name}', { name })`.
+- **Plurales:** `tp(n, '{n} tarea', '{n} tareas')`.
+- **Mismo texto con dos sentidos:** `tc('sonido', 'Mar')`.
+- **Si `t` ya es una variable** (`tasks.map((t) => ...)`), usa `trn(...)`.
+- **Fechas:** con `locale()`, nunca con `'es-CO'` fijo.
+- **Revisor:** `npm run i18n` dice cuántos textos faltan por traducir y cuáles quedaron sin envolver. `npm test` falla si queda español sin envolver.
+- **Envolver en bloque:** `npx tsx scripts/i18n-wrap.ts [carpeta]`. Lo que debe quedar en español se marca con `// i18n-ok`.
+
+### 4. Pruebas
+
+`npm test` (incluye `tests/v30.test.ts`). Se compararon las capturas en español antes y después: iguales en las 31 pantallas a 390 px (Estudio y Trabajo) y 1440 px. Solo cambian unos píxeles de kerning.

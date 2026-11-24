@@ -1,5 +1,5 @@
-
-import { t } from './i18n';// ============================================================
+import { t } from './i18n';
+// ============================================================
 //  Comentarios en tareas de proyecto (v23, fase 2). Puro, con pruebas:
 //  @menciones mientras se escribe, cuáles quedaron en el texto y cómo
 //  pintarlas.

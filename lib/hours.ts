@@ -1,5 +1,6 @@
-
-import { t, trn } from './i18n';// ============================================================
+import { t, trn } from './i18n';
+// ============================================================
+import { locale } from './i18n';
 //  Registro de horas (v24, fase 5). Puro, con pruebas: periodos, sumas por
 //  área, proyecto o día, valor con tarifa por hora, CSV e informe en HTML.
 // ============================================================
@@ -133,7 +134,7 @@ ${detail.map((s) => {
       + `<td class="n">${decHours(s.minutes)}</td>${money ? `<td class="n">${rate ? pesos(amountOf(s.minutes, rate)) : ''}</td>` : ''}</tr>`;
   }).join('\n')}
 </tbody></table>
-<p style="margin-top:18px">Generado con Kaderno el ${new Date().toLocaleDateString(trn('es-CO'))}.</p>
+<p style="margin-top:18px">Generado con Kaderno el ${new Date().toLocaleDateString(locale())}.</p>
 </body></html>`;
 }
 

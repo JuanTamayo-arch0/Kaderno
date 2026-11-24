@@ -18,7 +18,7 @@ import { confirm, friendlyError, notify, toast } from '../lib/feedback';
 import { Field } from '../components/ds';
 import { Sheet } from '../components/cards/CardForms';
 import { DateField } from '../components/DateTime';
-import { t, trn } from '../lib/i18n';
+import { t, trn, locale } from '../lib/i18n';
 
 // ============================================================
 //  Historial académico (v26, fase 3): los semestres, el promedio acumulado,
@@ -209,7 +209,7 @@ function ClosedDetail({ t, scale, onEdit, onDelete }: { t: Term; scale: ReturnTy
         {tile(trn('Promedio'), sameScale ? f(s.avg) : fmtGrade(s.avg, { decimals: scale.decimals }))}
         {tile(trn('Créditos'), String(s.credits ?? 0))}
         {!s.manual && tile(trn('Horas de estudio'), fmtHours(s.focus_minutes ?? 0))}
-        {!s.manual && tile(trn('Tarjetas'), (s.cards ?? 0).toLocaleString(trn('es-CO')))}
+        {!s.manual && tile(trn('Tarjetas'), (s.cards ?? 0).toLocaleString(locale()))}
         {!s.manual && tile(trn('Racha más larga'), trn('{v} días', { v: s.best_streak ?? 0 }))}
       </View>
       <Card padded={false}>

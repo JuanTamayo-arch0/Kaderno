@@ -1,5 +1,5 @@
-
-import { t } from './i18n';// ============================================================
+import { t } from './i18n';
+// ============================================================
 //  Proyectos de trabajo (v25, fase 3). Puro, con pruebas: prioridad,
 //  etiquetas, bloqueos, filtros, reglas y estado del proyecto.
 // ============================================================

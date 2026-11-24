@@ -19,7 +19,7 @@ import { copyText } from '../../lib/fileIO';
 import { MeetingPublish } from './MeetingPublish';
 import { openAdd } from '../../lib/uiBus';
 import { getMode, useMode } from '../../lib/mode';
-import { t, trn } from '../../lib/i18n';
+import { t, trn, lang as appLang } from '../../lib/i18n';
 
 // ============================================================
 //  Grabar la clase (v22, fase 1): el texto de la clase se escribe solo
@@ -40,7 +40,7 @@ export function useClassRecorder(noteId: string, getMd: () => string) {
   const [last, setLast] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
-  const [lang, setLangState] = useState<string>('es-CO');
+  const [lang, setLangState] = useState<string>(appLang() === 'en' ? 'en-US' : 'es-CO');
   const r = useRef({ id: null as string | null, tr: null as Transcriber | null, segs: [] as Segment[], marks: {} as MarkMap, md: '', acc: 0, since: 0, dirty: false, release: () => {} });
 
   useEffect(() => { AsyncStorage.getItem(LANG_KEY).then((v) => { if (v) setLangState(v); }).catch(() => {}); }, []);
@@ -82,7 +82,7 @@ export function useClassRecorder(noteId: string, getMd: () => string) {
 
   async function start() {
     if (!supported) {
-      notify(t('Este navegador no puede transcribir'), t('Abre Kaderno en Chrome, Edge o Safari para grabar la {v}. En Firefox no está disponible.', { v: getMode() === 'trabajo' ? 'reunión' : 'clase' }));
+      notify(t('Este navegador no puede transcribir'), t('Abre Kaderno en Chrome, Edge o Safari para grabar la {v}. En Firefox no está disponible.', { v: getMode() === 'trabajo' ? t('reunión') : t('clase') }));
       return false;
     }
     const ok = await AsyncStorage.getItem(CONSENT_KEY).catch(() => null);
@@ -130,7 +130,7 @@ export function useClassRecorder(noteId: string, getMd: () => string) {
     c.dirty = true;
     await flush();
     setState('stopped'); setInterim('');
-    toast(c.segs.length ? t('{v}: {length} {v2} y {length2} apuntes con minuto', { v: getMode() === 'trabajo' ? 'Reunión guardada' : 'Grabación guardada', length: c.segs.length, v2: c.segs.length === 1 ? 'frase' : 'frases', length2: marksList(c.marks).length }) : t('No se alcanzó a escuchar nada.'));
+    toast(c.segs.length ? t('{v}: {length} {v2} y {length2} apuntes con minuto', { v: getMode() === 'trabajo' ? t('Reunión guardada') : t('Grabación guardada'), length: c.segs.length, v2: c.segs.length === 1 ? t('frase') : t('frases'), length2: marksList(c.marks).length }) : t('No se alcanzó a escuchar nada.'));
     setVersion((v) => v + 1);
   }
   /** La nota cambió mientras se graba: marcar las líneas nuevas con el minuto. */
@@ -294,7 +294,7 @@ function TranscriptCard({ t, open, onToggle, focusT, subjectName, getMd, onInser
             <View style={{ padding: 12, borderRadius: 12, backgroundColor: C.surface2, gap: 8 }}>
               <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '800' }}>{trn('Resumen')}</Text>
               {cls.ideas.map((x, i) => <Text key={i} style={{ color: C.text, fontSize: 13.5, lineHeight: 20 }}>• {x}</Text>)}
-              {cls.formulas.length > 0 && <Text style={{ color: C.muted, fontSize: 12.5 }}>{trn('{length} {v} (se ven al insertarlo en la nota)', { length: cls.formulas.length, v: cls.formulas.length === 1 ? 'fórmula' : 'fórmulas' })}</Text>}
+              {cls.formulas.length > 0 && <Text style={{ color: C.muted, fontSize: 12.5 }}>{trn('{length} {v} (se ven al insertarlo en la nota)', { length: cls.formulas.length, v: cls.formulas.length === 1 ? trn('fórmula') : trn('fórmulas') })}</Text>}
               {cls.tasks.length > 0 && (
                 <View style={{ gap: 6, marginTop: 2 }}>
                   <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{trn('Lo que dejó el profesor')}</Text>

@@ -76,7 +76,7 @@ function Tipos() {
     let n = 0;
     try { n = await countTasksByType(t.key); } catch { /* si falla el conteo, seguimos */ }
     const msg = n > 0
-      ? trn('{n} {v} este tipo. {v2} a "Tarea".', { n, v: n === 1 ? 'tarea usa' : 'tareas usan', v2: n === 1 ? 'Pasará' : 'Pasarán' })
+      ? trn('{n} {v} este tipo. {v2} a "Tarea".', { n, v: n === 1 ? trn('tarea usa') : trn('tareas usan'), v2: n === 1 ? trn('Pasará') : trn('Pasarán') })
       : trn('No hay tareas con este tipo.');
     if (!(await confirm(trn('¿Borrar "{label}"?', { label: t.label }), msg, trn('Borrar')))) return;
     setBusy(true);

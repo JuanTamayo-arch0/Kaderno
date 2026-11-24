@@ -231,7 +231,7 @@ export function ExamReviewCard({ tasks }: { tasks: Task[] }) {
       <Ionicons name="school-outline" size={22} color={C.brand2} />
       <View style={{ flex: 1, minWidth: 180 }}>
         <Text style={{ color: C.text, fontWeight: '700', fontSize: 14 }}>{trn('¿Cómo te fue en {title}?', { title: t.title })}</Text>
-        <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{trn('{v}Pon la nota y mira si el esfuerzo alcanzó.', { v: d ? `Fue el ${DAY_LONG[d.getDay()]}. ` : '' })}</Text>
+        <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{trn('{v}Pon la nota y mira si el esfuerzo alcanzó.', { v: d ? trn('Fue el {v}. ', { v: DAY_LONG[d.getDay()] }) : '' })}</Text>
       </View>
       <Button label={trn('Poner la nota')} size="sm" onPress={() => openExamReview(t)} />
       <Button label={trn('Ahora no')} size="sm" kind="ghost" onPress={() => { dismissReview(t.id); setPending((p) => p.filter((x) => x.id !== t.id)); }} />

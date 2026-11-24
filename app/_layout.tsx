@@ -42,6 +42,7 @@ import { tipById } from '../lib/breakTips';
 import { registerServiceWorker } from '../lib/push';
 import { installMotion } from '../lib/motion';
 import { installTouch } from '../lib/touch';
+import { applyHtmlLang, syncCloudLang } from '../lib/i18nApp';
 import { celebrate } from '../lib/celebrate';
 import { PetBuddy } from '../components/pets/PetBuddy';
 import { emitPetEvent, refreshCoinsSoon } from '../lib/pets/store';
@@ -50,10 +51,11 @@ import { t } from '../lib/i18n';
 // Animaciones CSS (solo web): se inyectan una vez, antes del primer render.
 installMotion();
 installTouch();
+applyHtmlLang();
 
 // v27 (ley de Parkinson): se pasó la hora de fin del bloque planeado de la tarea.
 setBlockOverHandler((s) => {
-  toast(t('Se acabó el bloque de "{v}". ¿La cierras aquí? Si sigues, te aviso otra vez en 15 min.', { v: s.taskTitle ?? 'la tarea' }),
+  toast(t('Se acabó el bloque de "{v}". ¿La cierras aquí? Si sigues, te aviso otra vez en 15 min.', { v: s.taskTitle ?? t('la tarea') }),
     { duration: 12000, actionLabel: t('Terminar'), onAction: () => skipFocus() });
 });
 
@@ -158,6 +160,7 @@ function Shell() {
     fetchPrefs()
       .then((remote) => {
         if (cancel) return;
+        syncCloudLang(remote);
         if (!remote) {
           savePrefs({ ...PERSONALIZE, schedule: SCHEDULE }).catch(() => { });
           return;

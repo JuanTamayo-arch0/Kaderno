@@ -7,7 +7,7 @@ import { Button } from '../ds';
 import { Sheet } from '../cards/CardForms';
 import type { Task } from '../../lib/db';
 import { proposePlan, createPlan, type DraftSession } from '../../lib/quizDb';
-import { KIND_TEXT, daysUntil, type SessionKind } from '../../lib/examPlan';
+import { KIND_TEXT, daysUntil, isQuickMock, type SessionKind } from '../../lib/examPlan';
 import { timeLabel } from '../../lib/planSlots';
 import { toast, notify, friendlyError } from '../../lib/feedback';
 import { dataChanged } from '../../lib/uiBus';
@@ -58,7 +58,7 @@ export function ExamPlanSheet({ exam, onClose }: { exam: Task | null; onClose: (
     try {
       const count = await createPlan(exam, drafts.filter((_, i) => keep[i]));
       markExamPlanAsked(exam.id);
-      toast(t('Plan listo: {count} {v}. Salen en Hoy y en el calendario.', { count, v: count === 1 ? 'sesión' : 'sesiones' }), { tone: 'good' });
+      toast(t('Plan listo: {count} {v}. Salen en Hoy y en el calendario.', { count, v: count === 1 ? t('sesión') : t('sesiones') }), { tone: 'good' });
       dataChanged(); refreshNavCounts(true);
       onClose();
     } catch (e) { notify(t('No se pudo crear el plan'), friendlyError(e)); }
@@ -68,10 +68,10 @@ export function ExamPlanSheet({ exam, onClose }: { exam: Task | null; onClose: (
 
   return (
     <Sheet visible={!!exam} onClose={later} title={t('¿Armo tu plan de repaso para {title}?', { title: exam.title })}
-      subtitle={d > 0 ? t('Faltan {d} {v}. Sesiones cortas antes del examen, en horarios libres.', { d, v: d === 1 ? 'día' : 'días' }) : undefined}
+      subtitle={d > 0 ? t('Faltan {d} {v}. Sesiones cortas antes del examen, en horarios libres.', { d, v: d === 1 ? t('día') : t('días') }) : undefined}
       footer={<>
         <Button label={t('Ahora no')} kind="secondary" onPress={later} style={{ flex: 1 }} />
-        <Button label={t('Crear {n} {v}', { n, v: n === 1 ? 'sesión' : 'sesiones' })} icon="checkmark" onPress={create} busy={busy} disabled={!drafts || n === 0} style={{ flex: 2 }} />
+        <Button label={t('Crear {n} {v}', { n, v: n === 1 ? t('sesión') : t('sesiones') })} icon="checkmark" onPress={create} busy={busy} disabled={!drafts || n === 0} style={{ flex: 2 }} />
       </>}>
       {prev && (
         <View style={{ flexDirection: 'row', gap: 10, padding: 12, borderRadius: 12, backgroundColor: C.brand2 + '1a', borderWidth: 1, borderColor: C.brand2 + '55' }}>
@@ -91,7 +91,7 @@ export function ExamPlanSheet({ exam, onClose }: { exam: Task | null; onClose: (
             <Ionicons name={ICON[s.kind]} size={18} color={C.brand} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: C.text, fontSize: 14, fontWeight: '700' }}>{s.title.split(' · ')[0] === 'Simulacro rápido' ? t('Simulacro rápido') : KIND_TEXT[s.kind].long}</Text>
+            <Text style={{ color: C.text, fontSize: 14, fontWeight: '700' }}>{isQuickMock(s.title) ? t('Simulacro rápido') : KIND_TEXT[s.kind].long}</Text>
             <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{t('{v} {getDate} · {v2} · {minutes} min', { v: DAY[s.day.getDay()], getDate: s.day.getDate(), v2: s.at ? timeLabel(s.at) : t('sin hueco libre, a cualquier hora'), minutes: s.minutes })}</Text>
           </View>
           <Ionicons name={keep[i] ? 'checkbox' : 'square-outline'} size={20} color={keep[i] ? C.brand : C.muted} />

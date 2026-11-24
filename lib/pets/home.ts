@@ -1,5 +1,5 @@
-
-import { t } from '../i18n';// ============================================================
+import { t } from '../i18n';
+// ============================================================
 //  La casa de la mascota: un cuarto en pixel art (120 x 64 píxeles).
 //
 //  Capas: papel de pared, zócalo, piso, ventana (con lo que se ve afuera según

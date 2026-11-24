@@ -202,7 +202,7 @@ function Bienvenida() {
                 <Ionicons name="grid-outline" size={22} color={C.brand} />
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: C.text, fontWeight: '700' }}>{work ? t('Cargar mi agenda') : t('Cargar mi horario')}</Text>
-                  <Text style={{ color: C.muted, fontSize: 13 }}>{t('Toca cada franja y elige {v}.', { v: work ? 'el área' : 'la materia' })}</Text>
+                  <Text style={{ color: C.muted, fontSize: 13 }}>{t('Toca cada franja y elige {v}.', { v: work ? t('el área') : t('la materia') })}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={C.muted} />
               </Card>

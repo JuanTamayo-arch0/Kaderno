@@ -15,7 +15,7 @@
 import ts from 'typescript';
 import fs from 'node:fs';
 import path from 'node:path';
-import { inNonUiPosition, insideT, isHumanText, isJsxHuman, jsxTextValue, looksLabel, looksSpanish, markedOk, fileOk, q, TEXT_PROPS } from './i18nRules';
+import { inNonUiPosition, insideT, inTVars, isHumanText, isJsxHuman, jsxTextValue, looksLabel, looksSpanish, markedOk, fileOk, q, TEXT_PROPS } from './i18nRules';
 
 const ROOT = path.resolve(__dirname, '..');
 
@@ -150,7 +150,8 @@ function wrapFile(file: string): { edits: Edit[]; text: string } {
       const p = node.parent;
       const textKey = p && ts.isPropertyAssignment(p) && p.initializer === node && TEXT_PROPS.has(p.name.getText(sf));
       const jsxProp = p && ts.isJsxAttribute(p);
-      const ok = (looksSpanish(v) || looksLabel(v) || ((textKey || jsxProp) && isHumanText(v) && /^[A-ZÁÉÍÓÚÑ¿¡]/.test(v.trim()))) && !inNonUiPosition(node);
+      const varText = inTVars(node) && isJsxHuman(v) && /[a-záéíóúñ]/i.test(v);
+      const ok = (varText || looksSpanish(v) || looksLabel(v) || ((textKey || jsxProp) && isHumanText(v) && /^[A-ZÁÉÍÓÚÑ¿¡]/.test(v.trim()))) && !inNonUiPosition(node);
       if (ok) {
         const call = `${fn(node)}(${q(v)})`;
         edits.push({ start: node.getStart(sf), end: node.getEnd(), text: jsxProp ? `{${call}}` : call });

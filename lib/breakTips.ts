@@ -1,5 +1,5 @@
-
-import { t } from './i18n';// ============================================================
+import { t } from './i18n';
+// ============================================================
 //  Pausas guiadas: qué hacer en el descanso. Puro y probado.
 //  Rotan sin repetirse en el día; cuando se agotan, vuelven a empezar.
 //  Ninguna da monedas: son para descansar, no para hacer clic.

@@ -131,13 +131,13 @@ function Personalizar() {
       right={<Button label={t('Restablecer')} kind="ghost" size="sm" onPress={() => { pickSeq.current++; setUploading(false); setS({ ...DEFAULTS, bgCustom: null }); }} />}>
         <ThemePreview s={s} />
         {/* ---------------- TEMA ---------------- */}
-        <Section title={t('Tema')} subtitle={both ? t('Estás ajustando {v}. Claro u oscuro y la letra valen para los dos espacios; el acento es de cada uno. El logo no cambia de color.', { v: work ? 'Trabajo' : 'Estudio' }) : t('Los de Kaderno, con el color de acento que quieras. El logo no cambia de color.')} />
+        <Section title={t('Tema')} subtitle={both ? t('Estás ajustando {v}. Claro u oscuro y la letra valen para los dos espacios; el acento es de cada uno. El logo no cambia de color.', { v: work ? t('Trabajo') : t('Estudio') }) : t('Los de Kaderno, con el color de acento que quieras. El logo no cambia de color.')} />
         <View style={grid}>
           {BRAND_THEMES.map((t) => <ThemeCard key={t.id} id={t.id} accentId={s.accentId} workAccentId={s.workAccentId} work={work} wide active={s.themeId === t.id || (work && !isKadernoTheme(s.themeId) && THEMES[s.themeId]?.scheme === t.scheme)} onPress={() => set({ themeId: t.id })} />)}
         </View>
         {(isKadernoTheme(s.themeId) || work) && (
           <>
-            <Text style={groupLbl}>{t('Color de acento{v}', { v: both ? (work ? ' en Trabajo' : ' en Estudio') : '' })}</Text>
+            <Text style={groupLbl}>{t('Color de acento{v}', { v: both ? (work ? t(' en Trabajo') : t(' en Estudio')) : '' })}</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }} accessibilityRole="radiogroup">
               {(work ? WORK_ACCENTS : STUDY_ACCENTS).map((a) => {
                 const on = (work ? workAccentOf(s.workAccentId) : accentOf(s.accentId)).id === a.id;

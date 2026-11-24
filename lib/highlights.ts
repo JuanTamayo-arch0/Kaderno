@@ -1,5 +1,5 @@
-
-import { t } from './i18n';// ============================================================
+import { t } from './i18n';
+// ============================================================
 //  Anotar PDFs (v22, fase 2). Puro, con pruebas.
 //  Los rectángulos de un resaltado van en proporciones de la página (0 a 1)
 //  para que no dependan del zoom ni del tamaño de la pantalla.

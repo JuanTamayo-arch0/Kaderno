@@ -42,7 +42,7 @@ export function BoardCleanup({ visible, projectId, cols, onClose, onDone }: {
     setBusy('dups');
     try {
       const r = await bulkUpdateProjectTasks(projectId, ids, { delete: true });
-      onDone({ batchId: r.batch_id, text: t('Quité {deleted} {v}', { deleted: r.deleted, v: r.deleted === 1 ? 'tarjeta repetida' : 'tarjetas repetidas' }) });
+      onDone({ batchId: r.batch_id, text: t('Quité {deleted} {v}', { deleted: r.deleted, v: r.deleted === 1 ? t('tarjeta repetida') : t('tarjetas repetidas') }) });
     } catch (e) { notify(t('No se pudieron quitar'), friendlyError(e)); }
     finally { setBusy(null); }
   }
@@ -58,7 +58,7 @@ export function BoardCleanup({ visible, projectId, cols, onClose, onDone }: {
       // El servidor acepta lotes de hasta 500; un tablero normal cabe en uno.
       const ids = tasks.map((t) => t.id);
       const r = await bulkUpdateProjectTasks(projectId, ids.slice(0, 500), { delete: true });
-      onDone({ batchId: r.batch_id, text: t('Tablero vacío: {deleted} {v}', { deleted: r.deleted, v: r.deleted === 1 ? 'tarjeta borrada' : 'tarjetas borradas' }) });
+      onDone({ batchId: r.batch_id, text: t('Tablero vacío: {deleted} {v}', { deleted: r.deleted, v: r.deleted === 1 ? t('tarjeta borrada') : t('tarjetas borradas') }) });
     } catch (e) { notify(t('No se pudo vaciar'), friendlyError(e)); }
     finally { setBusy(null); }
   }
@@ -86,7 +86,7 @@ export function BoardCleanup({ visible, projectId, cols, onClose, onDone }: {
                   <Text style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>{t('No encontré tarjetas repetidas. Todo en orden.')}</Text>
                 ) : (
                   <>
-                    <Text style={{ color: C.muted, fontSize: 13, marginTop: 4, lineHeight: 19 }}>{t('{length} {v} más de una vez (mismo código o mismo título). De cada una se queda la más trabajada y se {v2}.', { length: groups.length, v: groups.length === 1 ? 'tarea aparece' : 'tareas aparecen', v2: toRemove === 1 ? 'borra 1 copia' : `borran ${toRemove} copias` })}</Text>
+                    <Text style={{ color: C.muted, fontSize: 13, marginTop: 4, lineHeight: 19 }}>{t('{length} {v} más de una vez (mismo código o mismo título). De cada una se queda la más trabajada y se {v2}.', { length: groups.length, v: groups.length === 1 ? t('tarea aparece') : t('tareas aparecen'), v2: toRemove === 1 ? t('borra 1 copia') : `borran ${toRemove} copias` })}</Text>
                     <View style={{ marginTop: 10 }}>
                       {groups.slice(0, 40).map((g) => (
                         <Pressable key={g.key} onPress={() => setOpen(open === g.key ? null : g.key)}
@@ -105,7 +105,7 @@ export function BoardCleanup({ visible, projectId, cols, onClose, onDone }: {
                       ))}
                       {groups.length > 40 && <Text style={{ color: C.muted, fontSize: 12, marginTop: 6 }}>{t('Y {v} más.', { v: groups.length - 40 })}</Text>}
                     </View>
-                    <Button label={t('Quitar {toRemove} {v}', { toRemove, v: toRemove === 1 ? 'repetida' : 'repetidas' })} icon="git-merge-outline" busy={busy === 'dups'}
+                    <Button label={t('Quitar {toRemove} {v}', { toRemove, v: toRemove === 1 ? t('repetida') : t('repetidas') })} icon="git-merge-outline" busy={busy === 'dups'}
                       onPress={removeDups} style={{ marginTop: 12, alignSelf: 'flex-start' }} />
                   </>
                 )}

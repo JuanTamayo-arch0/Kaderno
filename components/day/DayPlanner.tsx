@@ -125,7 +125,7 @@ export function DayPlanner({ tasks, slots, subjects, onChanged, onToggle, onFocu
         await updateTask(p.id, { plan_at: at.toISOString() });
         ok++;
       }
-      toast(t('{ok} {v} con hora', { ok, v: ok === 1 ? 'tarea quedó' : 'tareas quedaron' }), { tone: 'good' });
+      toast(t('{ok} {v} con hora', { ok, v: ok === 1 ? t('tarea quedó') : t('tareas quedaron') }), { tone: 'good' });
     } catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
     finally { setSaving(false); setPlan(null); onChanged(); }
   }
@@ -163,7 +163,7 @@ export function DayPlanner({ tasks, slots, subjects, onChanged, onToggle, onFocu
 
   const loose = (
     <View style={{ gap: 8 }}>
-      <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '800' }}>{t('Sin hora {v} · {length}', { v: isToday ? 'hoy' : '', length: parts.loose.length })}</Text>
+      <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '800' }}>{t('Sin hora {v} · {length}', { v: isToday ? t('hoy') : '', length: parts.loose.length })}</Text>
       {parts.loose.length === 0 && <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Nada pendiente sin hora.')}</Text>}
       {parts.loose.map((t) => <LooseRow key={t.id} t={t} ratio={ratio} active={placing?.id === t.id} onPlace={() => setPlacing(placing?.id === t.id ? null : t)} onToggle={() => onToggle(t)}
         mark={t.id === frog?.id ? 'rana' : t.plan_day === dayISO && t.plan_order ? t.plan_order : null} />)}
@@ -182,7 +182,7 @@ export function DayPlanner({ tasks, slots, subjects, onChanged, onToggle, onFocu
   const suggestion = plan && (
     <Card style={{ marginBottom: 10, borderLeftWidth: 4, borderLeftColor: C.brand, gap: 8 }} accessibilityLabel={t('Horario sugerido')}>
       <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>{plan.title ?? t('Horario sugerido')}</Text>
-      <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('{v} Nada se guarda hasta que aceptes.', { v: plan.title ? 'Una tras otra, en un solo bloque: cambiar de tema cuesta menos así.' : 'En los huecos libres, primero lo que vence antes.' })}</Text>
+      <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('{v} Nada se guarda hasta que aceptes.', { v: plan.title ? t('Una tras otra, en un solo bloque: cambiar de tema cuesta menos así.') : t('En los huecos libres, primero lo que vence antes.') })}</Text>
       {plan.placed.map((p) => (
         <View key={p.id} style={{ flexDirection: 'row', gap: 10, alignItems: 'baseline' }}>
           <Text style={{ width: 92, color: C.text, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] }}>{t('{start} a {end}', { start: clockLabel(p.start), end: clockLabel(p.end) })}</Text>
@@ -205,7 +205,7 @@ export function DayPlanner({ tasks, slots, subjects, onChanged, onToggle, onFocu
           <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700' }}>{over}</Text>
           {cand && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <Text style={{ color: C.muted, fontSize: 12.5, flex: 1 }}>{t('Lo que puede esperar: "{title}"{v}.', { title: cand.title, v: cand.due_date ? `, vence el ${cand.due_date.slice(8, 10)}/${cand.due_date.slice(5, 7)}` : '' })}</Text>
+              <Text style={{ color: C.muted, fontSize: 12.5, flex: 1 }}>{t('Lo que puede esperar: "{title}"{v}.', { title: cand.title, v: cand.due_date ? t(', vence el {slice}/{slice2}', { slice: cand.due_date.slice(8, 10), slice2: cand.due_date.slice(5, 7) }) : '' })}</Text>
               <Button label={t('Pasarla a mañana')} size="sm" kind="secondary" onPress={() => moveToTomorrow(cand)} />
             </View>
           )}

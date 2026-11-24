@@ -169,7 +169,7 @@ function Sala() {
         const pill = PILL[r.state];
         return (
           <View key={r.user_id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: C.surface2 }}
-            accessibilityLabel={t('{name}{v}: {label}{v2}. {pomodoros} pomodoros hoy.', { name: r.name, v: r.me ? ' (tú)' : '', label: r.label, v2: r.detail ? ', ' + r.detail : '', pomodoros: r.pomodoros })}>
+            accessibilityLabel={t('{name}{v}: {label}{v2}. {pomodoros} pomodoros hoy.', { name: r.name, v: r.me ? t(' (tú)') : '', label: r.label, v2: r.detail ? ', ' + r.detail : '', pomodoros: r.pomodoros })}>
             <Avatar name={r.name} state={r.state} size={36} />
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '700' }} numberOfLines={1}>{r.name}{r.me ? t(' (tú)') : ''}</Text>

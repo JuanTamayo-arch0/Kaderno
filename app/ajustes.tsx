@@ -19,6 +19,8 @@ import { canPromptInstall, onInstallChange, promptInstall, isIOSWeb } from '../l
 import { confirm, notify, toast, friendlyError, flushPendingDeletes } from '../lib/feedback';
 import { saveFile } from '../lib/fileIO';
 import { Screen, Button, Card, Field, IconButton, ListRow, SectionLabel, Toggle } from '../components/ds';
+import { LangPicker } from '../components/LangPicker';
+import { showLangPicker } from '../lib/i18nApp';
 import { Avatar } from '../components/SideNav';
 import { PetSettings } from '../components/pets/PetSettings';
 import { StudySettings } from '../components/cards/StudySettings';
@@ -72,7 +74,7 @@ function ConnectionTest() {
       {res && verdict && (
         <Text style={{ color: C.text, fontSize: 14 }}>
           <Text style={{ color: verdict.c, fontWeight: '800' }}>{t('{t}: {ms} ms', { t: verdict.t, ms: res.ms })}</Text>
-          <Text style={{ color: C.muted }}>{t(' por consulta (entre {min} y {max} ms en 5 pruebas).{v}', { min: res.min, max: res.max, v: res.ms >= 300 ? ' Conviene mudar la base a una región más cercana (ver RUNBOOK, versión 18).' : '' })}</Text>
+          <Text style={{ color: C.muted }}>{t(' por consulta (entre {min} y {max} ms en 5 pruebas).{v}', { min: res.min, max: res.max, v: res.ms >= 300 ? t(' Conviene mudar la base a una región más cercana (ver RUNBOOK, versión 18).') : '' })}</Text>
         </Text>
       )}
       {err && <Text style={{ color: C.badText, fontSize: 13 }}>{err}</Text>}
@@ -216,6 +218,16 @@ function Ajustes() {
         <Text style={{ color: C.muted, fontSize: 12 }}>{t('Con Los dos, Kaderno tiene dos espacios: Estudio (materias, calificaciones, repaso) y Trabajo (áreas, proyectos, horas, cobros), cada uno con su tema. Se cambia arriba de la barra o con Alt+1 y Alt+2. No borra nada.')}</Text>
       </Card>
 
+      {showLangPicker() && (
+        <>
+          <SectionLabel text={t('Idioma')} />
+          <Card style={{ gap: 10 }}>
+            <LangPicker />
+            <Text style={{ color: C.muted, fontSize: 12.5, lineHeight: 17 }}>{t('Cambia los textos de la app, las fechas, los avisos y las respuestas de la IA. Lo que escribes no se traduce. La app se recarga.')}</Text>
+          </Card>
+        </>
+      )}
+
       <SectionLabel text={t('Apariencia y organización')} />
       <Card padded={false}>
         <ListRow title={t('Tema, fondo y letra')} subtitle={t('Kaderno claro u oscuro, color de acento y más')} left={<Ionicons name="color-palette-outline" size={20} color={C.muted} />} onPress={() => router.push('/personalizar')} />
@@ -252,7 +264,7 @@ function Ajustes() {
         {hiddenN > 0 && (
           <>
             <Divider />
-            <ListRow title={t('{hiddenN} {v} en Hoy', { hiddenN, v: hiddenN === 1 ? 'oculta' : 'ocultas' })} subtitle={t('Tareas o proyectos que escondiste de Hoy. Siguen en sus tableros.')}
+            <ListRow title={t('{hiddenN} {v} en Hoy', { hiddenN, v: hiddenN === 1 ? t('oculta') : t('ocultas') })} subtitle={t('Tareas o proyectos que escondiste de Hoy. Siguen en sus tableros.')}
               left={<Ionicons name="eye-off-outline" size={20} color={C.muted} />} chevron={false}
               right={<Button label={t('Mostrar todo')} kind="secondary" size="sm" onPress={async () => { try { await clearHoyHidden(); setHiddenN(0); toast(t('Listo: vuelven a aparecer en Hoy')); } catch (e) { notify(t('No se pudo'), friendlyError(e)); } }} />} />
           </>
@@ -320,7 +332,7 @@ function Ajustes() {
             );
           })}
         </ScrollView>
-        <Text style={{ color: C.muted, fontSize: 12, paddingHorizontal: 14, paddingBottom: 12 }}>{t('Los recordatorios de cada tarea se eligen al crearla. Todos los avisos también quedan en la campana.{v}', { v: !hasV14() ? ' Requiere actualizar la base de datos (schema_v14).' : '' })}</Text>
+        <Text style={{ color: C.muted, fontSize: 12, paddingHorizontal: 14, paddingBottom: 12 }}>{t('Los recordatorios de cada tarea se eligen al crearla. Todos los avisos también quedan en la campana.{v}', { v: !hasV14() ? t(' Requiere actualizar la base de datos (schema_v14).') : '' })}</Text>
       </Card>
 
       <SectionLabel text={t('Conexión')} />

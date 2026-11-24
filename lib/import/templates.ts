@@ -1,5 +1,5 @@
-
-import { t } from '../i18n';// Plantillas que se descargan desde el importador. Son las mismas de la carpeta
+import { t } from '../i18n';
+// Plantillas que se descargan desde el importador. Son las mismas de la carpeta
 // plantillas/ del repositorio (se generan con la exportación, así que siempre se
 // pueden volver a importar sin errores).
 

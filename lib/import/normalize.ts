@@ -187,9 +187,9 @@ export function normalizeRows(parsed: ParsedFile, mapping: ColumnMapping, ctx: P
         t.assignee_id = m.user_id;
         present.push('assignee');
       } else if (m.kind === 'ambiguous') {
-        issue('assignee', 'warning', trn('"{assignee_input}" coincide con varios integrantes. Usa el correo. {v}', { assignee_input: t.assignee_input, v: isUpdate ? 'No se cambiará' : 'Quedará sin asignar' }));
+        issue('assignee', 'warning', trn('"{assignee_input}" coincide con varios integrantes. Usa el correo. {v}', { assignee_input: t.assignee_input, v: isUpdate ? trn('No se cambiará') : trn('Quedará sin asignar') }));
       } else if (m.kind === 'unknown') {
-        issue('assignee', 'warning', trn('"{assignee_input}" no es integrante del proyecto. {v}', { assignee_input: t.assignee_input, v: isUpdate ? 'No se cambiará' : 'Quedará sin asignar' }));
+        issue('assignee', 'warning', trn('"{assignee_input}" no es integrante del proyecto. {v}', { assignee_input: t.assignee_input, v: isUpdate ? trn('No se cambiará') : trn('Quedará sin asignar') }));
       }
     }
 

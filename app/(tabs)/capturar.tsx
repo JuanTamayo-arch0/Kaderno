@@ -382,7 +382,7 @@ export default function Capturar() {
             isWeb ? ({ fontFamily: 'ui-monospace, Menlo, monospace', outlineStyle: 'none' } as any) : null]} />
       )}
       {cur.status === 'fail' && <Text style={{ color: C.warnText, fontSize: 12.5 }}>{cur.error || t('No se pudo leer esta página.')}</Text>}
-      {doubt > 0 && <Text style={{ color: C.warnText, fontSize: 12.5 }}>{t('{v}: revísalas con la foto.', { v: doubt === 1 ? 'Una parte quedó marcada con [?]' : `${doubt} partes quedaron marcadas con [?]` })}</Text>}
+      {doubt > 0 && <Text style={{ color: C.warnText, fontSize: 12.5 }}>{t('{v}: revísalas con la foto.', { v: doubt === 1 ? t('Una parte quedó marcada con [?]') : t('{doubt} partes quedaron marcadas con [?]', { doubt }) })}</Text>}
       {(cur.figures as Figure[]).length > 0 && (mode === 'notes' || mode === 'pdf') ? (
         <View style={{ gap: 6 }}>
           <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{t('Dibujos encontrados')}</Text>
@@ -447,7 +447,7 @@ export default function Capturar() {
               {dragging ? t('Suelta aquí') : mode === 'pdf' ? (isWide ? t('Arrastra un PDF aquí o elígelo') : t('Elige un PDF')) : isWide ? t('Arrastra fotos aquí o pégalas con Ctrl V') : mode === 'board' ? t('Fotografía el tablero') : t('Fotografía una o varias páginas')}
             </Text>
             <Text style={{ color: C.muted, fontSize: 13.5, textAlign: 'center', marginTop: 6, maxWidth: 480 }}>{HINT[mode]}</Text>
-            {pdfProgress && <Text style={{ color: C.brand, fontSize: 13, marginTop: 10 }}>{t('Abriendo el PDF{v}', { v: pdfProgress.total ? `: página ${pdfProgress.done} de ${pdfProgress.total}` : '…' })}</Text>}
+            {pdfProgress && <Text style={{ color: C.brand, fontSize: 13, marginTop: 10 }}>{t('Abriendo el PDF{v}', { v: pdfProgress.total ? t(': página {done} de {total}', { done: pdfProgress.done, total: pdfProgress.total }) : '…' })}</Text>}
             <View style={{ flexDirection: 'row', gap: 10, marginTop: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
               {mode === 'pdf' ? <Button label={t('Elegir PDF')} icon="document-attach-outline" onPress={() => pick(false)} busy={!!pdfProgress} />
                 : isWide ? (

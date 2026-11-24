@@ -157,7 +157,7 @@ function JoinModal({ visible, onClose, onJoined }: { visible: boolean; onClose: 
     try {
       const peek = await peekProject(c);
       if (!peek) { setErr(t('Ese código no existe. Revisa que esté bien escrito.')); return; }
-      const ok = await confirm(`${peek.icon}  ${peek.name}`, t('{members} {v}. ¿Entrar a este proyecto?', { members: peek.members, v: peek.members === 1 ? 'integrante' : 'integrantes' }), t('Entrar'));
+      const ok = await confirm(`${peek.icon}  ${peek.name}`, t('{members} {v}. ¿Entrar a este proyecto?', { members: peek.members, v: peek.members === 1 ? t('integrante') : t('integrantes') }), t('Entrar'));
       if (!ok) return;
       const id = await joinProject(c);
       toast(`Entraste a ${peek.name}`, { tone: 'good' });

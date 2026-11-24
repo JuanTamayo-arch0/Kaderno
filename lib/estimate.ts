@@ -1,5 +1,5 @@
-
-import { t } from './i18n';// ============================================================
+import { t } from './i18n';
+// ============================================================
 //  Tu tiempo real (v20, sección F). Puro, con pruebas.
 //  Compara lo que estimas con lo que de verdad te enfocas en cada tarea.
 // ============================================================

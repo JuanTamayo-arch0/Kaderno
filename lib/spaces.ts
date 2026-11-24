@@ -48,5 +48,5 @@ export function needsSorting(subjects: S[], setting: Mode): boolean {
 /** Línea de Hoy: cuánto del otro espacio vence hoy o está vencido. */
 export function otherSpaceLine(n: number, other: Space): string | null {
   if (!n) return null;
-  return t('En {v}: {n} {v2} para hoy', { v: other === 'trabajo' ? 'Trabajo' : 'Estudio', n, v2: n === 1 ? 'cosa' : 'cosas' });
+  return t('En {v}: {n} {v2} para hoy', { v: other === 'trabajo' ? t('Trabajo') : t('Estudio'), n, v2: n === 1 ? t('cosa') : t('cosas') });
 }

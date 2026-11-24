@@ -21,7 +21,7 @@ import { useResponsive } from '../lib/responsive';
 import { useAuth } from '../lib/auth';
 import { saveFile } from '../lib/fileIO';
 import { confirm, friendlyError, notify, toast } from '../lib/feedback';
-import { t, trn } from '../lib/i18n';
+import { t, trn, locale } from '../lib/i18n';
 
 // ============================================================
 //  Registro de horas (v24, fase 5): el enfoque y las horas a mano, por
@@ -101,7 +101,7 @@ function Horas() {
     catch (e) { notify(trn('No se pudo abrir el informe'), friendlyError(e)); }
   }
   async function remove(s: HourSession) {
-    if (!(await confirm(trn('¿Borrar este registro?'), trn('{minutes} del {toLocaleDateString}.', { minutes: fmtHours(s.minutes), toLocaleDateString: new Date(s.created_at).toLocaleDateString('es-CO') }), trn('Borrar')))) return;
+    if (!(await confirm(trn('¿Borrar este registro?'), trn('{minutes} del {toLocaleDateString}.', { minutes: fmtHours(s.minutes), toLocaleDateString: new Date(s.created_at).toLocaleDateString(locale()) }), trn('Borrar')))) return;
     try { await deleteHours(s.id); setList((l) => l?.filter((x) => x.id !== s.id) ?? null); } catch (e) { notify(trn('No se pudo borrar'), friendlyError(e)); }
   }
 
@@ -128,7 +128,7 @@ function Horas() {
         <View style={{ flexGrow: 1 }}>
           <Text style={{ color: C.muted, fontSize: 12.5 }}>{trn('Total')}</Text>
           <CountUp value={list ? t.minutes : null} format={(n) => Number.isFinite(n) ? fmtHours(Math.round(n)) : '…'} style={{ color: C.text, fontSize: 26, fontWeight: '800', fontVariant: ['tabular-nums'] }} />
-          <Text style={{ color: C.muted, fontSize: 12.5 }}>{trn('{minutes} horas en {days} {v}', { minutes: decHours(t.minutes), days: t.days, v: t.days === 1 ? 'día' : 'días' })}</Text>
+          <Text style={{ color: C.muted, fontSize: 12.5 }}>{trn('{minutes} horas en {days} {v}', { minutes: decHours(t.minutes), days: t.days, v: t.days === 1 ? trn('día') : trn('días') })}</Text>
         </View>
         {t.amount > 0 && (
           <View style={{ flexGrow: 1 }}>
@@ -207,7 +207,7 @@ function Horas() {
                   <Ionicons name={s.source === 'manual' ? 'create-outline' : s.source === 'timer' ? 'stopwatch-outline' : 'timer-outline'} size={17} color={C.muted} accessibilityLabel={s.source === 'manual' ? 'A mano' : s.source === 'timer' ? trn('Cronómetro') : trn('Enfoque')} />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={{ color: C.text, fontSize: 13.5 }} numberOfLines={1}>{what}</Text>
-                    <Text style={{ color: C.muted, fontSize: 12 }} numberOfLines={1}>{d.toLocaleDateString(trn('es-CO'), { weekday: 'short', day: 'numeric', month: 'short' })}{s.note ? ` · ${s.note}` : ''}</Text>
+                    <Text style={{ color: C.muted, fontSize: 12 }} numberOfLines={1}>{d.toLocaleDateString(locale(), { weekday: 'short', day: 'numeric', month: 'short' })}{s.note ? ` · ${s.note}` : ''}</Text>
                   </View>
                   <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700', fontVariant: ['tabular-nums'] }}>{fmtHours(s.minutes)}</Text>
                   <Pressable onPress={() => remove(s)} accessibilityRole="button" accessibilityLabel={trn('Borrar registro')} hitSlop={6} style={{ width: 40, height: 40, marginRight: -10, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="trash-outline" size={16} color={C.muted} /></Pressable>

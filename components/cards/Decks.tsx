@@ -69,7 +69,7 @@ export function Decks({ cards, subjects, noteTitles, retention, onChanged }: {
     catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
   };
   const bulkDelete = async () => {
-    if (!(await confirm(t('¿Borrar {length} {v}?', { length: ids.length, v: ids.length === 1 ? 'tarjeta' : 'tarjetas' }), t('Se pierde también su historial de repaso.'), t('Borrar')))) return;
+    if (!(await confirm(t('¿Borrar {length} {v}?', { length: ids.length, v: ids.length === 1 ? t('tarjeta') : t('tarjetas') }), t('Se pierde también su historial de repaso.'), t('Borrar')))) return;
     try { await deleteCards(ids); done(t('Tarjetas borradas')); } catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
   };
   const bulkMove = async () => {
@@ -157,7 +157,7 @@ export function Decks({ cards, subjects, noteTitles, retention, onChanged }: {
           onChanged(); refreshNavCounts(true);
           if (!more) setEdit(null);
         }} />
-      <Sheet visible={moving} onClose={() => setMoving(false)} title={t('Mover {length} {v}', { length: ids.length, v: ids.length === 1 ? 'tarjeta' : 'tarjetas' })}
+      <Sheet visible={moving} onClose={() => setMoving(false)} title={t('Mover {length} {v}', { length: ids.length, v: ids.length === 1 ? t('tarjeta') : t('tarjetas') })}
         footer={<><Button label={t('Cancelar')} kind="secondary" onPress={() => setMoving(false)} style={{ flex: 1 }} /><Button label={t('Mover')} onPress={bulkMove} style={{ flex: 1 }} /></>}>
         <SubjectPicker subjects={subjects} value={moveTo} onChange={setMoveTo} placeholder={t('Sin materia')} />
       </Sheet>

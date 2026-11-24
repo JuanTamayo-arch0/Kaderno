@@ -41,7 +41,7 @@ export function ColumnsModal({ visible, cols, counts, onClose, onSave }: {
     if (draft.length <= 1) return notify(t('Tiene que quedar al menos una columna'));
     if (n > 0) {
       const ok = await confirm(t('¿Quitar "{label}"?', { label: col.label }),
-        t('Sus {n} {v} a la primera columna. No se borra nada.', { n, v: n === 1 ? 'tarjeta pasa' : 'tarjetas pasan' }), t('Quitar'));
+        t('Sus {n} {v} a la primera columna. No se borra nada.', { n, v: n === 1 ? t('tarjeta pasa') : t('tarjetas pasan') }), t('Quitar'));
       if (!ok) return;
     }
     setDraft((d) => d.filter((_, j) => j !== i));

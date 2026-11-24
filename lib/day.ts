@@ -198,6 +198,6 @@ export const clockLabel = (min: number) => `${Math.floor(min / 60)}:${String(min
 /** Cierre del día en modo Trabajo: el recordatorio de anotar horas (null si no hace falta). */
 export function hoursNudge(loggedMin: number, doneTasks: number): string | null {
   if (loggedMin >= 6 * 60) return null;
-  if (loggedMin === 0) return doneTasks ? t('Terminaste {doneTasks} {v} y no hay horas registradas hoy. ¿Las anotas?', { doneTasks, v: doneTasks === 1 ? 'tarea' : 'tareas' }) : t('No hay horas registradas hoy. Si trabajaste fuera de Kaderno, anótalas.');
+  if (loggedMin === 0) return doneTasks ? t('Terminaste {doneTasks} {v} y no hay horas registradas hoy. ¿Las anotas?', { doneTasks, v: doneTasks === 1 ? t('tarea') : t('tareas') }) : t('No hay horas registradas hoy. Si trabajaste fuera de Kaderno, anótalas.');
   return t('Llevas {loggedMin} registradas hoy. ¿Falta anotar alguna reunión o llamada?', { loggedMin: fmtHours(loggedMin) });
 }

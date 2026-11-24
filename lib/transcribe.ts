@@ -1,5 +1,6 @@
-
-import { t } from './i18n';// ============================================================
+import { t } from './i18n';
+// ============================================================
+import {  } from './i18n';
 //  Transcripción en vivo (v22, fase 1). Hoy solo con el reconocimiento del
 //  navegador (gratis): Chrome, Edge y Safari. La pantalla usa esta interfaz,
 //  así que más adelante se puede agregar un servicio pagado sin cambiarla.

@@ -1,5 +1,5 @@
-
-import { t } from './i18n';// ============================================================
+import { t } from './i18n';
+// ============================================================
 //  Días de estudio y rachas amables (v20, sección D). Puro, con pruebas.
 //  Las reglas son las mismas que usa la base (schema_v19.sql, fase 2):
 //  la base escribe (escudos, reparar); esto solo calcula lo que se ve.
@@ -113,14 +113,14 @@ export function todayHint(s: StreakSummary): string {
   if (s.today.ok) return t('Hoy ya cuenta.');
   const mins = Math.max(1, DAY_RULE.focus - s.today.focus);
   const cards = Math.max(1, DAY_RULE.cards - s.today.cards);
-  return t('Para que hoy cuente: {mins} min de enfoque, 1 tarea o {cards} {v}.', { mins, cards, v: cards === 1 ? 'tarjeta' : 'tarjetas' });
+  return t('Para que hoy cuente: {mins} min de enfoque, 1 tarea o {cards} {v}.', { mins, cards, v: cards === 1 ? t('tarjeta') : t('tarjetas') });
 }
 
 /** Mensaje sin culpa cuando se rompe la racha. */
 export function brokeMessage(s: StreakSummary): string | null {
   if (!s.repair) return null;
   if (s.repair.missed === 1) return t('Te saltaste un día: no pasa nada. Lo importante es no saltarse dos.');
-  return t('Te saltaste dos días. Si hoy haces el doble, recuperas tu racha de {prev} {v}.', { prev: s.repair.prev, v: s.repair.prev === 1 ? 'día' : 'días' });
+  return t('Te saltaste dos días. Si hoy haces el doble, recuperas tu racha de {prev} {v}.', { prev: s.repair.prev, v: s.repair.prev === 1 ? t('día') : t('días') });
 }
 
 /** Avance para reparar (0 a 1) y texto. */

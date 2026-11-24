@@ -11,7 +11,7 @@ import { Sheet } from './cards/CardForms';
 import { Button, Field } from './ds';
 import { friendlyError, notify, toast } from '../lib/feedback';
 import { dataChanged } from '../lib/uiBus';
-import { t } from '../lib/i18n';
+import { t, locale } from '../lib/i18n';
 
 // ============================================================
 //  Cronómetro corriendo (v25, fase 2): visible en cualquier pantalla, con
@@ -65,7 +65,7 @@ export function StopwatchPill({ inline = false }: { inline?: boolean }) {
           <Ionicons name="stop" size={16} color="#fff" />
         </Pressable>
       </View>
-      <Sheet visible={fix} onClose={() => setFix(false)} title={t('El cronómetro sigue corriendo')} subtitle={t('Empezó a las {toLocaleTimeString} ({fmtHours}). ¿Cuánto trabajaste de verdad?', { toLocaleTimeString: new Date(sw.startedAt).toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' }), fmtHours: fmtHours(elapsedMin(sw)) })} maxWidth={460}
+      <Sheet visible={fix} onClose={() => setFix(false)} title={t('El cronómetro sigue corriendo')} subtitle={t('Empezó a las {toLocaleTimeString} ({fmtHours}). ¿Cuánto trabajaste de verdad?', { toLocaleTimeString: new Date(sw.startedAt).toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' }), fmtHours: fmtHours(elapsedMin(sw)) })} maxWidth={460}
         footer={<>
           <Button label={t('Sigo trabajando')} kind="ghost" onPress={() => { snoozeForgotten(); setFix(false); }} />
           <Button label={t('Descartar')} kind="ghost" onPress={() => { discardStopwatch(); setFix(false); toast(t('Descartado: no se anotó nada')); }} />

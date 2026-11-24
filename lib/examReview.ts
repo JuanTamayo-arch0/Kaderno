@@ -93,11 +93,11 @@ export function verdict(score: number, maxScore: number, target: number | null, 
 
   if (e.minutes === 0) bad('nofocus', t('No hay enfoque registrado para este parcial ni para la materia en las 3 semanas antes.'));
   else {
-    if (e.firstDaysBefore != null && e.firstDaysBefore <= 2) bad('late', t('Empezaste {v}. Lo que mejor funciona es repartir el estudio en una o dos semanas.', { v: e.firstDaysBefore === 0 ? 'el mismo día' : e.firstDaysBefore === 1 ? 'un día antes' : `${e.firstDaysBefore} días antes` }));
+    if (e.firstDaysBefore != null && e.firstDaysBefore <= 2) bad('late', t('Empezaste {v}. Lo que mejor funciona es repartir el estudio en una o dos semanas.', { v: e.firstDaysBefore === 0 ? t('el mismo día') : e.firstDaysBefore === 1 ? t('un día antes') : t('{firstDaysBefore} días antes', { firstDaysBefore: e.firstDaysBefore }) }));
     else if (e.firstDaysBefore != null && e.firstDaysBefore >= 7) ok('early', t('Empezaste {firstDaysBefore} días antes.', { firstDaysBefore: e.firstDaysBefore }));
     if (e.last48Share >= 0.6 && e.minutes >= 30) bad('cram', t('El {round} % del estudio fue en las últimas 48 horas.', { round: Math.round(e.last48Share * 100) }));
     if (e.days >= 4) ok('spread', t('Repartiste el estudio en {days} días distintos.', { days: e.days }));
-    else if (e.days <= 2 && e.minutes >= 60 && !r.some((x) => x.key === 'late')) bad('fewdays', t('Estudiaste solo {v} distintos.', { v: e.days === 1 ? 'un día' : `${e.days} días` }));
+    else if (e.days <= 2 && e.minutes >= 60 && !r.some((x) => x.key === 'late')) bad('fewdays', t('Estudiaste solo {v} distintos.', { v: e.days === 1 ? t('un día') : t('{days} días', { days: e.days }) }));
     if (typicalGood != null && typicalGood > 0) {
       if (e.minutes < typicalGood * 0.7) bad('less', t('Menos horas que en los parciales donde te fue bien ({minutes} contra unas {typicalGood}).', { minutes: fmtHours(e.minutes), typicalGood: fmtHours(typicalGood) }));
       else if (e.minutes >= typicalGood) ok('more', t('Tantas horas o más que en los parciales donde te fue bien ({minutes}).', { minutes: fmtHours(e.minutes) }));
@@ -109,7 +109,7 @@ export function verdict(score: number, maxScore: number, target: number | null, 
   else if (e.bestQuiz != null && e.bestQuiz < 60 && !reached) bad('simlow', t('En el simulacro sacaste {bestQuiz} %: era una alerta.', { bestQuiz: Math.round(e.bestQuiz) }));
   else ok('sim', `Hiciste ${e.quizzes === 1 ? t('un simulacro') : `${e.quizzes} simulacros`}${e.bestQuiz != null ? ` (mejor: ${Math.round(e.bestQuiz)} %)` : ''}.`);
   if (e.cardReviews >= 20) ok('cards', t('Repasaste {cardReviews} tarjetas de la materia.', { cardReviews: e.cardReviews }));
-  if (e.recalls > 0) ok('recall', t('Te pusiste a prueba con {v}.', { v: e.recalls === 1 ? 'una nota' : `${e.recalls} notas` }));
+  if (e.recalls > 0) ok('recall', t('Te pusiste a prueba con {v}.', { v: e.recalls === 1 ? t('una nota') : `${e.recalls} notas` }));
 
   const badN = r.filter((x) => x.tone === 'bad').length;
   const targetText = target != null && target > 0 ? t('la nota que querías ({target})', { target: fmtGrade(target) }) : `aprobar (${fmtGrade(maxScore * 0.6)})`;

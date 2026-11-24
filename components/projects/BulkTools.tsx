@@ -137,7 +137,7 @@ export function BulkDialog({ action, projectId, tasks, cols, members, onClose, o
             )}
             {action === 'fecha' && <DueForm n={n} busy={busy} onClose={onClose} onApply={(iso) => run({ due_at: iso }, iso ? t('Entrega de {nTxt}: {iso}', { nTxt, iso: formatHuman(iso) }) : t('{nTxt} sin fecha', { nTxt }))} />}
             {action === 'correr' && <ShiftForm tasks={tasks.map(toExisting)} busy={busy} onClose={onClose}
-              onApply={(days, target) => run({ shift_days: days, shift_target: target }, t('Fechas de {nTxt} corridas {days} {v} {v2}', { nTxt, days: Math.abs(days), v: Math.abs(days) === 1 ? 'día' : 'días', v2: days >= 0 ? 'hacia adelante' : 'hacia atrás' }))} />}
+              onApply={(days, target) => run({ shift_days: days, shift_target: target }, t('Fechas de {nTxt} corridas {days} {v} {v2}', { nTxt, days: Math.abs(days), v: Math.abs(days) === 1 ? t('día') : t('días'), v2: days >= 0 ? t('hacia adelante') : t('hacia atrás') }))} />}
           </ScrollView>
         </Pressable>
       </Pressable>
@@ -186,7 +186,7 @@ function DueForm({ n, busy, onClose, onApply }: { n: number; busy: boolean; onCl
     });
   return (
     <>
-      <Title text={t('Entrega de {n} {v}', { n, v: n === 1 ? 'tarea' : 'tareas' })} onClose={onClose} />
+      <Title text={t('Entrega de {n} {v}', { n, v: n === 1 ? t('tarea') : t('tareas') })} onClose={onClose} />
       <Text style={{ color: C.muted, fontSize: 12.5, marginBottom: 10 }}>{t('Todas quedan con la misma fecha y hora. Sin hora, a las 11:59 p. m.')}</Text>
       {isWeb ? (
         <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -264,7 +264,7 @@ function ShiftForm({ tasks, busy, onClose, onApply }: {
       <Pressable onPress={() => onApply(days, target)} disabled={busy || days === 0 || prev.invalidCount > 0 || prev.items.length === 0}
         style={{ backgroundColor: days !== 0 && prev.invalidCount === 0 && prev.items.length > 0 ? C.brand : C.surface2, borderRadius: 12, padding: 13, alignItems: 'center', marginTop: 16 }}>
         {busy ? <ActivityIndicator color="#0f1115" /> : (
-          <Text style={{ color: days !== 0 && prev.invalidCount === 0 && prev.items.length > 0 ? C.onBrand : C.muted, fontWeight: '700' }}>{t('Correr {length} {v}', { length: prev.items.length, v: prev.items.length === 1 ? 'tarea' : 'tareas' })}</Text>
+          <Text style={{ color: days !== 0 && prev.invalidCount === 0 && prev.items.length > 0 ? C.onBrand : C.muted, fontWeight: '700' }}>{t('Correr {length} {v}', { length: prev.items.length, v: prev.items.length === 1 ? t('tarea') : t('tareas') })}</Text>
         )}
       </Pressable>
     </>

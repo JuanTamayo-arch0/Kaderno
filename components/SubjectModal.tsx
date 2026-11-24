@@ -73,7 +73,7 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
         if (both && spaceSel !== spaceOf(editSubject, mode)) {
           const ok = await setSubjectsSpace([editSubject.id], spaceSel);
           if (!ok) notify(t('Falta un paso en el servidor'), t('Para mover entre Estudio y Trabajo hay que correr schema_v25.sql en Supabase.'));
-          else { toast(t('{trim} pasó a {v}', { trim: name.trim(), v: spaceSel === 'trabajo' ? 'Trabajo' : 'Estudio' }), { tone: 'good' }); onSaved(); return; }
+          else { toast(t('{trim} pasó a {v}', { trim: name.trim(), v: spaceSel === 'trabajo' ? t('Trabajo') : t('Estudio') }), { tone: 'good' }); onSaved(); return; }
         }
       } else await addSubject(name.trim(), color, icon, cr, extra);
       toast(editSubject ? `${mv.subject} guardada` : `${mv.subject} creada: ${name.trim()}`, { tone: 'good' });

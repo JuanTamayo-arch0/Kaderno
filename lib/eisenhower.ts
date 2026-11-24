@@ -1,5 +1,5 @@
-
-import { t } from './i18n';// ============================================================
+import { t } from './i18n';
+// ============================================================
 //  Matriz de Eisenhower (v27, fase 1). Puro, con pruebas.
 //
 //  Importante lo marca la persona (una estrella); en las tareas de proyecto
@@ -106,7 +106,7 @@ export function weekBalance(tasks: Done[], weekStart: string, days = DEFAULT_URG
 export function balanceLine(b: ReturnType<typeof weekBalance>, work: boolean): string | null {
   if (b.total < 5) return null;
   const imp = Math.round(((b.counts.hacer + b.counts.planear) / b.total) * 100);
-  if (b.urgentOnlyPct >= 40) return t('La semana pasada el {urgentOnlyPct} % de lo que terminaste era urgente pero no tan importante. {v}', { urgentOnlyPct: b.urgentOnlyPct, v: work ? 'Mira qué se puede delegar.' : 'Esta semana, primero lo que tiene estrella.' });
+  if (b.urgentOnlyPct >= 40) return t('La semana pasada el {urgentOnlyPct} % de lo que terminaste era urgente pero no tan importante. {v}', { urgentOnlyPct: b.urgentOnlyPct, v: work ? t('Mira qué se puede delegar.') : t('Esta semana, primero lo que tiene estrella.') });
   if (imp >= 60) return t('La semana pasada el {imp} % de lo que terminaste era importante. Buen enfoque.', { imp });
   return t('La semana pasada terminaste {total} tareas; el {imp} % era importante.', { total: b.total, imp });
 }

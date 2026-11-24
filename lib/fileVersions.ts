@@ -1,5 +1,5 @@
-
-import { t } from './i18n';// ============================================================
+import { t } from './i18n';
+// ============================================================
 //  Utilidades puras para los archivos versionados de un proyecto.
 //  Sin dependencias de Supabase ni de React Native para poder probarlas.
 // ============================================================

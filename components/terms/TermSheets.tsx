@@ -12,7 +12,7 @@ import {
 } from '../../lib/terms';
 import { addPastTerm, closeTerm, saveGradeScale, termActivity } from '../../lib/termsDb';
 import { fmtHours } from '../../lib/day';
-import { t } from '../../lib/i18n';
+import { t, locale } from '../../lib/i18n';
 
 // ============================================================
 //  Semestres (v26, fase 3): cerrar el semestre, agregar uno pasado y la
@@ -54,7 +54,7 @@ function RowsEditor({ rows, setRows, scale, editableNames }: { rows: Row[]; setR
               {editableNames
                 ? <TextInput value={r.name} onChangeText={(t) => set(i, { name: t.slice(0, 80) })} placeholder={t('Materia')} placeholderTextColor={C.muted} accessibilityLabel={t('Nombre de la materia')} style={[inputStyle(), { flex: 1 }]} />
                 : <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '700', flex: 1 }} numberOfLines={1}>{r.name}</Text>}
-              {editableNames && <Pressable onPress={() => setRows(rows.filter((_, k) => k !== i))} accessibilityRole="button" accessibilityLabel={t('Quitar {v}', { v: r.name || 'materia' })} hitSlop={8}><Ionicons name="close" size={18} color={C.muted} /></Pressable>}
+              {editableNames && <Pressable onPress={() => setRows(rows.filter((_, k) => k !== i))} accessibilityRole="button" accessibilityLabel={t('Quitar {v}', { v: r.name || t('materia') })} hitSlop={8}><Ionicons name="close" size={18} color={C.muted} /></Pressable>}
             </View>
             <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Créditos')}</Text>
@@ -142,7 +142,7 @@ export function CloseTermSheet({ visible, term, subjects, scale, onClose, onClos
           {tile(t('Promedio'), fmtGrade(avg.avg, scale))}
           {tile(t('Créditos aprobados'), String(avg.credits))}
           {tile(t('Horas de estudio'), act ? fmtHours(act.focusMinutes) : '…')}
-          {tile(t('Tarjetas repasadas'), act ? act.cards.toLocaleString(t('es-CO')) : '…')}
+          {tile(t('Tarjetas repasadas'), act ? act.cards.toLocaleString(locale()) : '…')}
           {tile(t('Racha más larga'), act ? `${act.bestStreak} ${act.bestStreak === 1 ? t('día') : t('días')}` : '…')}
         </View>
         {best && <Text style={{ color: C.text, fontSize: 14 }}>{t('Tu mejor materia: ')}<Text style={{ fontWeight: '800' }}>{best.name}</Text> ({fmtGrade(best.grade, scale)}).</Text>}

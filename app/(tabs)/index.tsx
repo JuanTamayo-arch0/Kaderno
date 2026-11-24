@@ -74,7 +74,7 @@ import { getTerms } from '../../lib/termsDb';
 import { shouldOfferClose as shouldOfferCloseTerm, type Term } from '../../lib/terms';
 import { otherSpaceLine } from '../../lib/spaces';
 import { switchSpace } from '../../lib/spaceSwitch';
-import { t, trn } from '../../lib/i18n';
+import { t, trn, locale } from '../../lib/i18n';
 
 // ============================================================
 //  Hoy.
@@ -574,7 +574,7 @@ export default function Hoy() {
       actions={[
         { label: t('Abrir el proyecto'), icon: 'open-outline', onPress: () => router.push(`/proyectos/${r.p.project_id}`) },
         { label: t('Ocultar esta tarea de Hoy'), icon: 'eye-off-outline', onPress: () => hideProj(r.p, false) },
-        { label: t('Ocultar todo {v} de Hoy', { v: r.p.project?.name ?? 'este proyecto' }), icon: 'eye-off', onPress: () => hideProj(r.p, true) },
+        { label: t('Ocultar todo {v} de Hoy', { v: r.p.project?.name ?? t('este proyecto') }), icon: 'eye-off', onPress: () => hideProj(r.p, true) },
       ]} />
   );
 
@@ -614,7 +614,7 @@ export default function Hoy() {
     <View style={{ marginTop: 8 }}>
       <Pressable onPress={() => setShowDone((v) => !v)} accessibilityRole="button" accessibilityState={{ expanded: showDone }}
         style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', borderColor: C.line, marginBottom: 8, minHeight: 48 }}>
-        <Text style={{ color: C.muted, fontSize: 13.5 }}>{t('{length} {v} esta semana', { length: doneRecent.length, v: doneRecent.length === 1 ? 'completada' : 'completadas' })}</Text>
+        <Text style={{ color: C.muted, fontSize: 13.5 }}>{t('{length} {v} esta semana', { length: doneRecent.length, v: doneRecent.length === 1 ? t('completada') : t('completadas') })}</Text>
         <Ionicons name={showDone ? 'chevron-up' : 'chevron-down'} size={18} color={C.muted} />
       </Pressable>
       {showDone && doneRecent.map((t) => (
@@ -630,7 +630,7 @@ export default function Hoy() {
         <Pressable onPress={() => router.push('/horario')} accessibilityRole="link"><Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>{mv.schedule}</Text></Pressable>
       </View>
       {agenda.timed.length === 0 && agenda.allDay.length === 0 ? (
-        <Text style={{ color: C.muted, fontSize: 13 }}>{t('Sin clases ni entregas con hora. {v}', { v: slots.length === 0 ? 'Carga tu horario para verlas aquí.' : '' })}</Text>
+        <Text style={{ color: C.muted, fontSize: 13 }}>{t('Sin clases ni entregas con hora. {v}', { v: slots.length === 0 ? t('Carga tu horario para verlas aquí.') : '' })}</Text>
       ) : (
         <>
           {agenda.timed.map((it, i) => <AgendaRow key={i} it={it} now={now} isToday={!day || day === isoDate(now)}
@@ -649,7 +649,7 @@ export default function Hoy() {
       <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
         <View style={{ flex: 1 }}>
           <Text style={{ color: C.text, fontSize: 22, fontWeight: '800' }}>{focusToday.todayMin >= 60 ? `${Math.floor(focusToday.todayMin / 60)} h ${focusToday.todayMin % 60} min` : `${focusToday.todayMin} min`}</Text>
-          <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('hoy{v}', { v: !streak.s && focusToday.streak > 0 ? t(' · racha de {streak} {v}', { streak: focusToday.streak, v: focusToday.streak === 1 ? 'día' : 'días' }) : '' })}</Text>
+          <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('hoy{v}', { v: !streak.s && focusToday.streak > 0 ? t(' · racha de {streak} {v}', { streak: focusToday.streak, v: focusToday.streak === 1 ? t('día') : t('días') }) : '' })}</Text>
         </View>
         <Button label={t('Empezar')} kind="secondary" size="sm" icon="play" onPress={() => { startFocus(); router.push('/enfoque'); }} />
       </View>
@@ -721,7 +721,7 @@ export default function Hoy() {
               <Pressable key={i} onPress={() => togglePriority(p, i)} accessibilityRole="checkbox" accessibilityState={{ checked: done }} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 34 }}>
                 <Ionicons name={done ? 'checkmark-circle' : 'ellipse-outline'} size={20} color={done ? C.good : C.muted} />
                 <Text style={{ color: done ? C.muted : C.text, fontSize: 14, flex: 1, textDecorationLine: done ? 'line-through' : 'none' }} numberOfLines={1}>{p.title}</Text>
-                {!!at && !done && <Text style={{ color: C.brand, fontSize: 12, fontWeight: '600' }}>{new Date(at).toLocaleDateString(trn('es-CO'), { weekday: 'short' })} {minToLabel(new Date(at).getHours() * 60 + new Date(at).getMinutes())}</Text>}
+                {!!at && !done && <Text style={{ color: C.brand, fontSize: 12, fontWeight: '600' }}>{new Date(at).toLocaleDateString(locale(), { weekday: 'short' })} {minToLabel(new Date(at).getHours() * 60 + new Date(at).getMinutes())}</Text>}
               </Pressable>
             );
           })}
@@ -842,7 +842,7 @@ function AgendaRow({ it, now, isToday, onPress }: { it: AgendaItem; now: Date; i
         <Text style={{ width: 66, color: C.muted, fontSize: 12.5, fontVariant: ['tabular-nums'] }}>{minToLabel(it.start)}</Text>
         <View style={{ flex: 1, borderLeftWidth: 3, borderLeftColor: it.color, borderStyle: 'dashed', paddingLeft: 9 }}>
           <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '600' }} numberOfLines={1}>{t('Plan: {title}', { title: it.title })}</Text>
-          <Text style={{ color: live ? C.brand : C.muted, fontSize: 12, fontWeight: live ? '700' : '400' }}>{t('{v}{v2}toca para empezar', { v: live ? 'Ahora · ' : '', v2: it.place ? placePhrase(it.place).replace(/^en /, 'En ') + ' · ' : '' })}</Text>
+          <Text style={{ color: live ? C.brand : C.muted, fontSize: 12, fontWeight: live ? '700' : '400' }}>{t('{v}{v2}toca para empezar', { v: live ? t('Ahora · ') : '', v2: it.place ? placePhrase(it.place).replace(/^en /, 'En ') + ' · ' : '' })}</Text>
         </View>
         <Ionicons name="play-circle-outline" size={18} color={C.brand} style={{ alignSelf: 'center' }} />
       </Pressable>
@@ -879,7 +879,7 @@ function ProjectRow({ p, onOpen, actions }: { p: MyProjectTask; onOpen: () => vo
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4, flexWrap: 'wrap' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
             <Dot color={p.project?.color ?? C.brand} />
-            <Text style={{ color: C.muted, fontSize: 12.5 }} numberOfLines={1}>{t('{v} · en equipo', { v: p.project?.name ?? 'Proyecto' })}</Text>
+            <Text style={{ color: C.muted, fontSize: 12.5 }} numberOfLines={1}>{t('{v} · en equipo', { v: p.project?.name ?? t('Proyecto') })}</Text>
           </View>
           {!!due && <Text style={{ color: b === 'overdue' ? C.badText : b === 'today' ? C.warnText : C.muted, fontSize: 12.5, fontWeight: b === 'overdue' || b === 'today' ? '700' : '500' }}>{due}</Text>}
         </View>

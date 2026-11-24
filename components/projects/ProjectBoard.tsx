@@ -259,7 +259,7 @@ export function WorkBadges({ task, byId }: { task: PTask; byId: Record<string, P
       {p && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }} accessibilityLabel={`Prioridad ${p.label}`}><Ionicons name="flag" size={11} color={p.color} /><Text style={{ color: p.color, fontSize: 11.5, fontWeight: '800' }}>{p.label}</Text></View>}
       {!task.done && blockers.length > 0 && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }} accessibilityLabel={t('Bloqueada por {join}', { join: blockers.map((b) => b.title).join(', ') })}>
-          <Ionicons name="lock-closed" size={11} color={C.warnText} /><Text style={{ color: C.warnText, fontSize: 11.5, fontWeight: '700' }} numberOfLines={1}>{t('Espera: {title}{v}', { title: blockers[0].title, v: blockers.length > 1 ? ` y ${blockers.length - 1} más` : '' })}</Text>
+          <Ionicons name="lock-closed" size={11} color={C.warnText} /><Text style={{ color: C.warnText, fontSize: 11.5, fontWeight: '700' }} numberOfLines={1}>{t('Espera: {title}{v}', { title: blockers[0].title, v: blockers.length > 1 ? t(' y {v} más', { v: blockers.length - 1 }) : '' })}</Text>
         </View>
       )}
       {task.repeat_rule && <Ionicons name="repeat" size={12} color={C.muted} accessibilityLabel={t('Se repite')} />}

@@ -1,5 +1,5 @@
-
-import { t, trn } from './i18n';// ============================================================
+import { t, trn } from './i18n';
+// ============================================================
 //  "¿Cuándo lo haces?" (v20, sección E). Puro, con pruebas.
 //  Busca huecos libres de 50 min entre 7:00 y 21:00, fuera de clases y de
 //  otros planes, prefiriendo las horas en que sueles enfocarte.

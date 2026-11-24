@@ -1,5 +1,5 @@
-
-import { t } from './i18n';// ============================================================
+import { t, tc } from './i18n';
+// ============================================================
 //  Sonidos de fondo del Enfoque: catálogo y lógica de la mezcla.
 //  Puro (sin React ni Web Audio) para poder probarlo. El motor que
 //  suena está en lib/ambient.ts.
@@ -19,7 +19,7 @@ export type AmbientPrefs = {
 
 export const SOUNDS: { id: SoundId; label: string; hint: string }[] = [
   { id: 'lluvia', label: t('Lluvia'), hint: t('Lluvia suave, sin truenos') },
-  { id: 'mar', label: t('Mar'), hint: t('Olas lejanas') },
+  { id: 'mar', label: tc('sonido', 'Mar'), hint: t('Olas lejanas') },
   { id: 'bosque', label: t('Bosque'), hint: t('Viento en las hojas y pájaros') },
   { id: 'rio', label: t('Río'), hint: t('Arroyo continuo') },
   { id: 'viento', label: t('Viento'), hint: t('Ráfagas suaves') },

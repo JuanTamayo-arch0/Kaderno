@@ -5,7 +5,7 @@ import { supabase, currentUserId } from './supabase';
 import { getTasks, isMissingColumn, type Task } from './db';
 import type { QuizQuestion, QuizAnswer } from './quiz';
 import type { RecallResult, GradeResult } from '../supabase/functions/_shared/quiz';
-import { planSessions, sessionTitle, type SessionKind } from './examPlan';
+import { isQuickMock, planSessions, sessionTitle, type SessionKind } from './examPlan';
 import { suggestSlotsForDay } from './planHelpers';
 import { t } from './i18n';
 
@@ -101,7 +101,7 @@ export async function proposePlan(exam: Task, now = new Date()): Promise<DraftSe
   for (const s of list) {
     const at = await suggestSlotsForDay(s.day, s.minutes, taken).catch(() => null);
     if (at) taken.push(at);
-    out.push({ kind: s.kind, title: sessionTitle(s.kind, exam.title, s.title === 'Simulacro rápido'), day: s.day, at, minutes: s.minutes });
+    out.push({ kind: s.kind, title: sessionTitle(s.kind, exam.title, isQuickMock(s.title)), day: s.day, at, minutes: s.minutes });
   }
   return out;
 }

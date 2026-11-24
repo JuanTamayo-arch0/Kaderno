@@ -71,7 +71,7 @@ export function MeetingPublish({ visible, minutes, date, onClose }: { visible: b
         await uploadNewFile(project.id, { name: minutesFileName(minutes, date), bytes, mime: 'text/markdown', size: bytes.length }, { description: t('Acta de reunión hecha con Kaderno') })
           .catch(() => { toast(t('Las tareas quedaron, pero el acta no se pudo guardar en Archivos.'), { tone: 'bad' }); });
       }
-      logActivity(project.id, 'meeting', t('publicó el acta de la reunión del {when}{v}', { when, v: made ? ` con ${made} ${made === 1 ? 'tarea' : 'tareas'}` : '' }), {});
+      logActivity(project.id, 'meeting', t('publicó el acta de la reunión del {when}{v}', { when, v: made ? ` con ${made} ${made === 1 ? t('tarea') : t('tareas')}` : '' }), {});
       toast(t('Publicada en {name}', { name: project.name }), { tone: 'good', actionLabel: t('Ver proyecto'), onAction: () => router.push(`/proyectos/${project.id}` as any) });
       onClose();
     } catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
@@ -98,7 +98,7 @@ export function MeetingPublish({ visible, minutes, date, onClose }: { visible: b
       footer={<>
         <Button label={t('Otro proyecto')} kind="ghost" onPress={() => setProject(null)} />
         <View style={{ flex: 1 }} />
-        <Button label={n ? t('Crear {n} {v}{v2}', { n, v: n === 1 ? 'tarea' : 'tareas', v2: file ? ' y guardar el acta' : '' }) : t('Guardar el acta')} icon="checkmark" busy={busy} disabled={!editable || (!n && !file)} onPress={publish} />
+        <Button label={n ? t('Crear {n} {v}{v2}', { n, v: n === 1 ? t('tarea') : t('tareas'), v2: file ? t(' y guardar el acta') : '' }) : t('Guardar el acta')} icon="checkmark" busy={busy} disabled={!editable || (!n && !file)} onPress={publish} />
       </>}>
       {members === null && <ActivityIndicator color={C.brand} />}
       {members && !editable && <Text style={{ color: C.warnText, fontSize: 13 }}>{t('En este proyecto solo puedes ver. Pídele al dueño que te haga editor.')}</Text>}

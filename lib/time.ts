@@ -1,5 +1,5 @@
-
-import { t } from './i18n';// ============================================================
+import { t } from './i18n';
+// ============================================================
 //  Fechas y horas de las tareas personales.
 //  Una tarea puede tener solo fecha (due_date) o fecha con hora (due_at,
 //  desde schema_v14). Todo lo que agrupa, ordena o muestra fechas pasa por

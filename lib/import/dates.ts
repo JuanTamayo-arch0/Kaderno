@@ -1,5 +1,5 @@
-
-import { t } from '../i18n';// Fechas y horas del importador.
+import { t } from '../i18n';
+// Fechas y horas del importador.
 //
 // Todo lo que no trae zona horaria se interpreta en hora de Bogotá. Colombia no tiene
 // horario de verano, así que el desfase es fijo (UTC-5) y no hace falta una librería.

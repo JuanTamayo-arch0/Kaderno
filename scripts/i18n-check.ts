@@ -15,7 +15,7 @@
 import ts from 'typescript';
 import fs from 'node:fs';
 import path from 'node:path';
-import { inNonUiPosition, insideT, isJsxHuman, jsxTextValue, looksLabel, looksSpanish, markedOk, fileOk } from './i18nRules';
+import { inNonUiPosition, insideT, inTVars, isJsxHuman, jsxTextValue, looksLabel, looksSpanish, markedOk, fileOk } from './i18nRules';
 import { EN } from '../lib/i18n/en';
 
 const ROOT = path.resolve(__dirname, '..');
@@ -66,7 +66,7 @@ export function check(dirs = ['app', 'components', 'lib']): Report {
           const v = jsxTextValue(node.text);
           if (v.trim() && isJsxHuman(v)) rep.unwrapped.push({ file: rel, line: at(node), text: v.trim().slice(0, 100) });
         } else if ((ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) && !insideT(node)) {
-          if ((looksSpanish(node.text) || looksLabel(node.text)) && !inNonUiPosition(node)) rep.unwrapped.push({ file: rel, line: at(node), text: node.text.slice(0, 100) });
+          if ((looksSpanish(node.text) || looksLabel(node.text) || inTVars(node) && isJsxHuman(node.text) && /[a-záéíóúñ]/.test(node.text)) && !inNonUiPosition(node)) rep.unwrapped.push({ file: rel, line: at(node), text: node.text.slice(0, 100) });
         } else if (ts.isTemplateExpression(node) && !insideT(node)) {
           const lits = [node.head.text, ...node.templateSpans.map((s) => s.literal.text)].join(' ');
           if (looksSpanish(lits) && !inNonUiPosition(node)) rep.unwrapped.push({ file: rel, line: at(node), text: node.getText(sf).slice(0, 100) });

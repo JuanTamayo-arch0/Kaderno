@@ -1,5 +1,5 @@
-
-import { t, trn } from './i18n';// ============================================================
+import { t, trn } from './i18n';
+// ============================================================
 //  Tareas que se repiten (v21, sección 1). Puro, con pruebas.
 //  Texto en español → regla, regla → siguiente fecha, regla → texto.
 //  La base (schema_v20.sql) calcula la siguiente fecha con las mismas reglas.

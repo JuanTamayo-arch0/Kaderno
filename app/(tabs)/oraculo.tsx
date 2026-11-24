@@ -96,7 +96,7 @@ export default function Oraculo() {
   }
   async function reindex() {
     setIndexing(true);
-    try { const n = await reindexNotes(); toast(t('{n} {v} para el Oráculo', { n, v: n === 1 ? 'nota preparada' : 'notas preparadas' }), { tone: 'good' }); }
+    try { const n = await reindexNotes(); toast(t('{n} {v} para el Oráculo', { n, v: n === 1 ? t('nota preparada') : t('notas preparadas') }), { tone: 'good' }); }
     catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
     finally { setIndexing(false); }
   }

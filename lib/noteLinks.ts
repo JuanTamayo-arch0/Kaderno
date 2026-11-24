@@ -1,5 +1,5 @@
-
-import { t } from './i18n';// ============================================================
+import { t } from './i18n';
+// ============================================================
 //  Notas conectadas (v21, secciones 6 a 8). Puro, con pruebas.
 //  Enlaces [[entre notas]], tarjetas escritas con "::" y plantillas.
 // ============================================================

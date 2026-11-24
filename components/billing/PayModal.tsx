@@ -53,7 +53,7 @@ export function PayModal({ intent, onClose, onPaid }: { intent: PayIntent | null
   const isSource = intent.kind === 'source';
   const amount = isSeats ? seatsProrated(intent.period, intent.periodEnd ?? new Date(), seats) : priceOf(intent.plan, period, seats);
   const every = period === 'month' ? t('cada mes') : t('cada año');
-  const title = isSource ? t('Cambiar medio de pago') : isSeats ? t('Agregar puestos') : t('Pagar {v}', { v: intent.plan === 'pro' ? 'Pro' : 'Equipo' });
+  const title = isSource ? t('Cambiar medio de pago') : isSeats ? t('Agregar puestos') : t('Pagar {v}', { v: intent.plan === 'pro' ? 'Pro' : t('Equipo') });
   const needData = !!cfg?.acceptance.data;
   const accepted = terms && (!needData || data);
   const close = () => { cancelled.current = true; onClose(); };
@@ -71,7 +71,7 @@ export function PayModal({ intent, onClose, onPaid }: { intent: PayIntent | null
     setStep('working'); setMsg(t('Confirmando el pago con Wompi…'));
     const p = await waitPayment({ reference }, 90_000);
     forgetPlan(); await getMyPlan(true).catch(() => null);
-    if (p.status === 'APPROVED') { setResult({ ok: true, text: t('Listo: pago aprobado. Tienes {v} y se renueva solo {every}.', { v: intent!.plan === 'pro' ? 'Pro' : 'Equipo', every }) }); onPaid(); }
+    if (p.status === 'APPROVED') { setResult({ ok: true, text: t('Listo: pago aprobado. Tienes {v} y se renueva solo {every}.', { v: intent!.plan === 'pro' ? 'Pro' : t('Equipo'), every }) }); onPaid(); }
     else if (p.status === 'PENDING') setResult({ ok: true, text: t('Wompi sigue procesando el pago. Te avisamos cuando se apruebe; puedes cerrar esta ventana.') });
     else setResult({ ok: false, text: t('El pago no se aprobó{v}. No se te cobró nada. Prueba con otro medio.', { v: p.error ? ` (${p.error})` : '' }) });
     setStep('done');

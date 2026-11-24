@@ -1,5 +1,5 @@
-
-import { t } from './i18n';// ============================================================
+import { t } from './i18n';
+// ============================================================
 //  Repetición espaciada (variante de SM-2, la de Anki simplificada).
 //
 //  Cuatro botones: 0 "Otra vez", 1 "Difícil", 2 "Bien", 3 "Fácil".

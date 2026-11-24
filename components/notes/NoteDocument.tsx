@@ -117,7 +117,7 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
       syncNoteCards(noteId, md).then(({ create, updated }) => {
         if (updated) toast(updated === 1 ? t('1 tarjeta actualizada desde la nota') : t('{updated} tarjetas actualizadas desde la nota', { updated }));
         if (create.length) {
-          toast(t('Encontré {length} {v} en tu nota', { length: create.length, v: create.length === 1 ? 'tarjeta' : 'tarjetas' }));
+          toast(t('Encontré {length} {v} en tu nota', { length: create.length, v: create.length === 1 ? t('tarjeta') : t('tarjetas') }));
           maker.review(create.map((c) => ({ kind: c.kind, front: c.front, back: c.back })), {
             noteId, subjectId: note.subject_id ?? null, title: title || t('Nota'), from: 'note', lines: Object.fromEntries(create.map((c) => [c.front, c.line])),
           });
@@ -176,7 +176,7 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
       if (error) throw error;
       setNote({ ...note, subject_id: sid });
       cbRef.current?.({ id: noteId, subject_id: sid });
-      toast(sid ? t('Nota movida a {v}', { v: subjects.find((s) => s.id === sid)?.name ?? 'otra materia' }) : t('Nota sin materia'));
+      toast(sid ? t('Nota movida a {v}', { v: subjects.find((s) => s.id === sid)?.name ?? t('otra materia') }) : t('Nota sin materia'));
     } catch (e) { notify(t('No se pudo mover'), friendlyError(e)); }
   }
   async function togglePin() {
@@ -222,7 +222,7 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
       return;
     }
     if (kind === 'flashcard') makeFlashcards(text);
-    else askOracle(t('Explícame esto de mi nota "{v}": {slice}', { v: title || 'Nota', slice: text.slice(0, 600) }));
+    else askOracle(t('Explícame esto de mi nota "{v}": {slice}', { v: title || t('Nota'), slice: text.slice(0, 600) }));
   }
   // Fuente de una cita de PDF: abre el visor en esa página, en la misma pestaña
   // (atrás vuelve a la nota). El visor busca la dirección del archivo solo.
@@ -263,7 +263,7 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
   const meta = (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
       {note.pinned && <Ionicons name="pin" size={14} color={C.warnText} accessibilityLabel={t('Fijada')} />}
-      <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('{dateText} · {words} {v} · {minutes} min de lectura', { dateText, words, v: words === 1 ? 'palabra' : 'palabras', minutes })}</Text>
+      <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('{dateText} · {words} {v} · {minutes} min de lectura', { dateText, words, v: words === 1 ? t('palabra') : t('palabras'), minutes })}</Text>
       <View style={{ flex: 1 }} />
       {!!statusText && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }} accessibilityLiveRegion="polite">

@@ -142,7 +142,7 @@ export function WeekRitual({ visible, weekStart, onClose, onDone }: { visible: b
           {diary.slice(-5).map((d) => <Text key={d.day} style={{ color: C.muted, fontSize: 13 }}>{dayLabel(d.day)}: <Text style={{ color: C.text }}>{d.note}</Text></Text>)}
         </View>
       )}
-      <Group title={t('Esta semana{v}', { v: classes ? ` · ${classes} ${classes === 1 ? 'clase' : 'clases'}` : '' })} rows={items.thisWeek} empty={t('Nada con fecha esta semana.')} />
+      <Group title={t('Esta semana{v}', { v: classes ? ` · ${classes} ${classes === 1 ? t('clase') : t('clases')}` : '' })} rows={items.thisWeek} empty={t('Nada con fecha esta semana.')} />
       <Group title={t('La próxima')} rows={items.nextWeek} empty={t('Nada con fecha la próxima semana.')} />
       {goals.length > 0 && (
         <View style={{ gap: 6 }}>

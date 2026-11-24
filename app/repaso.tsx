@@ -65,7 +65,7 @@ function Repaso() {
     setResult(null);
     if (mode === 'cram' && subjectId) {
       const q = cramQueue(data.cards, subjectId);
-      setRun({ mode, queue: q, learning: [], label: t('Intensivo de {v}', { v: data.subjects.find((s) => s.id === subjectId)?.name ?? 'la materia' }) });
+      setRun({ mode, queue: q, learning: [], label: t('Intensivo de {v}', { v: data.subjects.find((s) => s.id === subjectId)?.name ?? t('la materia') }) });
       return;
     }
     const q = subjectId ? buildQueue({ cards: data.cards, now: new Date(), newPerDay: data.prefs.newPerDay, newDoneToday: newDoneToday(data.reviews), subjectId }) : queue;
@@ -168,7 +168,7 @@ function Home({ data, queue, result, onStart, onDismiss, onCreate, wide }: {
             <IconButton icon="close" label={t('Cerrar resumen')} onPress={onDismiss} />
           </View>
           {result.cards > 0 && (
-            <Text style={{ color: '#b9dccb', fontSize: 13.5, marginTop: 6, lineHeight: 19 }}>{t('{cards} {v} en {max} min. Recordaste {round}%.{v2} Mañana te tocan {tomorrow}.', { cards: result.cards, v: result.cards === 1 ? 'tarjeta' : 'tarjetas', max: Math.max(1, Math.round(result.ms / 60000)), round: Math.round((result.recalled / result.cards) * 100), v2: result.left ? ` Quedan ${result.left} para más tarde.` : '', tomorrow })}</Text>
+            <Text style={{ color: '#b9dccb', fontSize: 13.5, marginTop: 6, lineHeight: 19 }}>{t('{cards} {v} en {max} min. Recordaste {round}%.{v2} Mañana te tocan {tomorrow}.', { cards: result.cards, v: result.cards === 1 ? t('tarjeta') : t('tarjetas'), max: Math.max(1, Math.round(result.ms / 60000)), round: Math.round((result.recalled / result.cards) * 100), v2: result.left ? t(' Quedan {left} para más tarde.', { left: result.left }) : '', tomorrow })}</Text>
           )}
         </Card>
       )}
@@ -195,7 +195,7 @@ function Home({ data, queue, result, onStart, onDismiss, onCreate, wide }: {
         </View>
         {total > 0 ? (
           <>
-            <Text style={{ color: C.muted, fontSize: 13, marginTop: 12 }}>{t('{total} {v} hoy, {total2}.', { total, v: total === 1 ? 'tarjeta' : 'tarjetas', total2: estimateLabel(total, secs) })}</Text>
+            <Text style={{ color: C.muted, fontSize: 13, marginTop: 12 }}>{t('{total} {v} hoy, {total2}.', { total, v: total === 1 ? t('tarjeta') : t('tarjetas'), total2: estimateLabel(total, secs) })}</Text>
             <View style={{ flexDirection: 'row', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
               <Button label={t('Empezar')} icon="play" size="lg" onPress={() => onStart('normal')} style={{ flex: 2, minWidth: 160 }} />
               <Button label={t('Solo 5 minutos')} kind="secondary" size="lg" onPress={() => onStart('five')} style={{ flex: 1, minWidth: 150 }} />
@@ -231,7 +231,7 @@ function Home({ data, queue, result, onStart, onDismiss, onCreate, wide }: {
               <Text style={{ color: C.muted, fontSize: 12, width: 64, textAlign: 'right' }}>{d.ret === null ? `${d.total}` : `${d.ret}%`}</Text>
             </Pressable>
           ))}
-          <Text style={{ color: C.muted, fontSize: 11.5, paddingHorizontal: 14, paddingVertical: 10 }}>{t('Azul: nuevas de hoy · Verde: para repasar · La barra es cuánto recordaste en 30 días.{v}', { v: noSubject ? ` ${noSubject} sin materia.` : '' })}</Text>
+          <Text style={{ color: C.muted, fontSize: 11.5, paddingHorizontal: 14, paddingVertical: 10 }}>{t('Azul: nuevas de hoy · Verde: para repasar · La barra es cuánto recordaste en 30 días.{v}', { v: noSubject ? t(' {noSubject} sin materia.', { noSubject }) : '' })}</Text>
         </Card>
       )}
 

@@ -36,7 +36,7 @@ import { play } from '../lib/sound';
 import { useSpaceFilter } from '../lib/useSpace';
 import { getModeSetting } from '../lib/mode';
 import { switchSpace } from '../lib/spaceSwitch';
-import { t } from '../lib/i18n';
+import { t, locale } from '../lib/i18n';
 
 // ============================================================
 //  Paneles globales: hoja "Agregar", formulario de tarea, paleta de
@@ -246,7 +246,7 @@ function MicButton({ onText }: { onText: (t: string) => void }) {
     if (on) { try { recRef.current?.stop(); } catch { /* noop */ } return; }
     try {
       const rec = new SR();
-      rec.lang = t('es-CO'); rec.interimResults = true; rec.maxAlternatives = 1;
+      rec.lang = locale(); rec.interimResults = true; rec.maxAlternatives = 1;
       rec.onresult = (e: any) => { const t = Array.from(e.results).map((r: any) => r[0].transcript).join(' '); onText(t.trim()); };
       rec.onend = () => setOn(false);
       rec.onerror = (e: any) => { setOn(false); if (e?.error === 'not-allowed') toast(t('Permite el micrófono para dictar.'), { tone: 'bad' }); };

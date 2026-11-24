@@ -728,7 +728,7 @@ export async function aiFlashcards(content: string): Promise<{ front: string; ba
 }
 
 export async function aiSteps(title: string, description: string | null): Promise<string[]> {
-  const content = t('Título: {title}{v}', { title, v: description ? `\nDescripción: ${description}` : '' });
+  const content = t('Título: {title}{v}', { title, v: description ? t('\nDescripción: {description}', { description }) : '' });
   const { data, error } = await supabase.functions.invoke('ai', { body: { task: 'steps', content } });
   if (error) throw error;
   const steps = (data as any)?.steps;

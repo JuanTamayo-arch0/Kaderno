@@ -1,5 +1,5 @@
-
-import { t } from './i18n';// ============================================================
+import { t } from './i18n';
+// ============================================================
 //  Plan de repaso del parcial (v20, sección G). Puro, con pruebas.
 //  Sesiones a 14, 7, 4, 2 y 1 días del examen (las que quepan), con un
 //  tipo según su lugar: preparar, mezclar, simulacro y repaso ligero.
@@ -53,6 +53,12 @@ export function planSessions(exam: Date, now: Date): PlannedSession[] {
   });
 }
 
+/** ¿El título guardado es de un simulacro rápido? (en español o en inglés). */
+export function isQuickMock(title: string | null | undefined): boolean {
+  const head = String(title ?? '').split(' · ')[0];
+  return head === 'Simulacro rápido' || head === t('Simulacro rápido'); // i18n-ok
+}
+
 export function sessionTitle(kind: SessionKind, examTitle: string, quick = false): string {
   const base = quick && kind === 'sim' ? t('Simulacro rápido') : KIND_TEXT[kind].short;
   return `${base} · ${examTitle.trim().slice(0, 120)}`;
@@ -62,7 +68,7 @@ export function sessionTitle(kind: SessionKind, examTitle: string, quick = false
 export function planProgress(sessions: { status?: string | null }[]): { done: number; total: number; text: string } {
   const total = sessions.length;
   const done = sessions.filter((s) => s.status === 'done').length;
-  return { done, total, text: t('Plan de repaso: {done} de {total} {v}', { done, total, v: total === 1 ? 'sesión hecha' : 'sesiones hechas' }) };
+  return { done, total, text: t('Plan de repaso: {done} de {total} {v}', { done, total, v: total === 1 ? t('sesión hecha') : t('sesiones hechas') }) };
 }
 
 /**

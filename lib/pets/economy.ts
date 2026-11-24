@@ -7,6 +7,7 @@ import type { ItemId, Slot, Species } from './art';
 import { HOME_ITEMS, homeHas, type Home, type HomeItemId } from './home';
 import { isSeasonal, seasonOfItem, inSeason } from './seasons';
 import { t } from '../i18n';
+import { locale } from '../i18n';
 
 export const ITEM_RULES: Record<ItemId, { price: number; level: number; slot: Slot }> = {
   gorro: { price: 60, level: 1, slot: 'cabeza' },
@@ -117,5 +118,5 @@ export const DEFAULT_NAMES: Record<Species, string> = { pinguino: t('Pingu'), ga
 
 /** Plural correcto de la moneda: "1 pescado", "5 pescados". */
 export function coinLabel(n: number, coin: { one: string; many: string }): string {
-  return `${n.toLocaleString(t('es-CO'))} ${n === 1 ? coin.one : coin.many}`;
+  return `${n.toLocaleString(locale())} ${n === 1 ? coin.one : coin.many}`;
 }

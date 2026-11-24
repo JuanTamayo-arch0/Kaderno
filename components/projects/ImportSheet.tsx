@@ -252,7 +252,7 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
                 {/* duplicados */}
                 {dups.size > 0 && (
                   <View style={{ borderWidth: 1, borderColor: C.warn + '66', backgroundColor: C.warn + '12', borderRadius: 12, padding: 12, marginBottom: 12 }}>
-                    <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{t('{size} {v} en el proyecto', { size: dups.size, v: dups.size === 1 ? 'tarea ya existe' : 'tareas ya existen' })}</Text>
+                    <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{t('{size} {v} en el proyecto', { size: dups.size, v: dups.size === 1 ? t('tarea ya existe') : t('tareas ya existen') })}</Text>
                     <Text style={{ color: C.muted, fontSize: 12, marginTop: 3, marginBottom: 9 }}>{t('Las reconocí por el código del título (como H-009) o por el mismo título. ¿Qué hago con ellas?')}</Text>
                     <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
                       {([['actualizar', 'Actualizarlas (recomendado)'], ['omitir', t('Dejarlas como están')], ['crear', t('Crearlas otra vez')]] as const).map(([k, l]) => (
@@ -282,9 +282,9 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
                 {isUpdate && diff && (
                   <View style={{ marginBottom: 6 }}>
                     {diff.deletes.some((d) => d.task) && <Note color={C.bad} text={t('Se van a borrar {length} con «sí» en la columna eliminar: {join}.', { length: diff.deletes.filter((d) => d.task).length, join: diff.deletes.filter((d) => d.task).map((d) => `«${d.existing.title}»`).join(', ') })} />}
-                    {diff.deletes.some((d) => !d.task) && <Note color={C.bad} text={t('Se van a borrar {length} {v} en el archivo: {join}{v2}', { length: diff.deletes.filter((d) => !d.task).length, v: diff.deletes.filter((d) => !d.task).length === 1 ? 'tarea que no está' : 'tareas que no están', join: diff.deletes.filter((d) => !d.task).slice(0, 12).map((d) => `«${d.existing.title}»`).join(', '), v2: diff.deletes.filter((d) => !d.task).length > 12 ? '…' : '' })} />}
-                    {diff.skippedMatches > 0 && <Text style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>{t('{skippedMatches} ya {v} en el tablero y se {v2} como {v3}.', { skippedMatches: diff.skippedMatches, v: diff.skippedMatches === 1 ? 'estaba' : 'estaban', v2: diff.skippedMatches === 1 ? 'deja' : 'dejan', v3: diff.skippedMatches === 1 ? 'está' : 'están' })}</Text>}
-                    {diff.unknownIds.length > 0 && <Note color={C.warn} text={t('{length} {v} un id que no está en este proyecto y se ignoran.', { length: diff.unknownIds.length, v: diff.unknownIds.length === 1 ? 'fila tiene' : 'filas tienen' })} />}
+                    {diff.deletes.some((d) => !d.task) && <Note color={C.bad} text={t('Se van a borrar {length} {v} en el archivo: {join}{v2}', { length: diff.deletes.filter((d) => !d.task).length, v: diff.deletes.filter((d) => !d.task).length === 1 ? t('tarea que no está') : t('tareas que no están'), join: diff.deletes.filter((d) => !d.task).slice(0, 12).map((d) => `«${d.existing.title}»`).join(', '), v2: diff.deletes.filter((d) => !d.task).length > 12 ? '…' : '' })} />}
+                    {diff.skippedMatches > 0 && <Text style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>{t('{skippedMatches} ya {v} en el tablero y se {v2} como {v3}.', { skippedMatches: diff.skippedMatches, v: diff.skippedMatches === 1 ? t('estaba') : t('estaban'), v2: diff.skippedMatches === 1 ? t('deja') : t('dejan'), v3: diff.skippedMatches === 1 ? t('está') : t('están') })}</Text>}
+                    {diff.unknownIds.length > 0 && <Note color={C.warn} text={t('{length} {v} un id que no está en este proyecto y se ignoran.', { length: diff.unknownIds.length, v: diff.unknownIds.length === 1 ? t('fila tiene') : t('filas tienen') })} />}
                     {diff.updates.map((u) => (
                       <View key={u.existing.id} style={rowBox}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -505,9 +505,9 @@ function TaskRow({ task, issues, colLabel, who, duplicate, dupPolicy, editing, o
           <Text numberOfLines={2} style={{ color: C.text, fontSize: 13.5, fontWeight: '600' }}>
             {task.title ?? <Text style={{ color: C.muted, fontStyle: 'italic' }}>{t('Sin título')}</Text>}
           </Text>
-          <Text style={{ color: C.muted, fontSize: 11.5, marginTop: 3 }}>{t('Fila {row} · {colLabel} · {who}{v}{v2}', { row: task.row, colLabel, who, v: task.due_at ? ` · ${formatHuman(task.due_at)}` : '', v2: task.checklist?.length ? ` · ${task.checklist.length} ítems` : '' })}</Text>
+          <Text style={{ color: C.muted, fontSize: 11.5, marginTop: 3 }}>{t('Fila {row} · {colLabel} · {who}{v}{v2}', { row: task.row, colLabel, who, v: task.due_at ? ` · ${formatHuman(task.due_at)}` : '', v2: task.checklist?.length ? t(' · {length} ítems', { length: task.checklist.length }) : '' })}</Text>
           {duplicate && (
-            <Text style={{ color: C.warn, fontSize: 11.5, marginTop: 3 }}>{t('Ya existe en el proyecto · {v}', { v: dupPolicy === 'omitir' ? 'se omitirá' : dupPolicy === 'actualizar' ? 'se actualizará' : 'se creará otra' })}</Text>
+            <Text style={{ color: C.warn, fontSize: 11.5, marginTop: 3 }}>{t('Ya existe en el proyecto · {v}', { v: dupPolicy === 'omitir' ? t('se omitirá') : dupPolicy === 'actualizar' ? t('se actualizará') : t('se creará otra') })}</Text>
           )}
           {issues.map((i, k) => (
             <Text key={k} style={{ color: i.level === 'error' ? C.bad : C.warn, fontSize: 11.5, marginTop: 3 }}>

@@ -361,7 +361,7 @@ function FileSheet({ file, who, editable, onClose, onOpen, onDownload, onNewVers
   async function remove() {
     const n = versions?.length ?? current.current_version;
     const ok = await confirm(t('¿Eliminar “{name}”?', { name: current.name }),
-      t('Se borran el archivo y {v} para todo el equipo. No se puede deshacer.', { v: n === 1 ? 'su única versión' : `sus ${n} versiones` }), t('Eliminar'));
+      t('Se borran el archivo y {v} para todo el equipo. No se puede deshacer.', { v: n === 1 ? t('su única versión') : t('sus {n} versiones', { n }) }), t('Eliminar'));
     if (!ok) return;
     setBusy('delete');
     try { await deleteProjectFile(current); toast(t('Archivo eliminado')); await onDeleted(); }
@@ -406,7 +406,7 @@ function FileSheet({ file, who, editable, onClose, onOpen, onDownload, onNewVers
               </>
             )}
 
-            <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6, marginTop: 20, marginBottom: 8 }}>{t('Historial{v}', { v: versions ? ` · ${versions.length} ${versions.length === 1 ? 'versión' : 'versiones'}` : '' })}</Text>
+            <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6, marginTop: 20, marginBottom: 8 }}>{t('Historial{v}', { v: versions ? ` · ${versions.length} ${versions.length === 1 ? t('versión') : t('versiones')}` : '' })}</Text>
             {err ? (
               <Text style={{ color: C.badText, fontSize: 13 }}>{err}</Text>
             ) : versions === null ? (

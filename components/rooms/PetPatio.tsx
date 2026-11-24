@@ -173,7 +173,7 @@ export function PetPatio({ members, height, compact, onTapPet, celebrate, greeti
   return (
     <View onLayout={(e: LayoutChangeEvent) => setW(Math.round(e.nativeEvent.layout.width))}
       style={{ height, borderRadius: 14, overflow: 'hidden', backgroundColor: '#2b2433' }}
-      accessibilityLabel={t('Patio de la sala con {length} {v}', { length: members.length, v: members.length === 1 ? 'mascota' : 'mascotas' })}>
+      accessibilityLabel={t('Patio de la sala con {length} {v}', { length: members.length, v: members.length === 1 ? t('mascota') : t('mascotas') })}>
       {w > 0 && <SvgXml xml={roomXml} width={w} height={height} />}
       {w > 0 && members.map((m) => (
         <Pressable key={m.uid} ref={setNode(m.uid, 'box')} onPress={() => tap(m)}

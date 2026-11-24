@@ -159,11 +159,11 @@ export function ReviewSheet({ visible, drafts, onChange, onClose, onSave, onRedo
   const set = (key: string, patch: Partial<Draft>) => onChange(drafts.map((d) => (d.key === key ? { ...d, ...patch } : d)));
   return (
     <Sheet visible={visible} onClose={onClose} title={t('Revisa tus tarjetas')} maxWidth={680}
-      subtitle={t('{v}Corrige lo que quieras: no se guarda nada hasta que toques Guardar.', { v: source ? `De "${source}". ` : '' })}
+      subtitle={t('{v}Corrige lo que quieras: no se guarda nada hasta que toques Guardar.', { v: source ? t('De "{source}". ', { source }) : '' })}
       footer={<>
         <Button label={t('Agregar una a mano')} kind="secondary" icon="add" onPress={() => onChange([...drafts, { key: `m${Date.now()}`, kind: 'basic', front: '', back: '', keep: true }])} />
         <View style={{ flex: 1 }} />
-        <Button label={keep.length ? t('Guardar {length} {v}', { length: keep.length, v: keep.length === 1 ? 'tarjeta' : 'tarjetas' }) : t('Elige alguna para guardar')} onPress={() => onSave(keep)} disabled={!keep.length} busy={saving} />
+        <Button label={keep.length ? t('Guardar {length} {v}', { length: keep.length, v: keep.length === 1 ? t('tarjeta') : t('tarjetas') }) : t('Elige alguna para guardar')} onPress={() => onSave(keep)} disabled={!keep.length} busy={saving} />
       </>}>
       {drafts.map((d, i) => {
         const err = d.front || d.back ? cardError(d) : null;

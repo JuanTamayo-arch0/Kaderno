@@ -64,7 +64,7 @@ function PlanScreen() {
     setPay({ plan: p, period, seats: p === 'team' ? Math.max(TEAM_MIN_SEATS, plan?.own_plan === 'team' ? plan?.seats ?? TEAM_MIN_SEATS : TEAM_MIN_SEATS) : 1 });
   }
   async function cancel() {
-    if (!(await confirm(t('¿Apagar la renovación?'), t('Conservas {name} hasta el {v}. Después vuelves a Gratis sin perder nada.', { name: v.name, v: plan?.period_end ? shortDate(plan.period_end) : 'final del periodo' }), t('Apagar renovación')))) return;
+    if (!(await confirm(t('¿Apagar la renovación?'), t('Conservas {name} hasta el {v}. Después vuelves a Gratis sin perder nada.', { name: v.name, v: plan?.period_end ? shortDate(plan.period_end) : t('final del periodo') }), t('Apagar renovación')))) return;
     try { await cancelRenewal(); toast(t('Renovación apagada')); } catch (e) { notify(t('No se pudo'), friendlyError(e)); }
   }
   async function resume() {
@@ -112,7 +112,7 @@ function PlanScreen() {
           <Card style={{ gap: 10, marginBottom: 18 }}>
             {plan.auto_renew ? (
               <>
-                <Text style={{ color: C.text, fontSize: 14 }}>{t('Se cobra {v}{v2}{v3}.', { v: plan.period === 'year' ? 'cada año' : 'cada mes', v2: plan.source_label ? ` a ${plan.source_label}` : '', v3: plan.next_charge_at ? `, el próximo el ${shortDate(plan.next_charge_at)}` : '' })}</Text>
+                <Text style={{ color: C.text, fontSize: 14 }}>{t('Se cobra {v}{v2}{v3}.', { v: plan.period === 'year' ? t('cada año') : t('cada mes'), v2: plan.source_label ? ` a ${plan.source_label}` : '', v3: plan.next_charge_at ? t(', el próximo el {next_charge_at}', { next_charge_at: shortDate(plan.next_charge_at) }) : '' })}</Text>
                 <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
                   <Button label={t('Cambiar medio de pago')} size="sm" kind="secondary" icon="card-outline" onPress={() => setPay({ plan: plan.own_plan === 'team' ? 'team' : 'pro', period: plan.period ?? 'month', seats: plan.seats ?? 1, kind: 'source', method: plan.source_kind ?? 'CARD' })} />
                   <Button label={t('Apagar renovación')} size="sm" kind="ghost" onPress={cancel} />
@@ -148,7 +148,7 @@ function PlanScreen() {
           current={v.badge === 'pro' || v.badge === 'trial'}
           points={[t('Mucha más IA cada día'), t('Resúmenes de clase y actas de reunión'), '10 calendarios externos', t('Informe de horas en PDF')]}
           action={v.canPay && v.badge !== 'team' ? <Button label={plan?.trial_available ? t('Pagar Pro') : v.isPaid ? t('Pagar otro periodo') : t('Pagar Pro')} full onPress={() => choose('pro')} /> : undefined} />
-        <PlanCard title={t('Equipo')} price={cop(PRICES.team[period])} note={t('por persona {v} · desde {TEAM_MIN_SEATS}', { v: period === 'month' ? 'al mes' : 'al año', TEAM_MIN_SEATS })}
+        <PlanCard title={t('Equipo')} price={cop(PRICES.team[period])} note={t('por persona {v} · desde {TEAM_MIN_SEATS}', { v: period === 'month' ? t('al mes') : t('al año'), TEAM_MIN_SEATS })}
           current={v.badge === 'team'}
           points={[t('Pro para cada persona'), t('Un solo pago para todos'), t('Horas de todo el equipo por proyecto')]}
           action={!plan?.via_team ? <Button label={plan?.own_plan === 'team' && v.isPaid ? t('Pagar otro periodo') : t('Pagar Equipo')} kind="secondary" full onPress={() => choose('team')} /> : undefined} />
@@ -242,7 +242,7 @@ function TeamSeats({ seats, onAddSeats, onChanged }: { seats: number; onAddSeats
     <>
       <SectionLabel text={t('Tu equipo')} count={(list?.length ?? 0) + 1} />
       <Card style={{ gap: 10, marginBottom: 18 }}>
-        <Text style={{ color: C.text, fontSize: 13.5 }}>{t('{seats} puestos, contándote. {v}', { seats, v: free > 0 ? `Te ${free === 1 ? 'queda 1 libre' : `quedan ${free} libres`}.` : 'Todos están en uso.' })}</Text>
+        <Text style={{ color: C.text, fontSize: 13.5 }}>{t('{seats} puestos, contándote. {v}', { seats, v: free > 0 ? t('Te {v}.', { v: free === 1 ? t('queda 1 libre') : `quedan ${free} libres` }) : t('Todos están en uso.') })}</Text>
         {list === null && <ActivityIndicator color={C.brand} />}
         {list?.map((m) => (
           <View key={m} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>

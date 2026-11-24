@@ -1,5 +1,5 @@
-
-import { t } from './i18n';// ============================================================
+import { t } from './i18n';
+// ============================================================
 //  Sugerir microtareas a partir del título y la descripción.
 //  Funciona sin internet: lee listas, frases y rangos de ejercicios de la
 //  descripción, y si no hay suficiente usa pasos típicos según el tipo

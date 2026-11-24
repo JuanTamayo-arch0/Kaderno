@@ -29,7 +29,7 @@ function Row({ n, active, onPress, roomy }: { n: Note; active: boolean; onPress:
   const prev = notePreview(n.content, roomy ? 120 : 60);
   const { words } = readingStats(n.content);
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: active }} accessibilityLabel={t('Abrir nota {v}', { v: n.title || 'sin título' })}
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: active }} accessibilityLabel={t('Abrir nota {v}', { v: n.title || t('sin título') })}
       dataSet={{ press: '1', petPerch: roomy ? '1' : undefined }}
       style={({ pressed, focused, hovered }: any) => [{
         paddingVertical: roomy ? 14 : 10, paddingHorizontal: roomy ? 16 : 12, borderRadius: roomy ? 14 : 10, gap: 3,

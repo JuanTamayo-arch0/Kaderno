@@ -67,7 +67,7 @@ export default function Horario() {
 
   async function cleanOrphans() {
     if (!orphans.length) return;
-    if (!(await confirm(t('¿Quitar {length} {v} sueltas?', { length: orphans.length, v: orphans.length === 1 ? 'clase' : 'clases' }),
+    if (!(await confirm(t('¿Quitar {length} {v} sueltas?', { length: orphans.length, v: orphans.length === 1 ? t('clase') : t('clases') }),
       t('Están en bloques o días que ya no aparecen en tu horario.'), t('Quitar')))) return;
     try { await remapSlots(orphans.map((o) => ({ id: o.id, newSlot: null }))); load(); }
     catch (e: any) { notify(t('No se pudo limpiar'), e?.message ?? ''); }
@@ -84,7 +84,7 @@ export default function Horario() {
     const lost = slots.filter((s) => removedSet.has(s.slot) || s.day >= cfg.days);
     if (lost.length) {
       const ok = await confirm(
-        t('Se quitarán {length} {v}', { length: lost.length, v: lost.length === 1 ? 'clase' : 'clases' }),
+        t('Se quitarán {length} {v}', { length: lost.length, v: lost.length === 1 ? t('clase') : t('clases') }),
         t('Los bloques o días que quitaste tenían clases asignadas. Las demás se conservan y se mueven contigo.'),
         t('Aplicar'),
       );
@@ -119,7 +119,7 @@ export default function Horario() {
     <Pressable onPress={cleanOrphans}
       style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.warn + '1a', borderColor: C.warn + '55', borderWidth: 1, borderRadius: 12, padding: 10, marginBottom: 12 }}>
       <Ionicons name="alert-circle-outline" size={16} color={C.warn} />
-      <Text style={{ color: C.text, fontSize: 12.5, flex: 1 }}>{t('{length} {v} fuera de la cuadrícula.', { length: orphans.length, v: orphans.length === 1 ? 'clase quedó' : 'clases quedaron' })}</Text>
+      <Text style={{ color: C.text, fontSize: 12.5, flex: 1 }}>{t('{length} {v} fuera de la cuadrícula.', { length: orphans.length, v: orphans.length === 1 ? t('clase quedó') : t('clases quedaron') })}</Text>
       <Text style={{ color: C.warn, fontSize: 12.5, fontWeight: '700' }}>{t('Quitar')}</Text>
     </Pressable>
   ) : null;
