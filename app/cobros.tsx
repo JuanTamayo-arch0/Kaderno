@@ -15,7 +15,7 @@ import { createInvoice, deleteClient, getClients, getInvoices, getProfile, saveC
 import { copyText } from '../lib/fileIO';
 import { confirm, friendlyError, notify, toast } from '../lib/feedback';
 import { useMode } from '../lib/mode';
-import { t, decSep } from '../lib/i18n';
+import { t, decSep, lang } from '../lib/i18n';
 
 // ============================================================
 //  Cobrar (v25, fase 1): cuentas de cobro desde el registro de horas, tus
@@ -268,7 +268,8 @@ function NewInvoice({ visible, initial, clients, projects, subjects, missing, on
         <Button label={t('Línea con valor')} icon="add" size="sm" kind="secondary" onPress={() => setItems([...items, { concept: '', amount: 0 }])} />
         <Button label={t('Línea por horas')} icon="time-outline" size="sm" kind="ghost" onPress={() => setItems([...items, { concept: '', hours: 1, rate: client?.rate ?? 0, amount: 0 }])} />
       </View>
-      {total > 0 && <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Son {total}.', { total: pesosEnLetras(total) })}</Text>}
+      {/* El valor en letras es del documento legal en español; en inglés ya se ve el total arriba. */}
+      {total > 0 && lang() !== 'en' && <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Son {total}.', { total: pesosEnLetras(total) })}</Text>}
       <Field label={t('Nota (opcional)')} value={note} onChangeText={setNote} placeholder={t('Ej: corresponde al contrato 12 de 2026')} maxLength={500} />
       {err && <Text style={{ color: C.badText, fontSize: 13 }}>{err}</Text>}
     </Sheet>
