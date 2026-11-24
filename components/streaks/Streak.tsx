@@ -12,7 +12,7 @@ import {
   todayHint, brokeMessage, repairProgress, weeksLabel, daysLabel,
 } from '../../lib/streaks';
 import { toast, friendlyError } from '../../lib/feedback';
-import { t, daysLong } from '../../lib/i18n';
+import { t, daysLong, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Rachas amables (v20, sección D): meta semanal con siete puntos, racha
@@ -91,7 +91,7 @@ export function StreakCard({ s, onChanged, style }: { s: StreakSummary; onChange
         <View style={{ flex: 1 }}>
           <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Racha semanal')}</Text>
           <Text style={{ color: s.weekly ? C.goodText : C.text, fontSize: 26, fontWeight: '800' }}>{weeksLabel(s.weekly)}</Text>
-          <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{t('Meta: {goal} días por semana · {v}', { goal: s.goal, v: goalMet ? t('cumplida esta semana') : `llevas ${s.weekDone}` })}</Text>
+          <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{t('Meta: {goal} días por semana · {v}', { goal: s.goal, v: goalMet ? t('cumplida esta semana') : trn('llevas {v}', { v: s.weekDone }) })}</Text>
         </View>
         <View style={{ alignItems: 'flex-end', gap: 6 }}>
           <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{s.daily} {s.daily === 1 ? t('día seguido') : t('días seguidos')}</Text>

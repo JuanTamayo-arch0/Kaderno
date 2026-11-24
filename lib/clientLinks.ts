@@ -13,7 +13,7 @@ export const NEEDS_V24_4 = t('Para los enlaces del cliente falta correr schema_v
 
 export function linkUrl(kind: LinkKind, token: string, origin?: string): string {
   const base = origin ?? (typeof window !== 'undefined' && window.location ? window.location.origin : 'https://kaderno.app');
-  return `${base}/${kind === 'form' ? 'solicitar' : 'avance'}/${token}`;
+  return `${base}/${kind === 'form' ? 'solicitar' : 'avance'}/${token}`; // i18n-ok: rutas
 }
 
 export async function getLinks(projectId: string): Promise<ProjectLink[] | null> {

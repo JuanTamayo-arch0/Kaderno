@@ -131,8 +131,8 @@ export function recallLabel(at: string | null | undefined, score: number | null 
   const d = new Date(at);
   const day = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
   const diff = Math.round((day(now) - day(d)) / 86_400_000);
-  const when = diff <= 0 ? 'hoy' : diff === 1 ? 'ayer' : t('hace {diff} días', { diff });
-  return `Probada ${when}${score != null ? ` · ${score}%` : ''}`;
+  const when = diff <= 0 ? t('hoy') : diff === 1 ? t('ayer') : t('hace {diff} días', { diff });
+  return t('Probada {when}', { when }) + (score != null ? ` · ${score}%` : '');
 }
 
 /** Títulos (## …) de una nota en markdown, para enlazar lo que faltó. */

@@ -63,7 +63,7 @@ function Papelera() {
           {data.notes.length > 0 && <SectionLabel text={t('Notas')} count={data.notes.length} />}
           {data.notes.map((n) => row(n.id, 'document-text-outline', n.title || t('Nota'), daysLeft(n.deleted_at), () => act(() => restoreNote(n.id), t('Nota restaurada')), () => purge(n.title || t('Nota'), () => purgeNote(n.id))))}
           {data.subjects.length > 0 && <SectionLabel text={t('Materias archivadas')} count={data.subjects.length} />}
-          {data.subjects.map((s) => row(s.id, 'book-outline', s.name, t('Sus tareas y notas se conservan'), () => act(() => restoreSubject(s.id), `${s.name} restaurada`), undefined, s.color))}
+          {data.subjects.map((s) => row(s.id, 'book-outline', s.name, t('Sus tareas y notas se conservan'), () => act(() => restoreSubject(s.id), trn('{name} restaurada', { name: s.name })), undefined, s.color))}
         </>
       )}
     </Screen>

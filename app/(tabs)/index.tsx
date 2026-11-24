@@ -431,7 +431,7 @@ export default function Hoy() {
 
   const summary: React.ReactNode[] = [];
   summary.push(<Text key="t" style={{ color: C.text, fontWeight: '700' }}>{todayCount === 0 ? t('Nada para hoy') : todayCount === 1 ? t('1 para hoy') : t('{todayCount} para hoy', { todayCount })}</Text>);
-  if (overdueCount) summary.push(<Text key="o" style={{ color: C.badText, fontWeight: '600' }}>{overdueCount === 1 ? t('1 vencida') : `${overdueCount} vencidas`}</Text>);
+  if (overdueCount) summary.push(<Text key="o" style={{ color: C.badText, fontWeight: '600' }}>{overdueCount === 1 ? t('1 vencida') : trn('{n} vencidas', { n: overdueCount })}</Text>);
   if (nextExam) {
     const dd = dayDiff(dueDay(nextExam)!, now);
     summary.push(<Text key="e">{`${nextExam.title.length > 32 ? nextExam.title.slice(0, 30) + '…' : nextExam.title} ${dd === 0 ? t('hoy') : dd === 1 ? t('mañana') : t('en {dd} días', { dd })}`}</Text>);
@@ -855,7 +855,7 @@ function AgendaRow({ it, now, isToday, onPress }: { it: AgendaItem; now: Date; i
         <Text style={{ color: C.text, fontSize: 13.5, fontWeight: it.kind === 'class' ? '700' : '500' }} numberOfLines={1}>
           {it.kind === 'due' ? t('Entrega: ') : ''}{it.title}
         </Text>
-        {it.kind === 'event' && <Text style={{ color: live ? C.brand : C.muted, fontSize: 12, fontWeight: live ? '700' : '400' }}>{live ? t('Ahora · ') : ''}{it.end != null && it.end < 24 * 60 ? `hasta ${minToLabel(it.end)}` : t('hasta mañana')}</Text>}
+        {it.kind === 'event' && <Text style={{ color: live ? C.brand : C.muted, fontSize: 12, fontWeight: live ? '700' : '400' }}>{live ? t('Ahora · ') : ''}{it.end != null && it.end < 24 * 60 ? trn('hasta {v}', { v: minToLabel(it.end) }) : t('hasta mañana')}</Text>}
         {it.kind === 'class' && <Text style={{ color: live ? C.brand : C.muted, fontSize: 12, fontWeight: live ? '700' : '400' }}>{t('{v}hasta {minToLabel}', { v: live ? t('Ahora · ') : '', minToLabel: minToLabel(it.end!) })}</Text>}
         {it.project && <Text style={{ color: C.muted, fontSize: 12 }}>{it.project}</Text>}
       </View>

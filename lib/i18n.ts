@@ -27,11 +27,11 @@ export const LANGS: { id: Lang; name: string; native: string }[] = [
 export const LANG_KEY = 'kd-lang';
 
 /**
- * Mientras se traduce por fases el inglés queda escondido: sin elegirlo a
- * mano (localStorage) la app sale en español. La fase 7 lo prende y desde
- * ahí manda el idioma del dispositivo.
+ * El inglés está listo (v30, fase 7): sin elección guardada manda el idioma
+ * del dispositivo. En false, la app sale en español salvo que alguien elija
+ * inglés a mano (así se probó mientras se traducía por fases).
  */
-export const I18N_READY = false;
+export const I18N_READY = true;
 
 /** El idioma del dispositivo: inglés si lo pide primero; si no, español. */
 export function deviceLang(languages: readonly string[] | undefined): Lang {
@@ -52,7 +52,8 @@ function initialLang(): Lang {
   } catch { /* noop */ }
   if (!I18N_READY) return 'es';
   try {
-    if (typeof navigator !== 'undefined') return deviceLang(navigator.languages?.length ? navigator.languages : [navigator.language]);
+    // Solo en el navegador (Node también tiene navigator y las pruebas corren en español).
+    if (typeof window !== 'undefined' && typeof navigator !== 'undefined') return deviceLang(navigator.languages?.length ? navigator.languages : [navigator.language]);
   } catch { /* noop */ }
   return 'es';
 }

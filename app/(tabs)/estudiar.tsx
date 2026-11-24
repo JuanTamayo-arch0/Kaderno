@@ -16,7 +16,7 @@ import { weeksLabel } from '../../lib/streaks';
 import { Countdown } from '../../components/day/Countdown';
 import { getTasks, type Task } from '../../lib/db';
 import { useMode } from '../../lib/mode';
-import { t } from '../../lib/i18n';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Estudiar: Enfoque, Repaso y Oráculo en un solo lugar, más el avance
@@ -99,7 +99,7 @@ export default function Estudiar() {
             <View style={{ flex: 1 }}>
               <Text style={{ color: C.text, fontSize: 16, fontWeight: '700' }}>{t('Repaso')}</Text>
               <Text style={{ color: C.muted, fontSize: 13, marginTop: 2 }}>
-                {due ? `${due} ${due === 1 ? t('tarjeta toca') : t('tarjetas tocan')} hoy` : t('Nada para hoy. Crea tarjetas desde tus notas.')}
+                {due ? (due === 1 ? trn('1 tarjeta toca hoy') : trn('{n} tarjetas tocan hoy', { n: due })) : t('Nada para hoy. Crea tarjetas desde tus notas.')}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={C.muted} />

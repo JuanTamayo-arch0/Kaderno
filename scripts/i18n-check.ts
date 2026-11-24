@@ -42,7 +42,13 @@ function spanishVocab(): Set<string> {
   return new Set([...es].filter((w) => !en.has(w)));
 }
 /** Un identificador, una ruta o un nombre de archivo: no es texto para la gente. */
-const notProse = (s: string) => /^[\w\-.:#?=&%@/]*$/.test(s.trim()) || /^[a-z_:\-]+$/.test(s.trim()) || /^\/|\/[a-z]/.test(s);
+const notProse = (s: string) => (!/\s/.test(s) && /^[\w\-.:#?=&%@/]*$/.test(s)) || /^[a-z_:\-]+$/.test(s) || /^\/|\/[a-z]/.test(s);
+/** Una sola palabra en español donde se muestra: rama de un ?:, dentro de `${}` o en JSX. */
+const shownWord = (n: ts.Node) => {
+  let c: ts.Node = n, p = n.parent;
+  while (p && (ts.isParenthesizedExpression(p) || (ts.isConditionalExpression(p) && p.condition !== c))) { c = p; p = p.parent; }
+  return !!p && (ts.isTemplateSpan(p) || ts.isJsxExpression(p));
+};
 
 const placeholders = (s: string) => new Set([...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]));
 const edges = (s: string) => [/^\s/.test(s), /\s$/.test(s)].join(',');
@@ -52,7 +58,8 @@ export function check(dirs = ['app', 'components', 'lib']): Report {
   for (const d of dirs) walk(path.join(ROOT, d), files);
   const rep: Report = { keys: new Map(), unwrapped: [], missing: [], broken: [], manualFiles: [], dynamic: [] };
   const vocab = spanishVocab();
-  const vocabHit = (s: string) => !notProse(s) && (s.match(WORD) ?? []).some((w) => vocab.has(w.toLowerCase()));
+  const hasVocab = (s: string) => (s.match(WORD) ?? []).some((w) => vocab.has(w.toLowerCase()));
+  const vocabHit = (s: string) => !notProse(s) && hasVocab(s);
   for (const file of files) {
     const rel = path.relative(ROOT, file).replace(/\\/g, '/');
     if (/^lib\/i18n(\.ts|\/)/.test(rel)) continue;
@@ -85,10 +92,11 @@ export function check(dirs = ['app', 'components', 'lib']): Report {
         } else if ((ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) && !insideT(node)) {
           const p = node.parent;
           const skip = ts.isImportDeclaration(p) || ts.isExportDeclaration(p) || ts.isLiteralTypeNode(p) || ts.isCaseClause(p) || (ts.isPropertyAssignment(p) && p.name === node) || ts.isElementAccessExpression(p) || (ts.isBinaryExpression(p) && /^(===|!==|==|!=)$/.test(p.operatorToken.getText(sf)));
-          if ((looksSpanish(node.text) || looksLabel(node.text) || (inTVars(node) || pluralBranch(node)) && isJsxHuman(node.text) && /[a-záéíóúñ]/.test(node.text) || !skip && vocabHit(node.text)) && !inNonUiPosition(node)) rep.unwrapped.push({ file: rel, line: at(node), text: node.text.slice(0, 100) });
+          if ((looksSpanish(node.text) || looksLabel(node.text) || (inTVars(node) || pluralBranch(node)) && isJsxHuman(node.text) && /[a-záéíóúñ]/.test(node.text) || !skip && (vocabHit(node.text) || /^[a-záéíóúñ]+$/i.test(node.text) && shownWord(node) && hasVocab(node.text))) && !inNonUiPosition(node)) rep.unwrapped.push({ file: rel, line: at(node), text: node.text.slice(0, 100) });
         } else if (ts.isTemplateExpression(node) && !insideT(node)) {
-          const lits = [node.head.text, ...node.templateSpans.map((s) => s.literal.text)].join(' ');
-          if ((looksSpanish(lits) || vocabHit(lits)) && !inNonUiPosition(node)) rep.unwrapped.push({ file: rel, line: at(node), text: node.getText(sf).slice(0, 100) });
+          const parts = [node.head.text, ...node.templateSpans.map((s) => s.literal.text)];
+          const lits = parts.join(' ');
+          if ((looksSpanish(lits) || (vocabHit(lits) && !parts.every((x) => notProse(x)))) && !inNonUiPosition(node)) rep.unwrapped.push({ file: rel, line: at(node), text: node.getText(sf).slice(0, 100) });
         }
       }
       ts.forEachChild(node, visit);

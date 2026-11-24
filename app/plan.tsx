@@ -203,7 +203,7 @@ function PlanScreen() {
               <View key={p.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 11, borderBottomWidth: i < payments.length - 1 ? 1 : 0, borderBottomColor: C.line }}>
                 <Ionicons name={p.status === 'APPROVED' ? 'checkmark-circle' : p.status === 'PENDING' ? 'time-outline' : 'close-circle'} size={18} color={p.status === 'APPROVED' ? C.good : p.status === 'PENDING' ? C.warn : C.bad} />
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '600' }} numberOfLines={1}>{paymentKindText(p.kind)} · {p.plan === 'team' ? t('Equipo ({seats})', { seats: p.seats }) : 'Pro'} {p.kind === 'seats' ? '' : p.period === 'year' ? 'anual' : 'mensual'}</Text>
+                  <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '600' }} numberOfLines={1}>{paymentKindText(p.kind)} · {p.plan === 'team' ? t('Equipo ({seats})', { seats: p.seats }) : 'Pro'} {p.kind === 'seats' ? '' : p.period === 'year' ? trn('anual') : trn('mensual')}</Text>
                   <Text style={{ color: C.muted, fontSize: 12 }} numberOfLines={1}>{shortDate(p.created_at)} · {paymentStatusText(p.status)}{p.method ? ` · ${p.method}` : ''} · {p.reference}</Text>
                 </View>
                 <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700', fontVariant: ['tabular-nums'] }}>{cop(p.amount_in_cents / 100)}</Text>

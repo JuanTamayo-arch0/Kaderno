@@ -104,7 +104,7 @@ export function Lista({ tasks, cols, steps, members, editable, isWide, selecting
                 <Text style={{ color: C.muted, fontSize: 11.5 }}>· {who ? nameOf(who.profile) : trn('sin asignar')}</Text>
                 {due && <Text style={{ color: due.color, fontSize: 11.5, fontWeight: '700' }}>· {due.label}</Text>}
                 {st.length > 0 && <Text style={{ color: C.muted, fontSize: 11.5 }}>· {st.filter((s) => s.done).length}/{st.length}</Text>}
-                {!!comments?.[t.id] && <Text style={{ color: C.muted, fontSize: 11.5 }} accessibilityLabel={`${comments[t.id]} comentarios`}>· 💬 {comments[t.id]}</Text>}
+                {!!comments?.[t.id] && <Text style={{ color: C.muted, fontSize: 11.5 }} accessibilityLabel={trn('{n} comentarios', { n: comments[t.id] })}>· 💬 {comments[t.id]}</Text>}
               </View>
             </View>
 

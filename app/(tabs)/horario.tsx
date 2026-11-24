@@ -184,7 +184,7 @@ export default function Horario() {
             const live = di === todayIdx && si === nowBlock;
             return (
               <Pressable key={di} onPress={() => setEdit({ day: di, slot: si })}
-                accessibilityRole="button" accessibilityLabel={`${DAY_NAMES[di]} ${blockLabelLong(b, fmt24)}: ${sub ? sub.name : 'libre'}`}
+                accessibilityRole="button" accessibilityLabel={`${DAY_NAMES[di]} ${blockLabelLong(b, fmt24)}: ${sub ? sub.name : trn('libre')}`}
                 style={({ hovered }: any) => ({
                   flex: 1, minHeight: isWide ? 52 : 50, borderRadius: 9, alignItems: 'center', justifyContent: 'center', padding: 4,
                   borderWidth: live ? 2 : 1, borderStyle: sub ? 'solid' : 'dashed',

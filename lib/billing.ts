@@ -64,7 +64,7 @@ export const COMPARE: CompareRow[] = [
 
 /** "Pro mensual · $9.900" */
 export function planLabel(plan: 'pro' | 'team', period: Period, seats = 1): string {
-  return `${plan === 'pro' ? 'Pro' : t('Equipo ({seats} personas)', { seats })} ${period === 'month' ? 'mensual' : 'anual'}`;
+  return `${plan === 'pro' ? 'Pro' : t('Equipo ({seats} personas)', { seats })} ${period === 'month' ? t('mensual') : t('anual')}`;
 }
 /** Precio por mes de un plan anual (para comparar). */
 export const perMonth = (plan: 'pro' | 'team', period: Period) => (period === 'month' ? PRICES[plan].month : Math.round(PRICES[plan].year / 12 / 100) * 100);

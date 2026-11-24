@@ -194,7 +194,7 @@ export function TaskCardView({ task, steps, members, subject, color, dim, mine, 
         </View>}
 
         {comments > 0 && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }} accessibilityLabel={`${comments} comentarios`}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }} accessibilityLabel={trn('{n} comentarios', { n: comments })}>
             <Ionicons name="chatbubble-outline" size={11} color={C.muted} />
             <Text style={{ color: C.muted, fontSize: 11.5, fontWeight: '700' }}>{comments}</Text>
           </View>

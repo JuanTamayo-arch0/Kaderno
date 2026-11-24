@@ -244,7 +244,7 @@ function ManualSheet({ visible, subjects, projects, subjectWord, onClose, onSave
     if (isNaN(d.getTime())) { setErr(t('La fecha va como AAAA-MM-DD.')); return; }
     if (d.getTime() > Date.now() + 86_400_000) { setErr(t('No se pueden anotar horas en el futuro.')); return; }
     setBusy(true); setErr(null);
-    try { await addManualHours({ date: d, minutes: min, subject_id: subject, project_id: project, note }); toast(`${fmtHours(min)} anotadas`, { tone: 'good' }); onSaved(); }
+    try { await addManualHours({ date: d, minutes: min, subject_id: subject, project_id: project, note }); toast(trn('{v} anotadas', { v: fmtHours(min) }), { tone: 'good' }); onSaved(); }
     catch (e) { setErr(friendlyError(e)); }
     finally { setBusy(false); }
   }

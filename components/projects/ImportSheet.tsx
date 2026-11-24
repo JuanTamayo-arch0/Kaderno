@@ -238,7 +238,7 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
                   )}
                   {summary.withWarnings > 0 && <Chip icon="alert-circle" color={C.warn} text={t('{withWarnings} con avisos', { withWarnings: summary.withWarnings })} />}
                   {summary.withErrors > 0 && <Chip icon="close-circle" color={C.bad} text={t('{withErrors} con errores (no se importan)', { withErrors: summary.withErrors })} />}
-                  {summary.skipped > 0 && <Chip icon="remove-circle-outline" color={C.muted} text={`${summary.skipped} omitidas`} />}
+                  {summary.skipped > 0 && <Chip icon="remove-circle-outline" color={C.muted} text={trn('{n} omitidas', { n: summary.skipped })} />}
                 </View>
 
                 {parsed?.warnings.map((w, i) => <Note key={i} color={C.warn} text={w} />)}
@@ -447,7 +447,7 @@ function Inicio({ project, members, subjectName, ctxColumns, paste, setPaste, bu
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 3 }}>
               <MiniChip text={`${editores} ${editores === 1 ? t('integrante') : t('integrantes')}`} />
               {subjectName ? <MiniChip text={subjectName} /> : null}
-              <MiniChip text={`${ctxColumns.length} columnas`} />
+              <MiniChip text={trn('{n} columnas', { n: ctxColumns.length })} />
               {deadline ? <MiniChip text={t('Entrega {deadline}', { deadline: formatHuman(deadline) })} /> : null}
             </View>
           </View>

@@ -76,7 +76,7 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
           else { toast(t('{trim} pasó a {v}', { trim: name.trim(), v: spaceSel === 'trabajo' ? t('Trabajo') : t('Estudio') }), { tone: 'good' }); onSaved(); return; }
         }
       } else await addSubject(name.trim(), color, icon, cr, extra);
-      toast(editSubject ? `${mv.subject} guardada` : `${mv.subject} creada: ${name.trim()}`, { tone: 'good' });
+      toast(editSubject ? trn('{v} guardada', { v: mv.subject }) : trn('{v} creada: {name}', { v: mv.subject, name: name.trim() }), { tone: 'good' });
       onSaved();
     } catch (e) { notify(t('No se pudo guardar'), friendlyError(e)); }
     finally { setBusy(false); }
@@ -88,7 +88,7 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
     try {
       await archiveSubject(editSubject.id);
       const id = editSubject.id;
-      toast(`${editSubject.name} archivada`, { actionLabel: t('Deshacer'), onAction: () => { restoreSubject(id).then(onSaved).catch(() => {}); } });
+      toast(trn('{name} archivada', { name: editSubject.name }), { actionLabel: t('Deshacer'), onAction: () => { restoreSubject(id).then(onSaved).catch(() => {}); } });
       onArchived?.();
     } catch (e) { notify(t('No se pudo archivar'), friendlyError(e)); }
   }
