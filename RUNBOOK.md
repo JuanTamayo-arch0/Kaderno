@@ -2011,3 +2011,12 @@ Nada visible todavía: la app sigue en español, idéntica.
 ### 4. Pruebas
 
 `npm test` (incluye `tests/v30.test.ts`). Se compararon las capturas en español antes y después: iguales en las 31 pantallas a 390 px (Estudio y Trabajo) y 1440 px. Solo cambian unos píxeles de kerning.
+
+## Herramienta: cuenta demo al máximo
+
+`supabase/tools/demo_cuenta_maxima.sql` deja una cuenta ya creada lista para demos:
+- plan Equipo por 10 años, sin cobro;
+- las 4 mascotas a nivel 20 con 99.999 monedas;
+- toda la ropa y la casa compradas y puestas.
+
+Crea la cuenta en la app, cambia el correo en la primera línea del script y córrelo en el SQL Editor de Supabase. Se puede correr varias veces. Es solo para cuentas de demostración: no va en la app ni en las migraciones.
