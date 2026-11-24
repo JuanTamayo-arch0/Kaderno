@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { Animated, PanResponder, Pressable, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { tapHaptic } from '../lib/touch';
 import { slotLabel } from '../lib/planSlots';
 import { ruleText } from '../lib/repeat';
 import { C, RAD, inkOn } from '../lib/theme';
@@ -60,6 +61,7 @@ export function TaskRow({
       const sw = swipeRef.current;
       if (sw && Math.abs(g.dx) > 96) {
         const right = g.dx > 0;
+        tapHaptic(right ? 12 : 8);
         Animated.timing(dx, { toValue: right ? 480 : -480, duration: 180, useNativeDriver: false }).start(() => {
           if (right) { play('complete'); sw.onDone(); } else sw.onLater();
           dx.setValue(0); setDir(0);
@@ -82,14 +84,14 @@ export function TaskRow({
       )}
     <Animated.View {...(swipe ? pan.panHandlers : {})} dataSet={{ petPerch: '1' }} style={{ backgroundColor: C.surface, borderColor: C.line, borderWidth: 1, borderRadius: RAD.row, opacity: done ? 0.75 : 1, transform: [{ translateX: dx }] }}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-        <Pressable onPress={() => { if (!tapOk()) return; play(done ? 'uncheck' : 'complete'); onToggle(task); }} accessibilityRole="checkbox" accessibilityState={{ checked: done }}
+        <Pressable onPress={() => { if (!tapOk()) return; play(done ? 'uncheck' : 'complete'); if (!done) tapHaptic(); onToggle(task); }} accessibilityRole="checkbox" accessibilityState={{ checked: done }}
           accessibilityLabel={done ? `Marcar "${task.title}" como pendiente` : `Completar "${task.title}"`}
           style={{ width: 48, minHeight: compact ? 46 : 54, alignItems: 'center', justifyContent: 'center' }}>
           <View key={done ? 'hecha' : 'pendiente'} dataSet={done ? { anim: 'pop' } : undefined} style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: done ? C.good : (tm.key !== 'tarea' ? tm.color : C.muted), backgroundColor: done ? C.good : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
             {done && <Ionicons name="checkmark" size={14} color={inkOn(C.good)} />}
           </View>
         </Pressable>
-        <Pressable onPress={() => { if (tapOk()) onOpen(task); }} onLongPress={actions?.length ? () => { if (tapOk()) setMenu(true); } : undefined} delayLongPress={350}
+        <Pressable onPress={() => { if (tapOk()) onOpen(task); }} onLongPress={actions?.length ? () => { if (tapOk()) { tapHaptic(8); setMenu(true); } } : undefined} delayLongPress={350}
           accessibilityRole="button" accessibilityLabel={`${task.title}${due ? ', ' + due : ''}`} accessibilityHint="Abre la tarea"
           style={{ flex: 1, minWidth: 0, paddingVertical: compact ? 10 : 12, paddingRight: 4 }}>
           <Text style={{ color: done ? C.muted : C.text, fontSize: 15, fontWeight: '600', lineHeight: 20, textDecorationLine: done ? 'line-through' : 'none' }} numberOfLines={2}>{task.title}</Text>

@@ -36,3 +36,21 @@ export function focusRingSize(winW: number, winH: number): number {
 export function boardColumnWidth(winW: number): number {
   return Math.min(320, Math.round(winW * 0.82));
 }
+
+// ---------- Hojas que se cierran arrastrando (fase 3) ----------
+
+/** ¿Se cierra al soltar? Más de 110 px hacia abajo o un gesto rápido. */
+export function shouldDismiss(dy: number, vy: number): boolean {
+  return dy > 110 || vy > 1.1;
+}
+
+/** ¿El gesto es de arrastre hacia abajo (y no un toque o un deslizamiento de lado)? */
+export function isDownDrag(dy: number, dx: number): boolean {
+  return dy > 8 && Math.abs(dy) > Math.abs(dx) * 1.5;
+}
+
+/** ¿El gesto empezó en la franja de arriba de la hoja (la rayita y el título)? */
+export function inDragZone(y0: number, sheetTop: number | null, zone: number): boolean {
+  if (sheetTop == null) return false;
+  return y0 >= sheetTop - 8 && y0 <= sheetTop + zone;
+}

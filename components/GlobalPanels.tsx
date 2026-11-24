@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StopwatchPill } from './StopwatchPill';
-import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Animated, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { needsPlan } from '../lib/planSlots';
@@ -11,6 +11,7 @@ import { goesToInbox } from '../lib/day';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C } from '../lib/theme';
 import { useResponsive } from '../lib/responsive';
+import { useSheetDrag } from '../lib/sheetDrag';
 import {
   Subject, Task, getSubjects, addTask, addNote, search, getNotifications, markNotificationsRead,
   type AppNotification, type ProjectTaskHit, type Note, type Flashcard,
@@ -96,6 +97,8 @@ export function GlobalPanels() {
 function Panel({ visible, onClose, children, top, maxWidth = 560 }: { visible: boolean; onClose: () => void; children: React.ReactNode; top?: boolean; maxWidth?: number }) {
   const { isWide } = useResponsive();
   const insets = useSafeAreaInsets();
+  // v29: la rayita de arriba ahora sí se arrastra hacia abajo para cerrar.
+  const drag = useSheetDrag(visible, onClose, 40);
   useEffect(() => {
     if (!visible || Platform.OS !== 'web' || typeof window === 'undefined') return;
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -105,13 +108,17 @@ function Panel({ visible, onClose, children, top, maxWidth = 560 }: { visible: b
   return (
     <Modal visible={visible} transparent animationType={isWide || Platform.OS === 'web' ? 'fade' : 'slide'} onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: isWide ? (top ? 'flex-start' : 'center') : 'flex-end', alignItems: isWide ? 'center' : 'stretch', padding: isWide ? 24 : 0, paddingTop: isWide && top ? 90 : undefined }}>
+        <Animated.View ref={drag.ref} onLayout={drag.onLayout} {...(isWide ? {} : drag.handlers)} style={isWide ? { width: '100%', maxWidth, maxHeight: '80%' } : [{ maxHeight: '92%' }, drag.style]}>
         <Pressable onPress={() => {}} accessibilityViewIsModal dataSet={{ anim: 'sheet' }}
           style={isWide
-            ? { width: '100%', maxWidth, maxHeight: '80%', backgroundColor: C.surface, borderRadius: 16, borderWidth: 1, borderColor: C.line, padding: 18 }
-            : { backgroundColor: C.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 16, paddingBottom: 16 + insets.bottom, maxHeight: '92%', borderTopWidth: 1, borderColor: C.line }}>
-          {!isWide && <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: C.line, alignSelf: 'center', marginBottom: 12 }} />}
+            ? { width: '100%', flexShrink: 1, backgroundColor: C.surface, borderRadius: 16, borderWidth: 1, borderColor: C.line, padding: 18 }
+            : { flexShrink: 1, backgroundColor: C.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 16, paddingTop: 4, paddingBottom: 16 + insets.bottom, borderTopWidth: 1, borderColor: C.line }}>
+          {!isWide && <View style={{ paddingVertical: 8, marginBottom: 4, alignItems: 'center' }} accessibilityElementsHidden importantForAccessibility="no">
+            <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: C.line }} />
+          </View>}
           {children}
         </Pressable>
+        </Animated.View>
       </Pressable>
     </Modal>
   );

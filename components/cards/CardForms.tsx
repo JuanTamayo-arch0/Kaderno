@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Modal, PanResponder, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Animated, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C, RAD } from '../../lib/theme';
 import { useResponsive } from '../../lib/responsive';
+import { useSheetDrag } from '../../lib/sheetDrag';
 import type { Subject } from '../../lib/db';
 import { cardError, convertKind, type CardKind, type Draft } from '../../lib/cards';
 import { Button, focusRingStyle } from '../ds';
@@ -28,28 +29,17 @@ export function Sheet({ visible, onClose, title, subtitle, children, footer, max
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
   }, [visible, onClose]);
-  // v26, fase 4: en el celular, la hoja se cierra arrastrándola hacia abajo desde el encabezado.
-  const dy = useRef(new Animated.Value(0)).current;
-  const closeRef = useRef(onClose); closeRef.current = onClose;
-  const pan = useMemo(() => PanResponder.create({
-    onMoveShouldSetPanResponder: (_, g) => g.dy > 8 && Math.abs(g.dy) > Math.abs(g.dx) * 1.5,
-    onPanResponderMove: (_, g) => dy.setValue(Math.max(0, g.dy)),
-    onPanResponderRelease: (_, g) => {
-      if (g.dy > 110 || g.vy > 1.1) Animated.timing(dy, { toValue: 700, duration: 180, useNativeDriver: false }).start(() => { closeRef.current(); dy.setValue(0); });
-      else Animated.spring(dy, { toValue: 0, useNativeDriver: false, bounciness: 4 }).start();
-    },
-    onPanResponderTerminate: () => Animated.spring(dy, { toValue: 0, useNativeDriver: false }).start(),
-  }), []);
-  useEffect(() => { if (visible) dy.setValue(0); }, [visible]);
+  // v26, fase 4 (compartido desde v29): en el celular, la hoja se cierra arrastrándola hacia abajo desde el encabezado.
+  const drag = useSheetDrag(visible, onClose);
   return (
     <Modal visible={visible} transparent animationType={isWide || Platform.OS === 'web' ? 'fade' : 'slide'} onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: isWide ? 'center' : 'flex-end', alignItems: isWide ? 'center' : 'stretch', padding: isWide ? 24 : 0 }}>
-        <Animated.View style={isWide ? { width: '100%', maxWidth, maxHeight: '90%' } : { maxHeight: '94%', transform: [{ translateY: dy }] }}>
+        <Animated.View ref={drag.ref} onLayout={drag.onLayout} {...(isWide ? {} : drag.handlers)} style={isWide ? { width: '100%', maxWidth, maxHeight: '90%' } : [{ maxHeight: '94%' }, drag.style]}>
         <Pressable onPress={() => {}} accessibilityViewIsModal accessibilityLabel={title} dataSet={{ anim: 'sheet' }}
           style={isWide
             ? { width: '100%', flexShrink: 1, backgroundColor: C.surface, borderRadius: RAD.sheet, borderWidth: 1, borderColor: C.line }
             : { flexShrink: 1, backgroundColor: C.surface, borderTopLeftRadius: RAD.sheetTop, borderTopRightRadius: RAD.sheetTop, borderTopWidth: 1, borderColor: C.line, paddingBottom: insets.bottom }}>
-          <View {...(isWide ? {} : pan.panHandlers)}>
+          <View>
             {!isWide && <View style={{ alignSelf: 'center', width: 38, height: 5, borderRadius: 3, backgroundColor: C.line, marginTop: 8 }} accessibilityElementsHidden importantForAccessibility="no" />}
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 18, paddingTop: isWide ? 18 : 10, paddingBottom: 10 }}>
               <View style={{ flex: 1 }}>

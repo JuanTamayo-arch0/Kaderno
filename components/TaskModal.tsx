@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { startStopwatch } from '../lib/stopwatch';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Animated, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C, R } from '../lib/theme';
 import { useResponsive } from '../lib/responsive';
+import { useSheetDrag } from '../lib/sheetDrag';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SubjectPicker } from './SubjectPicker';
 import { SubtaskList, isTempStep } from './SubtaskList';
 import { DateField, TimeField, DateShortcuts } from './DateTime';
@@ -47,6 +49,8 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
   onClose: () => void; onSaved: (id?: string) => void; onDeleted?: (id: string) => void;
 }) {
   const { isWide } = useResponsive();
+  const insets = useSafeAreaInsets();
+  const drag = useSheetDrag(visible, onClose);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [subjectId, setSubjectId] = useState<string | null>(null);
@@ -374,13 +378,19 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
     <Modal visible={visible} transparent animationType={isWide || Platform.OS === 'web' ? 'fade' : 'slide'} onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: isWide ? 'center' : 'stretch', justifyContent: isWide ? 'center' : 'flex-end', padding: isWide ? 24 : 0 }}>
+          <Animated.View ref={drag.ref} onLayout={drag.onLayout} {...(isWide ? {} : drag.handlers)} style={isWide ? { width: '100%', maxWidth: 580, maxHeight: '90%' } : [{ maxHeight: '94%' }, drag.style]}>
           <Pressable onPress={() => {}} accessibilityViewIsModal dataSet={{ anim: 'sheet' }}
             style={isWide
-              ? { width: '100%', maxWidth: 580, maxHeight: '90%', backgroundColor: C.surface, borderRadius: R.xl, borderWidth: 1, borderColor: C.line, padding: 22 }
-              : { backgroundColor: C.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18, paddingBottom: 24, maxHeight: '94%', borderTopWidth: 1, borderColor: C.line }}>
+              ? { width: '100%', flexShrink: 1, backgroundColor: C.surface, borderRadius: R.xl, borderWidth: 1, borderColor: C.line, padding: 22 }
+              : { flexShrink: 1, backgroundColor: C.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18, paddingTop: 8, paddingBottom: 18 + Math.max(insets.bottom, 6), borderTopWidth: 1, borderColor: C.line }}>
+            {/* v29: en el celular, la rayita de arriba y el encabezado se arrastran hacia abajo para cerrar. */}
+            {!isWide && <View style={{ paddingVertical: 6, marginBottom: 4, alignItems: 'center' }} accessibilityElementsHidden importantForAccessibility="no">
+              <View style={{ width: 38, height: 5, borderRadius: 3, backgroundColor: C.line }} />
+            </View>}
             {body}
             {footer}
           </Pressable>
+          </Animated.View>
         </Pressable>
       </KeyboardAvoidingView>
     </Modal>

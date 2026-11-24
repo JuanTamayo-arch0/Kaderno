@@ -1959,3 +1959,24 @@ No hay.
 ### 3. Pruebas
 
 `npm test` (reglas de `lib/mobileLayout.ts` en `tests/v29.test.ts`). En el navegador, revisar a 320 x 568 y 390 x 844: Horario, Tipos de tarea, Horas, Enfoque, Materias, una materia, un proyecto y el login.
+
+## Versión 29 (parte 3): sensación de app
+
+### 1. Migración
+
+No hay.
+
+### 2. Lo que cambia para el usuario
+
+- **Hojas que se cierran arrastrando hacia abajo**, desde la rayita o el título:
+  - editar tarea;
+  - Agregar;
+  - el menú de una tarea (desde cualquier parte);
+  - la hoja de tarjetas. Esta última ya lo prometía desde v26, pero en la web no respondía.
+- Arrastrar dentro del contenido sigue desplazando; no cierra la hoja.
+- **Vibración corta** en Android al completar una tarea (tocando el círculo o deslizando) y al abrir el menú con un toque largo. El iPhone no permite vibrar desde la web. Con "reducir movimiento" no vibra.
+- Editar tarea respeta la zona del indicador de inicio del iPhone abajo.
+
+### 3. Pruebas
+
+`npm test`. En un celular: abrir una tarea y arrastrar la rayita hacia abajo (se cierra); arrastrar en medio del formulario (se desplaza, no se cierra); deslizar una tarea a la derecha en Android (vibra y queda hecha).

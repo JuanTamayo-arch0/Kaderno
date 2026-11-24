@@ -109,3 +109,32 @@ test('v29 pantallas: Horario llena el ancho y los botones pequeños crecieron', 
   assert.match(readFileSync('components/pets/PetInvite.tsx', 'utf8'), /const narrow = useWindowDimensions\(\)\.width < 420/);
   assert.match(readFileSync('app/login.tsx', 'utf8'), /paddingTop: insets\.top \+ \(short \? 22 : 44\)/);
 });
+
+// ---------------- Fase 3: sensación de app ----------------
+import { isDownDrag, shouldDismiss, inDragZone } from '../lib/mobileLayout';
+
+test('v29 nativo: las hojas se cierran al arrastrar hacia abajo, no con un toque ni de lado', () => {
+  assert.equal(isDownDrag(4, 0), false, 'un toque no arrastra');
+  assert.equal(isDownDrag(20, 2), true);
+  assert.equal(isDownDrag(20, 30), false, 'de lado es otro gesto');
+  assert.equal(isDownDrag(-30, 0), false, 'hacia arriba no');
+  assert.equal(shouldDismiss(120, 0), true);
+  assert.equal(shouldDismiss(60, 1.4), true, 'un gesto rápido también cierra');
+  assert.equal(shouldDismiss(60, 0.3), false, 'vuelve a su lugar');
+  assert.equal(inDragZone(110, 100, 72), true, 'empezó en la rayita');
+  assert.equal(inDragZone(300, 100, 72), false, 'empezó en el contenido: se desplaza, no cierra');
+  assert.equal(inDragZone(110, null, 72), false, 'sin medir la hoja no se arrastra');
+  for (const f of ['components/TaskModal.tsx', 'components/ActionMenu.tsx', 'components/GlobalPanels.tsx', 'components/cards/CardForms.tsx']) {
+    assert.match(readFileSync(f, 'utf8'), /useSheetDrag\(visible, onClose(, \d+)?\)/, f);
+    assert.match(readFileSync(f, 'utf8'), /<Animated.View ref=\{drag.ref\} onLayout=\{drag.onLayout\}/, f);
+  }
+});
+
+test('v29 nativo: vibración corta al completar y al abrir el menú con toque largo', () => {
+  const row = readFileSync('components/TaskRow.tsx', 'utf8');
+  assert.match(row, /if \(!done\) tapHaptic\(\); onToggle\(task\);/);
+  assert.match(row, /tapHaptic\(8\); setMenu\(true\);/);
+  assert.match(row, /tapHaptic\(right \? 12 : 8\)/, 'también al deslizar');
+  const touch = readFileSync('lib/touch.ts', 'utf8');
+  assert.match(touch, /prefers-reduced-motion: reduce\)'\)\.matches\) return;/, 'respeta reducir movimiento');
+});

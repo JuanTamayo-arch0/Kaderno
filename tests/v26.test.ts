@@ -196,8 +196,10 @@ test('movimiento: Trabajo más recto, transiciones y gestos con respeto a reduci
   assert.match(row, /Math\.abs\(g\.dx\) > 96/);
   const hoy = fs.readFileSync('app/(tabs)/index.tsx', 'utf8');
   assert.match(hoy, /swipe=\{!isWide && r\.t\.status !== 'done'/, 'deslizar solo en el celular');
+  // Desde v29 la regla de arrastre vive en lib/mobileLayout.ts y la comparten todas las hojas.
   const sheet = fs.readFileSync('components/cards/CardForms.tsx', 'utf8');
-  assert.match(sheet, /g\.dy > 110 \|\| g\.vy > 1\.1/);
+  assert.match(sheet, /useSheetDrag\(visible, onClose\)/);
+  assert.match(fs.readFileSync('lib/mobileLayout.ts', 'utf8'), /dy > 110 \|\| vy > 1\.1/);
   const ds = fs.readFileSync('components/ds.tsx', 'utf8');
   assert.match(ds, /prefersReducedMotion\(\)/, 'los números que cuentan respetan reducir movimiento');
 });

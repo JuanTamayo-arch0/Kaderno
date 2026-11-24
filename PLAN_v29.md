@@ -93,3 +93,17 @@ Arreglar los hallazgos 5 a 16.
 - **Bloquear el zoom con dos dedos** en todos los equipos. Afecta a personas con baja visión.
 - **Esconder la barra inferior al desplazar:** confunde y la barra tiene el +.
 - **Hacer todos los botones de 44 px de dibujo.** Las pantallas se volverían pesadas. Se agranda el área, no el dibujo.
+
+## G. Decisiones tomadas al construir
+
+1. (Fase 1) El área de 44 px es un `::after` con `z-index: -1`, solo en elementos de react-native-web (clases que empiezan por `css-`):
+   - con `z-index: -1`, una tarjeta que se toca entera no tapa a sus propios botones;
+   - un enlace dentro del texto de una nota no se toca.
+   - Un Pressable sin rol se dibuja como `div` con `tabindex="0"` y también se incluye.
+2. (Fase 1) El zoom al escribir se quita solo en iPhone y iPad con `maximum-scale=1`. Subir todos los campos a 16 px con CSS habría achicado los títulos grandes que se editan en línea.
+3. (Fase 1) La barra de pestañas se esconde solo si se está escribiendo y además la parte visible de la pantalla bajó más de un 20 %. En Android el teclado se puede cerrar sin salir del campo, y entonces la barra vuelve.
+4. (Fase 2) Los botones del encabezado bajan debajo del título según el espacio que queda, no por el ancho de la pantalla. Así "Hoy" conserva sus íconos al lado incluso a 320 px.
+5. (Fase 2) El snap del tablero es de proximidad, no obligatorio, y se apaga mientras se arrastra una tarjeta.
+6. (Fase 3) **Arreglo de paso:** la hoja de tarjetas de v26 no se cerraba arrastrando en la web.
+   - En el sistema de gestos de react-native-web, cuando el dedo se mueve solo un ancestro de quien recibió el toque puede quedarse con el gesto, y los oyentes estaban dentro de la hoja.
+   - Ahora van en el contenedor de afuera (`lib/sheetDrag.ts`) y solo cuentan si el gesto empieza en la franja de arriba. Arrastrar dentro del contenido sigue desplazando.
