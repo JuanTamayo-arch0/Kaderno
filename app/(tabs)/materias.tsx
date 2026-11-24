@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 import { C } from '../../lib/theme';
+import { tileWidth } from '../../lib/mobileLayout';
 import { useResponsive } from '../../lib/responsive';
 import { Subject, Task, Grade, Slot, getSubjects, getTasks, getNoteRefs, getAllGrades, getSchedule } from '../../lib/db';
 import { SCHEDULE, fmtHour } from '../../lib/schedule';
@@ -141,6 +142,8 @@ function Summary({ subjects, tasks, grades, slots, isWide, work, scaleMax, decim
   subjects: Subject[]; tasks: Task[]; grades: Grade[]; slots: Slot[]; isWide: boolean; work: boolean; scaleMax: number; decimals: 1 | 2; onOpen: (id: string) => void;
 }) {
   const sem = semesterAverage(subjects, grades, scaleMax);
+  const { width: winW } = useResponsive();
+  const tileW = tileWidth(winW);
   const pending = tasks.filter((t) => t.status !== 'done' && subjects.some((s) => s.id === t.subject_id));
   const overdue = pending.filter((t) => bucketOf(t) === 'overdue').length;
   const next = [...pending].sort(compareDue).find((t) => bucketOf(t) !== 'overdue' && (t.due_date || t.due_at));
@@ -158,16 +161,13 @@ function Summary({ subjects, tasks, grades, slots, isWide, work, scaleMax, decim
     { k: 'class', label: work ? 'Próxima reunión' : 'Próxima clase', big: nc ? nc.s.name : work ? 'Sin agenda' : 'Sin horario', sub: nc ? (nc.n!.now ? 'Ahora' : `${dayWord(nc.n!.start)}, ${fmtHour(hhmm(nc.n!.start))}`) + (nc.s.room ? ` · ${nc.s.room}` : '') : work ? 'Arma tu agenda para verla' : 'Arma tu horario para verla', onPress: nc ? () => onOpen(nc.s.id) : undefined },
   ];
   const tile = (t: typeof tiles[number]) => (
-    <Card key={t.k} onPress={t.onPress} accessibilityLabel={t.label} style={isWide ? { flex: 1, padding: 14 } : { width: 168, padding: 14 }}>
+    <Card key={t.k} onPress={t.onPress} accessibilityLabel={t.label} style={isWide ? { flex: 1, padding: 14 } : { width: tileW, padding: 14 }}>
       <Text style={{ color: C.muted, fontSize: 12, fontWeight: '600' }}>{t.label}</Text>
       <Text style={{ color: C.text, fontSize: t.k === 'avg' || t.k === 'pend' ? 24 : 16, fontWeight: '800', marginTop: 4 }} numberOfLines={1}>{t.big}</Text>
-      <Text style={{ color: t.tone ?? C.muted, fontSize: 12.5, marginTop: 2, fontWeight: t.tone ? '700' : '400' }} numberOfLines={1}>{t.sub}</Text>
+      <Text style={{ color: t.tone ?? C.muted, fontSize: 12.5, marginTop: 2, fontWeight: t.tone ? '700' : '400' }} numberOfLines={isWide ? 1 : 2}>{t.sub}</Text>
     </Card>
   );
   if (isWide) return <View style={{ flexDirection: 'row', gap: 12, marginBottom: 18 }}>{tiles.map(tile)}</View>;
-  return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16, marginBottom: 14, flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}>
-      {tiles.map(tile)}
-    </ScrollView>
-  );
+  // v29: en el celular, cuadrícula de 2 (4 en tableta): se ven todas sin cortar.
+  return <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>{tiles.map(tile)}</View>;
 }

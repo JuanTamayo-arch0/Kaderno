@@ -3,6 +3,7 @@ import {
   ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView,
   Text, TextInput, View, useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Redirect } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase, SUPABASE_READY } from '../lib/supabase';
@@ -59,7 +60,10 @@ function strengthOf(pw: string): { score: number; label: string; color: string }
 
 export default function Login() {
   const { session } = useAuth();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  // v29: en celulares bajos (SE) la franja se achica para que el formulario se vea sin desplazar.
+  const short = height < 700;
   // v28: pantalla completa, sin tarjeta en el centro. En pantallas anchas la
   // mitad izquierda es la hoja de cuaderno con el logo que se escribe; en las
   // angostas, la hoja va arriba como una franja y el formulario debajo.
@@ -216,10 +220,10 @@ export default function Login() {
 
   // ---------------- La franja de la marca (pantallas angostas) ----------------
   const band = (
-    <View style={{ overflow: 'hidden', paddingLeft: width < 420 ? 46 : 64, paddingRight: 22, paddingTop: 44, paddingBottom: 30 }}>
+    <View style={{ overflow: 'hidden', paddingLeft: width < 420 ? 46 : 64, paddingRight: 22, paddingTop: insets.top + (short ? 22 : 44), paddingBottom: short ? 20 : 30 }}>
       {notebook(width < 420 ? 22 : 30)}
-      {brandRow(width < 420 ? 64 : 76, width < 420 ? 40 : 48)}
-      <Text key={mode} dataSet={{ anim: 'swap', head: '1' }} style={{ color: '#fff', fontSize: 21, fontWeight: '800', marginTop: 22, lineHeight: 27 }}>{copy.panelTitle}</Text>
+      {brandRow(short ? 52 : width < 420 ? 64 : 76, short ? 32 : width < 420 ? 40 : 48)}
+      {!short && <Text key={mode} dataSet={{ anim: 'swap', head: '1' }} style={{ color: '#fff', fontSize: 21, fontWeight: '800', marginTop: 22, lineHeight: 27 }}>{copy.panelTitle}</Text>}
     </View>
   );
 
@@ -346,7 +350,7 @@ export default function Login() {
   ) : (
     <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
       {band}
-      <View dataSet={{ anim: 'rise', i: '2' }} style={{ paddingHorizontal: 24, paddingTop: 26, paddingBottom: 36 }}>{form}</View>
+      <View dataSet={{ anim: 'rise', i: '2' }} style={{ paddingHorizontal: 24, paddingTop: short ? 18 : 26, paddingBottom: 36 + insets.bottom }}>{form}</View>
     </ScrollView>
   );
 
@@ -388,7 +392,7 @@ function Input({ right, tone, style, ...props }: React.ComponentProps<typeof Tex
       ...(web ? { transitionProperty: 'border-color, box-shadow', transitionDuration: '180ms', boxShadow: focus ? `0 0 0 3px ${C.brand}2e` : 'none' } as any : null) }}>
       <TextInput placeholderTextColor={C.muted} {...props}
         onFocus={(e) => { setFocus(true); props.onFocus?.(e); }} onBlur={(e) => { setFocus(false); props.onBlur?.(e); }}
-        style={[{ flex: 1, color: C.text, paddingHorizontal: 14, paddingVertical: 13, fontSize: 16, ...(web ? { outlineStyle: 'none' } as any : null) }, style]} />
+        style={[{ flex: 1, minWidth: 0, color: C.text, paddingHorizontal: 14, paddingVertical: 13, fontSize: 16, ...(web ? { outlineStyle: 'none' } as any : null) }, style]} />
       {right ? <View style={{ paddingRight: 12 }}>{right}</View> : null}
     </View>
   );

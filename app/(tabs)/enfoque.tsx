@@ -4,12 +4,13 @@ import { Platform, Pressable, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ProgressRing } from '../../components/Ring';
 import { C } from '../../lib/theme';
+import { focusRingSize } from '../../lib/mobileLayout';
 import { useResponsive } from '../../lib/responsive';
 import { Subject, Task, FocusSession, getSubjects, getTasks, getFocusDetail } from '../../lib/db';
 import { useFocusTimer, startFocus, pauseFocus, resetFocus, skipFocus, configureFocus, setFocusStyle, FLOW_CAP_MIN, type FocusStyle } from '../../lib/focusTimer';
 import { toast } from '../../lib/feedback';
 import { compareDue, fmtDue } from '../../lib/time';
-import { Screen, Button, Card, SectionLabel, Dot, Toggle } from '../../components/ds';
+import { Screen, Button, Card, SectionLabel, Dot, Toggle, StatValue } from '../../components/ds';
 import { SubjectPicker } from '../../components/SubjectPicker';
 import { ActionMenu } from '../../components/ActionMenu';
 import { fmtMin } from '../../components/TaskRow';
@@ -37,7 +38,9 @@ const RAD = 100;
 const CIRC = 2 * Math.PI * RAD;
 
 export default function Enfoque() {
-  const { isWide } = useResponsive();
+  const { isWide, height: winH, width: winW } = useResponsive();
+  // v29: en celulares bajos (SE) el reloj se achica para que "Empezar" quede a la vista.
+  const ring = isWide ? 228 : focusRingSize(winW, winH);
   const f = useFocusTimer();
   const s = f.state;
   const [allSubjects, setSubjects] = useState<Subject[]>([]);
@@ -117,15 +120,15 @@ export default function Enfoque() {
           <View key={i} style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: i < s.cycle ? C.brand : C.surface2, borderWidth: 1, borderColor: i < s.cycle ? C.brand : C.line }} />
         ))}
       </View>}
-      <View style={{ width: 228, height: 228, alignItems: 'center', justifyContent: 'center' }} accessibilityRole="timer" accessibilityLabel={`${s.mode === 'work' ? 'Enfoque' : 'Descanso'}, ${f.countsUp ? 'llevas' : 'quedan'} ${f.label}`}>
-        <ProgressRing size={228} stroke={14} inset={7} frac={f.frac} color={modeColor} color2={s.mode === 'work' ? C.brand2 : C.good} track={C.surface2} />
-        <Text style={{ color: C.text, fontSize: 46, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{f.label}</Text>
+      <View style={{ width: ring, height: ring, alignItems: 'center', justifyContent: 'center' }} accessibilityRole="timer" accessibilityLabel={`${s.mode === 'work' ? 'Enfoque' : 'Descanso'}, ${f.countsUp ? 'llevas' : 'quedan'} ${f.label}`}>
+        <ProgressRing size={ring} stroke={ring < 200 ? 12 : 14} inset={ring < 200 ? 6 : 7} frac={f.frac} color={modeColor} color2={s.mode === 'work' ? C.brand2 : C.good} track={C.surface2} />
+        <Text style={{ color: C.text, fontSize: Math.round(ring * 0.2), fontWeight: '800', fontVariant: ['tabular-nums'] }}>{f.label}</Text>
         <Text style={{ color: s.mode === 'work' ? C.muted : C.goodText, marginTop: 2, fontSize: 14, fontWeight: '600' }}>{s.mode === 'work' ? (f.countsUp ? 'En flujo' : 'Enfoque') : style === 'pomodoro' && s.cycle === 0 ? 'Descanso largo' : 'Descanso'}</Text>
       </View>
 
       <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
         <Button label={s.running ? 'Pausar' : started ? 'Seguir' : 'Empezar'} icon={s.running ? 'pause' : 'play'} size="lg"
-          onPress={() => { if (s.running) pauseFocus(); else { unlockAmbient(); startFocus(); } }} style={{ flex: 2 }} />
+          onPress={() => { if (s.running) pauseFocus(); else { unlockAmbient(); startFocus(); } }} style={{ flex: winW < 380 ? 1.4 : 2 }} />
         <Button label="Reiniciar" kind="secondary" size="lg" onPress={resetFocus} disabled={!started} style={{ flex: 1 }} />
       </View>
       {started && <Button label={s.mode === 'work' ? 'Terminar y descansar' : 'Saltar descanso'} kind={f.countsUp ? 'secondary' : 'ghost'} size="sm" onPress={skipFocus} />}
@@ -251,7 +254,7 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: str
   return (
     <View style={{ flex: 1, backgroundColor: C.surface, borderColor: C.line, borderWidth: 1, borderRadius: 14, padding: 14 }}>
       <Text style={{ color: C.muted, fontSize: 12 }}>{label}</Text>
-      <Text style={{ color: tone ?? C.text, fontSize: 20, fontWeight: '800', marginTop: 4 }} numberOfLines={1}>{value}</Text>
+      <StatValue value={value} color={tone ?? C.text} size={20} style={{ marginTop: 4 }} />
     </View>
   );
 }

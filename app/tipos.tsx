@@ -30,7 +30,8 @@ type Draft = { key: string | null; label: string; icon: string; color: string; p
 
 function Tipos() {
   const router = useRouter();
-  const { isWide } = useResponsive();
+  const { isWide, width: winW } = useResponsive();
+  const narrow = !isWide && winW < 400;
   const [types, setTypes] = useState<TypeMeta[]>(taskTypeList());
   const [draft, setDraft] = useState<Draft | null>(null);
   const [busy, setBusy] = useState(false);
@@ -136,11 +137,11 @@ function Tipos() {
 
         <View style={{ gap: 10 }}>
           {types.map((t, i) => (
-            <View key={t.key} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.surface, borderColor: C.line, borderWidth: 1, borderRadius: R.lg, padding: 12, borderLeftWidth: 4, borderLeftColor: t.color }}>
+            <View key={t.key} style={{ flexDirection: 'row', alignItems: 'center', gap: narrow ? 6 : 12, backgroundColor: C.surface, borderColor: C.line, borderWidth: 1, borderRadius: R.lg, padding: 12, borderLeftWidth: 4, borderLeftColor: t.color }}>
               <View style={{ width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: t.color + '22' }}>
                 <Text style={{ fontSize: 19 }}>{t.icon}</Text>
               </View>
-              <Pressable style={{ flex: 1, minWidth: 0 }} onPress={() => openEdit(t)}>
+              <Pressable style={{ flex: 1, minWidth: 0 }} onPress={() => openEdit(t)} accessibilityRole="button" accessibilityLabel={`Editar ${t.label}`}>
                 <Text style={{ color: C.text, fontSize: 15, fontWeight: '700' }}>{t.label}</Text>
                 <Text style={{ color: C.muted, fontSize: 11.5, marginTop: 2 }}>
                   {t.builtin ? 'Original' : 'Propio'}
@@ -148,24 +149,26 @@ function Tipos() {
                 </Text>
               </Pressable>
 
-              <View style={{ gap: 2 }}>
-                <Pressable onPress={() => move(i, -1)} disabled={i === 0} hitSlop={4} accessibilityLabel="Subir">
+              <View>
+                <Pressable onPress={() => move(i, -1)} disabled={i === 0} accessibilityRole="button" accessibilityLabel="Subir" style={ARROW}>
                   <Ionicons name="chevron-up" size={16} color={i === 0 ? C.line : C.muted} />
                 </Pressable>
-                <Pressable onPress={() => move(i, 1)} disabled={i === types.length - 1} hitSlop={4} accessibilityLabel="Bajar">
+                <Pressable onPress={() => move(i, 1)} disabled={i === types.length - 1} accessibilityRole="button" accessibilityLabel="Bajar" style={ARROW}>
                   <Ionicons name="chevron-down" size={16} color={i === types.length - 1 ? C.line : C.muted} />
                 </Pressable>
               </View>
 
-              <Pressable onPress={() => openEdit(t)} hitSlop={8} accessibilityLabel={`Editar ${t.label}`}>
-                <Ionicons name="create-outline" size={18} color={C.muted} />
-              </Pressable>
+              {!narrow && (
+                <Pressable onPress={() => openEdit(t)} accessibilityRole="button" accessibilityLabel={`Editar ${t.label}`} style={ICON}>
+                  <Ionicons name="create-outline" size={18} color={C.muted} />
+                </Pressable>
+              )}
               {t.builtin ? (
-                <Pressable onPress={() => reset(t)} hitSlop={8} accessibilityLabel={`Restablecer ${t.label}`}>
+                <Pressable onPress={() => reset(t)} accessibilityRole="button" accessibilityLabel={`Restablecer ${t.label}`} style={ICON}>
                   <Ionicons name="refresh-outline" size={18} color={C.muted} />
                 </Pressable>
               ) : (
-                <Pressable onPress={() => remove(t)} hitSlop={8} accessibilityLabel={`Borrar ${t.label}`}>
+                <Pressable onPress={() => remove(t)} accessibilityRole="button" accessibilityLabel={`Borrar ${t.label}`} style={ICON}>
                   <Ionicons name="trash-outline" size={18} color={C.muted} />
                 </Pressable>
               )}
@@ -281,3 +284,7 @@ export default function TiposProtegida() {
     </RequireAuth>
   );
 }
+
+// v29: botones de la fila con área cómoda para el dedo (antes 16 a 18 px).
+const ARROW = { width: 40, height: 30, alignItems: 'center', justifyContent: 'center' } as const;
+const ICON = { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' } as const;

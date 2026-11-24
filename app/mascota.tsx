@@ -95,7 +95,7 @@ function Hero({ pet, earnedToday }: { pet: Pet; earnedToday: number }) {
         {editing ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <TextInput value={name} onChangeText={(v) => setName(v.slice(0, 24))} autoFocus maxLength={24} onSubmitEditing={save} accessibilityLabel="Nombre de la mascota"
-              style={[{ flex: 1, color: C.text, fontSize: 22, fontWeight: '800', borderBottomWidth: 2, borderBottomColor: C.brand, paddingVertical: 4 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
+              style={[{ flex: 1, minWidth: 0, color: C.text, fontSize: 22, fontWeight: '800', borderBottomWidth: 2, borderBottomColor: C.brand, paddingVertical: 4 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
             <Button label="Guardar" size="sm" onPress={save} />
             <IconButton icon="close" label="Cancelar" onPress={() => { setEditing(false); setName(pet.name); }} />
           </View>
@@ -347,7 +347,7 @@ function Pets({ pets, active }: { pets: Pet[]; active: Pet }) {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <TextInput value={name} onChangeText={(v) => setName(v.slice(0, 24))} autoFocus maxLength={24} accessibilityLabel={`Nombre para el ${SPECIES[sp].name.toLowerCase()}`}
                   onSubmitEditing={() => adopt(sp)}
-                  style={[{ flex: 1, color: C.text, fontSize: 15, fontWeight: '700', backgroundColor: C.surface2, borderWidth: 1, borderColor: C.line, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
+                  style={[{ flex: 1, minWidth: 0, color: C.text, fontSize: 15, fontWeight: '700', backgroundColor: C.surface2, borderWidth: 1, borderColor: C.line, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
                 <Button label={`Pagar ${price.toLocaleString('es-CO')}`} size="sm" busy={busy} onPress={() => adopt(sp)} />
                 <IconButton icon="close" label="Cancelar" onPress={() => setAdopting(null)} />
               </View>

@@ -33,7 +33,8 @@ function Horas() {
   const router = useRouter();
   const { v: mv } = useMode();
   const { plan } = usePlan();
-  const { isWide } = useResponsive();
+  const { isWide, width: winW } = useResponsive();
+  const narrow = !isWide && winW < 400;
   const [kind, setKind] = useState<'week' | 'month'>('week');
   const [offset, setOffset] = useState(0);
   const [by, setBy] = useState<GroupBy>('project');
@@ -111,12 +112,15 @@ function Horas() {
       </View>}>
       {!v5 && <Card style={{ marginBottom: 12 }}><Text style={{ color: C.warnText, fontSize: 13 }}>{NEEDS_V23_5}</Text></Card>}
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: isWide ? 8 : 2, marginBottom: 10 }}>
+      <View style={{ flexDirection: 'row', flexWrap: narrow ? 'wrap' : 'nowrap', alignItems: 'center', gap: isWide ? 8 : 2, marginBottom: 10 }}>
         <Segmented<'week' | 'month'> items={[{ key: 'week', label: 'Semana' }, { key: 'month', label: 'Mes' }]} value={kind} onChange={(k) => { setKind(k); setOffset(0); }} style={{ borderBottomWidth: 0 }} />
         <View style={{ flex: 1, minWidth: 8 }} />
-        <Pressable onPress={() => setOffset(offset - 1)} accessibilityRole="button" accessibilityLabel="Periodo anterior" hitSlop={6} style={{ padding: 6 }}><Ionicons name="chevron-back" size={20} color={C.text} /></Pressable>
+        {/* v29: en un celular angosto la semana va en su propia línea. */}
+        <View style={narrow ? { flexDirection: 'row', alignItems: 'center', width: '100%', justifyContent: 'space-between', marginTop: 6 } : { flexDirection: 'row', alignItems: 'center', gap: isWide ? 8 : 2, flexShrink: 1 }}>
+        <Pressable onPress={() => setOffset(offset - 1)} accessibilityRole="button" accessibilityLabel="Periodo anterior" hitSlop={6} style={{ padding: 10 }}><Ionicons name="chevron-back" size={20} color={C.text} /></Pressable>
         <Text style={{ color: C.text, fontSize: isWide ? 14.5 : 13.5, fontWeight: '700', minWidth: isWide ? 150 : 0, textAlign: 'center', flexShrink: 1 }} numberOfLines={1} accessibilityLiveRegion="polite">{range.label}</Text>
-        <Pressable onPress={() => setOffset(Math.min(0, offset + 1))} disabled={offset >= 0} accessibilityRole="button" accessibilityLabel="Periodo siguiente" hitSlop={6} style={{ padding: 6, opacity: offset >= 0 ? 0.35 : 1 }}><Ionicons name="chevron-forward" size={20} color={C.text} /></Pressable>
+        <Pressable onPress={() => setOffset(Math.min(0, offset + 1))} disabled={offset >= 0} accessibilityRole="button" accessibilityLabel="Periodo siguiente" hitSlop={6} style={{ padding: 10, opacity: offset >= 0 ? 0.35 : 1 }}><Ionicons name="chevron-forward" size={20} color={C.text} /></Pressable>
+        </View>
       </View>
 
       <Card style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 18, alignItems: 'center', marginBottom: 14 }} accessibilityLabel="Total del periodo">
@@ -173,12 +177,12 @@ function Horas() {
                 {(canRate || project) && (
                   <View style={{ flexDirection: 'row', gap: 14 }}>
                     {canRate && (
-                      <Pressable onPress={() => setRateFor({ id: r.key, name: r.name })} accessibilityRole="button" accessibilityLabel={`Tarifa por hora de ${r.name}`} hitSlop={4}>
+                      <Pressable onPress={() => setRateFor({ id: r.key, name: r.name })} accessibilityRole="button" accessibilityLabel={`Tarifa por hora de ${r.name}`} hitSlop={4} style={{ paddingVertical: 10, marginVertical: -6 }}>
                         <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>{rates[r.key] ? `${cop(rates[r.key])} la hora` : 'Poner tarifa por hora'}</Text>
                       </Pressable>
                     )}
                     {project && (
-                      <Pressable onPress={() => setTeam(project)} accessibilityRole="button" accessibilityLabel={`Horas del equipo en ${project.name}`} hitSlop={4}>
+                      <Pressable onPress={() => setTeam(project)} accessibilityRole="button" accessibilityLabel={`Horas del equipo en ${project.name}`} hitSlop={4} style={{ paddingVertical: 10, marginVertical: -6 }}>
                         <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>Horas del equipo</Text>
                       </Pressable>
                     )}
@@ -205,7 +209,7 @@ function Horas() {
                     <Text style={{ color: C.muted, fontSize: 12 }} numberOfLines={1}>{d.toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric', month: 'short' })}{s.note ? ` · ${s.note}` : ''}</Text>
                   </View>
                   <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700', fontVariant: ['tabular-nums'] }}>{fmtHours(s.minutes)}</Text>
-                  <Pressable onPress={() => remove(s)} accessibilityRole="button" accessibilityLabel="Borrar registro" hitSlop={6}><Ionicons name="trash-outline" size={16} color={C.muted} /></Pressable>
+                  <Pressable onPress={() => remove(s)} accessibilityRole="button" accessibilityLabel="Borrar registro" hitSlop={6} style={{ width: 40, height: 40, marginRight: -10, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="trash-outline" size={16} color={C.muted} /></Pressable>
                 </View>
               );
             })}

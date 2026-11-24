@@ -68,3 +68,44 @@ test('v29 PWA: el manifiesto tiene id, categorías y capturas para instalar', ()
     assert.ok(readFileSync('public' + s.src).length > 1000, s.src);
   }
 });
+
+// ---------------- Fase 2: pantallas ----------------
+import { headerStacks, statParts, tileWidth, focusRingSize, boardColumnWidth } from '../lib/mobileLayout';
+
+test('v29 pantallas: las acciones del encabezado bajan solo si no caben', () => {
+  const base = { titleSize: 28, back: false, subtitle: false };
+  assert.equal(headerStacks({ ...base, rowW: 288, rightW: 132, title: 'Hoy' }), false, 'Hoy conserva sus íconos al lado a 320 px');
+  assert.equal(headerStacks({ rowW: 288, rightW: 117, title: 'Tipos de tarea', titleSize: 22, back: true, subtitle: false }), true, 'Tipos de tarea a 320 px');
+  assert.equal(headerStacks({ rowW: 358, rightW: 117, title: 'Tipos de tarea', titleSize: 22, back: true, subtitle: false }), false, 'a 390 px cabe');
+  assert.equal(headerStacks({ rowW: 288, rightW: 150, title: 'Horas', titleSize: 22, back: true, subtitle: true }), true, 'el subtítulo quedaría en una columna diminuta');
+  assert.equal(headerStacks({ rowW: 358, rightW: 150, title: 'Horas', titleSize: 22, back: true, subtitle: true }), false);
+  assert.equal(headerStacks({ ...base, rowW: 0, rightW: 100, title: 'X' }), false, 'sin medir no se mueve nada');
+});
+
+test('v29 pantallas: cifras, resúmenes, reloj y tablero se acomodan al ancho', () => {
+  assert.deepEqual(statParts('0 semanas'), ['0', 'semanas']);
+  assert.deepEqual(statParts('4h 15m'), ['4h', '15m']);
+  assert.deepEqual(statParts('12'), ['12', '']);
+  assert.equal(tileWidth(390), 174, 'dos por fila a 390 px');
+  assert.equal(tileWidth(320), 139);
+  assert.equal(tileWidth(768), 176, 'cuatro por fila en tableta');
+  assert.equal(focusRingSize(390, 844), 228);
+  assert.equal(focusRingSize(320, 568), 170, 'en un SE el reloj se achica');
+  assert.ok(focusRingSize(320, 400) >= 168, 'nunca menos de 168');
+  assert.equal(boardColumnWidth(390), 320);
+  assert.equal(boardColumnWidth(320), 262, 'se asoma la columna siguiente');
+});
+
+test('v29 pantallas: Horario llena el ancho y los botones pequeños crecieron', () => {
+  const horario = readFileSync('app/(tabs)/horario.tsx', 'utf8');
+  assert.match(horario, /alignItems: isWide \? 'flex-start' : 'stretch'/);
+  const tipos = readFileSync('app/tipos.tsx', 'utf8');
+  assert.match(tipos, /const ARROW = \{ width: 40, height: 30/);
+  assert.match(tipos, /const ICON = \{ width: 40, height: 40/);
+  const board = readFileSync('components/projects/ProjectBoard.tsx', 'utf8');
+  assert.match(board, /scrollSnapType: 'x proximity'/);
+  assert.match(board, /accessibilityLabel=\{`Mover "\$\{task.title\}" a otra columna`\}\s+style=\{\{ width: 34, height: 34/);
+  assert.match(readFileSync('app/(tabs)/estudiar.tsx', 'utf8'), /flex: 1, minWidth: 0, color: C.text, fontSize: 15/);
+  assert.match(readFileSync('components/pets/PetInvite.tsx', 'utf8'), /const narrow = useWindowDimensions\(\)\.width < 420/);
+  assert.match(readFileSync('app/login.tsx', 'utf8'), /paddingTop: insets\.top \+ \(short \? 22 : 44\)/);
+});

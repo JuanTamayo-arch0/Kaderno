@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { RequireAuth } from '../../components/RequireAuth';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useEdgeFade } from '../../components/ds';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C, R, screenBg } from '../../lib/theme';
 import { useResponsive, SIDEBAR_W } from '../../lib/responsive';
@@ -64,6 +66,10 @@ function ProyectoDetalle() {
   const projectId = Array.isArray(params.id) ? params.id[0] : (params.id ?? '');
   const router = useRouter();
   const { isWide } = useResponsive();
+  const insets = useSafeAreaInsets();
+  // v29: las pestañas y los filtros se desvanecen en el borde si hay más a la derecha.
+  const tabsFade = useEdgeFade(!isWide);
+  const filtersFade = useEdgeFade(!isWide);
   const { session } = useAuth();
   const myId = session?.user.id ?? null;
 
@@ -279,9 +285,10 @@ function ProyectoDetalle() {
     <View style={{ flex: 1, backgroundColor: screenBg(), paddingLeft: isWide ? SIDEBAR_W : 0 }}>
 
       {/* ---------- Barra de arriba ---------- */}
-      <View style={{ paddingTop: isWide ? 26 : 56, paddingHorizontal: isWide ? 32 : 16, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: C.line }}>
+      <View style={{ paddingTop: isWide ? 26 : Math.max(insets.top, 12) + 10, paddingHorizontal: isWide ? 32 : 16, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: C.line }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <Pressable onPress={goBack} hitSlop={10} accessibilityLabel="Volver">
+          <Pressable onPress={goBack} hitSlop={10} accessibilityRole="button" accessibilityLabel="Volver"
+            style={{ width: 40, height: 40, marginLeft: -10, marginRight: -6, alignItems: 'center', justifyContent: 'center' }}>
             <Ionicons name="chevron-back" size={26} color={C.text} />
           </Pressable>
           <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: (project?.color ?? C.brand) + '26', alignItems: 'center', justifyContent: 'center' }}>
@@ -300,7 +307,7 @@ function ProyectoDetalle() {
           </View>
           {latest && (
             <Pressable onPress={() => setStatusOpen(true)} accessibilityRole="button" accessibilityLabel={`Estado: ${HEALTH[latest.health].label}`}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 5, paddingHorizontal: 10, borderRadius: R.pill, backgroundColor: HEALTH[latest.health].color + '22' }}>
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: isWide ? 5 : 9, paddingHorizontal: isWide ? 10 : 12, borderRadius: R.pill, backgroundColor: HEALTH[latest.health].color + '22' }}>
               <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: HEALTH[latest.health].color }} />
               {isWide && <Text style={{ color: C.text, fontSize: 12, fontWeight: '700' }}>{HEALTH[latest.health].label}</Text>}
             </Pressable>
@@ -314,7 +321,7 @@ function ProyectoDetalle() {
         </View>
 
         {/* pestañas */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12, flexGrow: 0 }} contentContainerStyle={{ gap: 8 }} accessibilityRole="tablist">
+        <ScrollView ref={tabsFade.ref} horizontal showsHorizontalScrollIndicator={false} style={[{ marginTop: 8, marginBottom: -4, flexGrow: 0 }, tabsFade.fade]} contentContainerStyle={{ gap: 8, paddingVertical: 4 }} accessibilityRole="tablist">
           {VIEWS.map((v) => {
             const on = v.key === view;
             return (
@@ -328,7 +335,7 @@ function ProyectoDetalle() {
           })}
         </ScrollView>
         {isTaskView && (labels.length > 0 || usedPrios.length > 0 || anyBlocked || filtering) && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8, flexGrow: 0 }} contentContainerStyle={{ gap: 6, alignItems: 'center' }} accessibilityLabel="Filtros">
+          <ScrollView ref={filtersFade.ref} horizontal showsHorizontalScrollIndicator={false} style={[{ marginTop: 4, marginBottom: -4, flexGrow: 0 }, filtersFade.fade]} contentContainerStyle={{ gap: 6, alignItems: 'center', paddingVertical: 4 }} accessibilityLabel="Filtros">
             <Ionicons name="filter-outline" size={14} color={C.muted} />
             {myId && <FChip label="Lo mío" on={!!filter.mine} onPress={() => setFilter({ ...filter, mine: filter.mine ? null : myId })} />}
             {usedPrios.map((p) => <FChip key={p.key} label={p.label} color={p.color} on={filter.priority === p.key} onPress={() => setFilter({ ...filter, priority: filter.priority === p.key ? null : p.key })} />)}

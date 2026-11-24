@@ -83,7 +83,7 @@ function Bienvenida() {
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.line, borderRadius: 12, paddingLeft: 12 }}>
       <Ionicons name="add" size={20} color={C.muted} />
       <TextInput value={value} onChangeText={set} placeholder={ph} placeholderTextColor={C.muted} onSubmitEditing={onSubmit} autoFocus={Platform.OS === 'web'} accessibilityLabel={label}
-        style={[{ flex: 1, color: C.text, fontSize: 15, paddingVertical: 12, minHeight: 46 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
+        style={[{ flex: 1, minWidth: 0, color: C.text, fontSize: 15, paddingVertical: 12, minHeight: 46 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
       {!!value.trim() && <Button label="Agregar" size="sm" onPress={onSubmit} busy={busy} style={{ marginRight: 6 }} />}
     </View>
   );

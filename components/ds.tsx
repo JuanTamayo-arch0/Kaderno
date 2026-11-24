@@ -1,4 +1,5 @@
 import React from 'react';
+import { headerStacks, statParts } from '../lib/mobileLayout';
 import {
   ActivityIndicator, Platform, Pressable, ScrollView, Text, TextInput, View,
   type PressableProps, type StyleProp, type TextInputProps, type TextStyle, type ViewStyle,
@@ -212,6 +213,28 @@ export function Segmented<K extends string>({ items, value, onChange, style }: {
  * cortarse; en el celular se desliza de lado y se desvanece en el borde para
  * que se note que hay más.
  */
+/**
+ * v29: borde que se desvanece en una fila que se desliza de lado, mientras haya
+ * más a la derecha. Se usa en ChipRow y en las pestañas del proyecto.
+ */
+export function useEdgeFade(enabled: boolean, deps: React.DependencyList = []): { ref: React.MutableRefObject<any>; fade: any } {
+  const ref = React.useRef<any>(null);
+  const [more, setMore] = React.useState(false);
+  React.useEffect(() => {
+    if (!enabled || Platform.OS !== 'web') return;
+    const el = ref.current?.getScrollableNode?.() ?? ref.current;
+    if (!el || !el.addEventListener) return;
+    const check = () => setMore(el.scrollWidth - el.clientWidth - el.scrollLeft > 4);
+    check();
+    el.addEventListener('scroll', check, { passive: true });
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(check) : null;
+    ro?.observe(el);
+    return () => { el.removeEventListener('scroll', check); ro?.disconnect(); };
+  }, [enabled, ...deps]);
+  const fade = enabled && more && Platform.OS === 'web' ? { maskImage: 'linear-gradient(to right, #000 82%, transparent)', WebkitMaskImage: 'linear-gradient(to right, #000 82%, transparent)' } : null;
+  return { ref, fade };
+}
+
 export function ChipRow({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
   const { isWide } = useResponsive();
   const ref = React.useRef<any>(null);
@@ -229,7 +252,9 @@ export function ChipRow({ children, style }: { children: React.ReactNode; style?
   }, [isWide, children]);
   if (isWide) return <View style={[{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 8 }, style]}>{children}</View>;
   const fade = more && Platform.OS === 'web' ? ({ maskImage: 'linear-gradient(to right, #000 82%, transparent)', WebkitMaskImage: 'linear-gradient(to right, #000 82%, transparent)' } as any) : null;
-  return <ScrollView ref={ref} horizontal showsHorizontalScrollIndicator={false} style={[{ flexGrow: 0 }, style, fade]}>{children}</ScrollView>;
+  // v29: 4 px arriba y abajo para que el área de toque de los chips no se recorte.
+  return <ScrollView ref={ref} horizontal showsHorizontalScrollIndicator={false} style={[{ flexGrow: 0, marginVertical: -4 }, style, fade]}
+    contentContainerStyle={{ paddingVertical: 4 }}>{children}</ScrollView>;
 }
 
 // ---------- Chip de filtro ----------
@@ -379,20 +404,29 @@ export function Screen({
   const petRoom = Platform.OS === 'web' && pets.prefs.enabled && pets.pets.some((p) => p.active);
   const padX = isWide ? 40 : 16;
   const top = isWide ? 30 : Math.max(insets.top, 12) + 8;
+  // v29: en el celular, si las acciones de la derecha son anchas (botones con
+  // texto), van debajo del título para que este no se corte ("Tipos de ...").
+  const [rowW, setRowW] = React.useState(0);
+  const [rightW, setRightW] = React.useState(0);
+  const stackRight = !isWide && !!right && rowW > 0 && headerStacks({ rowW, rightW, title: title ?? '', titleSize: back ? 22 : 28, back: !!back, subtitle: !!subtitle });
 
   const head = title || back ? (
     <View style={{ paddingTop: top, paddingHorizontal: padX, paddingBottom: 12 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, maxWidth: maxWidth && isWide ? maxWidth : undefined, width: '100%', alignSelf: maxWidth && isWide ? 'center' : 'auto' }}>
+      <View onLayout={isWide ? undefined : (e) => setRowW(e.nativeEvent.layout.width)}
+        style={{ flexDirection: 'row', flexWrap: stackRight ? 'wrap' : 'nowrap', alignItems: 'flex-end', gap: 8, maxWidth: maxWidth && isWide ? maxWidth : undefined, width: '100%', alignSelf: maxWidth && isWide ? 'center' : 'auto' }}>
         {back ? (
           <IconButton icon="chevron-back" label="Volver" onPress={goBack} color={C.text} size={24} style={{ marginLeft: -12, alignSelf: 'flex-start', marginTop: title ? (isWide ? -5 : -8) : 0 }} />
         ) : null}
         {leading ? <View style={{ alignSelf: 'center', marginRight: 4 }}>{leading}</View> : null}
-        <View style={{ flex: 1, minWidth: 0 }}>
+        <View style={stackRight ? { flexBasis: '70%', flexGrow: 1, minWidth: 0 } : { flex: 1, minWidth: 0 }}>
           {!!eyebrow && <Text style={{ color: C.muted, fontSize: 13, marginBottom: 2 }}>{eyebrow}</Text>}
           {!!title && <Text dataSet={{ head: '1' }} style={back && !isWide ? T.title : T.display} numberOfLines={1} accessibilityRole="header">{title}</Text>}
           {!!subtitle && <Text style={{ color: C.muted, fontSize: 13.5, marginTop: 3 }} numberOfLines={2}>{subtitle}</Text>}
         </View>
-        {right ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>{right}</View> : null}
+        {right ? (
+          <View onLayout={isWide ? undefined : (e) => { if (!stackRight) setRightW(e.nativeEvent.layout.width); }}
+            style={stackRight ? { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, width: '100%', marginTop: 6 } : { flexDirection: 'row', alignItems: 'center', gap: 4 }}>{right}</View>
+        ) : null}
       </View>
     </View>
   ) : <View style={{ height: top }} />;
@@ -439,3 +473,17 @@ export function Toggle({ value, onChange, label, hint }: { value: boolean; onCha
 
 // Re-exporta lo que las pantallas suelen necesitar junto con el sistema.
 export type { PressableProps };
+
+// ---------- Cifra con unidad ----------
+/**
+ * v29: "45 min", "0 semanas": el número grande y la unidad más pequeña. En una
+ * caja angosta del celular la unidad baja de línea en vez de cortarse ("0 sem...").
+ */
+export function StatValue({ value, color, size = 18, style }: { value: string; color: string; size?: number; style?: StyleProp<TextStyle> }) {
+  const [num, unit] = statParts(value);
+  return (
+    <Text style={[{ color, fontSize: size, fontWeight: '800', fontVariant: ['tabular-nums'] }, style]} numberOfLines={2}>
+      {num}{unit ? <Text style={{ fontSize: Math.round(size * 0.68), fontWeight: '700' }}>{' ' + unit}</Text> : null}
+    </Text>
+  );
+}
