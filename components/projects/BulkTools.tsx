@@ -14,7 +14,7 @@ import {
   encodeUtf8, exportFileName, formatHuman, previewShift, tasksToCsv, tasksToJson,
   type ExistingTask, type ShiftTarget,
 } from '../../lib/import';
-import { t } from '../../lib/i18n';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Edición en masa: barra de selección, sus ventanas, y exportar.
@@ -115,7 +115,7 @@ export function BulkDialog({ action, projectId, tasks, cols, members, onClose, o
               <>
                 <Title text={t('Mover {nTxt} a…', { nTxt })} onClose={onClose} />
                 {cols.map((c) => (
-                  <Option key={c.key} busy={busy} onPress={() => run({ status: c.key }, `${nTxt} movidas a ${c.label}`)}
+                  <Option key={c.key} busy={busy} onPress={() => run({ status: c.key }, trn('{nTxt} movidas a {label}', { nTxt, label: c.label }))}
                     left={<View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: c.color }} />}
                     text={c.label} hint={c.done ? t('termina aquí') : undefined} />
                 ))}
@@ -127,7 +127,7 @@ export function BulkDialog({ action, projectId, tasks, cols, members, onClose, o
                 <Option busy={busy} onPress={() => run({ assignee_id: null }, t('{nTxt} sin asignar', { nTxt }))}
                   left={<Ionicons name="person-remove-outline" size={16} color={C.muted} />} text={t('Nadie (sin asignar)')} />
                 {members.filter((m) => m.role !== 'viewer').map((m) => (
-                  <Option key={m.id} busy={busy} onPress={() => run({ assignee_id: m.user_id }, `${nTxt} asignadas a ${nameOf(m.profile)}`)}
+                  <Option key={m.id} busy={busy} onPress={() => run({ assignee_id: m.user_id }, trn('{nTxt} asignadas a {name}', { nTxt, name: nameOf(m.profile) }))}
                     left={<View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: colorOf(m.user_id), alignItems: 'center', justifyContent: 'center' }}>
                       <Text style={{ color: '#0f1115', fontSize: 9, fontWeight: '800' }}>{initialsOf(m.profile)}</Text>
                     </View>}

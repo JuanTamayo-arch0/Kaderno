@@ -1,4 +1,4 @@
-import { t, monthsShort, monthsLong } from './i18n';
+import { t, monthsShort, monthsLong, daysShort, daysLong, dayMonth, lang } from './i18n';
 // ============================================================
 //  Fechas y horas de las tareas personales.
 //  Una tarea puede tener solo fecha (due_date) o fecha con hora (due_at,
@@ -8,8 +8,8 @@ import { t, monthsShort, monthsLong } from './i18n';
 
 export type DueLike = { due_date?: string | null; due_at?: string | null };
 
-export const DAY_SHORT = ['dom', 'lun', 'mar', t('mié'), 'jue', 'vie', t('sáb')];
-export const DAY_LONG = ['domingo', 'lunes', 'martes', t('miércoles'), 'jueves', 'viernes', t('sábado')];
+export const DAY_SHORT = daysShort();
+export const DAY_LONG = daysLong();
 export const MONTH_SHORT = monthsShort();
 export const MONTH_LONG = monthsLong();
 
@@ -74,7 +74,7 @@ export function fmtDay(d: Date, now = new Date()): string {
   if (diff === -1) return t('Ayer');
   if (diff > 1 && diff < 7) return `${DAY_SHORT[d.getDay()]} ${d.getDate()}`;
   if (diff < 0 && diff > -7) return t('Hace {v} días', { v: -diff });
-  return `${d.getDate()} ${MONTH_SHORT[d.getMonth()]}`;
+  return dayMonth(d.getDate(), MONTH_SHORT[d.getMonth()]);
 }
 /** "Hoy, 10:00 am", "Mañana", "vie 16, 6:00 pm"... o "" si no tiene fecha. */
 export function fmtDue(t: DueLike, now = new Date()): string {
@@ -85,7 +85,8 @@ export function fmtDue(t: DueLike, now = new Date()): string {
 }
 /** "jueves 15 de octubre" */
 export function fmtLongDate(d: Date): string {
-  return `${DAY_LONG[d.getDay()]} ${d.getDate()} de ${MONTH_LONG[d.getMonth()]}`;
+  if (lang() === 'en') return `${DAY_LONG[d.getDay()]}, ${MONTH_LONG[d.getMonth()]} ${d.getDate()}`;
+  return `${DAY_LONG[d.getDay()]} ${d.getDate()} de ${MONTH_LONG[d.getMonth()]}`; // i18n-ok
 }
 export function capitalize(s: string): string { return s ? s[0].toUpperCase() + s.slice(1) : s; }
 

@@ -18,7 +18,7 @@ import { dataChanged } from '../lib/uiBus';
 import { refreshNavCounts } from '../lib/navCounts';
 import { Screen, Button, Card, Badge, Dot, SectionLabel, EmptyState } from '../components/ds';
 import { SubjectPicker } from '../components/SubjectPicker';
-import { t } from '../lib/i18n';
+import { t, trn } from '../lib/i18n';
 
 // ============================================================
 //  Importar cronograma: las entregas del semestre (tareas personales).
@@ -84,7 +84,7 @@ function Importar() {
         }));
       }
       dataChanged(); refreshNavCounts(true);
-      toast(`${ids.length} ${ids.length === 1 ? t('entrega importada') : 'entregas importadas'}`, {
+      toast(ids.length === 1 ? trn('1 entrega importada') : trn('{n} entregas importadas', { n: ids.length }), {
         tone: 'good', actionLabel: t('Deshacer'),
         onAction: () => { Promise.all(ids.map((id) => deleteTask(id))).then(() => { dataChanged(); toast(t('Importación deshecha')); }).catch(() => {}); },
       });
@@ -142,7 +142,7 @@ function Importar() {
             return (
               <Card key={i} style={{ marginBottom: 8, paddingVertical: 10, opacity: r.include ? 1 : 0.6 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <Pressable onPress={() => setRow(i, { include: !r.include })} accessibilityRole="checkbox" accessibilityState={{ checked: r.include }} accessibilityLabel={`Importar ${r.title}`}
+                  <Pressable onPress={() => setRow(i, { include: !r.include })} accessibilityRole="checkbox" accessibilityState={{ checked: r.include }} accessibilityLabel={trn('Importar {title}', { title: r.title })}
                     style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginLeft: -8 }}>
                     <Ionicons name={r.include ? 'checkbox' : 'square-outline'} size={22} color={r.include ? C.brand : C.muted} />
                   </Pressable>
@@ -163,7 +163,7 @@ function Importar() {
           })}
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
             <Button label={t('Cancelar')} kind="secondary" onPress={() => setRows(null)} style={{ flex: 1 }} />
-            <Button label={`Importar ${chosen.length}`} icon="download-outline" onPress={doImport} busy={busy} disabled={!chosen.length} style={{ flex: 2 }} />
+            <Button label={trn('Importar {n}', { n: chosen.length })} icon="download-outline" onPress={doImport} busy={busy} disabled={!chosen.length} style={{ flex: 2 }} />
           </View>
         </>
       )}

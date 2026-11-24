@@ -78,16 +78,16 @@ export function diffNoteCards(lines: NoteCard[], existing: { id: string; front: 
 // ---------- Plantillas ----------
 export type Template = { key: string; name: string; hint: string; content: string; work?: boolean };
 export const TEMPLATES: Template[] = [
-  { key: 'cornell', name: t('Apuntes de clase'), hint: t('Ideas clave, notas, preguntas y resumen (Cornell)'), content: '## Ideas clave\n\n- \n\n## Notas\n\n\n\n## Preguntas\n\n- \n\n## Resumen\n\n' },
-  { key: 'lab', name: t('Laboratorio'), hint: t('Objetivo, materiales, procedimiento, datos, análisis y conclusiones'), content: '## Objetivo\n\n\n\n## Materiales\n\n- \n\n## Procedimiento\n\n1. \n\n## Datos\n\n| Medida | Valor | Unidad |\n| --- | --- | --- |\n|  |  |  |\n\n## Análisis\n\n\n\n## Conclusiones\n\n' },
-  { key: 'capitulo', name: t('Capítulo de libro'), hint: t('Conceptos, fórmulas, ejemplos y dudas'), content: '## Conceptos\n\n- \n\n## Fórmulas\n\n\n\n## Ejemplos\n\n\n\n## Dudas\n\n- \n' },
-  { key: 'ejercicio', name: t('Ejercicio resuelto'), hint: t('Enunciado, datos, planteamiento, solución y verificación'), content: '## Enunciado\n\n\n\n## Datos\n\n- \n\n## Planteamiento\n\n\n\n## Solución\n\n\n\n## Verificación\n\n' },
+  { key: 'cornell', name: t('Apuntes de clase'), hint: t('Ideas clave, notas, preguntas y resumen (Cornell)'), content: t('## Ideas clave\n\n- \n\n## Notas\n\n\n\n## Preguntas\n\n- \n\n## Resumen\n\n') },
+  { key: 'lab', name: t('Laboratorio'), hint: t('Objetivo, materiales, procedimiento, datos, análisis y conclusiones'), content: t('## Objetivo\n\n\n\n## Materiales\n\n- \n\n## Procedimiento\n\n1. \n\n## Datos\n\n| Medida | Valor | Unidad |\n| --- | --- | --- |\n|  |  |  |\n\n## Análisis\n\n\n\n## Conclusiones\n\n') },
+  { key: 'capitulo', name: t('Capítulo de libro'), hint: t('Conceptos, fórmulas, ejemplos y dudas'), content: t('## Conceptos\n\n- \n\n## Fórmulas\n\n\n\n## Ejemplos\n\n\n\n## Dudas\n\n- \n') },
+  { key: 'ejercicio', name: t('Ejercicio resuelto'), hint: t('Enunciado, datos, planteamiento, solución y verificación'), content: t('## Enunciado\n\n\n\n## Datos\n\n- \n\n## Planteamiento\n\n\n\n## Solución\n\n\n\n## Verificación\n\n') },
   // v24: plantillas de trabajo.
-  { key: 'acta', work: true, name: t('Acta de reunión'), hint: t('Asistentes, temas, decisiones, tareas con responsable y pendientes'), content: '## Asistentes\n\n- \n\n## Temas\n\n1. \n\n## Decisiones\n\n- \n\n## Tareas\n\n| Tarea | Responsable | Fecha |\n| --- | --- | --- |\n|  |  |  |\n\n## Pendientes para la próxima\n\n- \n' },
-  { key: 'uno-a-uno', work: true, name: t('Uno a uno'), hint: t('Cómo vas, logros, bloqueos, metas y acuerdos'), content: '## Cómo vas\n\n\n\n## Logros desde la última\n\n- \n\n## Bloqueos\n\n- \n\n## Metas para las próximas semanas\n\n- \n\n## Acuerdos\n\n- [ ] \n' },
-  { key: 'retro', work: true, name: t('Retrospectiva'), hint: t('Qué salió bien, qué mejorar y qué vamos a probar'), content: '## Qué salió bien\n\n- \n\n## Qué mejorar\n\n- \n\n## Qué vamos a probar\n\n- [ ] \n\n## Responsables\n\n| Acción | Responsable | Fecha |\n| --- | --- | --- |\n|  |  |  |\n' },
-  { key: 'propuesta', work: true, name: t('Propuesta'), hint: t('Contexto, objetivo, alcance, cronograma, costo y siguientes pasos'), content: '## Contexto\n\n\n\n## Objetivo\n\n\n\n## Alcance\n\nIncluye:\n\n- \n\nNo incluye:\n\n- \n\n## Cronograma\n\n| Fase | Entrega | Fecha |\n| --- | --- | --- |\n|  |  |  |\n\n## Costo\n\n\n\n## Siguientes pasos\n\n- \n' },
-  { key: 'informe', work: true, name: t('Informe semanal'), hint: t('Lo hecho, lo que viene, lo bloqueado y los números'), content: '## Lo hecho\n\n- \n\n## Lo que viene\n\n- \n\n## Bloqueado o en riesgo\n\n- \n\n## Números\n\n| Indicador | Meta | Real |\n| --- | --- | --- |\n|  |  |  |\n' },
+  { key: 'acta', work: true, name: t('Acta de reunión'), hint: t('Asistentes, temas, decisiones, tareas con responsable y pendientes'), content: t('## Asistentes\n\n- \n\n## Temas\n\n1. \n\n## Decisiones\n\n- \n\n## Tareas\n\n| Tarea | Responsable | Fecha |\n| --- | --- | --- |\n|  |  |  |\n\n## Pendientes para la próxima\n\n- \n') },
+  { key: 'uno-a-uno', work: true, name: t('Uno a uno'), hint: t('Cómo vas, logros, bloqueos, metas y acuerdos'), content: t('## Cómo vas\n\n\n\n## Logros desde la última\n\n- \n\n## Bloqueos\n\n- \n\n## Metas para las próximas semanas\n\n- \n\n## Acuerdos\n\n- [ ] \n') },
+  { key: 'retro', work: true, name: t('Retrospectiva'), hint: t('Qué salió bien, qué mejorar y qué vamos a probar'), content: t('## Qué salió bien\n\n- \n\n## Qué mejorar\n\n- \n\n## Qué vamos a probar\n\n- [ ] \n\n## Responsables\n\n| Acción | Responsable | Fecha |\n| --- | --- | --- |\n|  |  |  |\n') },
+  { key: 'propuesta', work: true, name: t('Propuesta'), hint: t('Contexto, objetivo, alcance, cronograma, costo y siguientes pasos'), content: t('## Contexto\n\n\n\n## Objetivo\n\n\n\n## Alcance\n\nIncluye:\n\n- \n\nNo incluye:\n\n- \n\n## Cronograma\n\n| Fase | Entrega | Fecha |\n| --- | --- | --- |\n|  |  |  |\n\n## Costo\n\n\n\n## Siguientes pasos\n\n- \n') },
+  { key: 'informe', work: true, name: t('Informe semanal'), hint: t('Lo hecho, lo que viene, lo bloqueado y los números'), content: t('## Lo hecho\n\n- \n\n## Lo que viene\n\n- \n\n## Bloqueado o en riesgo\n\n- \n\n## Números\n\n| Indicador | Meta | Real |\n| --- | --- | --- |\n|  |  |  |\n') },
 ];
 /** Plantillas en el orden que conviene al modo (las del trabajo primero en modo Trabajo). */
 export function templatesFor(mode: 'estudio' | 'trabajo' | 'ambos'): Template[] {
@@ -101,13 +101,13 @@ export function builtinTemplate(key: string | null | undefined): Template | null
 
 const MONTHS = monthsShort();
 /** "Clase del 23 oct" (o "Reunión del 23 oct" en modo Trabajo). */
-export function classNoteTitle(d: Date, work = false): string { return `${work ? t('Reunión') : t('Clase')} del ${d.getDate()} ${MONTHS[d.getMonth()]}`; }
+export function classNoteTitle(d: Date, work = false): string { return work ? t('Reunión del {d} {m}', { d: d.getDate(), m: MONTHS[d.getMonth()] }) : t('Clase del {d} {m}', { d: d.getDate(), m: MONTHS[d.getMonth()] }); }
 
 // ---------- Compartir ----------
 /** La nota como Markdown para fuera de Kaderno: sin imágenes privadas ni enlaces internos. */
 export function noteForExport(title: string, md: string): string {
   const body = (md ?? '')
-    .replace(/!\[([^\]\n]*)\]\(kd-img:[^)\s]+\)/g, (_a, alt) => `*(imagen${alt ? `: ${alt}` : ''})*`)
+    .replace(/!\[([^\]\n]*)\]\(kd-img:[^)\s]+\)/g, (_a, alt) => (alt ? t('*(imagen: {alt})*', { alt }) : t('*(imagen)*')))
     .replace(/\[([^\]\n]*)\]\(kd-note:[0-9a-fA-F-]{36}\)/g, '$1')
     .replace(/\[([^\]\n]*)\]\(kd-file:[^)\s]+\)/g, '$1');
   return `# ${title || t('Nota')}\n\n${body.trim()}\n`;

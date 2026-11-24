@@ -36,7 +36,7 @@ import { play } from '../lib/sound';
 import { useSpaceFilter } from '../lib/useSpace';
 import { getModeSetting } from '../lib/mode';
 import { switchSpace } from '../lib/spaceSwitch';
-import { t, locale } from '../lib/i18n';
+import { t, locale, trn } from '../lib/i18n';
 
 // ============================================================
 //  Paneles globales: hoja "Agregar", formulario de tarea, paleta de
@@ -161,7 +161,7 @@ function AddSheet({ visible, subjects, initialText = '' }: { visible: boolean; s
         toast(t('A la bandeja: {title}', { title: parsed.title }), { actionLabel: t('Ordenar'), onAction: () => router.push({ pathname: '/', params: { bandeja: '1' } } as any) });
         return;
       }
-      toast(`Agregada: ${parsed.title}${when ? ' · ' + when : ''}`, {
+      toast(trn('Agregada: {title}', { title: parsed.title }) + (when ? ' · ' + when : ''), {
         actionLabel: askWhen ? t('¿Cuándo lo haces?') : t('Editar'),
         onAction: () => openTask({ id, status: 'pending', description: null, ...row } as Task),
       });

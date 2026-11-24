@@ -9,7 +9,7 @@ import { uploadNewFile } from '../../lib/projectFiles';
 import { copyText, saveFile } from '../../lib/fileIO';
 import { openWhatsApp } from '../../lib/clientLinks';
 import { toast, friendlyError } from '../../lib/feedback';
-import { t } from '../../lib/i18n';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Informe semanal del proyecto (v24, fase 5): lo hecho, lo que viene, lo
@@ -24,7 +24,7 @@ export function ReportSheet({ visible, project, tasks, members, editable, onClos
   const people = useMemo(() => members.map((m) => ({ user_id: m.user_id, name: nameOf(m.profile) })), [members]);
   const md = useMemo(() => (project && visible ? weeklyReportMarkdown(project.name, weeklyReport(tasks, people), people) : ''), [project, tasks, people, visible]);
   if (!project) return null;
-  const file = `Informe semanal ${new Date().toISOString().slice(0, 10)}.md`;
+  const file = trn('Informe semanal {date}.md', { date: new Date().toISOString().slice(0, 10) });
   async function copy() { const ok = await copyText(md); toast(ok ? t('Informe copiado: pégalo en un correo o un chat') : t('No se pudo copiar')); }
   async function download() { try { await saveFile(file, md, 'text/markdown'); } catch (e) { toast(friendlyError(e), { tone: 'bad' }); } }
   async function toFiles() {

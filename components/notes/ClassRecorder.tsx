@@ -89,7 +89,7 @@ export function useClassRecorder(noteId: string, getMd: () => string) {
     if (!ok) {
       const yes = await confirm(t('Antes de grabar'), getMode() === 'trabajo'
         ? t('Avisa a quienes están en la reunión. El audio no se guarda: Kaderno solo escribe lo que se dice, y el texto queda solo en tu cuenta.')
-        : t('Pide permiso al profesor (o avisa en la reunión). El audio no se guarda: Kaderno solo escribe lo que se dice, y el texto queda solo en tu cuenta.'), 'Entendido, grabar');
+        : t('Pide permiso al profesor (o avisa en la reunión). El audio no se guarda: Kaderno solo escribe lo que se dice, y el texto queda solo en tu cuenta.'), trn('Entendido, grabar'));
       if (!yes) return false;
       AsyncStorage.setItem(CONSENT_KEY, '1').catch(() => {});
     }
@@ -373,7 +373,7 @@ export function whenSaid(marks: NoteMark[], selected: string): NoteMark | null {
 function MinutesBlock({ m, dateLabel, busy, onRedo, onInsert, onPublish, onStyle }: {
   m: MeetingMinutes; dateLabel: string; busy: boolean; onRedo: () => void; onInsert: (md: string) => void; onPublish: () => void; onStyle: () => void;
 }) {
-  const subject = `Acta${m.title ? `: ${m.title}` : ''} (${dateLabel})`;
+  const subject = (m.title ? trn('Acta: {title} ({dateLabel})', { title: m.title, dateLabel }) : trn('Acta ({dateLabel})', { dateLabel }));
   const sec = (title: string, items: string[]) => items.length > 0 && (
     <View style={{ gap: 4 }}>
       <Text style={{ color: C.text, fontSize: 13, fontWeight: '800' }}>{title}</Text>

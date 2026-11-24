@@ -20,8 +20,8 @@ export function WoopFields({ step, d, onChange, subject, scale }: { step: number
   const then = planThen(d.plan, d.obstacle);
   if (step === 0) return (
     <View style={{ gap: 10 }}>
-      <Text style={{ color: C.text, fontSize: 14, lineHeight: 20 }}>{t('¿Qué quieres lograr{v}? Que sea retador pero posible.', { v: subject ? ` en ${subject}` : t(' este semestre') })}</Text>
-      <TextInput value={d.wish} onChangeText={(v) => onChange({ ...d, wish: v, target_grade: d.target_grade ?? gradeInWish(v, scale) })} placeholder={`Ej: ${wishExample(subject, scale)}`} placeholderTextColor={C.muted}
+      <Text style={{ color: C.text, fontSize: 14, lineHeight: 20 }}>{t('¿Qué quieres lograr{v}? Que sea retador pero posible.', { v: subject ? t(' en {subject}', { subject }) : t(' este semestre') })}</Text>
+      <TextInput value={d.wish} onChangeText={(v) => onChange({ ...d, wish: v, target_grade: d.target_grade ?? gradeInWish(v, scale) })} placeholder={t('Ej: {v}', { v: wishExample(subject, scale) })} placeholderTextColor={C.muted}
         accessibilityLabel={t('Tu meta')} maxLength={200} style={input} />
       {!!subject && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>

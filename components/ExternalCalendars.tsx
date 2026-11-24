@@ -6,7 +6,7 @@ import { Button, Card, Field } from './ds';
 import { getCalendars, addCalendar, removeCalendar, syncCalendar, CAL_COLORS, looksLikeCalendarUrl, type ExtCalendar } from '../lib/calendarsDb';
 import { confirm, friendlyError, toast } from '../lib/feedback';
 import { dataChanged } from '../lib/uiBus';
-import { t, locale } from '../lib/i18n';
+import { t, locale, trn } from '../lib/i18n';
 
 // ============================================================
 //  Ajustes, "Tus otros calendarios" (v21, sección 9): conectar Google
@@ -47,7 +47,7 @@ export function ExternalCalendars() {
   }
   async function refresh(c: ExtCalendar) {
     setBusy(c.id);
-    try { const n = await syncCalendar(c.id); toast(`${c.name}: ${n} eventos`); dataChanged(); }
+    try { const n = await syncCalendar(c.id); toast(trn('{name}: {n} eventos', { name: c.name, n })); dataChanged(); }
     catch (e) { toast((e as Error).message, { tone: 'bad' }); }
     finally { setBusy(null); load(); }
   }

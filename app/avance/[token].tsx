@@ -6,7 +6,7 @@ import { C } from '../../lib/theme';
 import { KadernoMark } from '../../components/brand/KadernoLogo';
 import { publicView, type PublicView } from '../../lib/clientLinks';
 import { HEALTH } from '../../lib/projectWork';
-import { t, monthsShort } from '../../lib/i18n';
+import { t, monthsShort, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Avance del proyecto para el cliente (v25, fase 4): público y de solo
@@ -20,7 +20,7 @@ export default function Avance() {
   const { token } = useLocalSearchParams<{ token: string }>();
   const [v, setV] = useState<PublicView | null | undefined>(undefined);
   useEffect(() => { publicView(String(token)).then(setV).catch(() => setV(null)); }, [token]);
-  useEffect(() => { if (Platform.OS === 'web' && typeof document !== 'undefined' && v) document.title = `Avance · ${v.name}`; }, [v]);
+  useEffect(() => { if (Platform.OS === 'web' && typeof document !== 'undefined' && v) document.title = trn('Avance · {name}', { name: v.name }); }, [v]);
   const pct = v && v.total ? Math.round((v.done / v.total) * 100) : 0;
   const box = { padding: 16, borderRadius: 16, borderWidth: 1, borderColor: C.line, backgroundColor: C.surface, gap: 8 } as const;
   return (
@@ -44,7 +44,7 @@ export default function Avance() {
               </View>
             </View>
             {v.intro ? <Text style={{ color: C.text, fontSize: 14.5, lineHeight: 21 }}>{v.intro}</Text> : null}
-            <View style={box} accessibilityLabel={`${pct} % terminado`}>
+            <View style={box} accessibilityLabel={trn('{pct} % terminado', { pct })}>
               <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
                 <Text style={{ color: C.text, fontSize: 30, fontWeight: '800' }}>{pct} %</Text>
                 <Text style={{ color: C.muted, fontSize: 13.5 }}>{t('{done} de {total} tareas terminadas', { done: v.done, total: v.total })}</Text>

@@ -210,7 +210,7 @@ function Simulacro() {
             <View style={{ width: `${((idx + 1) / qs.length) * 100}%`, height: '100%', backgroundColor: C.brand }} />
           </View>
           <Text style={{ color: C.muted, fontSize: 13, fontVariant: ['tabular-nums'] }}>{t('{v} de {length}', { v: idx + 1, length: qs.length })}</Text>
-          {timed && <Text style={{ color: left < 60 ? C.badText : C.text, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] }} accessibilityLabel={`Quedan ${fmtClock(left)}`}>{fmtClock(left)}</Text>}
+          {timed && <Text style={{ color: left < 60 ? C.badText : C.text, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] }} accessibilityLabel={t('Quedan {v}', { v: fmtClock(left) })}>{fmtClock(left)}</Text>}
         </View>
         <Card style={{ gap: 16, padding: isWide ? 24 : 16 }}>
           <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>

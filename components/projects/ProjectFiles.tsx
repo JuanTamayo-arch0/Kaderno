@@ -13,7 +13,7 @@ import {
   restoreVersion, updateFileInfo, uploadNewFile, uploadVersion,
 } from '../../lib/projectFiles';
 import { KIND_ICON, MAX_FILE_BYTES, humanSize, kindOf, matchExisting, previewable, whenLabel } from '../../lib/fileVersions';
-import { t } from '../../lib/i18n';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Pestaña "Archivos" de un proyecto.
@@ -197,7 +197,7 @@ function FileRow({ file, first, who, editable, isWide, highlight, onOpen, onPrev
   const meta = [
     `v${file.current_version}`,
     humanSize(file.size),
-    `${whenLabel(file.updated_at)}${isWide ? ` por ${who(file.updated_by ?? file.uploaded_by)}` : ''}`,
+    `${whenLabel(file.updated_at)}${isWide ? t(' por {v}', { v: who(file.updated_by ?? file.uploaded_by) }) : ''}`,
   ].filter(Boolean).join(' · ');
   return (
     <View style={{
@@ -220,7 +220,7 @@ function FileRow({ file, first, who, editable, isWide, highlight, onOpen, onPrev
           {!!file.description && !highlight && <Text numberOfLines={1} style={{ color: C.muted, fontSize: 12.5, marginTop: 1 }}>{file.description}</Text>}
         </View>
       </Pressable>
-      <IconButton icon={previewable(file.name, file.mime) ? 'eye-outline' : 'download-outline'} label={previewable(file.name, file.mime) ? t('Ver {name}', { name: file.name }) : `Descargar ${file.name}`} onPress={onPreview} />
+      <IconButton icon={previewable(file.name, file.mime) ? 'eye-outline' : 'download-outline'} label={previewable(file.name, file.mime) ? t('Ver {name}', { name: file.name }) : trn('Descargar {name}', { name: file.name })} onPress={onPreview} />
       {editable && isWide && <IconButton icon="cloud-upload-outline" label={t('Subir versión nueva de {name}', { name: file.name })} onPress={onNewVersion} />}
       {isWide && <IconButton icon="time-outline" label={t('Historial de {name}', { name: file.name })} onPress={onOpen} />}
     </View>
@@ -426,7 +426,7 @@ function FileSheet({ file, who, editable, onClose, onOpen, onDownload, onNewVers
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                       <Text numberOfLines={1} style={{ color: C.text, fontSize: 13.5, fontWeight: '700', flexShrink: 1 }}>{v.note ?? (v.version === 1 ? t('Primera versión') : t('Sin nota'))}</Text>
                       {isCurrent && <Badge text={t('Actual')} color={C.good} />}
-                      {v.restored_from != null && <Badge text={`igual a v${v.restored_from}`} />}
+                      {v.restored_from != null && <Badge text={trn('igual a v{n}', { n: v.restored_from })} />}
                     </View>
                     <Text numberOfLines={1} style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>
                       {who(v.uploaded_by)} · {whenLabel(v.created_at)}{v.size ? ` · ${humanSize(v.size)}` : ''}{label !== current.name ? ` · ${label}` : ''}

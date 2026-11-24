@@ -10,7 +10,7 @@ import { getGoals, saveGoal, saveRitualPrefs, type Goal } from '../../lib/ritual
 import { fullPlan, planThen, goalError, type GoalDraft } from '../../lib/rituals';
 import { toast, notify, friendlyError } from '../../lib/feedback';
 import { streakChanged } from '../../lib/uiBus';
-import { t } from '../../lib/i18n';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Ritual del semestre (v20, sección J.2): la nota que quieres en cada
@@ -110,7 +110,7 @@ export function SemesterRitual({ visible, onClose }: { visible: boolean; onClose
   else body = (
     <>
       <View style={{ flexDirection: 'row', gap: 6 }}>
-        {[0, 1, 2, 3].map((i) => <Pressable key={i} onPress={() => setWStep(i)} accessibilityLabel={`Parte ${i + 1}`} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: i <= wStep ? C.brand2 : C.surface2 }} />)}
+        {[0, 1, 2, 3].map((i) => <Pressable key={i} onPress={() => setWStep(i)} accessibilityLabel={trn('Parte {n}', { n: i + 1 })} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: i <= wStep ? C.brand2 : C.surface2 }} />)}
       </View>
       <WoopFields step={wStep} d={woop} onChange={setWoop} subject={null} scale={5} />
       <Text style={{ color: C.muted, fontSize: 12 }}>{t('Opcional. Puedes dejarla vacía y ponerla después.')}</Text>

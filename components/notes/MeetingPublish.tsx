@@ -10,7 +10,7 @@ import { addProjectTask, canEdit, colorOf, columnsOf, getMembers, getProjects, i
 import { uploadNewFile } from '../../lib/projectFiles';
 import { matchOwner, minutesFileName, minutesMarkdown, type MeetingMinutes } from '../../lib/meeting';
 import { toast, friendlyError } from '../../lib/feedback';
-import { t, monthsShort } from '../../lib/i18n';
+import { t, monthsShort, trn, dayMonth } from '../../lib/i18n';
 
 // ============================================================
 //  Publicar el acta en un proyecto (v24, fase 4): las tareas quedan
@@ -58,7 +58,7 @@ export function MeetingPublish({ visible, minutes, date, onClose }: { visible: b
     setBusy(true);
     try {
       const status = columnsOf(project).find((c) => !c.done)?.key ?? columnsOf(project)[0].key;
-      const when = `${date.getDate()} ${MONTHS[date.getMonth()]}`;
+      const when = dayMonth(date.getDate(), MONTHS[date.getMonth()]);
       let made = 0;
       for (const r of rows) {
         if (!r.include) continue;
@@ -66,12 +66,12 @@ export function MeetingPublish({ visible, minutes, date, onClose }: { visible: b
         made++;
       }
       if (file) {
-        const md = `# Acta${minutes.title ? `: ${minutes.title}` : ''} · ${when}\n\n` + minutesMarkdown(minutes, when, false);
+        const md = (minutes.title ? trn('# Acta: {title} · {when}', { title: minutes.title, when }) : trn('# Acta · {when}', { when })) + '\n\n' + minutesMarkdown(minutes, when, false);
         const bytes = new TextEncoder().encode(md);
         await uploadNewFile(project.id, { name: minutesFileName(minutes, date), bytes, mime: 'text/markdown', size: bytes.length }, { description: t('Acta de reunión hecha con Kaderno') })
           .catch(() => { toast(t('Las tareas quedaron, pero el acta no se pudo guardar en Archivos.'), { tone: 'bad' }); });
       }
-      logActivity(project.id, 'meeting', t('publicó el acta de la reunión del {when}{v}', { when, v: made ? ` con ${made} ${made === 1 ? t('tarea') : t('tareas')}` : '' }), {});
+      logActivity(project.id, 'meeting', t('publicó el acta de la reunión del {when}{v}', { when, v: made ? (made === 1 ? t(' con 1 tarea') : t(' con {made} tareas', { made })) : '' }), {});
       toast(t('Publicada en {name}', { name: project.name }), { tone: 'good', actionLabel: t('Ver proyecto'), onAction: () => router.push(`/proyectos/${project.id}` as any) });
       onClose();
     } catch (e) { toast(friendlyError(e), { tone: 'bad' }); }

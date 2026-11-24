@@ -65,7 +65,7 @@ function Personalizar() {
       const res = await ImagePicker.launchImageLibraryAsync({ quality: 0.6, base64: true });
       if (res.canceled || !res.assets?.length) return;
       const a = res.assets[0];
-      const uri = a.uri?.startsWith('data:') ? a.uri : (a.base64 ? `data:${a.mimeType ?? 'image/jpeg'};base64,${a.base64}` : a.uri);
+      const uri = a.uri?.startsWith('data:') ? a.uri : (a.base64 ? `data:${a.mimeType ?? 'image/jpeg'};base64,${a.base64}` /* i18n-ok */ : a.uri);
       if (!uri) return;
       // Vista previa inmediata con el archivo local, y en paralelo la subida.
       const seq = ++pickSeq.current;
@@ -258,7 +258,7 @@ function Section({ title, subtitle }: { title: string; subtitle: string }) {
 function ThemeCard({ id, active, onPress, accentId, workAccentId, work, wide }: { id: string; active: boolean; onPress: () => void; accentId?: string; workAccentId?: string; work?: boolean; wide?: boolean }) {
   const p = spacePalette({ themeId: id, scheme: THEMES[id].scheme, base: THEMES[id].palette, space: work ? 'trabajo' : 'estudio', accentId, workAccentId });
   return (
-    <Pressable onPress={onPress} accessibilityRole="radio" accessibilityState={{ checked: active }} accessibilityLabel={`Tema ${THEMES[id].name}`} style={[swatchBox, wide ? { width: 150 } : null, { borderColor: active ? p.brand : C.line, borderWidth: active ? 2 : 1, padding: 0, overflow: 'hidden' }]}>
+    <Pressable onPress={onPress} accessibilityRole="radio" accessibilityState={{ checked: active }} accessibilityLabel={trn('Tema {name}', { name: THEMES[id].name })} style={[swatchBox, wide ? { width: 150 } : null, { borderColor: active ? p.brand : C.line, borderWidth: active ? 2 : 1, padding: 0, overflow: 'hidden' }]}>
       <View style={{ flex: 1, backgroundColor: p.bg, padding: 8, justifyContent: 'space-between' }}>
         <View style={{ backgroundColor: p.surface, borderRadius: 6, padding: 6, borderWidth: 1, borderColor: p.line }}>
           <View style={{ height: 5, width: '70%', borderRadius: 3, backgroundColor: p.text, opacity: 0.85 }} />

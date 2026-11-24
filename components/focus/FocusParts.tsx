@@ -101,7 +101,7 @@ export function ParkButton({ s, active }: { s: FocusState; active: boolean }) {
   }
   const n = s.parked?.length ?? 0;
   return (
-    <Pressable onPress={() => setOpen(true)} accessibilityRole="button" accessibilityLabel={t('Anotar para después{v}', { v: n ? `, ${n} anotadas` : '' })} dataSet={{ press: '1' }}
+    <Pressable onPress={() => setOpen(true)} accessibilityRole="button" accessibilityLabel={t('Anotar para después{v}', { v: n ? t(', {n} anotadas', { n }) : '' })} dataSet={{ press: '1' }}
       style={({ pressed, focused, hovered }: any) => [{
         width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 42, borderRadius: 12,
         borderWidth: 1, borderStyle: 'dashed', borderColor: hovered ? C.muted : C.line, opacity: pressed ? 0.8 : 1,

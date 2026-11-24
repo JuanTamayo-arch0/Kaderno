@@ -10,7 +10,7 @@ import { COMPARE, PRICES, TEAM_MIN_SEATS, cop, paymentKindText, paymentStatusTex
 import { NEEDS_V23, addSeat, cancelRenewal, forgetPlan, getPayments, getSeats, removeSeat, resumeRenewal, startTrial, usageToday, usePlan, waitPayment, type PaymentRow } from '../lib/billingDb';
 import { confirm, friendlyError, notify, toast } from '../lib/feedback';
 import { PayModal, type PayIntent } from '../components/billing/PayModal';
-import { t } from '../lib/i18n';
+import { t, trn } from '../lib/i18n';
 
 // ============================================================
 //  Tu plan (v24): el plan de hoy, la prueba gratis, los precios y lo que
@@ -112,7 +112,7 @@ function PlanScreen() {
           <Card style={{ gap: 10, marginBottom: 18 }}>
             {plan.auto_renew ? (
               <>
-                <Text style={{ color: C.text, fontSize: 14 }}>{t('Se cobra {v}{v2}{v3}.', { v: plan.period === 'year' ? t('cada año') : t('cada mes'), v2: plan.source_label ? ` a ${plan.source_label}` : '', v3: plan.next_charge_at ? t(', el próximo el {next_charge_at}', { next_charge_at: shortDate(plan.next_charge_at) }) : '' })}</Text>
+                <Text style={{ color: C.text, fontSize: 14 }}>{t('Se cobra {v}{v2}{v3}.', { v: plan.period === 'year' ? t('cada año') : t('cada mes'), v2: plan.source_label ? t(' a {source_label}', { source_label: plan.source_label }) : '', v3: plan.next_charge_at ? t(', el próximo el {next_charge_at}', { next_charge_at: shortDate(plan.next_charge_at) }) : '' })}</Text>
                 <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
                   <Button label={t('Cambiar medio de pago')} size="sm" kind="secondary" icon="card-outline" onPress={() => setPay({ plan: plan.own_plan === 'team' ? 'team' : 'pro', period: plan.period ?? 'month', seats: plan.seats ?? 1, kind: 'source', method: plan.source_kind ?? 'CARD' })} />
                   <Button label={t('Apagar renovación')} size="sm" kind="ghost" onPress={cancel} />
@@ -139,14 +139,14 @@ function PlanScreen() {
 
       {/* Precios */}
       <SectionLabel text={t('Planes')} right={
-        <Segmented<Period> items={[{ key: 'month', label: t('Mensual') }, { key: 'year', label: `Anual (-${save.pct} %)` }]} value={period} onChange={setPeriod} style={{ borderBottomWidth: 0 }} />
+        <Segmented<Period> items={[{ key: 'month', label: t('Mensual') }, { key: 'year', label: trn('Anual (-{pct} %)', { pct: save.pct }) }]} value={period} onChange={setPeriod} style={{ borderBottomWidth: 0 }} />
       } />
       <View style={{ flexDirection: isWide ? 'row' : 'column', gap: 12, marginBottom: 20 }}>
         <PlanCard title={t('Gratis')} price="$0" note={t('Para siempre')} current={v.badge === 'free'}
-          points={[t('Todo lo de estudiar y organizarte'), t('IA con topes diarios'), '2 calendarios externos']} />
+          points={[t('Todo lo de estudiar y organizarte'), t('IA con topes diarios'), trn('2 calendarios externos')]} />
         <PlanCard title={t('Pro')} highlight price={cop(PRICES.pro[period])} note={period === 'month' ? t('al mes') : t('al año ({cop} al mes)', { cop: cop(perMonth('pro', 'year')) })}
           current={v.badge === 'pro' || v.badge === 'trial'}
-          points={[t('Mucha más IA cada día'), t('Resúmenes de clase y actas de reunión'), '10 calendarios externos', t('Informe de horas en PDF')]}
+          points={[t('Mucha más IA cada día'), t('Resúmenes de clase y actas de reunión'), trn('10 calendarios externos'), t('Informe de horas en PDF')]}
           action={v.canPay && v.badge !== 'team' ? <Button label={plan?.trial_available ? t('Pagar Pro') : v.isPaid ? t('Pagar otro periodo') : t('Pagar Pro')} full onPress={() => choose('pro')} /> : undefined} />
         <PlanCard title={t('Equipo')} price={cop(PRICES.team[period])} note={t('por persona {v} · desde {TEAM_MIN_SEATS}', { v: period === 'month' ? t('al mes') : t('al año'), TEAM_MIN_SEATS })}
           current={v.badge === 'team'}
@@ -242,7 +242,7 @@ function TeamSeats({ seats, onAddSeats, onChanged }: { seats: number; onAddSeats
     <>
       <SectionLabel text={t('Tu equipo')} count={(list?.length ?? 0) + 1} />
       <Card style={{ gap: 10, marginBottom: 18 }}>
-        <Text style={{ color: C.text, fontSize: 13.5 }}>{t('{seats} puestos, contándote. {v}', { seats, v: free > 0 ? t('Te {v}.', { v: free === 1 ? t('queda 1 libre') : `quedan ${free} libres` }) : t('Todos están en uso.') })}</Text>
+        <Text style={{ color: C.text, fontSize: 13.5 }}>{t('{seats} puestos, contándote. {v}', { seats, v: free > 0 ? t('Te {v}.', { v: free === 1 ? t('queda 1 libre') : t('quedan {free} libres', { free }) }) : t('Todos están en uso.') })}</Text>
         {list === null && <ActivityIndicator color={C.brand} />}
         {list?.map((m) => (
           <View key={m} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>

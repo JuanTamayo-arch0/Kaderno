@@ -30,7 +30,7 @@ import katex from 'katex';
 import { C, noteFontStack, noteFontFamily, loadWebFont, fontFamilyOf, PERSONALIZE } from '../../lib/theme';
 import { signedUrl } from '../../lib/db';
 import { KD_IMG, type HeadingItem, type NoteEditorHandle, type NoteEditorProps } from './editorTypes';
-import { t } from '../../lib/i18n';
+import { t, trn } from '../../lib/i18n';
 
 // ---------- Estilos ----------
 function loadKatexCss() {
@@ -184,19 +184,19 @@ type SlashState = { items: SlashItem[]; index: number; rect: DOMRect | null; com
 function makeSlashItems(api: { pickImage: () => void; openMath: (mode: 'block' | 'inline') => void }): SlashItem[] {
   const del = (e: Editor, r: Range) => e.chain().focus().deleteRange(r);
   return [
-    { key: 'h1', icon: 'H1', title: t('Título'), hint: t('Título grande de sección'), words: 'titulo h1 encabezado', run: (e, r) => del(e, r).setNode('heading', { level: 1 }).run() },
-    { key: 'h2', icon: 'H2', title: t('Subtítulo'), hint: t('Parte de una sección'), words: 'subtitulo h2', run: (e, r) => del(e, r).setNode('heading', { level: 2 }).run() },
-    { key: 'h3', icon: 'H3', title: t('Apartado'), hint: t('Título pequeño'), words: 'apartado h3 seccion', run: (e, r) => del(e, r).setNode('heading', { level: 3 }).run() },
+    { key: 'h1', icon: 'H1', title: t('Título'), hint: t('Título grande de sección'), words: t('titulo h1 encabezado'), run: (e, r) => del(e, r).setNode('heading', { level: 1 }).run() },
+    { key: 'h2', icon: 'H2', title: t('Subtítulo'), hint: t('Parte de una sección'), words: t('subtitulo h2'), run: (e, r) => del(e, r).setNode('heading', { level: 2 }).run() },
+    { key: 'h3', icon: 'H3', title: t('Apartado'), hint: t('Título pequeño'), words: t('apartado h3 seccion'), run: (e, r) => del(e, r).setNode('heading', { level: 3 }).run() },
     { key: 'ul', icon: '•', title: t('Lista'), hint: t('Lista con viñetas'), words: t('lista viñetas bullets'), run: (e, r) => del(e, r).toggleBulletList().run() },
-    { key: 'ol', icon: '1.', title: t('Lista numerada'), hint: t('Pasos en orden'), words: 'numerada pasos ordenada', run: (e, r) => del(e, r).toggleOrderedList().run() },
+    { key: 'ol', icon: '1.', title: t('Lista numerada'), hint: t('Pasos en orden'), words: t('numerada pasos ordenada'), run: (e, r) => del(e, r).toggleOrderedList().run() },
     { key: 'task', icon: '☐', title: t('Lista de tareas'), hint: t('Casillas para marcar'), words: t('tareas checklist casillas pendientes'), run: (e, r) => del(e, r).toggleTaskList().run() },
     { key: 'quote', icon: '!', title: t('Aviso o cita'), hint: t('Caja destacada para lo importante'), words: t('aviso cita importante nota destacado'), run: (e, r) => del(e, r).toggleBlockquote().run() },
-    { key: 'math', icon: 'fx', title: t('Fórmula'), hint: t('Ecuación centrada (LaTeX)'), words: 'formula ecuacion latex matematica', run: (e, r) => { del(e, r).run(); api.openMath('block'); } },
-    { key: 'imath', icon: 'x²', title: t('Fórmula en la línea'), hint: t('Dentro del párrafo'), words: 'formula linea inline latex', run: (e, r) => { del(e, r).run(); api.openMath('inline'); } },
-    { key: 'table', icon: '▦', title: t('Tabla'), hint: t('Filas y columnas'), words: 'tabla filas columnas', run: (e, r) => del(e, r).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
+    { key: 'math', icon: 'fx', title: t('Fórmula'), hint: t('Ecuación centrada (LaTeX)'), words: t('formula ecuacion latex matematica'), run: (e, r) => { del(e, r).run(); api.openMath('block'); } },
+    { key: 'imath', icon: 'x²', title: t('Fórmula en la línea'), hint: t('Dentro del párrafo'), words: t('formula linea inline latex'), run: (e, r) => { del(e, r).run(); api.openMath('inline'); } },
+    { key: 'table', icon: '▦', title: t('Tabla'), hint: t('Filas y columnas'), words: t('tabla filas columnas'), run: (e, r) => del(e, r).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
     { key: 'img', icon: '▣', title: t('Imagen o diagrama'), hint: t('Desde tu equipo; también puedes pegarla'), words: t('imagen foto diagrama dibujo'), run: (e, r) => { del(e, r).run(); api.pickImage(); } },
-    { key: 'code', icon: '</>', title: t('Código'), hint: t('Bloque de código'), words: 'codigo programacion code', run: (e, r) => del(e, r).toggleCodeBlock().run() },
-    { key: 'hr', icon: '―', title: t('Línea divisoria'), hint: t('Separa partes de la nota'), words: 'linea divisoria separador', run: (e, r) => del(e, r).setHorizontalRule().run() },
+    { key: 'code', icon: '</>', title: t('Código'), hint: t('Bloque de código'), words: t('codigo programacion code'), run: (e, r) => del(e, r).toggleCodeBlock().run() },
+    { key: 'hr', icon: '―', title: t('Línea divisoria'), hint: t('Separa partes de la nota'), words: t('linea divisoria separador'), run: (e, r) => del(e, r).setHorizontalRule().run() },
   ];
 }
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -346,7 +346,7 @@ function MathPanel({ edit, onSave, onCancel, onRemove }: { edit: NonNullable<Mat
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
         {MATH_SNIPPETS.map((m) => <button key={m.t} type="button" className="kd-chip" onClick={() => insert(m.s)} title={m.s}>{m.t}</button>)}
       </div>
-      <div className="kd-math-prev" aria-live="polite" dangerouslySetInnerHTML={{ __html: html || `<span style="color:${C.muted};font-size:13px">Vista previa</span>` }} />
+      <div className="kd-math-prev" aria-live="polite" dangerouslySetInnerHTML={{ __html: html || `<span style="color:${C.muted};font-size:13px">${trn('Vista previa')}</span>` }} />
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
         {onRemove && <button type="button" className="kd-btn" style={{ color: C.badText, marginRight: 'auto' }} onClick={onRemove}>{t('Quitar')}</button>}
         <button type="button" className="kd-btn" onClick={onCancel}>{t('Cancelar')}</button>

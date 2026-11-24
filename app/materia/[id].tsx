@@ -391,7 +391,7 @@ function Grades({ subject, grades, avg, doneWeight, scale, passMark, target, onA
           <View style={{ width: `${Math.min(100, Math.max(0, totalWeight - doneWeight))}%`, backgroundColor: subject.color + '55' }} />
         </View>
         <View style={{ flexDirection: 'row', gap: 14, marginTop: 8, flexWrap: 'wrap' }}>
-          <Legend color={subject.color} text={`Calificado ${doneWeight}%`} />
+          <Legend color={subject.color} text={trn('Calificado {v}%', { v: doneWeight })} />
           {totalWeight - doneWeight > 0 && <Legend color={subject.color + '55'} text={t('Por calificar {v}%', { v: totalWeight - doneWeight })} />}
           {missing > 0 && <Legend color={C.surface2} text={t('Sin registrar {missing}%', { missing })} />}
         </View>

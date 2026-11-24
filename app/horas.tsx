@@ -204,7 +204,7 @@ function Horas() {
               const what = [s.project_id && names[s.project_id]?.name, s.subject_id && names[s.subject_id]?.name].filter(Boolean).join(' · ') || trn('Sin proyecto ni área');
               return (
                 <View key={s.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: i < arr.length - 1 ? 1 : 0, borderBottomColor: C.line }}>
-                  <Ionicons name={s.source === 'manual' ? 'create-outline' : s.source === 'timer' ? 'stopwatch-outline' : 'timer-outline'} size={17} color={C.muted} accessibilityLabel={s.source === 'manual' ? 'A mano' : s.source === 'timer' ? trn('Cronómetro') : trn('Enfoque')} />
+                  <Ionicons name={s.source === 'manual' ? 'create-outline' : s.source === 'timer' ? 'stopwatch-outline' : 'timer-outline'} size={17} color={C.muted} accessibilityLabel={s.source === 'manual' ? trn('A mano') : s.source === 'timer' ? trn('Cronómetro') : trn('Enfoque')} />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={{ color: C.text, fontSize: 13.5 }} numberOfLines={1}>{what}</Text>
                     <Text style={{ color: C.muted, fontSize: 12 }} numberOfLines={1}>{d.toLocaleDateString(locale(), { weekday: 'short', day: 'numeric', month: 'short' })}{s.note ? ` · ${s.note}` : ''}</Text>

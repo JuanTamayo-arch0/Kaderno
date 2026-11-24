@@ -1,4 +1,4 @@
-import { t, monthsShort } from './i18n';
+import { t, monthsShort, dayMonth } from './i18n';
 // ============================================================
 //  Utilidades puras para los archivos versionados de un proyecto.
 //  Sin dependencias de Supabase ni de React Native para poder probarlas.
@@ -127,6 +127,6 @@ export function whenLabel(iso: string, now: Date = new Date()): string {
   const y = new Date(now); y.setDate(now.getDate() - 1);
   if (d.toDateString() === y.toDateString()) return t('ayer');
   const meses = monthsShort();
-  const base = `${d.getDate()} ${meses[d.getMonth()]}`;
+  const base = dayMonth(d.getDate(), meses[d.getMonth()]);
   return d.getFullYear() === now.getFullYear() ? base : `${base} ${d.getFullYear()}`;
 }

@@ -7,7 +7,7 @@ import { Member, colorOf, initialsOf, logActivity, nameOf } from '../../lib/proj
 import { mentionQuery, mentionMatches, insertMention, mentionsIn, commentParts, type MentionPerson } from '../../lib/comments';
 import { getComments, addComment, editComment, deleteComment, commentsAvailable, type TaskComment } from '../../lib/commentsDb';
 import { COARSE_POINTER, hace } from './projectUi';
-import { t } from '../../lib/i18n';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Comentarios de una tarea de proyecto (v23, fase 2): con @menciones,
@@ -139,7 +139,7 @@ export function TaskComments({ projectId, taskId, taskTitle, members, myId, isOw
         {sugg.length > 0 && (
           <View style={{ position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: 6, backgroundColor: C.surface, borderWidth: 1, borderColor: C.line, borderRadius: 12, padding: 4, zIndex: 10 }} accessibilityRole="menu">
             {sugg.map((p, i) => (
-              <Pressable key={p.user_id} onPress={() => choose(p)} accessibilityRole="menuitem" accessibilityLabel={`Mencionar a ${p.name}`}
+              <Pressable key={p.user_id} onPress={() => choose(p)} accessibilityRole="menuitem" accessibilityLabel={trn('Mencionar a {name}', { name: p.name })}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 8, borderRadius: 8, backgroundColor: i === pick ? C.surface2 : 'transparent' }}>
                 <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: colorOf(p.user_id), alignItems: 'center', justifyContent: 'center' }}>
                   <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{initialsOf(byId[p.user_id]?.profile)}</Text>

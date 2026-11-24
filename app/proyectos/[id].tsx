@@ -306,7 +306,7 @@ function ProyectoDetalle() {
             </Text>
           </View>
           {latest && (
-            <Pressable onPress={() => setStatusOpen(true)} accessibilityRole="button" accessibilityLabel={`Estado: ${HEALTH[latest.health].label}`}
+            <Pressable onPress={() => setStatusOpen(true)} accessibilityRole="button" accessibilityLabel={trn('Estado: {label}', { label: HEALTH[latest.health].label })}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: isWide ? 5 : 9, paddingHorizontal: isWide ? 10 : 12, borderRadius: R.pill, backgroundColor: HEALTH[latest.health].color + '22' }}>
               <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: HEALTH[latest.health].color }} />
               {isWide && <Text style={{ color: C.text, fontSize: 12, fontWeight: '700' }}>{HEALTH[latest.health].label}</Text>}

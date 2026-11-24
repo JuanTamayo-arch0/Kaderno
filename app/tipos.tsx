@@ -163,7 +163,7 @@ function Tipos() {
                 </Pressable>
               )}
               {t.builtin ? (
-                <Pressable onPress={() => reset(t)} accessibilityRole="button" accessibilityLabel={`Restablecer ${t.label}`} style={ICON}>
+                <Pressable onPress={() => reset(t)} accessibilityRole="button" accessibilityLabel={trn('Restablecer {label}', { label: t.label })} style={ICON}>
                   <Ionicons name="refresh-outline" size={18} color={C.muted} />
                 </Pressable>
               ) : (

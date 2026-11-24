@@ -12,7 +12,7 @@ import {
 } from '../../lib/terms';
 import { addPastTerm, closeTerm, saveGradeScale, termActivity } from '../../lib/termsDb';
 import { fmtHours } from '../../lib/day';
-import { t, locale } from '../../lib/i18n';
+import { t, locale, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Semestres (v26, fase 3): cerrar el semestre, agregar uno pasado y la
@@ -114,7 +114,7 @@ export function CloseTermSheet({ visible, term, subjects, scale, onClose, onClos
     setBusy(true);
     try {
       const t = await closeTerm({ termId: term.id, subjects: list, scale, reflection: reflection.trim(), next: next.trim(), focusMinutes: act?.focusMinutes ?? 0, cards: act?.cards ?? 0, bestStreak: act?.bestStreak ?? 0 });
-      toast(`Semestre ${term.name} cerrado${next.trim() ? `. Empieza ${next.trim()}` : ''}`, { tone: 'good' });
+      toast(trn('Semestre {name} cerrado', { name: term.name }) + (next.trim() ? trn('. Empieza {v}', { v: next.trim() }) : ''), { tone: 'good' });
       onClosed(t);
     } catch (e) { notify(t('No se pudo cerrar'), friendlyError(e)); }
     finally { setBusy(false); }
@@ -188,7 +188,7 @@ export function PastTermSheet({ visible, scale, onClose, onAdded }: { visible: b
   async function save() {
     if (!name.trim()) { notify(t('Falta el nombre'), t('Escribe cuál semestre es, por ejemplo 2025-2.')); return; }
     setBusy(true);
-    try { const t = await addPastTerm({ name: name.trim(), subjects: list, scale, startsOn: from, endsOn: to }); toast(`Semestre ${t.name} agregado`, { tone: 'good' }); onAdded(t); }
+    try { const t = await addPastTerm({ name: name.trim(), subjects: list, scale, startsOn: from, endsOn: to }); toast(trn('Semestre {name} agregado', { name: t.name }), { tone: 'good' }); onAdded(t); }
     catch (e) { notify(t('No se pudo guardar'), friendlyError(e)); }
     finally { setBusy(false); }
   }

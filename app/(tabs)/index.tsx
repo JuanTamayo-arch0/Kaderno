@@ -281,7 +281,7 @@ export default function Hoy() {
     else if (c.offer === 'despues') toast(trn('Sin afán: ¿la pasas a la próxima semana? {title}', { title: t.title }), { actionLabel: trn('Mover'), onAction: () => move(t, isoDate(addDays(today, 7 - ((today.getDay() + 6) % 7))), trn('el lunes')) });
   }
   async function move(t: Task, iso: string | null, label: string) {
-    try { await moveTaskDate(t, iso); toast(`Movida a ${label}`); load(); }
+    try { await moveTaskDate(t, iso); toast(trn('Movida a {label}', { label })); load(); }
     catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
   }
   async function hideProj(p: MyProjectTask, wholeProject: boolean) {
@@ -315,7 +315,7 @@ export default function Hoy() {
       ...(t.status !== 'done' ? [{ label: trn('Iniciar cronómetro'), icon: 'play-circle-outline' as const, onPress: () => { startStopwatch({ title: t.title, subjectId: t.subject_id, assignmentId: t.id }); toast(trn('Cronómetro: ') + t.title); } }] : []),
       ...(['examen', 'quiz'].includes(String(t.type)) && t.status !== 'done' ? [{ label: trn('Plan de repaso'), icon: 'calendar-number-outline' as const, onPress: () => openTask(t) }] : []),
       ...(t.repeat_rule && t.status !== 'done' ? [{ label: trn('Saltar esta vez'), icon: 'play-skip-forward-outline' as const, onPress: async () => {
-        try { await skipRepeat(t.id); toast(`Saltada. Sigue ${ruleText(t.repeat_rule)}.`, { actionLabel: trn('Ver'), onAction: load }); load(); refreshNavCounts(true); }
+        try { await skipRepeat(t.id); toast(trn('Saltada. Sigue {v}.', { v: ruleText(t.repeat_rule) }), { actionLabel: trn('Ver'), onAction: load }); load(); refreshNavCounts(true); }
         catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
       } }] : []),
       { label: trn('Mover a hoy'), icon: 'today-outline', onPress: () => move(t, isoDate(today), 'hoy') },
@@ -483,7 +483,7 @@ export default function Hoy() {
       <View style={{ width: 4, alignSelf: 'stretch', borderRadius: 2, backgroundColor: (classNow ?? classNext)!.color }} />
       <View style={{ flex: 1, minWidth: 150 }}>
         <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-          {classNow ? t('Ahora · hasta {minToLabel}', { minToLabel: minToLabel(classNow.end!) }) : `Siguiente ${mv.klass} · ${minToLabel(classNext!.start)}`}
+          {classNow ? t('Ahora · hasta {minToLabel}', { minToLabel: minToLabel(classNow.end!) }) : trn('Siguiente {klass} · {time}', { klass: mv.klass, time: minToLabel(classNext!.start) })}
         </Text>
         <Text style={{ color: C.text, fontSize: 16, fontWeight: '700', marginTop: 2 }}>{(classNow ?? classNext)!.title}</Text>
         {classNow && classNext && <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{t('Después: {title}, {start}', { title: classNext.title, start: minToLabel(classNext.start) })}</Text>}
@@ -842,7 +842,7 @@ function AgendaRow({ it, now, isToday, onPress }: { it: AgendaItem; now: Date; i
         <Text style={{ width: 66, color: C.muted, fontSize: 12.5, fontVariant: ['tabular-nums'] }}>{minToLabel(it.start)}</Text>
         <View style={{ flex: 1, borderLeftWidth: 3, borderLeftColor: it.color, borderStyle: 'dashed', paddingLeft: 9 }}>
           <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '600' }} numberOfLines={1}>{t('Plan: {title}', { title: it.title })}</Text>
-          <Text style={{ color: live ? C.brand : C.muted, fontSize: 12, fontWeight: live ? '700' : '400' }}>{t('{v}{v2}toca para empezar', { v: live ? t('Ahora · ') : '', v2: it.place ? placePhrase(it.place).replace(/^en /, 'En ') + ' · ' : '' })}</Text>
+          <Text style={{ color: live ? C.brand : C.muted, fontSize: 12, fontWeight: live ? '700' : '400' }}>{t('{v}{v2}toca para empezar', { v: live ? t('Ahora · ') : '', v2: it.place ? capitalize(placePhrase(it.place)) + ' · ' : '' })}</Text>
         </View>
         <Ionicons name="play-circle-outline" size={18} color={C.brand} style={{ alignSelf: 'center' }} />
       </Pressable>

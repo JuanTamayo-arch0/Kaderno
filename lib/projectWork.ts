@@ -1,4 +1,4 @@
-import { t } from './i18n';
+import { t, trn } from './i18n';
 // ============================================================
 //  Proyectos de trabajo (v25, fase 3). Puro, con pruebas: prioridad,
 //  etiquetas, bloqueos, filtros, reglas y estado del proyecto.
@@ -50,8 +50,8 @@ export type Rule = { id: string; project_id: string; trigger: 'moved' | 'created
 /** "Cuando pase a En revisión, asignar a Ana". */
 export function ruleText(r: Pick<Rule, 'trigger' | 'column_key' | 'action' | 'user_id'>, cols: { key: string; label: string }[], nameOf: (id: string) => string): string {
   const when = r.trigger === 'moved' ? t('Cuando pase a {v}', { v: cols.find((c) => c.key === r.column_key)?.label ?? r.column_key }) : r.trigger === 'created' ? t('Cuando se cree una tarea') : t('Cuando se venza una tarea');
-  const what = r.action === 'assign' ? `asignar a ${r.user_id ? nameOf(r.user_id) : '…'}`
-    : r.action === 'notify_assignee' ? t('avisar a quien la tiene') : r.user_id ? `avisar a ${nameOf(r.user_id)}` : t('avisar al dueño del proyecto');
+  const what = r.action === 'assign' ? trn('asignar a {name}', { name: r.user_id ? nameOf(r.user_id) : '…' })
+    : r.action === 'notify_assignee' ? t('avisar a quien la tiene') : r.user_id ? trn('avisar a {name}', { name: nameOf(r.user_id) }) : t('avisar al dueño del proyecto');
   return `${when}, ${what}`;
 }
 /** ¿La regla se puede guardar? (igual que las restricciones del servidor) */

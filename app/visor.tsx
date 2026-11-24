@@ -8,7 +8,7 @@ import { RequireAuth } from '../components/RequireAuth';
 import { PdfViewer } from '../components/pdf/PdfViewer';
 import { openUrlFor } from '../lib/highlightsDb';
 import type { FileKind } from '../lib/highlights';
-import { t } from '../lib/i18n';
+import { t, trn } from '../lib/i18n';
 
 // react-native-webview NO funciona en web; solo lo cargamos en móvil.
 let WebView: any = null;
@@ -46,7 +46,7 @@ function Visor() {
         {!clean ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: C.muted }}>{t('No se pudo cargar el documento.')}</Text></View>
         ) : isWeb && isPdf ? (
-          <PdfViewer url={clean} name={name || 'Documento.pdf'} kind={kind} fileId={fileId} subjectId={subjectId} startPage={Number(params.p) || 1} />
+          <PdfViewer url={clean} name={name || trn('Documento.pdf')} kind={kind} fileId={fileId} subjectId={subjectId} startPage={Number(params.p) || 1} />
         ) : isWeb ? (
           // En web renderizamos un iframe nativo del navegador (muestra el PDF).
           React.createElement('iframe', { src: clean, style: { border: 'none', width: '100%', height: '100%', backgroundColor: '#fff' }, title: name || t('Documento') })

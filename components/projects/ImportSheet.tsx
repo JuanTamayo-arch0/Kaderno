@@ -16,7 +16,7 @@ import {
   type ColumnMapping, type DuplicatePolicy, type ExistingTask, type Field, type NormalizedTask,
   type ParsedFile, type RowIssue,
 } from '../../lib/import';
-import { t } from '../../lib/i18n';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Importar tareas a un proyecto (CSV o JSON), con vista previa.
@@ -177,8 +177,8 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
         const r = await importProjectTasks(project.id, payload, 'crear');
         const parts = [`${r.created} ${r.created === 1 ? t('tarea importada') : t('tareas importadas')}`];
         if (r.updated) parts.push(`${r.updated} actualizadas`);
-        if (r.skipped) parts.push(`${r.skipped} repetidas omitidas`);
-        if (r.steps) parts.push(`${r.steps} ítems de checklist`);
+        if (r.skipped) parts.push(trn('{n} repetidas omitidas', { n: r.skipped }));
+        if (r.steps) parts.push(t('{n} ítems de checklist', { n: r.steps }));
         onDone({ batchId: r.batch_id, text: parts.join(' · ') });
       }
     } catch (e: any) {
@@ -195,7 +195,7 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
   };
 
   const total = isUpdate && diff ? diff.updates.length + diff.creates.length + diff.deletes.length : importable.length;
-  const accion = isUpdate ? t('Aplicar cambios') : `Importar ${importable.length} ${importable.length === 1 ? t('tarea') : t('tareas')}`;
+  const accion = isUpdate ? t('Aplicar cambios') : (importable.length === 1 ? trn('Importar 1 tarea') : trn('Importar {n} tareas', { n: importable.length }));
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -255,7 +255,7 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
                     <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{t('{size} {v} en el proyecto', { size: dups.size, v: dups.size === 1 ? t('tarea ya existe') : t('tareas ya existen') })}</Text>
                     <Text style={{ color: C.muted, fontSize: 12, marginTop: 3, marginBottom: 9 }}>{t('Las reconocí por el código del título (como H-009) o por el mismo título. ¿Qué hago con ellas?')}</Text>
                     <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-                      {([['actualizar', 'Actualizarlas (recomendado)'], ['omitir', t('Dejarlas como están')], ['crear', t('Crearlas otra vez')]] as const).map(([k, l]) => (
+                      {([['actualizar', trn('Actualizarlas (recomendado)')], ['omitir', t('Dejarlas como están')], ['crear', t('Crearlas otra vez')]] as const).map(([k, l]) => (
                         <Pressable key={k} onPress={() => setDupPolicy(k)}
                           style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: R.pill, borderWidth: 1, borderColor: dupPolicy === k ? C.brand : C.line, backgroundColor: dupPolicy === k ? C.brand + '22' : 'transparent' }}>
                           <Text style={{ color: dupPolicy === k ? C.brand : C.text, fontSize: 12.5, fontWeight: dupPolicy === k ? '700' : '500' }}>{l}</Text>
@@ -319,7 +319,7 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
                     <TaskRow
                       key={t.row} task={t} issues={issuesForRow(result.issues, t.row)}
                       colLabel={columnLabel(ctx.columns, t.status ?? firstCol)}
-                      who={t.assignee_id ? nombre(t.assignee_id) : t.assignee_input ? `${t.assignee_input} (sin asignar)` : 'Sin asignar'}
+                      who={t.assignee_id ? nombre(t.assignee_id) : t.assignee_input ? trn('{v} (sin asignar)', { v: t.assignee_input }) : trn('Sin asignar')}
                       duplicate={dups.has(t.row)} dupPolicy={dupPolicy}
                       editing={editRow === t.row}
                       onToggleSkip={() => setSkip((s) => { const n = new Set(s); n.has(t.row) ? n.delete(t.row) : n.add(t.row); return n; })}
@@ -392,7 +392,7 @@ function Inicio({ project, members, subjectName, ctxColumns, paste, setPaste, bu
       style={{ borderWidth: 1.5, borderStyle: 'dashed', borderColor: dragOver ? C.brand : C.line, backgroundColor: dragOver ? C.brand + '12' : C.surface2 + '80', borderRadius: 14, paddingVertical: 22, paddingHorizontal: 16, alignItems: 'center', gap: 6 }}>
       {busy ? <ActivityIndicator color={C.brand} /> : <Ionicons name="cloud-upload-outline" size={28} color={C.brand} />}
       <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '600', textAlign: 'center' }}>
-        {canDrop ? t('Arrastra tu archivo aquí o ') : ''}<Text style={{ color: C.brand }}>{canDrop ? 'elige uno' : t('Elegir archivo')}</Text>
+        {canDrop ? t('Arrastra tu archivo aquí o ') : ''}<Text style={{ color: C.brand }}>{canDrop ? trn('elige uno') : t('Elegir archivo')}</Text>
       </Text>
       <Text style={{ color: C.muted, fontSize: 12 }}>{t('.csv (separado por , o ;) o .json')}</Text>
     </Pressable>
@@ -414,11 +414,11 @@ function Inicio({ project, members, subjectName, ctxColumns, paste, setPaste, bu
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Plantillas:')}</Text>
-        <Pressable onPress={() => saveFile('plantilla_tareas.csv', encodeUtf8(TEMPLATE_CSV, true), 'text/csv')} hitSlop={6}>
+        <Pressable onPress={() => saveFile(trn('plantilla_tareas.csv'), encodeUtf8(TEMPLATE_CSV, true), 'text/csv')} hitSlop={6}>
           <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>{t('Descargar CSV')}</Text>
         </Pressable>
         <Text style={{ color: C.muted }}>·</Text>
-        <Pressable onPress={() => saveFile('plantilla_tareas.json', TEMPLATE_JSON, 'application/json')} hitSlop={6}>
+        <Pressable onPress={() => saveFile(trn('plantilla_tareas.json'), TEMPLATE_JSON, 'application/json')} hitSlop={6}>
           <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>{t('Descargar JSON')}</Text>
         </Pressable>
       </View>

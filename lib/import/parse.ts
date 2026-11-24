@@ -79,7 +79,7 @@ export function parseJsonText(text: string): ParsedFile {
   const warnings: string[] = [];
   list.forEach((item, idx) => {
     if (!item || typeof item !== 'object' || Array.isArray(item)) {
-      warnings.push(`El elemento ${idx + 1} no es una tarea y se ignoró`);
+      warnings.push(t('El elemento {n} no es una tarea y se ignoró', { n: idx + 1 }));
       return;
     }
     const obj = item as Record<string, unknown>;
@@ -137,7 +137,7 @@ export function parseCsvText(text: string): ParsedFile {
   const headers: string[] = [];
   const counts = new Map<string, number>();
   data[headerIdx].forEach((h, i) => {
-    let name = (h ?? '').trim() || `Columna ${i + 1}`;
+    let name = (h ?? '').trim() || t('Columna {n}', { n: i + 1 });
     const c = (counts.get(name) ?? 0) + 1;
     counts.set(name, c);
     if (c > 1) name = `${name} (${c})`;
@@ -150,7 +150,7 @@ export function parseCsvText(text: string): ParsedFile {
     const r = data[i];
     if (isEmpty(r)) continue;
     if (r.length > headers.length && r.slice(headers.length).some((c) => (c ?? '').trim() !== '')) {
-      warnings.push(`La fila ${i + 1} tiene más columnas que el encabezado; se ignoró lo que sobra`);
+      warnings.push(t('La fila {n} tiene más columnas que el encabezado; se ignoró lo que sobra', { n: i + 1 }));
     }
     const obj: Record<string, unknown> = {};
     headers.forEach((h, j) => {

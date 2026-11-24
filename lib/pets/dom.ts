@@ -13,6 +13,7 @@
 import { petSheet, SHEET_FRAMES, type Frame, type Mood, type Outfit, type Species } from './art';
 import { PetMotion, type Rect, type World } from './motion';
 import type { ActionId } from './brain';
+import { t } from '../i18n';
 
 const FRAMES: Frame[] = SHEET_FRAMES;
 export const PET_SIZE = 64;
@@ -181,7 +182,7 @@ export class PetController {
     this.bName = document.createElement('span');
     Object.assign(this.bName.style, { fontSize: '12.5px', fontWeight: '800', color: opts.palette.muted });
     const x = document.createElement('button');
-    x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', 'Cerrar');
+    x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', t('Cerrar'));
     Object.assign(x.style, { background: 'none', border: '0', cursor: 'pointer', color: opts.palette.muted, fontSize: '20px', lineHeight: '1', width: '28px', height: '28px', margin: '-6px -8px -6px 0' });
     x.addEventListener('click', (e) => { e.stopPropagation(); this.hideBubble(); });
     head.append(this.bName, x);
@@ -370,7 +371,7 @@ export class PetController {
   private applySheet() {
     this.el.style.backgroundImage = sheetUrl(this.opts.species, this.mood, this.opts.outfit, this.look);
     this.el.style.backgroundSize = `${FRAMES.length * PET_SIZE}px ${PET_SIZE}px`;
-    this.el.setAttribute('aria-label', `${this.opts.name}, tu mascota. Tócala para hablarle o arrástrala para moverla.`);
+    this.el.setAttribute('aria-label', t('{name}, tu mascota. Tócala para hablarle o arrástrala para moverla.', { name: this.opts.name }));
     this.bName.textContent = this.opts.name;
   }
   setLook(look: PetLook) {

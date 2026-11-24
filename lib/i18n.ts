@@ -115,6 +115,16 @@ const ES_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep',
 const ES_LONG = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const EN_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const EN_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const ES_DAYS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+const ES_DAYS_LONG = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const EN_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const EN_DAYS_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+/** Días cortos (0 = domingo, como getDay): "mié" en español, "Wed" en inglés. */
+export function daysShort(): string[] { return [...(current === 'en' ? EN_DAYS : ES_DAYS)]; }
+/** Días completos (0 = domingo): "miércoles" en español, "Wednesday" en inglés. */
+export function daysLong(): string[] { return [...(current === 'en' ? EN_DAYS_LONG : ES_DAYS_LONG)]; }
+/** Día y mes en el orden del idioma: "23 nov" en español, "Nov 23" en inglés. */
+export function dayMonth(day: number | string, month: string): string { return current === 'en' ? `${month} ${day}` : `${day} ${month}`; }
 /** Meses cortos como los escribe la app: "nov" en español, "Nov" en inglés. */
 export function monthsShort(): string[] { return [...(current === 'en' ? EN_SHORT : ES_SHORT)]; }
 /** Meses completos: "noviembre" en español, "November" en inglés. */

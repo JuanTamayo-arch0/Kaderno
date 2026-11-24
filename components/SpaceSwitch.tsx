@@ -4,7 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../lib/theme';
 import { useMode, type Space } from '../lib/mode';
 import { switchSpace } from '../lib/spaceSwitch';
-import { t } from '../lib/i18n';
+import { t, trn } from '../lib/i18n';
 
 // ============================================================
 //  Estudio | Trabajo (v26, fase 2). Solo aparece con "Los dos".
@@ -24,7 +24,7 @@ export function SpaceSwitch({ compact = false }: { compact?: boolean }) {
       {ITEMS.map((it) => {
         const on = space === it.key;
         return (
-          <Pressable key={it.key} onPress={() => switchSpace(it.key)} accessibilityRole="radio" accessibilityState={{ checked: on }} accessibilityLabel={`Espacio ${it.label}`}
+          <Pressable key={it.key} onPress={() => switchSpace(it.key)} accessibilityRole="radio" accessibilityState={{ checked: on }} accessibilityLabel={trn('Espacio {label}', { label: it.label })}
             style={({ hovered }: any) => ({ flex: compact ? undefined : 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 7, paddingHorizontal: compact ? 10 : 6, minHeight: 34, borderRadius: 8, backgroundColor: on ? C.brand : hovered ? C.surface : 'transparent' })}>
             <Ionicons name={it.icon as any} size={14} color={on ? C.onBrand : C.muted} />
             {(!compact || on) && <Text style={{ color: on ? C.onBrand : C.text, fontSize: 12.5, fontWeight: '700' }}>{it.label}</Text>}

@@ -4,7 +4,7 @@
 // ============================================================
 export * from '../supabase/functions/_shared/plans';
 import { LIMITS, LIMIT_TEXT, PRICES, type LimitKey, type Period, type PlanId } from '../supabase/functions/_shared/plans';
-import { t, monthsShort } from './i18n';
+import { t, monthsShort, dayMonth } from './i18n';
 
 export type MyPlan = {
   plan: PlanId; own_plan?: PlanId; status?: 'none' | 'trial' | 'active' | 'past_due' | 'canceled';
@@ -14,7 +14,7 @@ export type MyPlan = {
 };
 
 const MONTHS = monthsShort();
-export const shortDate = (iso: string | Date) => { const d = new Date(iso); return `${d.getDate()} ${MONTHS[d.getMonth()]}${d.getFullYear() !== new Date().getFullYear() ? ` ${d.getFullYear()}` : ''}`; };
+export const shortDate = (iso: string | Date) => { const d = new Date(iso); return `${dayMonth(d.getDate(), MONTHS[d.getMonth()])}${d.getFullYear() !== new Date().getFullYear() ? ` ${d.getFullYear()}` : ''}`; };
 const daysUntil = (iso: string, now: Date) => Math.max(0, Math.ceil((new Date(iso).getTime() - now.getTime()) / 86_400_000));
 
 export type PlanView = { name: string; badge: 'free' | 'trial' | 'pro' | 'team' | 'warn'; line: string; daysLeft: number | null; canPay: boolean; isPaid: boolean };
@@ -44,7 +44,7 @@ export function planView(mp: MyPlan | null | undefined, now = new Date()): PlanV
     return { name, badge: 'warn', daysLeft: left, canPay: true, isPaid: true, line: t('No pudimos cobrar la renovación{v}.{next}{keep}', { v: mp.source_label ? ` a ${mp.source_label}` : '', next, keep }) };
   }
   if (mp?.auto_renew && end) {
-    return { name, badge: plan === 'team' ? 'team' : 'pro', daysLeft: left, canPay: false, isPaid: true, line: t('Se renueva el {end}{v}.', { end: shortDate(end), v: mp.source_label ? ` con ${mp.source_label}` : '' }) };
+    return { name, badge: plan === 'team' ? 'team' : 'pro', daysLeft: left, canPay: false, isPaid: true, line: t('Se renueva el {end}{v}.', { end: shortDate(end), v: mp.source_label ? t(' con {v}', { v: mp.source_label }) : '' }) };
   }
   return { name, badge: plan === 'team' ? 'team' : 'pro', daysLeft: left, canPay: true, isPaid: true, line: end ? t('Pagado hasta el {end}. No se renueva solo: te avisamos antes.', { end: shortDate(end) }) : t('Activo.') };
 }

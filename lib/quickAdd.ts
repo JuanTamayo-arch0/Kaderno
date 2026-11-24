@@ -196,7 +196,7 @@ export function parseQuickAdd(input: string, subjects: QuickSubject[], types: Qu
   if (!title) {
     const tl = types.find((t) => t.key === typeKey)?.label ?? t('Tarea');
     const sn = subjects.find((s) => s.id === subjectId)?.name;
-    title = sn ? `${tl} de ${sn}` : tl;
+    title = sn ? t('{tl} de {sn}', { tl, sn }) : tl;
   }
   title = title[0].toUpperCase() + title.slice(1);
 

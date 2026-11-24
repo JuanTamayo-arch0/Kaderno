@@ -6,7 +6,7 @@ import { C } from '../../lib/theme';
 import { KadernoMark } from '../../components/brand/KadernoLogo';
 import { Button, Field } from '../../components/ds';
 import { publicFormInfo, submitRequest, type FormInfo } from '../../lib/clientLinks';
-import { t } from '../../lib/i18n';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Formulario de solicitudes (v25, fase 4): público y sin cuenta. Lo que
@@ -21,7 +21,7 @@ export default function Solicitar() {
   const [due, setDue] = useState(''); const [trap, setTrap] = useState('');
   const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null); const [sent, setSent] = useState(false);
   useEffect(() => { publicFormInfo(String(token)).then(setInfo).catch(() => setInfo(null)); }, [token]);
-  useEffect(() => { if (Platform.OS === 'web' && typeof document !== 'undefined' && info) document.title = `Solicitud · ${info.name}`; }, [info]);
+  useEffect(() => { if (Platform.OS === 'web' && typeof document !== 'undefined' && info) document.title = trn('Solicitud · {name}', { name: info.name }); }, [info]);
 
   async function send() {
     if (due && !/^\d{4}-\d{2}-\d{2}$/.test(due)) { setErr(t('La fecha va como AAAA-MM-DD.')); return; }

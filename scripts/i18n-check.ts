@@ -9,6 +9,8 @@
 //    1. Textos en español sin envolver en t() (en app/, components/, lib/).
 //    2. Llaves sin traducción al inglés.
 //    3. Traducciones que no conservan las {variables} o los espacios de los bordes.
+//  Para 1 también usa el vocabulario de las llaves: una palabra que solo sale en
+//  español ("Agregado", "Bloque") dentro de un texto o una plantilla `...` sin t().
 //  Lo que debe quedarse en español se marca con `// i18n-ok` (línea) o
 //  `// i18n-ok-archivo` (archivo entero, al principio).
 // ============================================================
@@ -29,6 +31,19 @@ function walk(p: string, out: string[]) {
   else if (/\.tsx?$/.test(p) && !/\.d\.ts$/.test(p)) out.push(p);
 }
 
+const WORD = /[A-Za-záéíóúñÁÉÍÓÚÑü]{3,}/g;
+/** Palabras que solo aparecen en las llaves en español, nunca en las traducciones. */
+function spanishVocab(): Set<string> {
+  const es = new Set<string>(), en = new Set<string>();
+  for (const [k, v] of Object.entries(EN)) {
+    for (const w of k.match(WORD) ?? []) es.add(w.toLowerCase());
+    for (const w of v.match(WORD) ?? []) en.add(w.toLowerCase());
+  }
+  return new Set([...es].filter((w) => !en.has(w)));
+}
+/** Un identificador, una ruta o un nombre de archivo: no es texto para la gente. */
+const notProse = (s: string) => /^[\w\-.:#?=&%@/]*$/.test(s.trim()) || /^[a-z_:\-]+$/.test(s.trim()) || /^\/|\/[a-z]/.test(s);
+
 const placeholders = (s: string) => new Set([...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]));
 const edges = (s: string) => [/^\s/.test(s), /\s$/.test(s)].join(',');
 
@@ -36,6 +51,8 @@ export function check(dirs = ['app', 'components', 'lib']): Report {
   const files: string[] = [];
   for (const d of dirs) walk(path.join(ROOT, d), files);
   const rep: Report = { keys: new Map(), unwrapped: [], missing: [], broken: [], manualFiles: [], dynamic: [] };
+  const vocab = spanishVocab();
+  const vocabHit = (s: string) => !notProse(s) && (s.match(WORD) ?? []).some((w) => vocab.has(w.toLowerCase()));
   for (const file of files) {
     const rel = path.relative(ROOT, file).replace(/\\/g, '/');
     if (/^lib\/i18n(\.ts|\/)/.test(rel)) continue;
@@ -66,10 +83,12 @@ export function check(dirs = ['app', 'components', 'lib']): Report {
           const v = jsxTextValue(node.text);
           if (v.trim() && isJsxHuman(v)) rep.unwrapped.push({ file: rel, line: at(node), text: v.trim().slice(0, 100) });
         } else if ((ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) && !insideT(node)) {
-          if ((looksSpanish(node.text) || looksLabel(node.text) || (inTVars(node) || pluralBranch(node)) && isJsxHuman(node.text) && /[a-záéíóúñ]/.test(node.text)) && !inNonUiPosition(node)) rep.unwrapped.push({ file: rel, line: at(node), text: node.text.slice(0, 100) });
+          const p = node.parent;
+          const skip = ts.isImportDeclaration(p) || ts.isExportDeclaration(p) || ts.isLiteralTypeNode(p) || ts.isCaseClause(p) || (ts.isPropertyAssignment(p) && p.name === node) || ts.isElementAccessExpression(p) || (ts.isBinaryExpression(p) && /^(===|!==|==|!=)$/.test(p.operatorToken.getText(sf)));
+          if ((looksSpanish(node.text) || looksLabel(node.text) || (inTVars(node) || pluralBranch(node)) && isJsxHuman(node.text) && /[a-záéíóúñ]/.test(node.text) || !skip && vocabHit(node.text)) && !inNonUiPosition(node)) rep.unwrapped.push({ file: rel, line: at(node), text: node.text.slice(0, 100) });
         } else if (ts.isTemplateExpression(node) && !insideT(node)) {
           const lits = [node.head.text, ...node.templateSpans.map((s) => s.literal.text)].join(' ');
-          if (looksSpanish(lits) && !inNonUiPosition(node)) rep.unwrapped.push({ file: rel, line: at(node), text: node.getText(sf).slice(0, 100) });
+          if ((looksSpanish(lits) || vocabHit(lits)) && !inNonUiPosition(node)) rep.unwrapped.push({ file: rel, line: at(node), text: node.getText(sf).slice(0, 100) });
         }
       }
       ts.forEachChild(node, visit);

@@ -8,7 +8,7 @@ import { Button } from '../ds';
 import { searchNoteTitles, openClassNote, type NoteRef } from '../../lib/notesDb';
 import { appendToNote, newNoteWith } from '../../lib/highlightsDb';
 import { toast, friendlyError } from '../../lib/feedback';
-import { t } from '../../lib/i18n';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  "Enviar a una nota" (v22, fase 2): la cita del PDF con su fuente va a la
@@ -31,7 +31,7 @@ export function SendToNoteSheet({ visible, md, fileName, subjectId, onClose }: {
   }, [q, visible]);
 
   const done = (id: string, label: string) => {
-    toast(`Cita agregada a ${label}`, { tone: 'good', actionLabel: t('Abrir'), onAction: () => router.push(`/nota/${id}`) });
+    toast(trn('Cita agregada a {label}', { label }), { tone: 'good', actionLabel: t('Abrir'), onAction: () => router.push(`/nota/${id}`) });
     onClose();
   };
   async function toNote(n: NoteRef) {

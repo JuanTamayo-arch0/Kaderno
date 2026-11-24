@@ -249,7 +249,7 @@ function Group({ title, rows, empty }: { title: string; rows: Task[]; empty: str
         <View key={t.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Text style={{ color: C.muted, fontSize: 12.5, width: 52 }}>{dayLabel(t.due_date!)}</Text>
           <Text style={{ color: C.text, fontSize: 13.5, flex: 1 }} numberOfLines={1}>{t.title}</Text>
-          {['examen', 'quiz'].includes(String(t.type)) && <Text style={{ color: C.badText, fontSize: 11.5, fontWeight: '800' }}>{t.type === 'quiz' ? 'QUIZ' : 'EXAMEN'}</Text>}
+          {['examen', 'quiz'].includes(String(t.type)) && <Text style={{ color: C.badText, fontSize: 11.5, fontWeight: '800' }}>{t.type === 'quiz' ? trn('QUIZ') : trn('EXAMEN')}</Text>}
         </View>
       ))}
       {rows.length > 8 && <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('y {v} más', { v: rows.length - 8 })}</Text>}

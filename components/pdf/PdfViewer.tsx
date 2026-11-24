@@ -9,7 +9,7 @@ import { getHighlights, addHighlight, updateHighlight, deleteHighlight, type Hig
 import { toast, friendlyError, confirm } from '../../lib/feedback';
 import { useCardMaker } from '../cards/CardMaker';
 import { SendToNoteSheet } from './SendToNoteSheet';
-import { t } from '../../lib/i18n';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Visor de PDF con resaltados (v22, fase 2). Solo web.
@@ -229,8 +229,8 @@ export function PdfViewer({ url, name, kind, fileId, subjectId, startPage }: {
           <Text style={{ color: C.muted, fontSize: 12.5, minWidth: isWide ? 40 : 34, textAlign: 'center' }}>{Math.round(scale * 100)}%</Text>
           <IconButton icon="add" label={t('Acercar')} onPress={() => changeZoom(ZOOMS[Math.min(ZOOMS.length - 1, ZOOMS.findIndex((z) => z > zoom))])} color={C.text} />
           {canMark && (isWide
-            ? <Button label={`Resaltados${hls.length ? ` (${hls.length})` : ''}`} size="sm" kind={panel ? 'primary' : 'secondary'} icon="bookmark-outline" onPress={() => setPanel(!panel)} />
-            : <IconButton icon={panel ? 'bookmark' : 'bookmark-outline'} label={`Resaltados (${hls.length})`} onPress={() => setPanel(!panel)} color={panel ? C.brand : C.text} />)}
+            ? <Button label={trn('Resaltados') + (hls.length ? ` (${hls.length})` : '')} size="sm" kind={panel ? 'primary' : 'secondary'} icon="bookmark-outline" onPress={() => setPanel(!panel)} />
+            : <IconButton icon={panel ? 'bookmark' : 'bookmark-outline'} label={trn('Resaltados ({n})', { n: hls.length })} onPress={() => setPanel(!panel)} color={panel ? C.brand : C.text} />)}
         </View>
         {/* Páginas */}
         <div ref={scroller} className="kd-pdf" onScroll={onScroll} onClick={onClick} style={{ flex: 1, overflow: 'auto', background: C.surface2, position: 'relative', minHeight: 0 }}>

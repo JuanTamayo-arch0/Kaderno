@@ -12,7 +12,7 @@ import {
   todayHint, brokeMessage, repairProgress, weeksLabel, daysLabel,
 } from '../../lib/streaks';
 import { toast, friendlyError } from '../../lib/feedback';
-import { t } from '../../lib/i18n';
+import { t, daysLong } from '../../lib/i18n';
 
 // ============================================================
 //  Rachas amables (v20, sección D): meta semanal con siete puntos, racha
@@ -37,7 +37,7 @@ const DOT: Record<DotState, { bg: string; border: string; fg: string }> = {
   future: { bg: 'transparent', border: C.line + '88', fg: C.muted },
 };
 const STATE_TXT: Record<DotState, string> = { done: 'estudiaste', protected: t('protegido con escudo'), missed: t('sin estudio'), today: t('hoy, aún no cuenta'), future: t('por venir') };
-const DAY_NAMES = ['lunes', 'martes', t('miércoles'), 'jueves', 'viernes', t('sábado'), 'domingo'];
+const DAY_NAMES = [...daysLong().slice(1), daysLong()[0]];
 
 /** L M M J V S D con el estado de cada día. */
 export function WeekDots({ s, size = 26 }: { s: StreakSummary; size?: number }) {

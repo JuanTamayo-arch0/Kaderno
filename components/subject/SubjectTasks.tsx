@@ -46,7 +46,7 @@ export function QuickTaskInput({ subject, onCreated }: { subject: Subject; onCre
       refreshNavCounts(true);
       onCreated(); dataChanged();
       const when = fmtDue(row);
-      toast(`Agregada: ${parsed.title}${when ? ' · ' + when : ''}`, { actionLabel: t('Editar'), onAction: () => openTask({ id, status: 'pending', description: null, ...row } as Task) });
+      toast(trn('Agregada: {title}', { title: parsed.title }) + (when ? ' · ' + when : ''), { actionLabel: t('Editar'), onAction: () => openTask({ id, status: 'pending', description: null, ...row } as Task) });
     } catch (e) { notify(t('No se pudo agregar'), friendlyError(e)); }
     finally { setBusy(false); }
   }

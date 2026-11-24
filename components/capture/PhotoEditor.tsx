@@ -5,7 +5,7 @@ import { Button } from '../ds';
 import { processImage } from '../../lib/captureImage';
 import { clampCrop, type Crop } from '../../lib/capture';
 import type { PageEdit } from '../../lib/captureDraft';
-import { t } from '../../lib/i18n';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Editar una foto antes de leerla (v22, fase 4): girar, recortar
@@ -74,7 +74,7 @@ export function PhotoEditor({ original, edit, onCancel, onApply }: {
           style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0, touchAction: 'none' }}>
           {!preview ? <ActivityIndicator color="#fff" /> : (
             <div style={{ position: 'relative', maxWidth: '100%', maxHeight: '100%', display: 'inline-block' }}>
-              <img src={preview} alt="Foto a editar" draggable={false} style={{ display: 'block', maxWidth: '100%', maxHeight: 'calc(100vh - 190px)', userSelect: 'none' }} />
+              <img src={preview} alt={trn('Foto a editar')} draggable={false} style={{ display: 'block', maxWidth: '100%', maxHeight: 'calc(100vh - 190px)', userSelect: 'none' }} />
               {/* Lo que queda fuera del recorte, oscurecido */}
               <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', boxShadow: 'none' }}>
                 <div style={{ position: 'absolute', left: `${crop.x * 100}%`, top: `${crop.y * 100}%`, width: `${crop.w * 100}%`, height: `${crop.h * 100}%`, boxShadow: '0 0 0 9999px rgba(0,0,0,.55)', outline: '2px solid #fff' }} />

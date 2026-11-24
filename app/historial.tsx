@@ -82,7 +82,7 @@ function Historial() {
     const s = t.summary;
     const isOpen = t.status === 'open';
     return (
-      <Pressable key={t.id} onPress={() => setSel(t.id)} accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={`Semestre ${t.name}`}
+      <Pressable key={t.id} onPress={() => setSel(t.id)} accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={trn('Semestre {name}', { name: t.name })}
         style={({ hovered }: any) => ({ padding: 14, borderRadius: 14, borderWidth: on ? 2 : 1, borderColor: on ? C.brand : C.line, backgroundColor: hovered ? C.surface2 : C.surface, gap: 4 })}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Text dataSet={{ head: '1' }} style={{ color: C.text, fontSize: 16, fontWeight: '800', flex: 1 }}>{t.name}</Text>
@@ -98,7 +98,7 @@ function Historial() {
   const chart = closed.length > 1 ? (
     <Card style={{ gap: 10 }}>
       <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{t('Promedio por semestre')}</Text>
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 10, height: 120 }} accessibilityLabel={`Promedios: ${[...closed].reverse().map((t) => `${t.name} ${fmtGrade(t.summary?.avg ?? null, scale)}`).join(', ')}`}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 10, height: 120 }} accessibilityLabel={trn('Promedios: {v}', { v: [...closed].reverse().map((t) => `${t.name} ${fmtGrade(t.summary?.avg ?? null, scale)}`).join(', ') })}>
         {[...closed].reverse().slice(-8).map((t) => {
           const v = t.summary?.avg != null ? (t.summary.avg / (t.summary.max || scale.max)) : 0;
           return (
@@ -152,7 +152,7 @@ function Historial() {
 
   return (
     <Screen title={t('Historial académico')} subtitle={t('Tus semestres, sus notas y el promedio acumulado')} back="/materias" maxWidth={1180}
-      right={<Button label={isWide ? 'Descargar (PDF)' : 'PDF'} icon="download-outline" size="sm" kind="secondary" disabled={!closed.length} onPress={pdf} />}>
+      right={<Button label={isWide ? trn('Descargar (PDF)') : 'PDF'} icon="download-outline" size="sm" kind="secondary" disabled={!closed.length} onPress={pdf} />}>
       {!ready && <Card style={{ marginBottom: 12 }}><Text style={{ color: C.warnText, fontSize: 13 }}>{NEEDS_V25_3}</Text></Card>}
       <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap', marginBottom: 18 }}>
         {stat(t('Promedio acumulado'), cum.avg, (n) => fmtGrade(Number.isFinite(n) ? n : null, scale), cum.terms ? `${cum.terms} ${cum.terms === 1 ? t('semestre cerrado') : t('semestres cerrados')}` : t('Aún sin semestres cerrados'))}
@@ -201,7 +201,7 @@ function ClosedDetail({ t, scale, onEdit, onDelete }: { t: Term; scale: ReturnTy
     <View style={{ gap: 14 }}>
       <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
         <Text dataSet={{ head: '1' }} style={{ color: C.text, fontSize: 22, fontWeight: '800' }}>{trn('Semestre {name}', { name: t.name })}</Text>
-        <Text style={{ color: C.muted, fontSize: 13, flex: 1 }}>{[range, s.manual ? 'agregado a mano' : '', !sameScale ? trn('escala de 0 a {max}', { max: s.max }) : ''].filter(Boolean).join(' · ')}</Text>
+        <Text style={{ color: C.muted, fontSize: 13, flex: 1 }}>{[range, s.manual ? trn('agregado a mano') : '', !sameScale ? trn('escala de 0 a {max}', { max: s.max }) : ''].filter(Boolean).join(' · ')}</Text>
         <Button label={trn('Editar')} kind="ghost" size="sm" onPress={onEdit} />
         <Button label={trn('Borrar')} kind="ghost" size="sm" onPress={onDelete} />
       </View>

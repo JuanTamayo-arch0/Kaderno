@@ -1,4 +1,4 @@
-import { t, trn, monthsShort } from './i18n';
+import { t, trn, monthsShort, daysLong } from './i18n';
 // ============================================================
 //  Tareas que se repiten (v21, sección 1). Puro, con pruebas.
 //  Texto en español → regla, regla → siguiente fecha, regla → texto.
@@ -26,7 +26,7 @@ const MONTHS: Record<string, number> = {
   enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5, julio: 6, agosto: 7, septiembre: 8, setiembre: 8, octubre: 9, noviembre: 10, diciembre: 11,
   ene: 0, feb: 1, abr: 3, may: 4, jun: 5, jul: 6, ago: 7, sep: 8, sept: 8, oct: 9, nov: 10, dic: 11,
 };
-const DAY_NAME = ['domingo', 'lunes', 'martes', t('miércoles'), 'jueves', 'viernes', t('sábado')];
+const DAY_NAME = daysLong();
 const MONTH_SHORT = monthsShort();
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/^[(\["'¿¡]+|[)\]"',;.:?]+$/g, '');
@@ -107,11 +107,11 @@ export function ruleText(rule: RepeatRule | null | undefined): string {
   const n = Math.max(1, rule.interval || 1);
   let t: string;
   if (rule.freq === 'day') t = n === 1 ? trn('cada día') : trn('cada {n} días', { n });
-  else if (rule.freq === 'month') t = (n === 1 ? trn('cada mes') : trn('cada {n} meses', { n })) + (rule.monthDay ? ` el ${rule.monthDay}` : '');
+  else if (rule.freq === 'month') t = (n === 1 ? trn('cada mes') : trn('cada {n} meses', { n })) + (rule.monthDay ? trn(' el {monthDay}', { monthDay: rule.monthDay }) : '');
   else if (rule.days?.length) {
     const d = [...rule.days].sort();
     if (n === 1 && d.join() === '1,2,3,4,5') t = trn('cada día hábil');
-    else t = (n === 1 ? 'cada ' : trn('cada {n} semanas: ', { n })) + joinY(d.map((x) => DAY_NAME[x]));
+    else t = (n === 1 ? trn('cada ') : trn('cada {n} semanas: ', { n })) + joinY(d.map((x) => DAY_NAME[x]));
   } else t = n === 1 ? trn('cada semana') : trn('cada {n} semanas', { n });
   if (rule.until) { const u = toDate(rule.until); t += trn(' hasta el {getUTCDate} {v}', { getUTCDate: u.getUTCDate(), v: MONTH_SHORT[u.getUTCMonth()] }); }
   if (rule.fromDone) t += trn(' (desde que la terminas)');

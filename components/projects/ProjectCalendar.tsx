@@ -95,7 +95,7 @@ export function ProjectCalendar({ projectId, tasks, cols, members, editable, isW
         <View key={i} style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start', padding: 10, borderRadius: 10, backgroundColor: C.warn + '14' }}>
           <Ionicons name="git-merge-outline" size={16} color={C.warnText} style={{ marginTop: 1 }} />
           <Text style={{ color: C.text, fontSize: 12.5, flex: 1, lineHeight: 18 }}>
-            <Text style={{ fontWeight: '800' }}>{nameOf(memberOf(c.user_id)?.profile)}</Text> {t(' tiene ')}{c.count} {t(' tareas a la vez ')}{c.from.getTime() === c.to.getTime() ? `el ${shortDay(c.from)}` : t('del {from} al {to}', { from: shortDay(c.from), to: shortDay(c.to) })}: {c.titles.slice(0, 4).join(', ')}.
+            <Text style={{ fontWeight: '800' }}>{nameOf(memberOf(c.user_id)?.profile)}</Text> {t(' tiene ')}{c.count} {t(' tareas a la vez ')}{c.from.getTime() === c.to.getTime() ? t('el {day}', { day: shortDay(c.from) }) : t('del {from} al {to}', { from: shortDay(c.from), to: shortDay(c.to) })}: {c.titles.slice(0, 4).join(', ')}.
           </Text>
         </View>
       ))}
@@ -169,7 +169,7 @@ function MonthView({ ym, setYm, today, tasks, isWide, editable, colOf, memberOf,
             const iso = isoDay(d), list = by[iso] ?? [], other = d.getMonth() !== ym.m, isToday = iso === todayIso;
             const late = list.some((t) => !t.done && d < today);
             return (
-              <Pressable key={iso} accessibilityRole="button" accessibilityLabel={`${d.getDate()} ${list.length ? `, ${list.length} ${list.length === 1 ? t('entrega') : t('entregas')}` : ''}`}
+              <Pressable key={iso} accessibilityRole="button" accessibilityLabel={`${d.getDate()}${list.length ? `, ${list.length} ${list.length === 1 ? t('entrega') : t('entregas')}` : ''}`}
                 onPress={() => (isWide ? (editable ? onAddOn(d) : null) : setPickDay(pickDay === iso ? null : iso))}
                 style={({ hovered }: any) => ({
                   flex: 1, minHeight: isWide ? 104 : 54, borderTopWidth: 1, borderLeftWidth: 1, borderColor: C.line, padding: isWide ? 5 : 3,

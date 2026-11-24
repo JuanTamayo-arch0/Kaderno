@@ -15,7 +15,7 @@ import { useAuth } from '../../lib/auth';
 import { snapshotFor } from '../../lib/snapshot';
 import { useSpaceFilter } from '../../lib/useSpace';
 import { vtNavigate } from '../../lib/motion';
-import { t } from '../../lib/i18n';
+import { t, tc } from '../../lib/i18n';
 
 const PROJECT_ICONS = ['📦', '👥', '🧪', '🎤', '🔎', '📊', '🎬', '🏗️', '🎨', '💡', '📚', '⚙️'];
 
@@ -157,7 +157,7 @@ function JoinModal({ visible, onClose, onJoined }: { visible: boolean; onClose: 
     try {
       const peek = await peekProject(c);
       if (!peek) { setErr(t('Ese código no existe. Revisa que esté bien escrito.')); return; }
-      const ok = await confirm(`${peek.icon}  ${peek.name}`, t('{members} {v}. ¿Entrar a este proyecto?', { members: peek.members, v: peek.members === 1 ? t('integrante') : t('integrantes') }), t('Entrar'));
+      const ok = await confirm(`${peek.icon}  ${peek.name}`, t('{members} {v}. ¿Entrar a este proyecto?', { members: peek.members, v: peek.members === 1 ? t('integrante') : t('integrantes') }), tc('unirse', 'Entrar'));
       if (!ok) return;
       const id = await joinProject(c);
       toast(`Entraste a ${peek.name}`, { tone: 'good' });
@@ -167,7 +167,7 @@ function JoinModal({ visible, onClose, onJoined }: { visible: boolean; onClose: 
   }
   return (
     <Dialog visible={visible} onClose={onClose} title={t('Unirme a un proyecto')}
-      footer={<><Button label={t('Cancelar')} kind="secondary" onPress={onClose} style={{ flex: 1 }} /><Button label={t('Entrar')} onPress={go} busy={busy} style={{ flex: 1 }} /></>}>
+      footer={<><Button label={t('Cancelar')} kind="secondary" onPress={onClose} style={{ flex: 1 }} /><Button label={tc('unirse', 'Entrar')} onPress={go} busy={busy} style={{ flex: 1 }} /></>}>
       <Field value={code} onChangeText={(t) => { setCode(t.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)); setErr(null); }}
         placeholder="K7F2QX" autoCapitalize="characters" autoCorrect={false} maxLength={6} onSubmitEditing={go} autoFocus
         label={t('Código de 6 caracteres')} error={err} inputStyle={{ letterSpacing: 4, fontWeight: '800', fontSize: 18 }}
