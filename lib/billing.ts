@@ -3,6 +3,9 @@
 //  "Tu plan" según lo que devuelve my_plan() de schema_v23.
 // ============================================================
 export * from '../supabase/functions/_shared/plans';
+import { cop as copBase } from '../supabase/functions/_shared/plans';
+/** Pesos con el separador de miles del idioma: "$9.900" o "$9,900". */
+export const cop = (n: number): string => copBase(n, lang() === 'en' ? ',' : '.');
 import { LIMITS, limitText, PRICES, type LimitKey, type Period, type PlanId } from '../supabase/functions/_shared/plans';
 import { t, monthsShort, dayMonth, lang } from './i18n';
 

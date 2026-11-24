@@ -100,7 +100,7 @@ export function hoursCsv(list: HourSession[], names: Record<string, Named>, rate
 }
 
 const esc = (s: string) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const pesos = (n: number) => '$' + String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+const pesos = (n: number) => '$' + String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, lang() === 'en' ? ',' : '.');
 
 /** Informe de horas para imprimir o guardar en PDF: sobrio, en Times New Roman y en negro. */
 export function hoursReportHtml(o: { who: string; period: string; list: HourSession[]; names: Record<string, Named>; rates?: Rates; by?: GroupBy }): string {

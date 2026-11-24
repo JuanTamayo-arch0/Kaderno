@@ -26,7 +26,7 @@ export type Invoice = {
 };
 
 export const numberLabel = (prefix: string | null | undefined, n: number) => `${prefix ? prefix + '-' : ''}${String(n).padStart(4, '0')}`;
-export const pesos = (n: number) => (n < 0 ? '-$' : '$') + String(Math.round(Math.abs(n))).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+export const pesos = (n: number) => (n < 0 ? '-$' : '$') + String(Math.round(Math.abs(n))).replace(/\B(?=(\d{3})+(?!\d))/g, lang() === 'en' ? ',' : '.');
 
 // ---------- Valor en letras ----------
 // i18n-ok-desde: el valor en letras es parte del documento legal, en español.

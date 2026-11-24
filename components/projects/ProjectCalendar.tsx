@@ -7,7 +7,7 @@ import { BoardColumn, Member, PTask, colorOf, initialsOf, nameOf } from '../../l
 import {
   monthGrid, byDueDay, timelineRange, barOf, clashes, roadToFinal, isoDay, addDays, dueDayOf, monthLabel, shortDay, spanOf,
 } from '../../lib/projectCalendar';
-import { t, trn } from '../../lib/i18n';
+import { t, trn, dayLettersMon } from '../../lib/i18n';
 
 // ============================================================
 //  Calendario del proyecto (v23, fase 3): el mes con las entregas, la
@@ -15,7 +15,7 @@ import { t, trn } from '../../lib/i18n';
 //  persona y el camino a la entrega final.
 // ============================================================
 
-const DOW = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+const DOW = dayLettersMon();
 type Mode = 'mes' | 'linea';
 
 export function ProjectCalendar({ projectId, tasks, cols, members, editable, isWide, myId, onOpen, onAddOn }: {

@@ -63,8 +63,8 @@ export function yearlySaving(plan: 'pro' | 'team'): { pesos: number; pct: number
   return { pesos: m - y, pct: Math.round(((m - y) / m) * 100) };
 }
 
-/** "$9.900" */
-export function cop(n: number): string {
-  const s = String(Math.round(Math.abs(n))).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+/** "$9.900" (en inglés la app pasa sep = ',': "$9,900"). */
+export function cop(n: number, sep: '.' | ',' = '.'): string {
+  const s = String(Math.round(Math.abs(n))).replace(/\B(?=(\d{3})+(?!\d))/g, sep);
   return (n < 0 ? '-$' : '$') + s;
 }

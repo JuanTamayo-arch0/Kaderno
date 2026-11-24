@@ -36,7 +36,7 @@ const DOT: Record<DotState, { bg: string; border: string; fg: string }> = {
   today: { bg: 'transparent', border: C.good, fg: C.text },
   future: { bg: 'transparent', border: C.line + '88', fg: C.muted },
 };
-const STATE_TXT: Record<DotState, string> = { done: 'estudiaste', protected: t('protegido con escudo'), missed: t('sin estudio'), today: t('hoy, aún no cuenta'), future: t('por venir') };
+const STATE_TXT: Record<DotState, string> = { done: t('estudiaste'), protected: t('protegido con escudo'), missed: t('sin estudio'), today: t('hoy, aún no cuenta'), future: t('por venir') };
 const DAY_NAMES = [...daysLong().slice(1), daysLong()[0]];
 
 /** L M M J V S D con el estado de cada día. */

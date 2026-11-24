@@ -1,4 +1,4 @@
-import { t } from '../i18n';
+import { t, lang, monthsShort, dayMonth } from '../i18n';
 // Fechas y horas del importador.
 //
 // Todo lo que no trae zona horaria se interpreta en hora de Bogotá. Colombia no tiene
@@ -6,7 +6,6 @@ import { t } from '../i18n';
 
 export const BOGOTA_OFFSET_MIN = -5 * 60;
 
-const MONTHS_ES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
 export type DateKind = 'start' | 'due';
 
@@ -162,10 +161,10 @@ export function formatForJson(iso: string | null): string | null {
 export function formatHuman(iso: string | null, withTime = true): string {
   if (!iso) return t('Sin fecha');
   const p = bogotaParts(iso);
-  const date = `${p.d} ${MONTHS_ES[p.mo - 1]}`;
+  const date = dayMonth(p.d, monthsShort()[p.mo - 1]);
   if (!withTime) return date;
   const h12 = p.h % 12 === 0 ? 12 : p.h % 12;
-  const mer = p.h < 12 ? 'a. m.' : 'p. m.';
+  const mer = lang() === 'en' ? (p.h < 12 ? 'AM' : 'PM') : p.h < 12 ? 'a. m.' : 'p. m.'; // i18n-ok
   return `${date} · ${h12}:${pad(p.mi)} ${mer}`;
 }
 

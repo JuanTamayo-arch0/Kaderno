@@ -1,4 +1,4 @@
-import { t } from './i18n';
+import { t, dayLettersMon } from './i18n';
 // ============================================================
 //  Días de estudio y rachas amables (v20, sección D). Puro, con pruebas.
 //  Las reglas son las mismas que usa la base (schema_v19.sql, fase 2):
@@ -15,7 +15,7 @@ export const MAX_SHIELDS = 2;
 export const SHIELD_PRICE = 80;
 export const SHIELD_EVERY = 7;
 export const DEFAULT_GOAL = 4;
-export const WEEK_LETTERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+export const WEEK_LETTERS = dayLettersMon();
 
 export function dayCounts(r: Pick<StudyDayRow, 'focus_min' | 'tasks_done' | 'cards' | 'tests'> | null | undefined): boolean {
   if (!r) return false;

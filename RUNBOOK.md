@@ -2011,3 +2011,47 @@ Nada visible todavía: la app sigue en español, idéntica.
 ### 4. Pruebas
 
 `npm test` (incluye `tests/v30.test.ts`). Se compararon las capturas en español antes y después: iguales en las 31 pantallas a 390 px (Estudio y Trabajo) y 1440 px. Solo cambian unos píxeles de kerning.
+
+## Versión 30 (partes 2 a 7): Kaderno en inglés
+
+### 1. Migración y funciones
+
+1. En Supabase (SQL Editor), correr `supabase/schema_v27.sql` una vez. Pone un disparador en la bandeja de avisos: si la persona tiene la app en inglés (`user_prefs.settings.lang = 'en'`), el título y el texto del aviso se guardan en inglés. Lo que escribió la gente (títulos de tareas, nombres de proyectos) queda igual.
+2. Volver a desplegar las funciones que cambiaron:
+
+```
+npx supabase functions deploy ai
+npx supabase functions deploy oracle
+npx supabase functions deploy ocr
+npx supabase functions deploy notify
+npx supabase functions deploy shared-note --no-verify-jwt
+npx supabase functions deploy ical --no-verify-jwt
+npx supabase functions deploy ical-import
+npx supabase functions deploy billing
+```
+
+Si una función se despliega antes que la app nueva, sigue respondiendo en español: el idioma llega en cada llamada (`lang`) y sin él se usa español.
+
+### 2. Lo que cambia para el usuario
+
+- **Idioma:** la primera vez la app sale en el idioma del dispositivo (inglés si el navegador lo pide primero; si no, español). Se cambia en Ajustes, sección Idioma, o arriba a la derecha en el inicio de sesión. Queda guardado en el dispositivo y en la cuenta.
+- **Todo en inglés:** pantallas, avisos, fechas ("Monday, November 23", "Nov 23"), plantillas de notas, informes en PDF, el manifiesto de la app instalada y la página antes de cargar.
+- **La IA y el Oráculo** responden en el idioma de la app aunque los apuntes estén en español. Digitalizar no traduce: copia el texto como está.
+- **Agregar con texto** entiende inglés: "calculus exam friday 10am", "report 12/3" (mes/día), "day after tomorrow", "next week", "every monday until dec 18", "every weekday".
+- **Importar tareas** acepta encabezados y estados en inglés (title, status, "In progress"); en inglés se exporta con encabezados en inglés.
+- **Cuenta de cobro:** el texto legal sigue en español y, con la app en inglés, lleva la traducción al lado.
+- **Lo que no se traduce:** lo que escribe cada persona (tareas, notas, materias, columnas de proyectos ya creados) y los nombres propios (Kaderno, Pomodoro, Wompi, DIAN, NIT).
+
+### 3. Para quien programa
+
+- Las traducciones están en `lib/i18n/src/*.tsv`: una línea por texto, el español y el inglés en JSON separados por un tabulador. Después de editar, `npx tsx scripts/i18n-build.ts` genera `lib/i18n/en.ts` (no se edita a mano).
+- `npm run i18n` cuenta lo que falta. `npm test` falla si un texto no tiene inglés, si una traducción pierde o inventa `{variables}`, o si queda español sin envolver. El revisor usa el vocabulario de las llaves: una palabra que solo existe en español ("Agregado", "vencidas") en una plantilla `...` o en un `?:` que se muestra se marca.
+- Fechas: `dayMonth(d, mes)`, `daysShort()`, `daysLong()`, `monthsShort()`, `monthsLong()` y `locale()`. No escribas `${d} ${mes}` a mano.
+- Mensajes del servidor: `say(lang, '...')` con su inglés en `supabase/functions/_shared/lang.ts` (una prueba revisa que no falte ninguno). Prompts de IA: `+ answerIn(lang)`.
+- Avisos nuevos en SQL: escríbelos en español y agrega su regla en `kd_notif_en` (`schema_v27.sql`).
+- Para probar en inglés sin cambiar el navegador: `localStorage.setItem('kd-lang', 'en'); location.reload()`.
+
+### 4. Pruebas
+
+- `npm test` (incluye `tests/v30.test.ts`: lector en inglés, cuenta de cobro bilingüe, sílabo, servidor, manifiesto) y `bash tests/run_sql.sh` (incluye `tests/sql/27_pruebas.sql`: avisos en inglés).
+- Recorrido en inglés de las 31 pantallas a 320, 390 y 1440 px, en Estudio y Trabajo, buscando texto en español y desbordes; y un segundo recorrido tocando cada botón para revisar hojas y menús.

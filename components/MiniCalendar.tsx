@@ -4,10 +4,10 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../lib/theme';
 import { taskTypeMeta } from '../lib/taskTypes';
 import { Subject, Task } from '../lib/db';
-import { t, trn, locale, monthsLong } from '../lib/i18n';
+import { t, trn, locale, monthsLong, dayLettersMon } from '../lib/i18n';
 
 const MONTHS = monthsLong();
-const WD = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+const WD = dayLettersMon();
 const pad = (n: number) => String(n).padStart(2, '0');
 const iso = (y: number, m: number, d: number) => `${y}-${pad(m + 1)}-${pad(d)}`;
 

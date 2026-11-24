@@ -124,6 +124,10 @@ const EN_DAYS_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'F
 export function daysShort(): string[] { return [...(current === 'en' ? EN_DAYS : ES_DAYS)]; }
 /** Días completos (0 = domingo): "miércoles" en español, "Wednesday" en inglés. */
 export function daysLong(): string[] { return [...(current === 'en' ? EN_DAYS_LONG : ES_DAYS_LONG)]; }
+/** Inicial de cada día (0 = domingo): D L M M J V S en español, S M T W T F S en inglés. */
+export function dayLetters(): string[] { return current === 'en' ? ['S', 'M', 'T', 'W', 'T', 'F', 'S'] : ['D', 'L', 'M', 'M', 'J', 'V', 'S']; }
+/** Lo mismo empezando en lunes. */
+export function dayLettersMon(): string[] { const d = dayLetters(); return [...d.slice(1), d[0]]; }
 /** Día y mes en el orden del idioma: "23 nov" en español, "Nov 23" en inglés. */
 export function dayMonth(day: number | string, month: string): string { return current === 'en' ? `${month} ${day}` : `${day} ${month}`; }
 /** Meses cortos como los escribe la app: "nov" en español, "Nov" en inglés. */
