@@ -1,0 +1,101 @@
+// ============================================================
+//  v30: idiomas (español e inglés).
+//
+//  El texto en español es la llave: `t('Nueva tarea')` devuelve "New task"
+//  en inglés y el mismo texto en español. Así el código sigue leyéndose en
+//  español y no hay que inventar nombres para 3.000 textos. Las traducciones
+//  viven en lib/i18n/en/*.ts y `npm run i18n` revisa que no falte ninguna.
+//
+//  - Variables: t('Hola, {name}', { name }) -> "Hi, {name}".
+//  - Plurales: tp(n, '{n} tarea', '{n} tareas').
+//  - Un mismo texto con dos sentidos ("Mar": martes o el sonido del mar) se
+//    distingue con contexto: tc('sonido', 'Mar').
+//  - El idioma se lee una vez al cargar (localStorage o el del dispositivo):
+//    al cambiarlo la app se recarga, así también los textos que se arman al
+//    cargar cada archivo salen en el idioma nuevo.
+//
+//  Sin react-native: se puede probar con tsx.
+// ============================================================
+
+import { EN } from './i18n/en';
+
+export type Lang = 'es' | 'en';
+export const LANGS: { id: Lang; name: string; native: string }[] = [
+  { id: 'es', name: 'Spanish', native: 'Español' },
+  { id: 'en', name: 'English', native: 'English' },
+];
+export const LANG_KEY = 'kd-lang';
+
+/** El idioma del dispositivo: inglés si lo pide primero; si no, español. */
+export function deviceLang(languages: readonly string[] | undefined): Lang {
+  const first = (languages ?? []).find((l) => !!l)?.toLowerCase() ?? '';
+  return first.startsWith('en') ? 'en' : 'es';
+}
+
+export function cleanLang(v: unknown): Lang | null {
+  return v === 'es' || v === 'en' ? v : null;
+}
+
+function initialLang(): Lang {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const saved = cleanLang(localStorage.getItem(LANG_KEY));
+      if (saved) return saved;
+    }
+  } catch { /* noop */ }
+  try {
+    if (typeof navigator !== 'undefined') return deviceLang(navigator.languages?.length ? navigator.languages : [navigator.language]);
+  } catch { /* noop */ }
+  return 'es';
+}
+
+let current: Lang = initialLang();
+
+/** Idioma actual. */
+export function lang(): Lang { return current; }
+
+/** Solo para pruebas y para el arranque en nativo. */
+export function _setLangForTests(l: Lang): void { current = l; }
+
+/** Configuración regional para fechas y números. */
+export function locale(): string { return current === 'en' ? 'en-US' : 'es-CO'; }
+
+/** Reemplaza {nombre} por su valor. */
+export function fill(s: string, vars?: Record<string, string | number | null | undefined>): string {
+  if (!vars) return s;
+  return s.replace(/\{(\w+)\}/g, (m, k) => (k in vars && vars[k] != null ? String(vars[k]) : m));
+}
+
+/** Traduce un texto escrito en español. */
+export function t(es: string, vars?: Record<string, string | number | null | undefined>): string {
+  const out = current === 'en' ? (EN[es] ?? es) : es;
+  return fill(out, vars);
+}
+
+/** Igual que t, para un texto que en español tiene más de un sentido. */
+export function tc(context: string, es: string, vars?: Record<string, string | number | null | undefined>): string {
+  const out = current === 'en' ? (EN[`${context}|${es}`] ?? EN[es] ?? es) : es;
+  return fill(out, vars);
+}
+
+/** Plural: tp(3, '{n} tarea', '{n} tareas'). */
+export function tp(n: number, one: string, many: string, vars?: Record<string, string | number | null | undefined>): string {
+  return t(n === 1 ? one : many, { n, ...vars });
+}
+
+/** Días de la semana (0 = lunes) en el idioma actual. */
+export function weekdayNames(style: 'long' | 'short' | 'narrow' = 'short'): string[] {
+  const base = new Date(2024, 0, 1); // lunes 1 de enero de 2024
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(base); d.setDate(base.getDate() + i);
+    const s = d.toLocaleDateString(locale(), { weekday: style });
+    return cap(s.replace('.', ''));
+  });
+}
+
+/** Meses (0 = enero) en el idioma actual. */
+export function monthNames(style: 'long' | 'short' = 'long'): string[] {
+  return Array.from({ length: 12 }, (_, i) => cap(new Date(2024, i, 15).toLocaleDateString(locale(), { month: style }).replace('.', '')));
+}
+
+function cap(s: string): string { return s ? s[0].toUpperCase() + s.slice(1) : s; }
