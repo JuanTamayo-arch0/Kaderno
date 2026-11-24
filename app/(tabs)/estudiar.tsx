@@ -113,7 +113,7 @@ export default function Estudiar() {
             <Pressable onPress={() => router.push('/oraculo')} accessibilityRole="link"><Text style={{ color: C.brand, fontWeight: '700', fontSize: 13 }}>Abrir</Text></Pressable>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.surface2, borderRadius: 12, borderWidth: 1, borderColor: C.line, paddingLeft: 12 }}>
-            <TextInput value={q} onChangeText={setQ} onSubmitEditing={ask} placeholder="Pregunta algo sobre tus apuntes…" placeholderTextColor={C.muted} accessibilityLabel="Pregunta para el Oráculo"
+            <TextInput value={q} onChangeText={setQ} onSubmitEditing={ask} enterKeyHint="send" placeholder="Pregunta algo sobre tus apuntes…" placeholderTextColor={C.muted} accessibilityLabel="Pregunta para el Oráculo"
               style={[{ flex: 1, color: C.text, fontSize: 14.5, paddingVertical: 11, minHeight: 44 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
             <Pressable onPress={ask} accessibilityLabel="Preguntar" style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
               <Ionicons name="arrow-up-circle" size={26} color={q.trim() ? C.brand : C.muted} />

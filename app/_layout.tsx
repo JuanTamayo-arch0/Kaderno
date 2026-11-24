@@ -41,12 +41,14 @@ import { FriendPets } from '../components/pets/FriendPets';
 import { tipById } from '../lib/breakTips';
 import { registerServiceWorker } from '../lib/push';
 import { installMotion } from '../lib/motion';
+import { installTouch } from '../lib/touch';
 import { celebrate } from '../lib/celebrate';
 import { PetBuddy } from '../components/pets/PetBuddy';
 import { emitPetEvent, refreshCoinsSoon } from '../lib/pets/store';
 
 // Animaciones CSS (solo web): se inyectan una vez, antes del primer render.
 installMotion();
+installTouch();
 
 // v27 (ley de Parkinson): se pasó la hora de fin del bloque planeado de la tarea.
 setBlockOverHandler((s) => {

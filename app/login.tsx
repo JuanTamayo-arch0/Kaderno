@@ -263,13 +263,13 @@ export default function Login() {
 
           <Field label="Correo" icon="mail-outline">
             <Input value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address"
-              autoComplete="email" placeholder="tucorreo@ejemplo.com" />
+              autoComplete="email" placeholder="tucorreo@ejemplo.com" enterKeyHint="next" />
           </Field>
 
           <Field label="Contraseña" icon="lock-closed-outline">
             <Input value={password} onChangeText={setPassword} secureTextEntry={!showPw}
-              autoComplete={mode === 'in' ? 'current-password' : 'new-password'} placeholder="••••••••" onSubmitEditing={mode === 'in' ? submit : undefined}
-              right={<Pressable onPress={() => setShowPw((v) => !v)} hitSlop={10} accessibilityRole="button" accessibilityLabel={showPw ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
+              autoComplete={mode === 'in' ? 'current-password' : 'new-password'} placeholder="••••••••" onSubmitEditing={mode === 'in' ? submit : undefined} enterKeyHint={mode === 'in' ? 'go' : 'next'}
+              right={<Pressable onPress={() => setShowPw((v) => !v)} hitSlop={10} style={{ width: 40, height: 40, marginRight: -10, alignItems: 'center', justifyContent: 'center' }} accessibilityRole="button" accessibilityLabel={showPw ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
                 <Ionicons name={showPw ? 'eye-off-outline' : 'eye-outline'} size={19} color={C.muted} />
               </Pressable>} />
           </Field>
@@ -287,7 +287,7 @@ export default function Login() {
               )}
 
               <Field label="Confirmar contraseña" icon="checkmark-done-outline">
-                <Input value={confirm} onChangeText={setConfirm} secureTextEntry={!showPw} placeholder="Repite la contraseña" onSubmitEditing={submit}
+                <Input value={confirm} onChangeText={setConfirm} secureTextEntry={!showPw} placeholder="Repite la contraseña" onSubmitEditing={submit} enterKeyHint="go"
                   tone={confirm.length > 0 ? (confirm === password ? 'good' : 'bad') : undefined} />
               </Field>
             </>
@@ -388,7 +388,7 @@ function Input({ right, tone, style, ...props }: React.ComponentProps<typeof Tex
       ...(web ? { transitionProperty: 'border-color, box-shadow', transitionDuration: '180ms', boxShadow: focus ? `0 0 0 3px ${C.brand}2e` : 'none' } as any : null) }}>
       <TextInput placeholderTextColor={C.muted} {...props}
         onFocus={(e) => { setFocus(true); props.onFocus?.(e); }} onBlur={(e) => { setFocus(false); props.onBlur?.(e); }}
-        style={[{ flex: 1, color: C.text, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, ...(web ? { outlineStyle: 'none' } as any : null) }, style]} />
+        style={[{ flex: 1, color: C.text, paddingHorizontal: 14, paddingVertical: 13, fontSize: 16, ...(web ? { outlineStyle: 'none' } as any : null) }, style]} />
       {right ? <View style={{ paddingRight: 12 }}>{right}</View> : null}
     </View>
   );
