@@ -1,11 +1,10 @@
-// i18n-ok-archivo: se traduce a mano (v30, fase 6): tiene palabras que el lector reconoce o texto legal.
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
 import { Note, signedUrl } from './db';
 import { noteToHtml } from './noteHtml';
 import { docFooter } from './brand';
-import { locale } from './i18n';
+import { t, locale, lang } from './i18n';
 
 // Genera un PDF con las notas de una materia y abre el menú de compartir/guardar.
 export async function exportSubjectPdf(subjectName: string, icon: string, notes: Note[]): Promise<void> {
@@ -16,15 +15,15 @@ export async function exportSubjectPdf(subjectName: string, icon: string, notes:
   const body = notes.length
     ? notes.map((n, i) => `
         <section>
-          <h2>${esc(n.title || 'Nota')}</h2>
+          <h2>${esc(n.title || t('Nota'))}</h2>
           <p class="date">${new Date(n.created_at).toLocaleDateString(locale(), { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-          ${n.summary ? `<div class="summary"><strong>Resumen:</strong> ${esc(n.summary)}</div>` : ''}
+          ${n.summary ? `<div class="summary"><strong>${t('Resumen:')}</strong> ${esc(n.summary)}</div>` : ''}
           <div class="note">${rendered[i]}</div>
         </section>`).join('')
-    : '<p>Esta materia aún no tiene notas.</p>';
+    : `<p>${t('Esta materia aún no tiene notas.')}</p>`;
 
   const katexCss = Platform.OS === 'web' && typeof location !== 'undefined' ? `<link rel="stylesheet" href="${location.origin}/katex/katex.min.css"/>` : '';
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>${katexCss}
+  const html = /* i18n-ok: HTML */ `<!DOCTYPE html><html lang="${lang()}"><head><meta charset="utf-8"/>${katexCss}
     <style>
       /* Sobrio, como los demás documentos de Kaderno: Times New Roman y todo en negro. */
       body { font-family: 'Times New Roman', Times, serif; color: #000; padding: 32px; line-height: 1.5; font-size: 12pt; }
@@ -47,13 +46,13 @@ export async function exportSubjectPdf(subjectName: string, icon: string, notes:
     </style></head>
     <body>
       <h1>${esc(subjectName)}</h1>
-      <p class="subtitle">Apuntes · ${new Date().toLocaleDateString(locale(), { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+      <p class="subtitle">${t('Apuntes · {date}', { date: new Date().toLocaleDateString(locale(), { day: 'numeric', month: 'long', year: 'numeric' }) })}</p>
       ${body}
       ${docFooter()}
     </body></html>`;
 
   const { uri } = await Print.printToFileAsync({ html });
   if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: `Apuntes de ${subjectName}` });
+    await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: t('Apuntes de {subjectName}', { subjectName }) });
   }
 }

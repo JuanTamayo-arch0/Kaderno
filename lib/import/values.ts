@@ -1,28 +1,28 @@
-// i18n-ok-archivo: se traduce a mano (v30, fase 6): tiene palabras que el lector reconoce o texto legal.
 import { normalizeKey } from './fields';
+import { t } from '../i18n';
 import type { BoardColumnRef, ChecklistItem, ProjectStatus } from './types';
 
 // ---------- Columnas (estado) ----------
 
 /** Columnas por defecto de un proyecto nuevo (iguales a DEFAULT_COLUMNS de lib/projects). */
 export const DEFAULT_BOARD: BoardColumnRef[] = [
-  { key: 'todo', label: 'Por hacer' },
-  { key: 'doing', label: 'En curso' },
-  { key: 'review', label: 'En revisión' },
-  { key: 'done', label: 'Hecho', done: true },
+  { key: 'todo', label: t('Por hacer') },
+  { key: 'doing', label: t('En curso') },
+  { key: 'review', label: t('En revisión') },
+  { key: 'done', label: t('Hecho'), done: true },
 ];
 
 // Palabras comunes que se entienden aunque el tablero tenga otros nombres.
 const GENERIC: Record<string, 'first' | 'doing' | 'review' | 'done'> = {
-  'por hacer': 'first', 'pendiente': 'first', 'pendientes': 'first', 'todo': 'first', 'to do': 'first',
-  'backlog': 'first', 'nuevo': 'first', 'nueva': 'first', 'sin empezar': 'first',
-  'en curso': 'doing', 'en progreso': 'doing', 'haciendo': 'doing', 'doing': 'doing',
-  'in progress': 'doing', 'progreso': 'doing', 'trabajando': 'doing',
-  'en revision': 'review', 'revision': 'review', 'review': 'review', 'in review': 'review',
-  'por revisar': 'review', 'revisar': 'review',
-  'hecho': 'done', 'hecha': 'done', 'terminado': 'done', 'terminada': 'done', 'listo': 'done', 'lista': 'done',
-  'done': 'done', 'completado': 'done', 'completada': 'done', 'completed': 'done', 'finalizado': 'done',
-  'entregado': 'done', 'entregada': 'done',
+  'por hacer': 'first', 'pendiente': 'first', 'pendientes': 'first', 'todo': 'first', 'to do': 'first', // i18n-ok
+  'backlog': 'first', 'nuevo': 'first', 'nueva': 'first', 'sin empezar': 'first', // i18n-ok
+  'en curso': 'doing', 'en progreso': 'doing', 'haciendo': 'doing', 'doing': 'doing', // i18n-ok
+  'in progress': 'doing', 'progreso': 'doing', 'trabajando': 'doing', // i18n-ok
+  'en revision': 'review', 'revision': 'review', 'review': 'review', 'in review': 'review', // i18n-ok
+  'por revisar': 'review', 'revisar': 'review', // i18n-ok
+  'hecho': 'done', 'hecha': 'done', 'terminado': 'done', 'terminada': 'done', 'listo': 'done', 'lista': 'done', // i18n-ok
+  'done': 'done', 'completado': 'done', 'completada': 'done', 'completed': 'done', 'finalizado': 'done', // i18n-ok
+  'entregado': 'done', 'entregada': 'done', // i18n-ok
 };
 
 export function columnLabel(columns: BoardColumnRef[], key: string | null): string {
@@ -62,7 +62,7 @@ export function parseStatus(
   }
   return {
     ok: false,
-    error: `"${raw}" no es una columna de este proyecto (${cols.map((c) => c.label).join(', ')})`,
+    error: t('"{raw}" no es una columna de este proyecto ({cols})', { raw, cols: cols.map((c) => c.label).join(', ') }),
   };
 }
 
@@ -72,7 +72,7 @@ export function parseYes(input: unknown): boolean {
   if (input === true) return true;
   if (input === null || input === undefined || input === false) return false;
   const s = normalizeKey(String(input));
-  return ['si', 's', 'yes', 'y', 'true', '1', 'x', 'eliminar', 'borrar'].includes(s);
+  return ['si', 's', 'yes', 'y', 'true', '1', 'x', 'eliminar', 'borrar', 'delete', 'remove'].includes(s); // i18n-ok
 }
 
 // ---------- Checklist ----------

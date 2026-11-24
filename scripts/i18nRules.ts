@@ -170,7 +170,13 @@ export function inTVars(node: ts.Node): boolean {
 export function markedOk(sf: ts.SourceFile, node: ts.Node): boolean {
   const { line } = sf.getLineAndCharacterOfPosition(node.getStart(sf));
   const lines = sf.text.split('\n');
-  return /i18n-ok/.test(lines[line] ?? '') || /i18n-ok/.test(lines[line - 1] ?? '');
+  if (/i18n-ok/.test(lines[line] ?? '') || /i18n-ok/.test(lines[line - 1] ?? '')) return true;
+  // Bloque: desde una línea con "i18n-ok-desde" hasta una con "i18n-ok-hasta".
+  for (let i = line; i >= 0; i--) {
+    if (/i18n-ok-hasta/.test(lines[i] ?? '') && i < line) return false;
+    if (/i18n-ok-desde/.test(lines[i] ?? '')) return true;
+  }
+  return false;
 }
 
 /** ¿El archivo entero queda en español a propósito? (marca en las primeras líneas). */

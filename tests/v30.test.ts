@@ -92,3 +92,59 @@ test('v30 idiomas: fechas con el idioma de la app y el selector', () => {
   assert.match(fs.readFileSync('app/login.tsx', 'utf8'), /<LangPicker compact onDark=\{!wide\} \/>/);
   assert.match(fs.readFileSync('app/_layout.tsx', 'utf8'), /syncCloudLang\(remote\)/);
 });
+
+test('v30 idiomas: agregar con texto en inglés', async () => {
+  const { parseQuickAdd } = await import('../lib/quickAdd');
+  const { parseRepeat } = await import('../lib/repeat');
+  const subjects = [{ id: 'calc', name: 'Calculus II' }, { id: 'phys', name: 'Physics' }];
+  const types = [{ key: 'tarea', label: 'Task' }, { key: 'examen', label: 'Exam' }, { key: 'quiz', label: 'Quiz' }];
+  const now = new Date(2026, 10, 23, 9, 0); // lunes 23 nov 2026, 9:00
+  _setLangForTests('en');
+  try {
+    let r = parseQuickAdd('calculus exam friday 10am', subjects, types, now);
+    assert.deepEqual([r.typeKey, r.subjectId, r.dueDate, r.dueTime], ['examen', 'calc', '2026-11-27', '10:00']);
+    r = parseQuickAdd('physics report on 12/3', subjects, types, now);
+    assert.equal(r.dueDate, '2026-12-03', 'mes/día como en EE. UU.');
+    assert.equal(r.title, 'Physics report');
+    r = parseQuickAdd('read chapter 9 tomorrow at 6', subjects, types, now);
+    assert.deepEqual([r.dueDate, r.dueTime, r.title], ['2026-11-24', '18:00', 'Read chapter 9']);
+    assert.equal(parseQuickAdd('essay day after tomorrow', subjects, types, now).dueDate, '2026-11-25');
+    assert.equal(parseQuickAdd('lab next week', subjects, types, now).dueDate, '2026-11-30');
+    assert.equal(parseQuickAdd('quiz in 3 days', subjects, types, now).dueDate, '2026-11-26');
+    assert.equal(parseQuickAdd('presentation Dec 5th', subjects, types, now).dueDate, '2026-12-05');
+    assert.equal(parseQuickAdd('call 30/11', subjects, types, now).dueDate, '2026-11-30', 'si el primero pasa de 12 es el día');
+    const rp = parseRepeat('gym every monday and wednesday until dec 18', '2026-11-23');
+    assert.deepEqual(rp?.rule, { freq: 'week', interval: 1, days: [1, 3], until: '2026-12-18' });
+    assert.equal(rp?.rest, 'gym');
+    assert.deepEqual(parseRepeat('standup every weekday', '2026-11-23')?.rule, { freq: 'week', interval: 1, days: [1, 2, 3, 4, 5] });
+    assert.deepEqual(parseRepeat('rent every month on the 5th', '2026-11-23')?.rule, { freq: 'month', interval: 1, monthDay: 5 });
+  } finally { _setLangForTests('es'); }
+  // En español, las palabras en inglés no cambian nada.
+  const es = parseQuickAdd('test sat', subjects, types, now);
+  assert.deepEqual([es.dueDate, es.typeKey], [null, null]);
+});
+
+test('v30 idiomas: cuenta de cobro bilingüe, sílabo y exportación en inglés', async () => {
+  const { invoiceHtml } = await import('../lib/invoice');
+  const inv: any = {
+    id: 'i', client_id: 'c', prefix: 'CC', number: 7, issued_on: '2026-11-30', period_from: '2026-11-01', period_to: '2026-11-30',
+    issuer: { full_name: 'Juan Tamayo', doc_type: 'CC', doc_number: '1000', city: 'Medellín', bank_name: 'Bancolombia', account_type: 'ahorros', account_number: '123-45' },
+    client: { name: 'Acme S.A.S.' }, items: [{ concept: 'Web', hours: 2.5, rate: 60000, amount: 150000 }], total: 150000,
+    note: null, status: 'emitida', paid_on: null, created_at: '',
+  };
+  const es = invoiceHtml(inv);
+  assert.doesNotMatch(es, /OWES|class="en"/, 'en español no lleva traducción');
+  _setLangForTests('en');
+  try {
+    const en = invoiceHtml(inv);
+    assert.match(en, /CUENTA DE COBRO No\. CC-0007/, 'el texto legal sigue en español');
+    assert.match(en, /DEBE A <span class="en">\(OWES\)<\/span>/);
+    assert.match(en, /30 de noviembre de 2026 <span class="en">\(November 30, 2026\)<\/span>/);
+    assert.match(en, /Please pay to Bancolombia savings account number 123-45, in the name of Juan Tamayo\./);
+    assert.match(en, /ciento cincuenta mil pesos m\/cte/);
+    const { parseSyllabus, syllabusPrompt } = await import('../lib/syllabus');
+    const rows = parseSyllabus('Date\tTitle\tType\n12/04/2026\tFinal project\tProject', [], [{ key: 'proyecto', label: 'Project' }], null, new Date(2026, 10, 23));
+    assert.equal(rows[0].dueDate, '2026-12-04'); assert.equal(rows[0].typeKey, 'proyecto');
+    assert.match(syllabusPrompt('Physics', 2026), /MM\/DD\/YYYY/);
+  } finally { _setLangForTests('es'); }
+});
