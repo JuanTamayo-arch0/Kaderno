@@ -6,6 +6,7 @@ import { decode } from 'base64-arraybuffer';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../lib/theme';
 import { SubjectFile, getSubjectFiles, uploadSubjectFile, deleteSubjectFile, signedUrl } from '../lib/db';
+import { t } from '../lib/i18n';
 
 function human(size: number | null): string {
   if (!size) return '';
@@ -51,26 +52,26 @@ export function SubjectFiles({ subjectId }: { subjectId: string }) {
       }
       await uploadSubjectFile(subjectId, { name: a.name ?? 'archivo', mime: a.mimeType ?? null, size: a.size ?? null, body });
       await load();
-    } catch (e: any) { notify('No se pudo subir', friendlyError(e)); }
+    } catch (e: any) { notify(t('No se pudo subir'), friendlyError(e)); }
     finally { setBusy(false); }
   }
 
   async function open(f: SubjectFile) {
     const url = await signedUrl(f.path);
-    if (!url) { notify('No se pudo abrir el archivo', 'Inténtalo de nuevo en un momento.'); return; }
+    if (!url) { notify(t('No se pudo abrir el archivo'), t('Inténtalo de nuevo en un momento.')); return; }
     router.push({ pathname: '/visor', params: { url, name: f.name, mime: f.mime ?? '', kind: 'subject', fileId: f.id, subjectId } });
   }
 
   function confirmDelete(f: SubjectFile) {
-    confirm('¿Eliminar archivo?', `"${f.name}" se borrará para siempre.`, 'Eliminar').then(async (ok) => {
+    confirm(t('¿Eliminar archivo?'), t('"{name}" se borrará para siempre.', { name: f.name }), t('Eliminar')).then(async (ok) => {
       if (!ok) return;
-      try { await deleteSubjectFile(f.id, f.path); toast('Archivo eliminado'); load(); } catch (e: any) { notify('No se pudo eliminar', friendlyError(e)); }
+      try { await deleteSubjectFile(f.id, f.path); toast(t('Archivo eliminado')); load(); } catch (e: any) { notify(t('No se pudo eliminar'), friendlyError(e)); }
     });
   }
 
   return (
     <View>
-      {files.length === 0 && <Text style={{ color: C.muted, fontSize: 13, paddingVertical: 8 }}>Aún no hay materiales. Sube PDFs de libros, guías, etc.</Text>}
+      {files.length === 0 && <Text style={{ color: C.muted, fontSize: 13, paddingVertical: 8 }}>{t('Aún no hay materiales. Sube PDFs de libros, guías, etc.')}</Text>}
       {files.map((f) => (
         <View key={f.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 8 }}>
           <Ionicons name={iconFor(f.mime)} size={22} color={C.brand} />
@@ -78,14 +79,14 @@ export function SubjectFiles({ subjectId }: { subjectId: string }) {
             <Text numberOfLines={1} style={{ color: C.text, fontWeight: '600' }}>{f.name}</Text>
             <Text style={{ color: C.muted, fontSize: 12 }}>{human(f.size)}{f.mime?.includes('pdf') ? ' · PDF' : ''}</Text>
           </Pressable>
-          <Pressable onPress={() => open(f)} hitSlop={8} accessibilityLabel="Abrir"><Ionicons name="eye-outline" size={18} color={C.muted} /></Pressable>
-          <Pressable onPress={() => confirmDelete(f)} hitSlop={8} accessibilityLabel="Eliminar"><Ionicons name="trash-outline" size={18} color={C.muted} /></Pressable>
+          <Pressable onPress={() => open(f)} hitSlop={8} accessibilityLabel={t('Abrir')}><Ionicons name="eye-outline" size={18} color={C.muted} /></Pressable>
+          <Pressable onPress={() => confirmDelete(f)} hitSlop={8} accessibilityLabel={t('Eliminar')}><Ionicons name="trash-outline" size={18} color={C.muted} /></Pressable>
         </View>
       ))}
       <Pressable onPress={pickAndUpload} disabled={busy}
         style={{ flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderStyle: 'dashed', borderColor: C.line, borderRadius: 12, padding: 13, marginTop: 4 }}>
         {busy ? <ActivityIndicator color={C.brand} /> : <Ionicons name="cloud-upload-outline" size={18} color={C.muted} />}
-        <Text style={{ color: C.muted, fontSize: 14, fontWeight: '600' }}>{busy ? 'Subiendo…' : 'Subir archivo (PDF, etc.)'}</Text>
+        <Text style={{ color: C.muted, fontSize: 14, fontWeight: '600' }}>{busy ? t('Subiendo…') : t('Subir archivo (PDF, etc.)')}</Text>
       </Pressable>
     </View>
   );

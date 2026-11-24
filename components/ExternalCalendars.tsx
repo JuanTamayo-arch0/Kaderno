@@ -6,6 +6,7 @@ import { Button, Card, Field } from './ds';
 import { getCalendars, addCalendar, removeCalendar, syncCalendar, CAL_COLORS, looksLikeCalendarUrl, type ExtCalendar } from '../lib/calendarsDb';
 import { confirm, friendlyError, toast } from '../lib/feedback';
 import { dataChanged } from '../lib/uiBus';
+import { t } from '../lib/i18n';
 
 // ============================================================
 //  Ajustes, "Tus otros calendarios" (v21, sección 9): conectar Google
@@ -14,12 +15,12 @@ import { dataChanged } from '../lib/uiBus';
 // ============================================================
 
 function ago(iso: string | null): string {
-  if (!iso) return 'aún sin leer';
+  if (!iso) return t('aún sin leer');
   const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
-  if (m < 1) return 'leído hace un momento';
-  if (m < 60) return `leído hace ${m} min`;
+  if (m < 1) return t('leído hace un momento');
+  if (m < 60) return t('leído hace {m} min', { m });
   const h = Math.round(m / 60);
-  return h < 24 ? `leído hace ${h} h` : `leído el ${new Date(iso).toLocaleDateString('es')}`;
+  return h < 24 ? t('leído hace {h} h', { h }) : t('leído el {toLocaleDateString}', { toLocaleDateString: new Date(iso).toLocaleDateString('es') });
 }
 
 export function ExternalCalendars() {
@@ -37,8 +38,8 @@ export function ExternalCalendars() {
     setBusy('add');
     try {
       const r = await addCalendar(name, url, color);
-      if (r.error) toast(`Quedó guardado, pero: ${r.error}`, { tone: 'bad' });
-      else toast(`Listo: ${r.events} eventos de los próximos días`);
+      if (r.error) toast(t('Quedó guardado, pero: {error}', { error: r.error }), { tone: 'bad' });
+      else toast(t('Listo: {events} eventos de los próximos días', { events: r.events }));
       setAdding(false); setName(''); setUrl('');
       await load(); dataChanged();
     } catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
@@ -51,7 +52,7 @@ export function ExternalCalendars() {
     finally { setBusy(null); load(); }
   }
   async function remove(c: ExtCalendar) {
-    if (!(await confirm(`¿Quitar "${c.name}"?`, 'Sus eventos dejan de verse en Kaderno. Tu calendario no cambia.', 'Quitar'))) return;
+    if (!(await confirm(t('¿Quitar "{name}"?', { name: c.name }), t('Sus eventos dejan de verse en Kaderno. Tu calendario no cambia.'), t('Quitar')))) return;
     try { await removeCalendar(c.id); await load(); dataChanged(); } catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
   }
 
@@ -61,8 +62,8 @@ export function ExternalCalendars() {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         <Ionicons name="calendar-number-outline" size={20} color={C.brand} />
         <View style={{ flex: 1 }}>
-          <Text style={{ color: C.text, fontSize: 15, fontWeight: '600' }}>Tus otros calendarios</Text>
-          <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>Ve en Hoy los eventos de Google Calendar u Outlook. Kaderno solo los lee.</Text>
+          <Text style={{ color: C.text, fontSize: 15, fontWeight: '600' }}>{t('Tus otros calendarios')}</Text>
+          <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{t('Ve en Hoy los eventos de Google Calendar u Outlook. Kaderno solo los lee.')}</Text>
         </View>
       </View>
       {list?.map((c) => (
@@ -72,20 +73,20 @@ export function ExternalCalendars() {
             <Text style={{ color: C.text, fontSize: 14, fontWeight: '600' }} numberOfLines={1}>{c.name}</Text>
             <Text style={{ color: c.last_error ? C.bad : C.muted, fontSize: 12 }} numberOfLines={2}>{c.last_error ?? ago(c.last_sync)}</Text>
           </View>
-          <Button label="Actualizar" size="sm" kind="ghost" busy={busy === c.id} onPress={() => refresh(c)} />
-          <Pressable onPress={() => remove(c)} accessibilityRole="button" accessibilityLabel={`Quitar ${c.name}`} hitSlop={6} style={{ padding: 4 }}>
+          <Button label={t('Actualizar')} size="sm" kind="ghost" busy={busy === c.id} onPress={() => refresh(c)} />
+          <Pressable onPress={() => remove(c)} accessibilityRole="button" accessibilityLabel={t('Quitar {name}', { name: c.name })} hitSlop={6} style={{ padding: 4 }}>
             <Ionicons name="trash-outline" size={18} color={C.muted} />
           </Pressable>
         </View>
       ))}
       {!adding ? (
-        (list?.length ?? 0) < 5 && <Button label="Conectar un calendario" kind="secondary" size="sm" onPress={() => setAdding(true)} />
+        (list?.length ?? 0) < 5 && <Button label={t('Conectar un calendario')} kind="secondary" size="sm" onPress={() => setAdding(true)} />
       ) : (
         <View style={{ gap: 4 }}>
-          <Field label="Nombre del calendario" placeholder="Trabajo, Familia, Universidad…" value={name} onChangeText={setName} maxLength={60} />
-          <Field label="Dirección iCal secreta" placeholder="https://calendar.google.com/calendar/ical/…/basic.ics" value={url} onChangeText={setUrl}
-            autoCapitalize="none" autoCorrect={false} error={urlBad ? 'Debe empezar con https:// o webcal://' : null} />
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }} accessibilityRole="radiogroup" accessibilityLabel="Color">
+          <Field label={t('Nombre del calendario')} placeholder={t('Trabajo, Familia, Universidad…')} value={name} onChangeText={setName} maxLength={60} />
+          <Field label={t('Dirección iCal secreta')} placeholder="https://calendar.google.com/calendar/ical/…/basic.ics" value={url} onChangeText={setUrl}
+            autoCapitalize="none" autoCorrect={false} error={urlBad ? t('Debe empezar con https:// o webcal://') : null} />
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }} accessibilityRole="radiogroup" accessibilityLabel={t('Color')}>
             {CAL_COLORS.map((k) => (
               <Pressable key={k} onPress={() => setColor(k)} accessibilityRole="radio" accessibilityState={{ checked: color === k }} accessibilityLabel={`Color ${k}`}
                 style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: k, borderWidth: 3, borderColor: color === k ? C.text : 'transparent' }} />
@@ -93,18 +94,18 @@ export function ExternalCalendars() {
           </View>
           <Pressable onPress={() => setHelp(!help)} accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 }}>
             <Ionicons name={help ? 'chevron-down' : 'chevron-forward'} size={14} color={C.brand} />
-            <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>¿Dónde encuentro la dirección?</Text>
+            <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>{t('¿Dónde encuentro la dirección?')}</Text>
           </Pressable>
           {help && (
             <View style={{ gap: 4, padding: 10, borderRadius: 10, backgroundColor: C.surface2, marginBottom: 6 }}>
-              <Text style={{ color: C.text, fontSize: 12.5 }}>Google Calendar (en el computador): Configuración → elige tu calendario en la izquierda → "Integrar el calendario" → copia "Dirección secreta en formato iCal".</Text>
-              <Text style={{ color: C.text, fontSize: 12.5 }}>Outlook: Configuración → Calendario → Calendarios compartidos → "Publicar un calendario" → copia el enlace ICS.</Text>
-              <Text style={{ color: C.muted, fontSize: 12 }}>Esa dirección es privada: quien la tenga ve tu calendario. Kaderno la guarda solo en tu cuenta.</Text>
+              <Text style={{ color: C.text, fontSize: 12.5 }}>{t('Google Calendar (en el computador): Configuración → elige tu calendario en la izquierda → "Integrar el calendario" → copia "Dirección secreta en formato iCal".')}</Text>
+              <Text style={{ color: C.text, fontSize: 12.5 }}>{t('Outlook: Configuración → Calendario → Calendarios compartidos → "Publicar un calendario" → copia el enlace ICS.')}</Text>
+              <Text style={{ color: C.muted, fontSize: 12 }}>{t('Esa dirección es privada: quien la tenga ve tu calendario. Kaderno la guarda solo en tu cuenta.')}</Text>
             </View>
           )}
           <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'flex-end' }}>
-            <Button label="Cancelar" kind="ghost" size="sm" onPress={() => setAdding(false)} />
-            <Button label="Conectar" size="sm" busy={busy === 'add'} disabled={!url.trim() || urlBad} onPress={add} />
+            <Button label={t('Cancelar')} kind="ghost" size="sm" onPress={() => setAdding(false)} />
+            <Button label={t('Conectar')} size="sm" busy={busy === 'add'} disabled={!url.trim() || urlBad} onPress={add} />
           </View>
         </View>
       )}

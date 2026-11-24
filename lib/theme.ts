@@ -4,6 +4,7 @@ import { derive, type BasePalette, type Palette } from './color';
 import { THEMES, type Theme } from './palettes';
 import { BRAND_FONT, BRAND_FONT_FACES, BRAND_VERSION, DEFAULT_ACCENT, DEFAULT_WORK_ACCENT, WORK_FONT, WORK_HEAD_FONT, isKadernoTheme, migrateBrand, spacePalette, SPACE_RADII } from './brand';
 import { getSpace } from './mode';
+import { t, trn } from './i18n';
 export * from './color';
 export { THEMES, type Theme } from './palettes';
 
@@ -36,35 +37,35 @@ const FALLBACK_THEME = 'kaderno-oscuro';
 // En web se pintan con CSS; en nativo se usa el color sólido de respaldo.
 export type Background = { id: string; name: string; css: string; solid: string };
 export const BACKGROUNDS: Background[] = [
-  { id: 'aurora', name: 'Aurora', css: 'linear-gradient(160deg,#0f2027,#203a43,#2c5364)', solid: '#1b3a44' },
-  { id: 'ciruela', name: 'Ciruela', css: 'linear-gradient(160deg,#41295a,#2f0743)', solid: '#3a1f52' },
-  { id: 'durazno', name: 'Durazno', css: 'linear-gradient(160deg,#3a1c71,#d76d77,#ffaf7b)', solid: '#7a3d63' },
-  { id: 'esmeralda', name: 'Esmeralda', css: 'linear-gradient(160deg,#134e5e,#71b280)', solid: '#2f6f5e' },
-  { id: 'nocturno', name: 'Nocturno', css: 'linear-gradient(160deg,#232526,#414345)', solid: '#2c2e30' },
-  { id: 'cosmico', name: 'Cósmico', css: 'radial-gradient(circle at 30% 20%,#3b2f63,#0b1020 60%)', solid: '#171433' },
-  { id: 'amanecer', name: 'Amanecer', css: 'linear-gradient(160deg,#ff9a9e,#fad0c4,#fbc2eb)', solid: '#f2b3c1' },
-  { id: 'brisa', name: 'Brisa', css: 'linear-gradient(160deg,#a1c4fd,#c2e9fb)', solid: '#aed3f7' },
+  { id: 'aurora', name: t('Aurora'), css: 'linear-gradient(160deg,#0f2027,#203a43,#2c5364)', solid: '#1b3a44' },
+  { id: 'ciruela', name: t('Ciruela'), css: 'linear-gradient(160deg,#41295a,#2f0743)', solid: '#3a1f52' },
+  { id: 'durazno', name: t('Durazno'), css: 'linear-gradient(160deg,#3a1c71,#d76d77,#ffaf7b)', solid: '#7a3d63' },
+  { id: 'esmeralda', name: t('Esmeralda'), css: 'linear-gradient(160deg,#134e5e,#71b280)', solid: '#2f6f5e' },
+  { id: 'nocturno', name: t('Nocturno'), css: 'linear-gradient(160deg,#232526,#414345)', solid: '#2c2e30' },
+  { id: 'cosmico', name: t('Cósmico'), css: 'radial-gradient(circle at 30% 20%,#3b2f63,#0b1020 60%)', solid: '#171433' },
+  { id: 'amanecer', name: t('Amanecer'), css: 'linear-gradient(160deg,#ff9a9e,#fad0c4,#fbc2eb)', solid: '#f2b3c1' },
+  { id: 'brisa', name: t('Brisa'), css: 'linear-gradient(160deg,#a1c4fd,#c2e9fb)', solid: '#aed3f7' },
 ];
 export function backgroundOf(id: string): Background | undefined { return BACKGROUNDS.find((b) => b.id === id); }
 
 // ---------- Fuentes (Google Fonts, se cargan en web) ----------
 export type FontOpt = { id: string; name: string; family?: string };
 export const FONTS: FontOpt[] = [
-  { id: 'marca', name: 'La de Kaderno', family: BRAND_FONT },
-  { id: 'system', name: 'Sistema', family: undefined },
-  { id: 'inter', name: 'Inter', family: 'Inter' },
-  { id: 'nunito', name: 'Nunito', family: 'Nunito' },
-  { id: 'poppins', name: 'Poppins', family: 'Poppins' },
-  { id: 'grotesk', name: 'Space Grotesk', family: 'Space Grotesk' },
-  { id: 'lora', name: 'Lora (serif)', family: 'Lora' },
+  { id: 'marca', name: t('La de Kaderno'), family: BRAND_FONT },
+  { id: 'system', name: t('Sistema'), family: undefined },
+  { id: 'inter', name: t('Inter'), family: t('Inter') },
+  { id: 'nunito', name: t('Nunito'), family: t('Nunito') },
+  { id: 'poppins', name: t('Poppins'), family: t('Poppins') },
+  { id: 'grotesk', name: t('Space Grotesk'), family: t('Space Grotesk') },
+  { id: 'lora', name: t('Lora (serif)'), family: t('Lora') },
 ];
 export function fontFamilyOf(id: string): string | undefined { return FONTS.find((f) => f.id === id)?.family; }
 // Letra para LEER las notas (puede ser distinta a la de la app).
 export const NOTE_FONTS: FontOpt[] = [
-  { id: 'serif', name: 'Source Serif (lectura)', family: 'Source Serif 4' },
-  { id: 'app', name: 'La misma de la app', family: undefined },
-  { id: 'plex', name: 'IBM Plex Sans', family: 'IBM Plex Sans' },
-  { id: 'lora', name: 'Lora', family: 'Lora' },
+  { id: 'serif', name: t('Source Serif (lectura)'), family: t('Source Serif 4') },
+  { id: 'app', name: t('La misma de la app'), family: undefined },
+  { id: 'plex', name: t('IBM Plex Sans'), family: 'IBM Plex Sans' },
+  { id: 'lora', name: t('Lora'), family: t('Lora') },
 ];
 /** Cadena CSS de la letra de las notas según los ajustes. */
 export function noteFontStack(s: { noteFontId?: string; fontId: string } = PERSONALIZE): string {
@@ -118,10 +119,10 @@ export const GOOGLE_FONTS_HREF =
 // ---------- Tamaño de interfaz ----------
 export type SizeOpt = { id: string; name: string; scale: number };
 export const SIZES: SizeOpt[] = [
-  { id: 'sm', name: 'Pequeño', scale: 0.9 },
-  { id: 'md', name: 'Normal', scale: 1 },
-  { id: 'lg', name: 'Grande', scale: 1.12 },
-  { id: 'xl', name: 'Muy grande', scale: 1.25 },
+  { id: 'sm', name: t('Pequeño'), scale: 0.9 },
+  { id: 'md', name: t('Normal'), scale: 1 },
+  { id: 'lg', name: t('Grande'), scale: 1.12 },
+  { id: 'xl', name: t('Muy grande'), scale: 1.25 },
 ];
 export function scaleOf(id: string): number { return SIZES.find((s) => s.id === id)?.scale ?? 1; }
 
@@ -259,11 +260,11 @@ export function fmtDate(iso: string): string {
   const t = new Date();
   t.setHours(0, 0, 0, 0);
   const diff = Math.round((d.getTime() - t.getTime()) / 86400000);
-  if (diff === 0) return 'Hoy';
-  if (diff === 1) return 'Mañana';
-  if (diff === -1) return 'Ayer';
-  if (diff < 0) return `Hace ${-diff} días`;
-  if (diff < 7) return `En ${diff} días`;
+  if (diff === 0) return trn('Hoy');
+  if (diff === 1) return trn('Mañana');
+  if (diff === -1) return trn('Ayer');
+  if (diff < 0) return trn('Hace {v} días', { v: -diff });
+  if (diff < 7) return trn('En {diff} días', { diff });
   return d.toLocaleDateString('es', { day: 'numeric', month: 'short' });
 }
 

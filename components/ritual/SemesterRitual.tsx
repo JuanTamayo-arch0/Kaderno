@@ -10,13 +10,14 @@ import { getGoals, saveGoal, saveRitualPrefs, type Goal } from '../../lib/ritual
 import { fullPlan, planThen, goalError, type GoalDraft } from '../../lib/rituals';
 import { toast, notify, friendlyError } from '../../lib/feedback';
 import { streakChanged } from '../../lib/uiBus';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Ritual del semestre (v20, sección J.2): la nota que quieres en cada
 //  materia, la meta semanal y una meta WOOP del semestre.
 // ============================================================
 
-const STEPS = ['Notas que quieres', 'Meta semanal', 'Meta del semestre'];
+const STEPS = [t('Notas que quieres'), t('Meta semanal'), t('Meta del semestre')];
 
 export function SemesterRitual({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const [step, setStep] = useState(0);
@@ -56,7 +57,7 @@ export function SemesterRitual({ visible, onClose }: { visible: boolean; onClose
         if (!Number.isFinite(n) || n <= 0 || n > (scales[s.id] ?? 5)) continue;
         const g = goals.find((x) => x.subject_id === s.id);
         if (g) await saveGoal({ wish: g.wish, outcome: g.outcome, obstacle: g.obstacle, plan: g.plan, target_grade: n }, s.id, g.id);
-        else await saveGoal({ wish: `Sacar ${String(n).replace('.', ',')} en ${s.name}`, target_grade: n }, s.id);
+        else await saveGoal({ wish: t('Sacar {replace} en {name}', { replace: String(n).replace('.', ','), name: s.name }), target_grade: n }, s.id);
       }
       if (woop.wish.trim()) {
         const then = planThen(woop.plan, woop.obstacle);
@@ -69,9 +70,9 @@ export function SemesterRitual({ visible, onClose }: { visible: boolean; onClose
       await saveStudyPrefs({ weeklyGoal: weekly });
       await saveRitualPrefs({ semesterAt: new Date().toISOString() });
       streakChanged(0);
-      toast('Semestre listo: metas guardadas.', { tone: 'good' });
+      toast(t('Semestre listo: metas guardadas.'), { tone: 'good' });
       onClose();
-    } catch (e) { notify('No se pudo guardar', friendlyError(e)); }
+    } catch (e) { notify(t('No se pudo guardar'), friendlyError(e)); }
     finally { setBusy(false); }
   }
 
@@ -79,14 +80,14 @@ export function SemesterRitual({ visible, onClose }: { visible: boolean; onClose
   if (!subjects) body = <View style={{ padding: 30, alignItems: 'center' }}><ActivityIndicator color={C.brand} /></View>;
   else if (step === 0) body = (
     <>
-      <Text style={{ color: C.text, fontSize: 14 }}>¿Qué nota quieres sacar en cada materia? Se usa en "Quiero sacar" y en el resultado del simulacro.</Text>
-      {subjects.length === 0 && <Text style={{ color: C.muted, fontSize: 13 }}>Primero crea tus materias.</Text>}
+      <Text style={{ color: C.text, fontSize: 14 }}>{t('¿Qué nota quieres sacar en cada materia? Se usa en "Quiero sacar" y en el resultado del simulacro.')}</Text>
+      {subjects.length === 0 && <Text style={{ color: C.muted, fontSize: 13 }}>{t('Primero crea tus materias.')}</Text>}
       {subjects.map((s) => (
         <View key={s.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <Dot color={s.color} />
           <Text style={{ color: C.text, fontSize: 14, flex: 1 }} numberOfLines={1}>{s.name}</Text>
           <TextInput value={targets[s.id] ?? ''} onChangeText={(v) => setTargets((t) => ({ ...t, [s.id]: v.replace(/[^0-9.,]/g, '') }))} keyboardType="decimal-pad"
-            placeholder={(scales[s.id] ?? 5) >= 20 ? '80' : '4,0'} placeholderTextColor={C.muted} accessibilityLabel={`Nota que quieres en ${s.name}`}
+            placeholder={(scales[s.id] ?? 5) >= 20 ? '80' : '4,0'} placeholderTextColor={C.muted} accessibilityLabel={t('Nota que quieres en {name}', { name: s.name })}
             style={{ width: 72, textAlign: 'center', backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 10, color: C.text, padding: 8, fontSize: 15, fontWeight: '700' }} />
           <Text style={{ color: C.muted, fontSize: 12.5, width: 36 }}>/ {scales[s.id] ?? 5}</Text>
         </View>
@@ -95,10 +96,10 @@ export function SemesterRitual({ visible, onClose }: { visible: boolean; onClose
   );
   else if (step === 1) body = (
     <>
-      <Text style={{ color: C.text, fontSize: 14 }}>¿Cuántos días por semana quieres estudiar algo?</Text>
+      <Text style={{ color: C.text, fontSize: 14 }}>{t('¿Cuántos días por semana quieres estudiar algo?')}</Text>
       <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }} accessibilityRole="radiogroup">
         {[2, 3, 4, 5, 6, 7].map((n) => (
-          <Pressable key={n} onPress={() => setWeekly(n)} accessibilityRole="radio" accessibilityState={{ checked: weekly === n }} accessibilityLabel={`${n} días`}
+          <Pressable key={n} onPress={() => setWeekly(n)} accessibilityRole="radio" accessibilityState={{ checked: weekly === n }} accessibilityLabel={t('{n} días', { n })}
             style={{ minWidth: 48, minHeight: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 99, borderWidth: 1, borderColor: weekly === n ? C.brand : C.line, backgroundColor: weekly === n ? C.brand : 'transparent' }}>
             <Text style={{ color: weekly === n ? C.onBrand : C.text, fontSize: 15, fontWeight: '700' }}>{n}</Text>
           </Pressable>
@@ -112,21 +113,21 @@ export function SemesterRitual({ visible, onClose }: { visible: boolean; onClose
         {[0, 1, 2, 3].map((i) => <Pressable key={i} onPress={() => setWStep(i)} accessibilityLabel={`Parte ${i + 1}`} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: i <= wStep ? C.brand2 : C.surface2 }} />)}
       </View>
       <WoopFields step={wStep} d={woop} onChange={setWoop} subject={null} scale={5} />
-      <Text style={{ color: C.muted, fontSize: 12 }}>Opcional. Puedes dejarla vacía y ponerla después.</Text>
+      <Text style={{ color: C.muted, fontSize: 12 }}>{t('Opcional. Puedes dejarla vacía y ponerla después.')}</Text>
     </>
   );
 
   const last = step === 2 && wStep === 3;
   return (
-    <Sheet visible={visible} onClose={onClose} title="Empezar semestre" subtitle={`Paso ${step + 1} de 3 · ${STEPS[step]}`}
+    <Sheet visible={visible} onClose={onClose} title={t('Empezar semestre')} subtitle={t('Paso {v} de 3 · {v2}', { v: step + 1, v2: STEPS[step] })}
       footer={<>
-        <Button label={step === 0 ? 'Cerrar' : 'Atrás'} kind="secondary" style={{ flex: 1 }}
+        <Button label={step === 0 ? t('Cerrar') : t('Atrás')} kind="secondary" style={{ flex: 1 }}
           onPress={() => { if (step === 2 && wStep > 0) setWStep(wStep - 1); else if (step === 0) onClose(); else setStep(step - 1); }} />
         {step === 2 && !last && woop.wish.trim()
-          ? <Button label="Siguiente" icon="arrow-forward" onPress={() => setWStep(wStep + 1)} style={{ flex: 2 }} />
+          ? <Button label={t('Siguiente')} icon="arrow-forward" onPress={() => setWStep(wStep + 1)} style={{ flex: 2 }} />
           : step < 2
-          ? <Button label="Siguiente" icon="arrow-forward" onPress={() => setStep(step + 1)} disabled={!subjects} style={{ flex: 2 }} />
-          : <Button label="Guardar" icon="checkmark" onPress={save} busy={busy} style={{ flex: 2 }} />}
+          ? <Button label={t('Siguiente')} icon="arrow-forward" onPress={() => setStep(step + 1)} disabled={!subjects} style={{ flex: 2 }} />
+          : <Button label={t('Guardar')} icon="checkmark" onPress={save} busy={busy} style={{ flex: 2 }} />}
       </>}>
       {body}
     </Sheet>

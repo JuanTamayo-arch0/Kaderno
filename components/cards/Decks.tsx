@@ -12,6 +12,7 @@ import { Button, Card, ChipRow, Dot, EmptyState, FilterChip } from '../ds';
 import { SubjectPicker } from '../SubjectPicker';
 import { CardText } from './CardText';
 import { CardEditor, Sheet } from './CardForms';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Mazos: tus tarjetas por materia y por nota, con buscador,
@@ -54,7 +55,7 @@ export function Decks({ cards, subjects, noteTitles, retention, onChanged }: {
       if (!m.has(nk)) m.set(nk, []);
       m.get(nk)!.push(c);
     }
-    const name = (sid: string) => subjects.find((s) => s.id === sid)?.name ?? 'Sin materia';
+    const name = (sid: string) => subjects.find((s) => s.id === sid)?.name ?? t('Sin materia');
     return [...bySubj.entries()].sort((a, b) => (a[0] ? 0 : 1) - (b[0] ? 0 : 1) || name(a[0]).localeCompare(name(b[0]), 'es'));
   }, [list, subjects]);
 
@@ -64,15 +65,15 @@ export function Decks({ cards, subjects, noteTitles, retention, onChanged }: {
   const done = (msg: string) => { setSel(new Set()); setSelecting(false); onChanged(); refreshNavCounts(true); toast(msg, { tone: 'good' }); };
 
   const bulkSuspend = async () => {
-    try { await setSuspended(ids, !allSuspended); done(allSuspended ? 'Tarjetas reactivadas' : 'Tarjetas suspendidas: no saldrán en el repaso'); }
+    try { await setSuspended(ids, !allSuspended); done(allSuspended ? t('Tarjetas reactivadas') : t('Tarjetas suspendidas: no saldrán en el repaso')); }
     catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
   };
   const bulkDelete = async () => {
-    if (!(await confirm(`¿Borrar ${ids.length} ${ids.length === 1 ? 'tarjeta' : 'tarjetas'}?`, 'Se pierde también su historial de repaso.', 'Borrar'))) return;
-    try { await deleteCards(ids); done('Tarjetas borradas'); } catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
+    if (!(await confirm(t('¿Borrar {length} {v}?', { length: ids.length, v: ids.length === 1 ? t('tarjeta') : t('tarjetas') }), t('Se pierde también su historial de repaso.'), t('Borrar')))) return;
+    try { await deleteCards(ids); done(t('Tarjetas borradas')); } catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
   };
   const bulkMove = async () => {
-    try { await moveCards(ids, moveTo); setMoving(false); done('Tarjetas movidas'); } catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
+    try { await moveCards(ids, moveTo); setMoving(false); done(t('Tarjetas movidas')); } catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
   };
 
   return (
@@ -80,31 +81,31 @@ export function Decks({ cards, subjects, noteTitles, retention, onChanged }: {
       <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
         <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, minHeight: 42, borderRadius: 10, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.line }}>
           <Ionicons name="search" size={16} color={C.muted} />
-          <TextInput value={q} onChangeText={setQ} placeholder="Buscar en tus tarjetas" placeholderTextColor={C.muted} accessibilityLabel="Buscar en tus tarjetas"
+          <TextInput value={q} onChangeText={setQ} placeholder={t('Buscar en tus tarjetas')} placeholderTextColor={C.muted} accessibilityLabel={t('Buscar en tus tarjetas')}
             style={{ flex: 1, color: C.text, fontSize: 14, minHeight: 40, outlineStyle: 'none' } as any} />
         </View>
-        <Button label={selecting ? 'Listo' : 'Seleccionar'} kind="secondary" size="sm" onPress={() => { setSelecting(!selecting); setSel(new Set()); }} />
-        <Button label="Nueva" icon="add" size="sm" onPress={() => setEdit('new')} />
+        <Button label={selecting ? t('Listo') : t('Seleccionar')} kind="secondary" size="sm" onPress={() => { setSelecting(!selecting); setSel(new Set()); }} />
+        <Button label={t('Nueva')} icon="add" size="sm" onPress={() => setEdit('new')} />
       </View>
       <ChipRow>
-        <FilterChip label={`Todas · ${cards.filter((c) => !c.suspended).length}`} active={filter === 'todas'} onPress={() => setFilter('todas')} />
-        <FilterChip label="Nuevas" active={filter === 'nuevas'} onPress={() => setFilter('nuevas')} />
-        <FilterChip label="Difíciles" active={filter === 'dificiles'} onPress={() => setFilter('dificiles')} />
-        {hasFsrsDb() && <FilterChip label="Suspendidas" active={filter === 'suspendidas'} onPress={() => setFilter('suspendidas')} />}
+        <FilterChip label={t('Todas · {length}', { length: cards.filter((c) => !c.suspended).length })} active={filter === 'todas'} onPress={() => setFilter('todas')} />
+        <FilterChip label={t('Nuevas')} active={filter === 'nuevas'} onPress={() => setFilter('nuevas')} />
+        <FilterChip label={t('Difíciles')} active={filter === 'dificiles'} onPress={() => setFilter('dificiles')} />
+        {hasFsrsDb() && <FilterChip label={t('Suspendidas')} active={filter === 'suspendidas'} onPress={() => setFilter('suspendidas')} />}
       </ChipRow>
 
       {selecting && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: 12, backgroundColor: '#1a2036', borderWidth: 1, borderColor: '#34437a', flexWrap: 'wrap' }}>
-          <Text style={{ color: C.text, fontWeight: '700', fontSize: 13.5, flex: 1 }}>{ids.length ? `${ids.length} seleccionadas` : 'Toca las tarjetas para elegirlas'}</Text>
-          <Button label="Mover" kind="secondary" size="sm" disabled={!ids.length} onPress={() => { setMoveTo(null); setMoving(true); }} />
-          {hasFsrsDb() && <Button label={allSuspended ? 'Reactivar' : 'Suspender'} kind="secondary" size="sm" disabled={!ids.length} onPress={bulkSuspend} />}
-          <Button label="Borrar" kind="danger" size="sm" disabled={!ids.length} onPress={bulkDelete} />
+          <Text style={{ color: C.text, fontWeight: '700', fontSize: 13.5, flex: 1 }}>{ids.length ? `${ids.length} seleccionadas` : t('Toca las tarjetas para elegirlas')}</Text>
+          <Button label={t('Mover')} kind="secondary" size="sm" disabled={!ids.length} onPress={() => { setMoveTo(null); setMoving(true); }} />
+          {hasFsrsDb() && <Button label={allSuspended ? t('Reactivar') : t('Suspender')} kind="secondary" size="sm" disabled={!ids.length} onPress={bulkSuspend} />}
+          <Button label={t('Borrar')} kind="danger" size="sm" disabled={!ids.length} onPress={bulkDelete} />
         </View>
       )}
 
       {!list.length ? (
-        <EmptyState icon="albums-outline" compact title={cards.length ? 'Nada con ese filtro' : 'Aún no tienes tarjetas'}
-          text={cards.length ? 'Prueba con otro filtro o búsqueda.' : 'Créalas desde una nota con "Crear flashcards", o escribe una a mano.'} />
+        <EmptyState icon="albums-outline" compact title={cards.length ? t('Nada con ese filtro') : t('Aún no tienes tarjetas')}
+          text={cards.length ? t('Prueba con otro filtro o búsqueda.') : t('Créalas desde una nota con "Crear flashcards", o escribe una a mano.')} />
       ) : groups.map(([sid, notes]) => {
         const s = subjects.find((x) => x.id === sid);
         const count = [...notes.values()].reduce((n, xs) => n + xs.length, 0);
@@ -112,13 +113,13 @@ export function Decks({ cards, subjects, noteTitles, retention, onChanged }: {
           <View key={sid || 'none'} style={{ gap: 6 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
               <Dot color={s?.color ?? C.muted} size={10} />
-              <Text style={{ color: C.text, fontSize: 15, fontWeight: '800', flex: 1 }}>{s?.name ?? 'Sin materia'}</Text>
+              <Text style={{ color: C.text, fontSize: 15, fontWeight: '800', flex: 1 }}>{s?.name ?? t('Sin materia')}</Text>
               <Text style={{ color: C.muted, fontSize: 12.5 }}>{count}</Text>
             </View>
             {[...notes.entries()].map(([nid, xs]) => (
               <Card key={nid || 'sin-nota'} padded={false}>
                 <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', paddingHorizontal: 14, paddingTop: 10, paddingBottom: 4 }} numberOfLines={1}>
-                  {nid ? (noteTitles[nid] ?? 'Nota') : 'Sin nota (a mano)'}
+                  {nid ? (noteTitles[nid] ?? t('Nota')) : t('Sin nota (a mano)')}
                 </Text>
                 {xs.map((c) => {
                   const r = retrievability(c, now, retention);
@@ -131,10 +132,10 @@ export function Decks({ cards, subjects, noteTitles, retention, onChanged }: {
                       <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
                         <CardText text={c.front} kind={c.kind} reveal size={14} align="left" lines={2} />
                         <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
-                          {c.kind === 'cloze' && <Text style={{ color: C.brand, fontSize: 11.5, fontWeight: '700' }}>Completar</Text>}
-                          <Text style={{ color: C.muted, fontSize: 11.5 }}>{c.suspended ? 'Suspendida' : dueLabel(c, now)}</Text>
-                          {r !== null && <Text style={{ color: C.muted, fontSize: 11.5 }}>Recuerdas {Math.round(r * 100)}%</Text>}
-                          {isHard(c) && <Text style={{ color: C.warnText, fontSize: 11.5, fontWeight: '700' }}>Difícil</Text>}
+                          {c.kind === 'cloze' && <Text style={{ color: C.brand, fontSize: 11.5, fontWeight: '700' }}>{t('Completar')}</Text>}
+                          <Text style={{ color: C.muted, fontSize: 11.5 }}>{c.suspended ? t('Suspendida') : dueLabel(c, now)}</Text>
+                          {r !== null && <Text style={{ color: C.muted, fontSize: 11.5 }}>{t('Recuerdas {round}%', { round: Math.round(r * 100) })}</Text>}
+                          {isHard(c) && <Text style={{ color: C.warnText, fontSize: 11.5, fontWeight: '700' }}>{t('Difícil')}</Text>}
                         </View>
                       </View>
                       {!selecting && <Ionicons name="chevron-forward" size={16} color={C.muted} />}
@@ -152,13 +153,13 @@ export function Decks({ cards, subjects, noteTitles, retention, onChanged }: {
         onSave={async (v, more) => {
           if (edit && edit !== 'new') await updateCard(edit.id, { front: v.front.trim(), back: v.kind === 'cloze' ? '' : v.back.trim(), kind: v.kind, subject_id: v.subject_id });
           else await saveDrafts([v], { noteId: null, subjectId: v.subject_id, from: 'manual' });
-          toast(edit === 'new' ? 'Tarjeta creada: entra como nueva' : 'Tarjeta guardada', { tone: 'good' });
+          toast(edit === 'new' ? t('Tarjeta creada: entra como nueva') : t('Tarjeta guardada'), { tone: 'good' });
           onChanged(); refreshNavCounts(true);
           if (!more) setEdit(null);
         }} />
-      <Sheet visible={moving} onClose={() => setMoving(false)} title={`Mover ${ids.length} ${ids.length === 1 ? 'tarjeta' : 'tarjetas'}`}
-        footer={<><Button label="Cancelar" kind="secondary" onPress={() => setMoving(false)} style={{ flex: 1 }} /><Button label="Mover" onPress={bulkMove} style={{ flex: 1 }} /></>}>
-        <SubjectPicker subjects={subjects} value={moveTo} onChange={setMoveTo} placeholder="Sin materia" />
+      <Sheet visible={moving} onClose={() => setMoving(false)} title={t('Mover {length} {v}', { length: ids.length, v: ids.length === 1 ? t('tarjeta') : t('tarjetas') })}
+        footer={<><Button label={t('Cancelar')} kind="secondary" onPress={() => setMoving(false)} style={{ flex: 1 }} /><Button label={t('Mover')} onPress={bulkMove} style={{ flex: 1 }} /></>}>
+        <SubjectPicker subjects={subjects} value={moveTo} onChange={setMoveTo} placeholder={t('Sin materia')} />
       </Sheet>
     </View>
   );
@@ -198,13 +199,13 @@ export function CardStats({ cards, reviews }: { cards: CardRow[]; reviews: Revie
   return (
     <View style={{ gap: 14 }}>
       <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
-        {tile('Retención, 30 días', ret === null ? 'Sin datos' : `${ret}%`, ret === null ? 'Aparece tras unos repasos' : 'de las que ya habías aprendido')}
-        {tile('Aprendidas', String(learned), `${fresh} nuevas en espera`)}
-        {tile('Repasos, 90 días', String(total90))}
+        {tile(t('Retención, 30 días'), ret === null ? t('Sin datos') : `${ret}%`, ret === null ? t('Aparece tras unos repasos') : t('de las que ya habías aprendido'))}
+        {tile(t('Aprendidas'), String(learned), t('{fresh} nuevas en espera', { fresh }))}
+        {tile(t('Repasos, 90 días'), String(total90))}
       </View>
       <Card>
-        <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '800', marginBottom: 10 }}>Repasos por día</Text>
-        <View style={{ flexDirection: 'row', gap: 3 }} accessibilityLabel={`Mapa de 12 semanas: ${total90} repasos`}>
+        <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '800', marginBottom: 10 }}>{t('Repasos por día')}</Text>
+        <View style={{ flexDirection: 'row', gap: 3 }} accessibilityLabel={t('Mapa de 12 semanas: {total90} repasos', { total90 })}>
           {weeks.map((col, wi) => (
             <View key={wi} style={{ gap: 3, flex: 1, maxWidth: 22 }}>
               {col.map((c) => (
@@ -213,18 +214,18 @@ export function CardStats({ cards, reviews }: { cards: CardRow[]; reviews: Revie
             </View>
           ))}
         </View>
-        <Text style={{ color: C.muted, fontSize: 11.5, marginTop: 8 }}>Últimas 12 semanas. Más intenso = más tarjetas ese día.</Text>
+        <Text style={{ color: C.muted, fontSize: 11.5, marginTop: 8 }}>{t('Últimas 12 semanas. Más intenso = más tarjetas ese día.')}</Text>
       </Card>
       <Card>
-        <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '800', marginBottom: 10 }}>Lo que viene, 30 días</Text>
+        <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '800', marginBottom: 10 }}>{t('Lo que viene, 30 días')}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 90 }}>
           {fc.map((x, i) => (
             <View key={x.day} style={{ flex: 1, height: `${Math.max(3, (x.n / maxF) * 100)}%`, backgroundColor: i === 0 ? C.brand : C.line, borderRadius: 2 }} accessibilityLabel={`${x.day}: ${x.n}`} />
           ))}
         </View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
-          <Text style={{ color: C.muted, fontSize: 11.5 }}>Hoy · {fc[0]?.n ?? 0}</Text>
-          <Text style={{ color: C.muted, fontSize: 11.5 }}>En 30 días</Text>
+          <Text style={{ color: C.muted, fontSize: 11.5 }}>{t('Hoy · {v}', { v: fc[0]?.n ?? 0 })}</Text>
+          <Text style={{ color: C.muted, fontSize: 11.5 }}>{t('En 30 días')}</Text>
         </View>
       </Card>
     </View>

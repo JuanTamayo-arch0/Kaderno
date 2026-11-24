@@ -3,11 +3,12 @@
 // ============================================================
 import { supabase } from './supabase';
 import { countByTask } from './comments';
+import { t } from './i18n';
 
 export type TaskComment = { id: string; project_id: string; task_id: string; author_id: string; body: string; mentions: string[]; created_at: string; edited_at: string | null };
 
 const missing = (e: any) => !!e && (e.code === '42P01' || e.code === 'PGRST205' || /does not exist|Could not find/i.test(String(e.message ?? '')));
-export const NEEDS_V22_2 = 'Para los comentarios falta correr schema_v22.sql (fase 2) en Supabase.';
+export const NEEDS_V22_2 = t('Para los comentarios falta correr schema_v22.sql (fase 2) en Supabase.');
 
 let AVAILABLE: boolean | null = null;
 export const commentsAvailable = () => AVAILABLE !== false;
@@ -34,7 +35,7 @@ export async function addComment(projectId: string, taskId: string, body: string
     .select('*').single();
   if (error) {
     if (missing(error)) throw new Error(NEEDS_V22_2);
-    if (/Máximo 500/.test(String(error.message))) throw new Error('Esta tarea ya tiene 500 comentarios.');
+    if (/Máximo 500/.test(String(error.message))) throw new Error(t('Esta tarea ya tiene 500 comentarios.'));
     throw error;
   }
   return data as TaskComment;

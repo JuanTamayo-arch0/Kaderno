@@ -10,6 +10,7 @@ import { cardError, convertKind, type CardKind, type Draft } from '../../lib/car
 import { Button, focusRingStyle } from '../ds';
 import { SubjectPicker } from '../SubjectPicker';
 import { CardText } from './CardText';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Formularios de tarjetas: el editor de una tarjeta (nueva o
@@ -46,7 +47,7 @@ export function Sheet({ visible, onClose, title, subtitle, children, footer, max
                 <Text dataSet={{ head: '1' }} style={{ color: C.text, fontSize: 18, fontWeight: '800' }} accessibilityRole="header">{title}</Text>
                 {!!subtitle && <Text style={{ color: C.muted, fontSize: 13, marginTop: 3 }}>{subtitle}</Text>}
               </View>
-              <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Cerrar" hitSlop={8}><Ionicons name="close" size={22} color={C.muted} /></Pressable>
+              <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel={t('Cerrar')} hitSlop={8}><Ionicons name="close" size={22} color={C.muted} /></Pressable>
             </View>
           </View>
           <ScrollView contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 12, gap: 12 }} keyboardShouldPersistTaps="handled">{children}</ScrollView>
@@ -69,8 +70,8 @@ function KindSwitch({ value, onChange }: { value: CardKind; onChange: (k: CardKi
     );
   };
   return (
-    <View accessibilityRole="radiogroup" accessibilityLabel="Tipo de tarjeta" style={{ flexDirection: 'row', gap: 2, padding: 3, borderRadius: 10, backgroundColor: C.surface2, alignSelf: 'flex-start' }}>
-      {item('basic', 'Pregunta')}{item('cloze', 'Completar')}
+    <View accessibilityRole="radiogroup" accessibilityLabel={t('Tipo de tarjeta')} style={{ flexDirection: 'row', gap: 2, padding: 3, borderRadius: 10, backgroundColor: C.surface2, alignSelf: 'flex-start' }}>
+      {item('basic', t('Pregunta'))}{item('cloze', t('Completar'))}
     </View>
   );
 }
@@ -92,22 +93,22 @@ export function CardFields({ value, onChange, autoFocus }: { value: { kind: Card
     <View style={{ gap: 10 }}>
       <KindSwitch value={value.kind} onChange={(k) => onChange(convertKind(value, k))} />
       {value.kind === 'cloze' ? (
-        <Input label="Frase (marca con {{ }} lo que se oculta)" value={value.front} onChange={(front) => onChange({ ...value, front })}
-          placeholder="La unidad {{FRL}} filtra, regula y lubrica el aire" autoFocus={autoFocus} minHeight={64} />
+        <Input label={t('Frase (marca con {{ }} lo que se oculta)')} value={value.front} onChange={(front) => onChange({ ...value, front })}
+          placeholder={t('La unidad {{FRL}} filtra, regula y lubrica el aire')} autoFocus={autoFocus} minHeight={64} />
       ) : (
         <>
-          <Input label="Pregunta" value={value.front} onChange={(front) => onChange({ ...value, front })} placeholder="¿Qué hace la unidad FRL?" autoFocus={autoFocus} />
-          <Input label="Respuesta" value={value.back} onChange={(back) => onChange({ ...value, back })} placeholder="Filtra, regula y lubrica el aire" minHeight={64} />
+          <Input label={t('Pregunta')} value={value.front} onChange={(front) => onChange({ ...value, front })} placeholder={t('¿Qué hace la unidad FRL?')} autoFocus={autoFocus} />
+          <Input label={t('Respuesta')} value={value.back} onChange={(back) => onChange({ ...value, back })} placeholder={t('Filtra, regula y lubrica el aire')} minHeight={64} />
         </>
       )}
       {hasMath && (
         <View style={{ padding: 12, borderRadius: 10, borderWidth: 1, borderColor: C.line, gap: 6 }}>
-          <Text style={{ color: C.muted, fontSize: 11.5, fontWeight: '700' }}>VISTA PREVIA</Text>
+          <Text style={{ color: C.muted, fontSize: 11.5, fontWeight: '700' }}>{t('VISTA PREVIA')}</Text>
           <CardText text={value.front} kind={value.kind} reveal size={15} align="left" />
           {value.kind === 'basic' && !!value.back && <CardText text={value.back} size={14} align="left" color={C.muted} />}
         </View>
       )}
-      <Text style={{ color: C.muted, fontSize: 11.5 }}>Fórmulas con $...$, por ejemplo $F = P \cdot A$.</Text>
+      <Text style={{ color: C.muted, fontSize: 11.5 }}>{t('Fórmulas con $...$, por ejemplo $F = P \\cdot A$.')}</Text>
     </View>
   );
 }
@@ -130,15 +131,15 @@ export function CardEditor({ visible, initial, subjects, subjectId, onClose, onS
     catch (x: any) { setErr(String(x?.message ?? x)); } finally { setBusy(false); }
   };
   return (
-    <Sheet visible={visible} onClose={onClose} title={title ?? (initial ? 'Editar tarjeta' : 'Nueva tarjeta')}
+    <Sheet visible={visible} onClose={onClose} title={title ?? (initial ? t('Editar tarjeta') : t('Nueva tarjeta'))}
       footer={<>
-        <Button label="Cancelar" kind="secondary" onPress={onClose} style={{ flex: 1 }} />
-        {!initial && <Button label="Guardar y otra" kind="secondary" onPress={() => save(true)} style={{ flex: 1 }} />}
-        <Button label="Guardar" onPress={() => save(false)} busy={busy} style={{ flex: 1 }} />
+        <Button label={t('Cancelar')} kind="secondary" onPress={onClose} style={{ flex: 1 }} />
+        {!initial && <Button label={t('Guardar y otra')} kind="secondary" onPress={() => save(true)} style={{ flex: 1 }} />}
+        <Button label={t('Guardar')} onPress={() => save(false)} busy={busy} style={{ flex: 1 }} />
       </>}>
       <CardFields value={v} onChange={(x) => { setV(x); setErr(null); }} autoFocus />
       <View style={{ gap: 6 }}>
-        <Text style={{ color: C.muted, fontSize: 12, fontWeight: '600' }}>Materia</Text>
+        <Text style={{ color: C.muted, fontSize: 12, fontWeight: '600' }}>{t('Materia')}</Text>
         <SubjectPicker subjects={subjects} value={sid} onChange={setSid} />
       </View>
       {!!err && <Text style={{ color: C.badText, fontSize: 13 }} accessibilityLiveRegion="polite">{err}</Text>}
@@ -157,30 +158,30 @@ export function ReviewSheet({ visible, drafts, onChange, onClose, onSave, onRedo
   const keep = drafts.filter((d) => d.keep && !cardError(d));
   const set = (key: string, patch: Partial<Draft>) => onChange(drafts.map((d) => (d.key === key ? { ...d, ...patch } : d)));
   return (
-    <Sheet visible={visible} onClose={onClose} title="Revisa tus tarjetas" maxWidth={680}
-      subtitle={`${source ? `De "${source}". ` : ''}Corrige lo que quieras: no se guarda nada hasta que toques Guardar.`}
+    <Sheet visible={visible} onClose={onClose} title={t('Revisa tus tarjetas')} maxWidth={680}
+      subtitle={t('{v}Corrige lo que quieras: no se guarda nada hasta que toques Guardar.', { v: source ? t('De "{source}". ', { source }) : '' })}
       footer={<>
-        <Button label="Agregar una a mano" kind="secondary" icon="add" onPress={() => onChange([...drafts, { key: `m${Date.now()}`, kind: 'basic', front: '', back: '', keep: true }])} />
+        <Button label={t('Agregar una a mano')} kind="secondary" icon="add" onPress={() => onChange([...drafts, { key: `m${Date.now()}`, kind: 'basic', front: '', back: '', keep: true }])} />
         <View style={{ flex: 1 }} />
-        <Button label={keep.length ? `Guardar ${keep.length} ${keep.length === 1 ? 'tarjeta' : 'tarjetas'}` : 'Elige alguna para guardar'} onPress={() => onSave(keep)} disabled={!keep.length} busy={saving} />
+        <Button label={keep.length ? t('Guardar {length} {v}', { length: keep.length, v: keep.length === 1 ? t('tarjeta') : t('tarjetas') }) : t('Elige alguna para guardar')} onPress={() => onSave(keep)} disabled={!keep.length} busy={saving} />
       </>}>
       {drafts.map((d, i) => {
         const err = d.front || d.back ? cardError(d) : null;
         return (
           <View key={d.key} style={{ padding: 14, borderRadius: 14, borderWidth: 1, borderColor: d.keep ? C.line : C.surface2, backgroundColor: d.keep ? C.surface : C.bg, gap: 10, opacity: d.keep ? 1 : 0.75 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <Pressable onPress={() => set(d.key, { keep: !d.keep })} accessibilityRole="checkbox" accessibilityState={{ checked: d.keep }} accessibilityLabel={`Guardar la tarjeta ${i + 1}`}
+              <Pressable onPress={() => set(d.key, { keep: !d.keep })} accessibilityRole="checkbox" accessibilityState={{ checked: d.keep }} accessibilityLabel={t('Guardar la tarjeta {v}', { v: i + 1 })}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 32 }}>
                 <Ionicons name={d.keep ? 'checkbox' : 'square-outline'} size={22} color={d.keep ? C.brand : C.muted} />
-                <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700' }}>Tarjeta {i + 1}</Text>
+                <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700' }}>{t('Tarjeta {v}', { v: i + 1 })}</Text>
               </Pressable>
               <View style={{ flex: 1 }} />
-              <Pressable onPress={() => onRedo(d.key)} disabled={!!busyKey} accessibilityRole="button" accessibilityLabel={`Rehacer la tarjeta ${i + 1}`}
+              <Pressable onPress={() => onRedo(d.key)} disabled={!!busyKey} accessibilityRole="button" accessibilityLabel={t('Rehacer la tarjeta {v}', { v: i + 1 })}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, minHeight: 32, opacity: busyKey && busyKey !== d.key ? 0.4 : 1 }}>
                 <Ionicons name={busyKey === d.key ? 'hourglass-outline' : 'refresh'} size={15} color={C.muted} />
-                <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600' }}>{busyKey === d.key ? 'Rehaciendo…' : 'Rehacer esta'}</Text>
+                <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600' }}>{busyKey === d.key ? t('Rehaciendo…') : t('Rehacer esta')}</Text>
               </Pressable>
-              <Pressable onPress={() => onChange(drafts.filter((x) => x.key !== d.key))} accessibilityRole="button" accessibilityLabel={`Quitar la tarjeta ${i + 1}`} hitSlop={6}
+              <Pressable onPress={() => onChange(drafts.filter((x) => x.key !== d.key))} accessibilityRole="button" accessibilityLabel={t('Quitar la tarjeta {v}', { v: i + 1 })} hitSlop={6}
                 style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}>
                 <Ionicons name="trash-outline" size={16} color={C.muted} />
               </Pressable>
@@ -188,7 +189,7 @@ export function ReviewSheet({ visible, drafts, onChange, onClose, onSave, onRedo
             {d.similarTo && (
               <View style={{ flexDirection: 'row', gap: 8, padding: 10, borderRadius: 10, backgroundColor: '#2a2416', borderWidth: 1, borderColor: '#4a3d1f' }}>
                 <Ionicons name="copy-outline" size={15} color={C.warnText} style={{ marginTop: 1 }} />
-                <Text style={{ color: '#e2d2a8', fontSize: 12.5, flex: 1 }}>Ya tienes una parecida: "{d.similarTo.front.slice(0, 120)}"</Text>
+                <Text style={{ color: '#e2d2a8', fontSize: 12.5, flex: 1 }}>{t('Ya tienes una parecida: "{slice}"', { slice: d.similarTo.front.slice(0, 120) })}</Text>
               </View>
             )}
             <CardFields value={d} onChange={(v) => set(d.key, { ...v, keep: d.keep || !!(v.front && (v.kind === 'cloze' || v.back)) })} />
@@ -196,7 +197,7 @@ export function ReviewSheet({ visible, drafts, onChange, onClose, onSave, onRedo
           </View>
         );
       })}
-      {!drafts.length && <Text style={{ color: C.muted, fontSize: 13.5 }}>No quedó ninguna. Agrega una a mano o cierra.</Text>}
+      {!drafts.length && <Text style={{ color: C.muted, fontSize: 13.5 }}>{t('No quedó ninguna. Agrega una a mano o cierra.')}</Text>}
     </Sheet>
   );
 }

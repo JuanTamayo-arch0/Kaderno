@@ -1,3 +1,4 @@
+import { t } from './i18n';
 // ============================================================
 //  Pausas guiadas: qué hacer en el descanso. Puro y probado.
 //  Rotan sin repetirse en el día; cuando se agotan, vuelven a empezar.
@@ -7,15 +8,15 @@
 export type BreakTip = { id: string; long: boolean; icon: string; title: string; body: string; pet: string };
 
 export const BREAK_TIPS: BreakTip[] = [
-  { id: 'estirar', long: false, icon: 'body-outline', title: 'Párate y estira un minuto', body: 'Brazos arriba, cuello y espalda. Moverse un poco despeja más que quedarse sentado.', pet: 'Párate y estira un minuto.' },
-  { id: 'agua', long: false, icon: 'water-outline', title: 'Toma agua', body: 'Llena el vaso y tómalo con calma. Tu cabeza también lo agradece.', pet: '¿Y si tomas agua?' },
-  { id: 'lejos', long: false, icon: 'eye-outline', title: 'Mira algo lejano 20 segundos', body: 'Una ventana, el fondo del cuarto. Tus ojos llevan rato enfocados de cerca.', pet: 'Mira algo lejos unos segundos.' },
-  { id: 'respirar', long: false, icon: 'leaf-outline', title: 'Respira despacio un minuto', body: 'Toma aire en 4 tiempos y suéltalo en 6. Repite unas cuantas veces.', pet: 'Respira despacio conmigo.' },
-  { id: 'celular', long: false, icon: 'phone-portrait-outline', title: 'Deja el celular boca abajo', body: 'La pausa rinde más sin pantalla. Las redes pueden esperar al descanso largo.', pet: 'El celular boca abajo, ¿va?' },
-  { id: 'escritorio', long: false, icon: 'file-tray-outline', title: 'Ordena el escritorio', body: 'Guarda lo que no usas para el siguiente pomodoro. Menos cosas, menos distracciones.', pet: 'Ordenemos un poco el escritorio.' },
-  { id: 'caminar', long: true, icon: 'walk-outline', title: 'Sal a caminar 10 minutos', body: 'Aunque sea por la casa o el pasillo. Caminar ayuda a fijar lo que acabas de estudiar.', pet: '¡Vamos a caminar un rato!' },
-  { id: 'comer', long: true, icon: 'nutrition-outline', title: 'Come algo', body: 'Una fruta, unas nueces o lo que tengas a mano. Sin pantalla, si puedes.', pet: 'Hora de un snack.' },
-  { id: 'aire', long: true, icon: 'sunny-outline', title: 'Toma aire afuera', body: 'Asómate a la ventana o sal un momento. La luz natural despierta.', pet: 'Un poco de aire fresco.' },
+  { id: 'estirar', long: false, icon: 'body-outline', title: t('Párate y estira un minuto'), body: t('Brazos arriba, cuello y espalda. Moverse un poco despeja más que quedarse sentado.'), pet: t('Párate y estira un minuto.') },
+  { id: 'agua', long: false, icon: 'water-outline', title: t('Toma agua'), body: t('Llena el vaso y tómalo con calma. Tu cabeza también lo agradece.'), pet: t('¿Y si tomas agua?') },
+  { id: 'lejos', long: false, icon: 'eye-outline', title: t('Mira algo lejano 20 segundos'), body: t('Una ventana, el fondo del cuarto. Tus ojos llevan rato enfocados de cerca.'), pet: t('Mira algo lejos unos segundos.') },
+  { id: 'respirar', long: false, icon: 'leaf-outline', title: t('Respira despacio un minuto'), body: t('Toma aire en 4 tiempos y suéltalo en 6. Repite unas cuantas veces.'), pet: t('Respira despacio conmigo.') },
+  { id: 'celular', long: false, icon: 'phone-portrait-outline', title: t('Deja el celular boca abajo'), body: t('La pausa rinde más sin pantalla. Las redes pueden esperar al descanso largo.'), pet: t('El celular boca abajo, ¿va?') },
+  { id: 'escritorio', long: false, icon: 'file-tray-outline', title: t('Ordena el escritorio'), body: t('Guarda lo que no usas para el siguiente pomodoro. Menos cosas, menos distracciones.'), pet: t('Ordenemos un poco el escritorio.') },
+  { id: 'caminar', long: true, icon: 'walk-outline', title: t('Sal a caminar 10 minutos'), body: t('Aunque sea por la casa o el pasillo. Caminar ayuda a fijar lo que acabas de estudiar.'), pet: t('¡Vamos a caminar un rato!') },
+  { id: 'comer', long: true, icon: 'nutrition-outline', title: t('Come algo'), body: t('Una fruta, unas nueces o lo que tengas a mano. Sin pantalla, si puedes.'), pet: t('Hora de un snack.') },
+  { id: 'aire', long: true, icon: 'sunny-outline', title: t('Toma aire afuera'), body: t('Asómate a la ventana o sal un momento. La luz natural despierta.'), pet: t('Un poco de aire fresco.') },
 ];
 
 export function tipById(id: string | null | undefined): BreakTip | null {
@@ -58,5 +59,5 @@ export function removeParked(list: Parked[], id: string): Parked[] {
   return list.filter((p) => p.id !== id);
 }
 export function parkedTitle(n: number): string {
-  return n === 1 ? 'Anotaste 1 cosa para después' : `Anotaste ${n} cosas para después`;
+  return n === 1 ? t('Anotaste 1 cosa para después') : t('Anotaste {n} cosas para después', { n });
 }

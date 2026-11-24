@@ -15,6 +15,7 @@ import { createInvoice, deleteClient, getClients, getInvoices, getProfile, saveC
 import { copyText } from '../lib/fileIO';
 import { confirm, friendlyError, notify, toast } from '../lib/feedback';
 import { useMode } from '../lib/mode';
+import { t } from '../lib/i18n';
 
 // ============================================================
 //  Cobrar (v25, fase 1): cuentas de cobro desde el registro de horas, tus
@@ -23,7 +24,7 @@ import { useMode } from '../lib/mode';
 
 type Tab = 'cuentas' | 'clientes' | 'datos';
 const STATUS: Record<Invoice['status'], { text: string; color: string }> = {
-  emitida: { text: 'Por cobrar', color: C.warn }, pagada: { text: 'Pagada', color: C.good }, anulada: { text: 'Anulada', color: C.muted },
+  emitida: { text: t('Por cobrar'), color: C.warn }, pagada: { text: t('Pagada'), color: C.good }, anulada: { text: t('Anulada'), color: C.muted },
 };
 
 function Cobros() {
@@ -39,7 +40,7 @@ function Cobros() {
   const [editClient, setEditClient] = useState<Partial<Client> | null>(null);
 
   const load = useCallback(() => {
-    getInvoices().then(setInvoices).catch((e) => { notify('No se pudo cargar', friendlyError(e)); setInvoices([]); });
+    getInvoices().then(setInvoices).catch((e) => { notify(t('No se pudo cargar'), friendlyError(e)); setInvoices([]); });
     getClients().then(setClients).catch(() => {});
     getProfile().then(setProfile).catch(() => {});
     getProjects().then(setProjects).catch(() => {});
@@ -54,41 +55,41 @@ function Cobros() {
   const missing = profileMissing(profile);
 
   async function open(inv: Invoice) {
-    try { await printReport(invoiceHtml(inv), `Cuenta de cobro ${numberLabel(inv.prefix, inv.number)}`); }
-    catch (e) { notify('No se pudo abrir', friendlyError(e)); }
+    try { await printReport(invoiceHtml(inv), t('Cuenta de cobro {prefix}', { prefix: numberLabel(inv.prefix, inv.number) })); }
+    catch (e) { notify(t('No se pudo abrir'), friendlyError(e)); }
   }
   async function share(inv: Invoice) {
     const text = invoiceShareText(inv);
-    if (Platform.OS === 'web') { await copyText(text); toast('Mensaje copiado. Abre WhatsApp y pégalo junto al PDF.', { actionLabel: 'Abrir WhatsApp', onAction: () => Linking.openURL('https://wa.me/?text=' + encodeURIComponent(text)) }); }
+    if (Platform.OS === 'web') { await copyText(text); toast(t('Mensaje copiado. Abre WhatsApp y pégalo junto al PDF.'), { actionLabel: t('Abrir WhatsApp'), onAction: () => Linking.openURL('https://wa.me/?text=' + encodeURIComponent(text)) }); }
     else Linking.openURL('whatsapp://send?text=' + encodeURIComponent(text)).catch(() => copyText(text));
   }
   async function setStatus(inv: Invoice, s: Invoice['status']) {
-    if (s === 'anulada' && !(await confirm(`¿Anular la ${numberLabel(inv.prefix, inv.number)}?`, 'Queda en la lista marcada como anulada y su número no se vuelve a usar.', 'Anular'))) return;
+    if (s === 'anulada' && !(await confirm(t('¿Anular la {prefix}?', { prefix: numberLabel(inv.prefix, inv.number) }), t('Queda en la lista marcada como anulada y su número no se vuelve a usar.'), t('Anular')))) return;
     try { const r = await setInvoiceStatus(inv.id, s); setInvoices((l) => l?.map((x) => (x.id === r.id ? r : x)) ?? null); }
-    catch (e) { notify('No se pudo', friendlyError(e)); }
+    catch (e) { notify(t('No se pudo'), friendlyError(e)); }
   }
 
   return (
-    <Screen title="Cobrar" subtitle="Cuentas de cobro con tus horas" back="/horas" maxWidth={920}
-      right={tab === 'cuentas' ? <Button label="Nueva" icon="add" size="sm" onPress={() => setNewOpen({})} /> : tab === 'clientes' ? <Button label="Cliente" icon="add" size="sm" onPress={() => setEditClient({ project_ids: [], subject_ids: [] })} /> : undefined}>
-      <Segmented<Tab> items={[{ key: 'cuentas', label: 'Cuentas' }, { key: 'clientes', label: 'Clientes' }, { key: 'datos', label: 'Tus datos' }]} value={tab} onChange={setTab} style={{ marginBottom: 14 }} />
+    <Screen title={t('Cobrar')} subtitle={t('Cuentas de cobro con tus horas')} back="/horas" maxWidth={920}
+      right={tab === 'cuentas' ? <Button label={t('Nueva')} icon="add" size="sm" onPress={() => setNewOpen({})} /> : tab === 'clientes' ? <Button label={t('Cliente')} icon="add" size="sm" onPress={() => setEditClient({ project_ids: [], subject_ids: [] })} /> : undefined}>
+      <Segmented<Tab> items={[{ key: 'cuentas', label: t('Cuentas') }, { key: 'clientes', label: t('Clientes') }, { key: 'datos', label: t('Tus datos') }]} value={tab} onChange={setTab} style={{ marginBottom: 14 }} />
 
       {tab === 'cuentas' && (
         <>
           {missing.length > 0 && (
-            <Card onPress={() => setTab('datos')} accessibilityLabel="Completar tus datos para cobrar" style={{ flexDirection: 'row', gap: 10, alignItems: 'center', marginBottom: 12, borderColor: C.warn }}>
+            <Card onPress={() => setTab('datos')} accessibilityLabel={t('Completar tus datos para cobrar')} style={{ flexDirection: 'row', gap: 10, alignItems: 'center', marginBottom: 12, borderColor: C.warn }}>
               <Ionicons name="alert-circle-outline" size={20} color={C.warnText} />
-              <Text style={{ color: C.text, fontSize: 13.5, flex: 1 }}>Antes de cobrar, completa {missing.join(', ')}.</Text>
+              <Text style={{ color: C.text, fontSize: 13.5, flex: 1 }}>{t('Antes de cobrar, completa {join}.', { join: missing.join(', ') })}</Text>
               <Ionicons name="chevron-forward" size={16} color={C.muted} />
             </Card>
           )}
           <View style={{ flexDirection: 'row', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
-            <Card style={{ flex: 1, minWidth: 150 }}><Text style={{ color: C.muted, fontSize: 12.5 }}>Por cobrar</Text><Text style={{ color: C.text, fontSize: 22, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{pesos(due)}</Text></Card>
-            <Card style={{ flex: 1, minWidth: 150 }}><Text style={{ color: C.muted, fontSize: 12.5 }}>Cobrado este mes</Text><Text style={{ color: C.text, fontSize: 22, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{pesos(paid)}</Text></Card>
+            <Card style={{ flex: 1, minWidth: 150 }}><Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Por cobrar')}</Text><Text style={{ color: C.text, fontSize: 22, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{pesos(due)}</Text></Card>
+            <Card style={{ flex: 1, minWidth: 150 }}><Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Cobrado este mes')}</Text><Text style={{ color: C.text, fontSize: 22, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{pesos(paid)}</Text></Card>
           </View>
           {invoices === null ? <Skeleton height={70} /> : !invoices.length ? (
-            <EmptyState icon="receipt-outline" title="Aún no tienes cuentas de cobro" text="Crea un cliente, asígnale sus proyectos o áreas, y Kaderno arma la cuenta con las horas que registraste."
-              action={{ label: 'Nueva cuenta de cobro', icon: 'add', onPress: () => setNewOpen({}) }} />
+            <EmptyState icon="receipt-outline" title={t('Aún no tienes cuentas de cobro')} text={t('Crea un cliente, asígnale sus proyectos o áreas, y Kaderno arma la cuenta con las horas que registraste.')}
+              action={{ label: t('Nueva cuenta de cobro'), icon: 'add', onPress: () => setNewOpen({}) }} />
           ) : (
             <Card padded={false} style={{ marginBottom: 20 }}>
               {invoices.map((inv, i) => {
@@ -100,18 +101,18 @@ function Cobros() {
                         <Text style={{ color: C.text, fontSize: 14, fontWeight: '700' }} numberOfLines={2}>{numberLabel(inv.prefix, inv.number)} · {inv.client.name}</Text>
                         {/* v29: el estado va junto a la fecha; en el celular apretaba el nombre del cliente. */}
                         <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: 3 }}>
-                          <Text style={{ color: C.muted, fontSize: 12.5 }}>{inv.issued_on}{inv.paid_on ? ` · pagada el ${inv.paid_on}` : ''}</Text>
+                          <Text style={{ color: C.muted, fontSize: 12.5 }}>{inv.issued_on}{inv.paid_on ? t(' · pagada el {paid_on}', { paid_on: inv.paid_on }) : ''}</Text>
                           <Badge text={st.text} color={st.color} />
                         </View>
                       </View>
                       <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{pesos(inv.total)}</Text>
                     </View>
                     <View style={{ flexDirection: 'row', columnGap: 18, rowGap: 0, flexWrap: 'wrap', marginVertical: -6 }}>
-                      <Link label="Ver o imprimir" onPress={() => open(inv)} />
-                      {inv.status !== 'anulada' && <Link label="Mandar por WhatsApp" onPress={() => share(inv)} />}
-                      {inv.status === 'emitida' && <Link label="Marcar pagada" onPress={() => setStatus(inv, 'pagada')} />}
-                      {inv.status === 'pagada' && <Link label="Volver a por cobrar" onPress={() => setStatus(inv, 'emitida')} />}
-                      {inv.status !== 'anulada' && <Link label="Anular" muted onPress={() => setStatus(inv, 'anulada')} />}
+                      <Link label={t('Ver o imprimir')} onPress={() => open(inv)} />
+                      {inv.status !== 'anulada' && <Link label={t('Mandar por WhatsApp')} onPress={() => share(inv)} />}
+                      {inv.status === 'emitida' && <Link label={t('Marcar pagada')} onPress={() => setStatus(inv, 'pagada')} />}
+                      {inv.status === 'pagada' && <Link label={t('Volver a por cobrar')} onPress={() => setStatus(inv, 'emitida')} />}
+                      {inv.status !== 'anulada' && <Link label={t('Anular')} muted onPress={() => setStatus(inv, 'anulada')} />}
                     </View>
                   </View>
                 );
@@ -119,25 +120,24 @@ function Cobros() {
             </Card>
           )}
           <Text style={{ color: C.muted, fontSize: 12, lineHeight: 18, marginBottom: 30 }}>
-            La cuenta de cobro sirve si no estás obligado a facturar (persona natural no responsable de IVA). Si eres responsable de IVA o tu cliente te pide factura electrónica, usa un proveedor de facturación de la DIAN.
-          </Text>
+            {t('La cuenta de cobro sirve si no estás obligado a facturar (persona natural no responsable de IVA). Si eres responsable de IVA o tu cliente te pide factura electrónica, usa un proveedor de facturación de la DIAN.')}</Text>
         </>
       )}
 
       {tab === 'clientes' && (
         clients.length === 0 ? (
-          <EmptyState icon="business-outline" title="Sin clientes" text={`Un cliente agrupa los proyectos y ${mv.subjectsLower} que le cobras, con su tarifa por hora.`}
-            action={{ label: 'Nuevo cliente', icon: 'add', onPress: () => setEditClient({ project_ids: [], subject_ids: [] }) }} />
+          <EmptyState icon="business-outline" title={t('Sin clientes')} text={t('Un cliente agrupa los proyectos y {subjectsLower} que le cobras, con su tarifa por hora.', { subjectsLower: mv.subjectsLower })}
+            action={{ label: t('Nuevo cliente'), icon: 'add', onPress: () => setEditClient({ project_ids: [], subject_ids: [] }) }} />
         ) : (
           <Card padded={false} style={{ marginBottom: 30 }}>
             {clients.map((c, i) => (
-              <Pressable key={c.id} onPress={() => setEditClient(c)} accessibilityRole="button" accessibilityLabel={`Editar ${c.name}`}
+              <Pressable key={c.id} onPress={() => setEditClient(c)} accessibilityRole="button" accessibilityLabel={t('Editar {name}', { name: c.name })}
                 style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: i < clients.length - 1 ? 1 : 0, borderBottomColor: C.line, backgroundColor: hovered ? C.surface2 : 'transparent', opacity: c.archived ? 0.55 : 1 })}>
                 <Ionicons name="business-outline" size={18} color={C.muted} />
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={{ color: C.text, fontSize: 14, fontWeight: '600' }} numberOfLines={1}>{c.name}{c.archived ? ' (archivado)' : ''}</Text>
                   <Text style={{ color: C.muted, fontSize: 12.5 }} numberOfLines={1}>
-                    {[c.tax_id, c.rate ? `${pesos(c.rate)} la hora` : null, `${c.project_ids.length + c.subject_ids.length} ${c.project_ids.length + c.subject_ids.length === 1 ? 'proyecto o área' : 'proyectos o áreas'}`].filter(Boolean).join(' · ')}
+                    {[c.tax_id, c.rate ? t('{rate} la hora', { rate: pesos(c.rate) }) : null, `${c.project_ids.length + c.subject_ids.length} ${c.project_ids.length + c.subject_ids.length === 1 ? t('proyecto o área') : t('proyectos o áreas')}`].filter(Boolean).join(' · ')}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={C.muted} />
@@ -147,7 +147,7 @@ function Cobros() {
         )
       )}
 
-      {tab === 'datos' && <ProfileForm profile={profile} onSaved={(p) => { setProfile(p); toast('Datos guardados', { tone: 'good' }); }} />}
+      {tab === 'datos' && <ProfileForm profile={profile} onSaved={(p) => { setProfile(p); toast(t('Datos guardados'), { tone: 'good' }); }} />}
 
       <NewInvoice visible={!!newOpen} initial={newOpen} clients={clients.filter((c) => !c.archived)} projects={projects} subjects={subjects} missing={missing}
         onNeedProfile={() => { setNewOpen(null); setTab('datos'); }} onNeedClient={() => { setNewOpen(null); setTab('clientes'); setEditClient({ project_ids: [], subject_ids: [] }); }}
@@ -204,9 +204,9 @@ function NewInvoice({ visible, initial, clients, projects, subjects, missing, on
   const total = itemsTotal(items);
   const upd = (i: number, patch: Partial<InvoiceItem>) => setItems(items.map((x, k) => (k === i ? { ...x, ...patch } : x)));
   async function create() {
-    if (!client) { setErr('Escoge el cliente.'); return; }
-    if (items.some((i) => !i.concept.trim())) { setErr('Cada línea necesita un concepto.'); return; }
-    if (total <= 0) { setErr('El total debe ser mayor que cero.'); return; }
+    if (!client) { setErr(t('Escoge el cliente.')); return; }
+    if (items.some((i) => !i.concept.trim())) { setErr(t('Cada línea necesita un concepto.')); return; }
+    if (total <= 0) { setErr(t('El total debe ser mayor que cero.')); return; }
     setBusy(true); setErr(null);
     try { onCreated(await createInvoice({ client_id: client.id, items: items.map((i) => ({ ...i, amount: itemAmount(i) })), period_from: from, period_to: to, note: note.trim() || undefined })); }
     catch (e) { setErr(friendlyError(e)); }
@@ -215,49 +215,49 @@ function NewInvoice({ visible, initial, clients, projects, subjects, missing, on
 
   const num = (v: string) => { const n = Number(v.replace(/\./g, '').replace(',', '.')); return isNaN(n) ? 0 : n; };
   return (
-    <Sheet visible={visible} onClose={onClose} title="Nueva cuenta de cobro" subtitle="Con las horas del cliente en el periodo. Puedes cambiar cualquier línea." maxWidth={640}
-      footer={<><Text style={{ color: C.text, fontSize: 15, fontWeight: '800', flex: 1, fontVariant: ['tabular-nums'] }}>Total {pesos(total)}</Text>
-        <Button label="Crear y abrir" icon="checkmark" busy={busy} disabled={!!missing.length || !client || total <= 0} onPress={create} /></>}>
+    <Sheet visible={visible} onClose={onClose} title={t('Nueva cuenta de cobro')} subtitle={t('Con las horas del cliente en el periodo. Puedes cambiar cualquier línea.')} maxWidth={640}
+      footer={<><Text style={{ color: C.text, fontSize: 15, fontWeight: '800', flex: 1, fontVariant: ['tabular-nums'] }}>{t('Total {total}', { total: pesos(total) })}</Text>
+        <Button label={t('Crear y abrir')} icon="checkmark" busy={busy} disabled={!!missing.length || !client || total <= 0} onPress={create} /></>}>
       {missing.length > 0 && (
         <Card onPress={onNeedProfile} style={{ borderColor: C.warn, flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-          <Text style={{ color: C.text, fontSize: 13, flex: 1 }}>Falta {missing.join(', ')} en tus datos.</Text><Text style={{ color: C.brand, fontWeight: '700', fontSize: 13 }}>Completar</Text>
+          <Text style={{ color: C.text, fontSize: 13, flex: 1 }}>{t('Falta {join} en tus datos.', { join: missing.join(', ') })}</Text><Text style={{ color: C.brand, fontWeight: '700', fontSize: 13 }}>{t('Completar')}</Text>
         </Card>
       )}
       {clients.length === 0 ? (
-        <Button label="Crear el primer cliente" icon="add" onPress={onNeedClient} />
+        <Button label={t('Crear el primer cliente')} icon="add" onPress={onNeedClient} />
       ) : (
         <ChipRow>{clients.map((c) => <FilterChip key={c.id} label={c.name} active={client?.id === c.id} onPress={() => setClient(c)} />)}</ChipRow>
       )}
       <ChipRow>
-        <FilterChip label="Este mes" active={period === 'month'} onPress={() => setPeriod('month')} />
-        <FilterChip label="Mes pasado" active={period === 'last'} onPress={() => setPeriod('last')} />
-        <FilterChip label="Otras fechas" active={period === 'custom'} onPress={() => setPeriod('custom')} />
+        <FilterChip label={t('Este mes')} active={period === 'month'} onPress={() => setPeriod('month')} />
+        <FilterChip label={t('Mes pasado')} active={period === 'last'} onPress={() => setPeriod('last')} />
+        <FilterChip label={t('Otras fechas')} active={period === 'custom'} onPress={() => setPeriod('custom')} />
       </ChipRow>
       {period === 'custom' && (
         <View style={{ flexDirection: 'row', gap: 10 }}>
-          <View style={{ flex: 1 }}><Field label="Desde (AAAA-MM-DD)" value={from} onChangeText={setFrom} /></View>
-          <View style={{ flex: 1 }}><Field label="Hasta" value={to} onChangeText={setTo} /></View>
+          <View style={{ flex: 1 }}><Field label={t('Desde (AAAA-MM-DD)')} value={from} onChangeText={setFrom} /></View>
+          <View style={{ flex: 1 }}><Field label={t('Hasta')} value={to} onChangeText={setTo} /></View>
         </View>
       )}
       {client && !loading && items.length === 0 && (
-        <Text style={{ color: C.muted, fontSize: 13 }}>{client.project_ids.length + client.subject_ids.length === 0 ? 'Este cliente no tiene proyectos ni áreas asignados: agrégalos en Clientes, o escribe las líneas a mano.' : 'No hay horas de este cliente en esas fechas. Puedes escribir las líneas a mano.'}</Text>
+        <Text style={{ color: C.muted, fontSize: 13 }}>{client.project_ids.length + client.subject_ids.length === 0 ? t('Este cliente no tiene proyectos ni áreas asignados: agrégalos en Clientes, o escribe las líneas a mano.') : t('No hay horas de este cliente en esas fechas. Puedes escribir las líneas a mano.')}</Text>
       )}
       {items.map((it, i) => (
         <View key={i} style={{ gap: 6, padding: 10, borderRadius: 12, borderWidth: 1, borderColor: C.line }}>
           <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-            <TextInput value={it.concept} onChangeText={(t) => upd(i, { concept: t })} placeholder="Concepto" placeholderTextColor={C.muted} accessibilityLabel={`Concepto de la línea ${i + 1}`}
+            <TextInput value={it.concept} onChangeText={(t) => upd(i, { concept: t })} placeholder={t('Concepto')} placeholderTextColor={C.muted} accessibilityLabel={t('Concepto de la línea {v}', { v: i + 1 })}
               style={[inp, { flex: 1 }]} />
-            <Pressable onPress={() => setItems(items.filter((_, k) => k !== i))} accessibilityRole="button" accessibilityLabel="Quitar línea" hitSlop={6}><Ionicons name="close" size={18} color={C.muted} /></Pressable>
+            <Pressable onPress={() => setItems(items.filter((_, k) => k !== i))} accessibilityRole="button" accessibilityLabel={t('Quitar línea')} hitSlop={6}><Ionicons name="close" size={18} color={C.muted} /></Pressable>
           </View>
           <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
             {it.hours != null ? (
               <>
-                <TextInput value={String(it.hours).replace('.', ',')} onChangeText={(t) => upd(i, { hours: num(t) })} keyboardType="decimal-pad" accessibilityLabel="Horas" style={[inp, { width: 80 }]} />
-                <Text style={{ color: C.muted }}>h ×</Text>
-                <TextInput value={it.rate ? String(it.rate) : ''} onChangeText={(t) => upd(i, { rate: num(t) })} keyboardType="number-pad" placeholder="Tarifa" placeholderTextColor={C.muted} accessibilityLabel="Tarifa por hora" style={[inp, { width: 110 }]} />
+                <TextInput value={String(it.hours).replace('.', ',')} onChangeText={(t) => upd(i, { hours: num(t) })} keyboardType="decimal-pad" accessibilityLabel={t('Horas')} style={[inp, { width: 80 }]} />
+                <Text style={{ color: C.muted }}>{t('h ×')}</Text>
+                <TextInput value={it.rate ? String(it.rate) : ''} onChangeText={(t) => upd(i, { rate: num(t) })} keyboardType="number-pad" placeholder={t('Tarifa')} placeholderTextColor={C.muted} accessibilityLabel={t('Tarifa por hora')} style={[inp, { width: 110 }]} />
               </>
             ) : (
-              <TextInput value={it.amount ? String(it.amount) : ''} onChangeText={(t) => upd(i, { amount: num(t) })} keyboardType="number-pad" placeholder="Valor" placeholderTextColor={C.muted} accessibilityLabel="Valor" style={[inp, { width: 140 }]} />
+              <TextInput value={it.amount ? String(it.amount) : ''} onChangeText={(t) => upd(i, { amount: num(t) })} keyboardType="number-pad" placeholder={t('Valor')} placeholderTextColor={C.muted} accessibilityLabel={t('Valor')} style={[inp, { width: 140 }]} />
             )}
             <View style={{ flex: 1 }} />
             <Text style={{ color: C.text, fontWeight: '700', fontVariant: ['tabular-nums'] }}>{pesos(itemAmount(it))}</Text>
@@ -265,11 +265,11 @@ function NewInvoice({ visible, initial, clients, projects, subjects, missing, on
         </View>
       ))}
       <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
-        <Button label="Línea con valor" icon="add" size="sm" kind="secondary" onPress={() => setItems([...items, { concept: '', amount: 0 }])} />
-        <Button label="Línea por horas" icon="time-outline" size="sm" kind="ghost" onPress={() => setItems([...items, { concept: '', hours: 1, rate: client?.rate ?? 0, amount: 0 }])} />
+        <Button label={t('Línea con valor')} icon="add" size="sm" kind="secondary" onPress={() => setItems([...items, { concept: '', amount: 0 }])} />
+        <Button label={t('Línea por horas')} icon="time-outline" size="sm" kind="ghost" onPress={() => setItems([...items, { concept: '', hours: 1, rate: client?.rate ?? 0, amount: 0 }])} />
       </View>
-      {total > 0 && <Text style={{ color: C.muted, fontSize: 12.5 }}>Son {pesosEnLetras(total)}.</Text>}
-      <Field label="Nota (opcional)" value={note} onChangeText={setNote} placeholder="Ej: corresponde al contrato 12 de 2026" maxLength={500} />
+      {total > 0 && <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Son {total}.', { total: pesosEnLetras(total) })}</Text>}
+      <Field label={t('Nota (opcional)')} value={note} onChangeText={setNote} placeholder={t('Ej: corresponde al contrato 12 de 2026')} maxLength={500} />
       {err && <Text style={{ color: C.badText, fontSize: 13 }}>{err}</Text>}
     </Sheet>
   );
@@ -286,31 +286,31 @@ function ClientSheet({ client, projects, subjects, subjectWord, onClose, onSaved
   useEffect(() => { if (client) { setC({ ...client }); setErr(null); } }, [client]);
   const toggle = (key: 'project_ids' | 'subject_ids', id: string) => setC({ ...c, [key]: (c[key] ?? []).includes(id) ? (c[key] ?? []).filter((x) => x !== id) : [...(c[key] ?? []), id] });
   async function save() {
-    if (!c.name?.trim()) { setErr('Escribe el nombre del cliente.'); return; }
+    if (!c.name?.trim()) { setErr(t('Escribe el nombre del cliente.')); return; }
     setBusy(true); setErr(null);
     try { onSaved(await saveClient(c as Client)); } catch (e) { setErr(friendlyError(e)); } finally { setBusy(false); }
   }
   async function remove() {
-    if (!c.id || !(await confirm(`¿Borrar a ${c.name}?`, 'Las cuentas de cobro que ya hiciste se conservan con sus datos.', 'Borrar'))) return;
+    if (!c.id || !(await confirm(t('¿Borrar a {name}?', { name: c.name }), t('Las cuentas de cobro que ya hiciste se conservan con sus datos.'), t('Borrar')))) return;
     try { await deleteClient(c.id); onDeleted(c.id); } catch (e) { setErr(friendlyError(e)); }
   }
   return (
-    <Sheet visible={!!client} onClose={onClose} title={c.id ? 'Editar cliente' : 'Nuevo cliente'} maxWidth={560}
-      footer={<>{c.id ? <Button label={c.archived ? 'Desarchivar' : 'Archivar'} kind="ghost" onPress={() => setC({ ...c, archived: !c.archived })} /> : null}
-        {c.id ? <Button label="Borrar" kind="ghost" onPress={remove} /> : null}<View style={{ flex: 1 }} /><Button label="Guardar" busy={busy} onPress={save} /></>}>
-      <Field label="Nombre o razón social" value={c.name ?? ''} onChangeText={(t) => setC({ ...c, name: t })} maxLength={120} />
+    <Sheet visible={!!client} onClose={onClose} title={c.id ? t('Editar cliente') : t('Nuevo cliente')} maxWidth={560}
+      footer={<>{c.id ? <Button label={c.archived ? t('Desarchivar') : t('Archivar')} kind="ghost" onPress={() => setC({ ...c, archived: !c.archived })} /> : null}
+        {c.id ? <Button label={t('Borrar')} kind="ghost" onPress={remove} /> : null}<View style={{ flex: 1 }} /><Button label={t('Guardar')} busy={busy} onPress={save} /></>}>
+      <Field label={t('Nombre o razón social')} value={c.name ?? ''} onChangeText={(t) => setC({ ...c, name: t })} maxLength={120} />
       <View style={{ flexDirection: 'row', gap: 10 }}>
-        <View style={{ flex: 1 }}><Field label="NIT o cédula" value={c.tax_id ?? ''} onChangeText={(t) => setC({ ...c, tax_id: t })} maxLength={30} /></View>
-        <View style={{ flex: 1 }}><Field label="Tarifa por hora (opcional)" value={c.rate ? String(c.rate) : ''} onChangeText={(t) => setC({ ...c, rate: Number(t.replace(/\D/g, '')) || null })} keyboardType="number-pad" /></View>
+        <View style={{ flex: 1 }}><Field label={t('NIT o cédula')} value={c.tax_id ?? ''} onChangeText={(t) => setC({ ...c, tax_id: t })} maxLength={30} /></View>
+        <View style={{ flex: 1 }}><Field label={t('Tarifa por hora (opcional)')} value={c.rate ? String(c.rate) : ''} onChangeText={(t) => setC({ ...c, rate: Number(t.replace(/\D/g, '')) || null })} keyboardType="number-pad" /></View>
       </View>
       <View style={{ flexDirection: 'row', gap: 10 }}>
-        <View style={{ flex: 1 }}><Field label="Correo" value={c.email ?? ''} onChangeText={(t) => setC({ ...c, email: t })} keyboardType="email-address" autoCapitalize="none" maxLength={200} /></View>
-        <View style={{ flex: 1 }}><Field label="Teléfono" value={c.phone ?? ''} onChangeText={(t) => setC({ ...c, phone: t })} keyboardType="phone-pad" maxLength={40} /></View>
+        <View style={{ flex: 1 }}><Field label={t('Correo')} value={c.email ?? ''} onChangeText={(t) => setC({ ...c, email: t })} keyboardType="email-address" autoCapitalize="none" maxLength={200} /></View>
+        <View style={{ flex: 1 }}><Field label={t('Teléfono')} value={c.phone ?? ''} onChangeText={(t) => setC({ ...c, phone: t })} keyboardType="phone-pad" maxLength={40} /></View>
       </View>
-      <Field label="Dirección (opcional)" value={c.address ?? ''} onChangeText={(t) => setC({ ...c, address: t })} maxLength={200} />
-      {projects.length > 0 && <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600' }}>Proyectos que le cobras</Text>}
+      <Field label={t('Dirección (opcional)')} value={c.address ?? ''} onChangeText={(t) => setC({ ...c, address: t })} maxLength={200} />
+      {projects.length > 0 && <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600' }}>{t('Proyectos que le cobras')}</Text>}
       {projects.length > 0 && <ChipRow>{projects.map((p) => <FilterChip key={p.id} label={p.name} active={(c.project_ids ?? []).includes(p.id)} onPress={() => toggle('project_ids', p.id)} />)}</ChipRow>}
-      {subjects.length > 0 && <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600' }}>{subjectWord[0].toUpperCase() + subjectWord.slice(1)} (para las horas sin proyecto)</Text>}
+      {subjects.length > 0 && <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600' }}>{t('{v} (para las horas sin proyecto)', { v: subjectWord[0].toUpperCase() + subjectWord.slice(1) })}</Text>}
       {subjects.length > 0 && <ChipRow>{subjects.map((s) => <FilterChip key={s.id} label={s.name} active={(c.subject_ids ?? []).includes(s.id)} onPress={() => toggle('subject_ids', s.id)} />)}</ChipRow>}
       {err && <Text style={{ color: C.badText, fontSize: 13 }}>{err}</Text>}
     </Sheet>
@@ -325,39 +325,39 @@ function ProfileForm({ profile, onSaved }: { profile: BillingProfile | null; onS
   async function save() {
     setBusy(true);
     try { await saveProfile({ ...p, prefix: (p.prefix ?? '').toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 10), next_number: Math.max(1, Math.min(999999, Math.round(Number(p.next_number) || 1))) }); onSaved({ ...(profile ?? {}), ...p } as BillingProfile); }
-    catch (e) { notify('No se pudo guardar', friendlyError(e)); }
+    catch (e) { notify(t('No se pudo guardar'), friendlyError(e)); }
     finally { setBusy(false); }
   }
   return (
     <View style={{ gap: 4, marginBottom: 30 }}>
-      <Text style={{ color: C.muted, fontSize: 13, marginBottom: 8 }}>Salen en cada cuenta de cobro. Solo los ves tú; Kaderno no los comparte con nadie.</Text>
-      <Field label="Nombre completo" value={p.full_name ?? ''} onChangeText={set('full_name')} maxLength={120} />
-      <ChipRow style={{ marginBottom: 8 }}>{(['CC', 'CE', 'NIT', 'PP'] as const).map((d) => <FilterChip key={d} label={d === 'PP' ? 'Pasaporte' : d} active={p.doc_type === d} onPress={() => setP({ ...p, doc_type: d })} />)}</ChipRow>
+      <Text style={{ color: C.muted, fontSize: 13, marginBottom: 8 }}>{t('Salen en cada cuenta de cobro. Solo los ves tú; Kaderno no los comparte con nadie.')}</Text>
+      <Field label={t('Nombre completo')} value={p.full_name ?? ''} onChangeText={set('full_name')} maxLength={120} />
+      <ChipRow style={{ marginBottom: 8 }}>{(['CC', 'CE', 'NIT', 'PP'] as const).map((d) => <FilterChip key={d} label={d === 'PP' ? t('Pasaporte') : d} active={p.doc_type === d} onPress={() => setP({ ...p, doc_type: d })} />)}</ChipRow>
       <View style={{ flexDirection: 'row', gap: 10 }}>
-        <View style={{ flex: 1 }}><Field label="Número de documento" value={p.doc_number ?? ''} onChangeText={set('doc_number')} maxLength={30} /></View>
-        <View style={{ flex: 1 }}><Field label="Ciudad" value={p.city ?? ''} onChangeText={set('city')} maxLength={60} placeholder="Medellín" /></View>
+        <View style={{ flex: 1 }}><Field label={t('Número de documento')} value={p.doc_number ?? ''} onChangeText={set('doc_number')} maxLength={30} /></View>
+        <View style={{ flex: 1 }}><Field label={t('Ciudad')} value={p.city ?? ''} onChangeText={set('city')} maxLength={60} placeholder={t('Medellín')} /></View>
       </View>
       <View style={{ flexDirection: 'row', gap: 10 }}>
-        <View style={{ flex: 1 }}><Field label="Teléfono" value={p.phone ?? ''} onChangeText={set('phone')} keyboardType="phone-pad" maxLength={40} /></View>
-        <View style={{ flex: 1 }}><Field label="Correo" value={p.email ?? ''} onChangeText={set('email')} keyboardType="email-address" autoCapitalize="none" maxLength={200} /></View>
+        <View style={{ flex: 1 }}><Field label={t('Teléfono')} value={p.phone ?? ''} onChangeText={set('phone')} keyboardType="phone-pad" maxLength={40} /></View>
+        <View style={{ flex: 1 }}><Field label={t('Correo')} value={p.email ?? ''} onChangeText={set('email')} keyboardType="email-address" autoCapitalize="none" maxLength={200} /></View>
       </View>
-      <Field label="Dirección (opcional)" value={p.address ?? ''} onChangeText={set('address')} maxLength={200} />
-      <SectionLabel text="Dónde te pagan" />
-      <ChipRow style={{ marginBottom: 8 }}>{(['ahorros', 'corriente', 'nequi', 'daviplata'] as const).map((a) => <FilterChip key={a} label={a === 'ahorros' ? 'Ahorros' : a === 'corriente' ? 'Corriente' : a === 'nequi' ? 'Nequi' : 'Daviplata'} active={p.account_type === a} onPress={() => setP({ ...p, account_type: a })} />)}</ChipRow>
+      <Field label={t('Dirección (opcional)')} value={p.address ?? ''} onChangeText={set('address')} maxLength={200} />
+      <SectionLabel text={t('Dónde te pagan')} />
+      <ChipRow style={{ marginBottom: 8 }}>{(['ahorros', 'corriente', 'nequi', 'daviplata'] as const).map((a) => <FilterChip key={a} label={a === 'ahorros' ? t('Ahorros') : a === 'corriente' ? t('Corriente') : a === 'nequi' ? 'Nequi' : 'Daviplata'} active={p.account_type === a} onPress={() => setP({ ...p, account_type: a })} />)}</ChipRow>
       <View style={{ flexDirection: 'row', gap: 10 }}>
-        {p.account_type !== 'nequi' && p.account_type !== 'daviplata' && <View style={{ flex: 1 }}><Field label="Banco" value={p.bank_name ?? ''} onChangeText={set('bank_name')} maxLength={60} placeholder="Bancolombia" /></View>}
-        <View style={{ flex: 1 }}><Field label={p.account_type === 'nequi' || p.account_type === 'daviplata' ? 'Celular' : 'Número de cuenta'} value={p.account_number ?? ''} onChangeText={set('account_number')} maxLength={40} /></View>
+        {p.account_type !== 'nequi' && p.account_type !== 'daviplata' && <View style={{ flex: 1 }}><Field label={t('Banco')} value={p.bank_name ?? ''} onChangeText={set('bank_name')} maxLength={60} placeholder={t('Bancolombia')} /></View>}
+        <View style={{ flex: 1 }}><Field label={p.account_type === 'nequi' || p.account_type === 'daviplata' ? t('Celular') : t('Número de cuenta')} value={p.account_number ?? ''} onChangeText={set('account_number')} maxLength={40} /></View>
       </View>
-      <SectionLabel text="Numeración" />
+      <SectionLabel text={t('Numeración')} />
       <View style={{ flexDirection: 'row', gap: 10 }}>
-        <View style={{ flex: 1 }}><Field label="Prefijo" value={p.prefix ?? ''} onChangeText={(t) => setP({ ...p, prefix: t.toUpperCase() })} maxLength={10} hint="Ej: CC → CC-0001" /></View>
-        <View style={{ flex: 1 }}><Field label="Siguiente número" value={String(p.next_number ?? 1)} onChangeText={(t) => setP({ ...p, next_number: Number(t.replace(/\D/g, '')) || 1 })} keyboardType="number-pad" hint="Si ya hacías cuentas de cobro, sigue tu numeración" /></View>
+        <View style={{ flex: 1 }}><Field label={t('Prefijo')} value={p.prefix ?? ''} onChangeText={(t) => setP({ ...p, prefix: t.toUpperCase() })} maxLength={10} hint={t('Ej: CC → CC-0001')} /></View>
+        <View style={{ flex: 1 }}><Field label={t('Siguiente número')} value={String(p.next_number ?? 1)} onChangeText={(t) => setP({ ...p, next_number: Number(t.replace(/\D/g, '')) || 1 })} keyboardType="number-pad" hint={t('Si ya hacías cuentas de cobro, sigue tu numeración')} /></View>
       </View>
-      <Field label="Nota fija (opcional)" value={p.note ?? ''} onChangeText={set('note')} maxLength={300} multiline placeholder="Ej: Declaro que no soy responsable de IVA." />
+      <Field label={t('Nota fija (opcional)')} value={p.note ?? ''} onChangeText={set('note')} maxLength={300} multiline placeholder={t('Ej: Declaro que no soy responsable de IVA.')} />
       <ChipRow style={{ marginBottom: 10 }}>
-        <FilterChip label="No responsable de IVA" active={false} onPress={() => setP({ ...p, note: 'Declaro que no soy responsable de IVA ni estoy obligado a expedir factura electrónica.' })} />
+        <FilterChip label={t('No responsable de IVA')} active={false} onPress={() => setP({ ...p, note: t('Declaro que no soy responsable de IVA ni estoy obligado a expedir factura electrónica.') })} />
       </ChipRow>
-      <Button label="Guardar mis datos" icon="checkmark" busy={busy} onPress={save} />
+      <Button label={t('Guardar mis datos')} icon="checkmark" busy={busy} onPress={save} />
     </View>
   );
 }

@@ -6,18 +6,19 @@
 //  remind_days con el equivalente en días.
 // ============================================================
 import { fromISODate } from './time';
+import { t } from './i18n';
 
 export type RemindChoice = 'none' | 'at' | '1h' | '3h' | 'evening' | '1d' | '2d' | '1w';
 
 export const REMIND_OPTIONS: { key: RemindChoice; label: string; needsTime?: boolean }[] = [
-  { key: 'none', label: 'Sin aviso' },
-  { key: 'at', label: 'A la hora', needsTime: true },
-  { key: '1h', label: '1 hora antes', needsTime: true },
-  { key: '3h', label: '3 horas antes', needsTime: true },
-  { key: 'evening', label: 'La noche anterior' },
-  { key: '1d', label: '1 día antes' },
-  { key: '2d', label: '2 días antes' },
-  { key: '1w', label: '1 semana antes' },
+  { key: 'none', label: t('Sin aviso') },
+  { key: 'at', label: t('A la hora'), needsTime: true },
+  { key: '1h', label: t('1 hora antes'), needsTime: true },
+  { key: '3h', label: t('3 horas antes'), needsTime: true },
+  { key: 'evening', label: t('La noche anterior') },
+  { key: '1d', label: t('1 día antes') },
+  { key: '2d', label: t('2 días antes') },
+  { key: '1w', label: t('1 semana antes') },
 ];
 
 /** Momento del aviso, o null si no hay aviso o ya pasó. */

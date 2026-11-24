@@ -9,12 +9,13 @@ import { friendlyError, notify } from '../../lib/feedback';
 import { useResponsive } from '../../lib/responsive';
 import { Button } from '../ds';
 import { CoinIcon, PetImage, PetSprite } from './PetArt';
+import { t } from '../../lib/i18n';
 
 export const PERSONALITY: Record<Species, { trait: string; sample: string }> = {
-  pinguino: { trait: 'Ordenado y constante', sample: 'Paso a paso. Hoy van 2 de 4.' },
-  gato: { trait: 'Tranquilo, algo sarcástico', sample: 'Esa tarea lleva 3 días mirándote.' },
-  perro: { trait: 'Entusiasta, celebra todo', sample: '¡Terminaste! ¡Vamos por otra!' },
-  loro: { trait: 'Curioso, pregunta y repite', sample: '¿Repasamos 5 tarjetas? ¿5 tarjetas?' },
+  pinguino: { trait: t('Ordenado y constante'), sample: t('Paso a paso. Hoy van 2 de 4.') },
+  gato: { trait: t('Tranquilo, algo sarcástico'), sample: t('Esa tarea lleva 3 días mirándote.') },
+  perro: { trait: t('Entusiasta, celebra todo'), sample: t('¡Terminaste! ¡Vamos por otra!') },
+  loro: { trait: t('Curioso, pregunta y repite'), sample: t('¿Repasamos 5 tarjetas? ¿5 tarjetas?') },
 };
 
 export function PetChooser({ onDone }: { onDone?: (p: Pet) => void }) {
@@ -31,7 +32,7 @@ export function PetChooser({ onDone }: { onDone?: (p: Pet) => void }) {
   async function adopt() {
     setBusy(true);
     try { const p = await adoptPet(sp, name.trim() || DEFAULT_NAMES[sp]); onDone?.(p); }
-    catch (e) { notify('No se pudo adoptar', friendlyError(e)); }
+    catch (e) { notify(t('No se pudo adoptar'), friendlyError(e)); }
     finally { setBusy(false); }
   }
 
@@ -53,7 +54,7 @@ export function PetChooser({ onDone }: { onDone?: (p: Pet) => void }) {
               {isWide && <Text style={{ color: C.text, fontSize: 13, textAlign: 'center', backgroundColor: C.surface2, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 10, marginTop: 4 }}>“{PERSONALITY[s].sample}”</Text>}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
                 <CoinIcon species={s} size={16} />
-                <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '700' }}>Gana {SPECIES[s].coin.many}</Text>
+                <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '700' }}>{t('Gana {many}', { many: SPECIES[s].coin.many })}</Text>
               </View>
             </Pressable>
           );
@@ -61,16 +62,15 @@ export function PetChooser({ onDone }: { onDone?: (p: Pet) => void }) {
       </View>
       <View style={{ flexDirection: isWide ? 'row' : 'column', gap: 10, alignItems: isWide ? 'center' : 'stretch' }}>
         <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.line, borderRadius: 12, paddingHorizontal: 12 }}>
-          <Text style={{ color: C.muted, fontSize: 14 }}>Nombre</Text>
-          <TextInput value={name} onChangeText={(v) => { setName(v.slice(0, 24)); setTouched(true); }} maxLength={24} accessibilityLabel="Nombre de tu mascota"
+          <Text style={{ color: C.muted, fontSize: 14 }}>{t('Nombre')}</Text>
+          <TextInput value={name} onChangeText={(v) => { setName(v.slice(0, 24)); setTouched(true); }} maxLength={24} accessibilityLabel={t('Nombre de tu mascota')}
             onSubmitEditing={adopt} placeholder={DEFAULT_NAMES[sp]} placeholderTextColor={C.muted}
             style={[{ flex: 1, color: C.text, fontSize: 15, fontWeight: '700', paddingVertical: 12, minHeight: 46 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
         </View>
         <Button label={`Adoptar a ${name.trim() || DEFAULT_NAMES[sp]}`} icon="paw" onPress={adopt} busy={busy} size="lg" />
       </View>
       <Text style={{ color: C.muted, fontSize: 13, lineHeight: 19 }}>
-        La primera es gratis. Las demás las adoptas después con lo que ganes estudiando. Puedes cambiarle el nombre o apagarla cuando quieras.
-      </Text>
+        {t('La primera es gratis. Las demás las adoptas después con lo que ganes estudiando. Puedes cambiarle el nombre o apagarla cuando quieras.')}</Text>
     </View>
   );
 }

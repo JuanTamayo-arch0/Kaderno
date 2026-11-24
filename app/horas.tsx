@@ -21,6 +21,7 @@ import { useResponsive } from '../lib/responsive';
 import { useAuth } from '../lib/auth';
 import { saveFile } from '../lib/fileIO';
 import { confirm, friendlyError, notify, toast } from '../lib/feedback';
+import { t, trn, locale } from '../lib/i18n';
 
 // ============================================================
 //  Registro de horas (v24, fase 5): el enfoque y las horas a mano, por
@@ -62,7 +63,7 @@ function Horas() {
 
   const load = useCallback(() => {
     setList(null);
-    getHours(range.from, range.to).then((r) => { setList(r.list); setV5(r.v5); }).catch((e) => { notify('No se pudo cargar', friendlyError(e)); setList([]); });
+    getHours(range.from, range.to).then((r) => { setList(r.list); setV5(r.v5); }).catch((e) => { notify(trn('No se pudo cargar'), friendlyError(e)); setList([]); });
   }, [range.from.getTime(), range.to.getTime()]);
   useEffect(() => { load(); }, [load]);
   useEffect(() => { if (kind === 'week') getTimesheets(isoDay(range.from)).then(setSheets).catch(() => setSheets([])); else setSheets([]); }, [kind, range.from.getTime()]);
@@ -87,67 +88,67 @@ function Horas() {
 
   async function csv() {
     if (!list?.length) return;
-    try { await saveFile(`horas ${isoDay(range.from)} a ${isoDay(new Date(range.to.getTime() - 1))}.csv`, hoursCsv(list, names, rates), 'text/csv'); }
-    catch (e) { notify('No se pudo guardar', friendlyError(e)); }
+    try { await saveFile(trn('horas {from} a {isoDay}.csv', { from: isoDay(range.from), isoDay: isoDay(new Date(range.to.getTime() - 1)) }), hoursCsv(list, names, rates), 'text/csv'); }
+    catch (e) { notify(trn('No se pudo guardar'), friendlyError(e)); }
   }
   async function pdf() {
     if (!list?.length) return;
-    if (!isPro) { notify('Informe en PDF', 'El informe de horas en PDF viene con Kaderno Pro. El CSV es gratis y abre en Excel o Google Sheets.'); return; }
+    if (!isPro) { notify(trn('Informe en PDF'), trn('El informe de horas en PDF viene con Kaderno Pro. El CSV es gratis y abre en Excel o Google Sheets.')); return; }
     // En el informe, los nombres van sin el emoji del proyecto (documento sobrio).
     const plain: Record<string, Named> = { ...names };
     projects.forEach((p) => { plain[p.id] = { name: p.name }; });
-    try { await printReport(hoursReportHtml({ who, period: range.label, list, names: plain, rates, by: by === 'day' ? 'project' : by }), `Informe de horas ${range.label}`); }
-    catch (e) { notify('No se pudo abrir el informe', friendlyError(e)); }
+    try { await printReport(hoursReportHtml({ who, period: range.label, list, names: plain, rates, by: by === 'day' ? 'project' : by }), trn('Informe de horas {label}', { label: range.label })); }
+    catch (e) { notify(trn('No se pudo abrir el informe'), friendlyError(e)); }
   }
   async function remove(s: HourSession) {
-    if (!(await confirm('¿Borrar este registro?', `${fmtHours(s.minutes)} del ${new Date(s.created_at).toLocaleDateString('es-CO')}.`, 'Borrar'))) return;
-    try { await deleteHours(s.id); setList((l) => l?.filter((x) => x.id !== s.id) ?? null); } catch (e) { notify('No se pudo borrar', friendlyError(e)); }
+    if (!(await confirm(trn('¿Borrar este registro?'), trn('{minutes} del {toLocaleDateString}.', { minutes: fmtHours(s.minutes), toLocaleDateString: new Date(s.created_at).toLocaleDateString(locale()) }), trn('Borrar')))) return;
+    try { await deleteHours(s.id); setList((l) => l?.filter((x) => x.id !== s.id) ?? null); } catch (e) { notify(trn('No se pudo borrar'), friendlyError(e)); }
   }
 
   return (
-    <Screen title={isWide ? 'Registro de horas' : 'Horas'} subtitle="Tu enfoque y lo que anotes a mano" back="/estudiar" maxWidth={920}
+    <Screen title={isWide ? trn('Registro de horas') : trn('Horas')} subtitle={trn('Tu enfoque y lo que anotes a mano')} back="/estudiar" maxWidth={920}
       right={<View style={{ flexDirection: 'row', gap: 8 }}>
-        {!sw && <Button label={isWide ? 'Cronómetro' : ''} icon="play-circle-outline" size="sm" kind="secondary" onPress={() => setTimerOpen(true)} accessibilityLabel="Iniciar cronómetro" />}
-        <Button label={isWide ? 'Anotar horas' : 'Anotar'} icon="add" size="sm" onPress={() => setAdding(true)} />
+        {!sw && <Button label={isWide ? trn('Cronómetro') : ''} icon="play-circle-outline" size="sm" kind="secondary" onPress={() => setTimerOpen(true)} accessibilityLabel={trn('Iniciar cronómetro')} />}
+        <Button label={isWide ? trn('Anotar horas') : trn('Anotar')} icon="add" size="sm" onPress={() => setAdding(true)} />
       </View>}>
       {!v5 && <Card style={{ marginBottom: 12 }}><Text style={{ color: C.warnText, fontSize: 13 }}>{NEEDS_V23_5}</Text></Card>}
 
       <View style={{ flexDirection: 'row', flexWrap: narrow ? 'wrap' : 'nowrap', alignItems: 'center', gap: isWide ? 8 : 2, marginBottom: 10 }}>
-        <Segmented<'week' | 'month'> items={[{ key: 'week', label: 'Semana' }, { key: 'month', label: 'Mes' }]} value={kind} onChange={(k) => { setKind(k); setOffset(0); }} style={{ borderBottomWidth: 0 }} />
+        <Segmented<'week' | 'month'> items={[{ key: 'week', label: trn('Semana') }, { key: 'month', label: trn('Mes') }]} value={kind} onChange={(k) => { setKind(k); setOffset(0); }} style={{ borderBottomWidth: 0 }} />
         <View style={{ flex: 1, minWidth: 8 }} />
         {/* v29: en un celular angosto la semana va en su propia línea. */}
         <View style={narrow ? { flexDirection: 'row', alignItems: 'center', width: '100%', justifyContent: 'space-between', marginTop: 6 } : { flexDirection: 'row', alignItems: 'center', gap: isWide ? 8 : 2, flexShrink: 1 }}>
-        <Pressable onPress={() => setOffset(offset - 1)} accessibilityRole="button" accessibilityLabel="Periodo anterior" hitSlop={6} style={{ padding: 10 }}><Ionicons name="chevron-back" size={20} color={C.text} /></Pressable>
+        <Pressable onPress={() => setOffset(offset - 1)} accessibilityRole="button" accessibilityLabel={trn('Periodo anterior')} hitSlop={6} style={{ padding: 10 }}><Ionicons name="chevron-back" size={20} color={C.text} /></Pressable>
         <Text style={{ color: C.text, fontSize: isWide ? 14.5 : 13.5, fontWeight: '700', minWidth: isWide ? 150 : 0, textAlign: 'center', flexShrink: 1 }} numberOfLines={1} accessibilityLiveRegion="polite">{range.label}</Text>
-        <Pressable onPress={() => setOffset(Math.min(0, offset + 1))} disabled={offset >= 0} accessibilityRole="button" accessibilityLabel="Periodo siguiente" hitSlop={6} style={{ padding: 10, opacity: offset >= 0 ? 0.35 : 1 }}><Ionicons name="chevron-forward" size={20} color={C.text} /></Pressable>
+        <Pressable onPress={() => setOffset(Math.min(0, offset + 1))} disabled={offset >= 0} accessibilityRole="button" accessibilityLabel={trn('Periodo siguiente')} hitSlop={6} style={{ padding: 10, opacity: offset >= 0 ? 0.35 : 1 }}><Ionicons name="chevron-forward" size={20} color={C.text} /></Pressable>
         </View>
       </View>
 
-      <Card style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 18, alignItems: 'center', marginBottom: 14 }} accessibilityLabel="Total del periodo">
+      <Card style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 18, alignItems: 'center', marginBottom: 14 }} accessibilityLabel={trn('Total del periodo')}>
         <View style={{ flexGrow: 1 }}>
-          <Text style={{ color: C.muted, fontSize: 12.5 }}>Total</Text>
+          <Text style={{ color: C.muted, fontSize: 12.5 }}>{trn('Total')}</Text>
           <CountUp value={list ? t.minutes : null} format={(n) => Number.isFinite(n) ? fmtHours(Math.round(n)) : '…'} style={{ color: C.text, fontSize: 26, fontWeight: '800', fontVariant: ['tabular-nums'] }} />
-          <Text style={{ color: C.muted, fontSize: 12.5 }}>{decHours(t.minutes)} horas en {t.days} {t.days === 1 ? 'día' : 'días'}</Text>
+          <Text style={{ color: C.muted, fontSize: 12.5 }}>{trn('{minutes} horas en {days} {v}', { minutes: decHours(t.minutes), days: t.days, v: t.days === 1 ? trn('día') : trn('días') })}</Text>
         </View>
         {t.amount > 0 && (
           <View style={{ flexGrow: 1 }}>
-            <Text style={{ color: C.muted, fontSize: 12.5 }}>Valor con tus tarifas</Text>
+            <Text style={{ color: C.muted, fontSize: 12.5 }}>{trn('Valor con tus tarifas')}</Text>
             <Text style={{ color: C.text, fontSize: 26, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{cop(t.amount)}</Text>
           </View>
         )}
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          <Button label="CSV" icon="download-outline" size="sm" kind="secondary" disabled={!list?.length} onPress={csv} accessibilityLabel="Descargar CSV" />
-          <Button label="PDF" icon={isPro ? 'document-outline' : 'lock-closed-outline'} size="sm" kind="secondary" disabled={!list?.length} onPress={pdf} accessibilityLabel="Informe en PDF" />
-          <Button label="Cobrar" icon="receipt-outline" size="sm" kind="secondary" accessibilityLabel="Hacer cuenta de cobro"
+          <Button label="CSV" icon="download-outline" size="sm" kind="secondary" disabled={!list?.length} onPress={csv} accessibilityLabel={trn('Descargar CSV')} />
+          <Button label="PDF" icon={isPro ? 'document-outline' : 'lock-closed-outline'} size="sm" kind="secondary" disabled={!list?.length} onPress={pdf} accessibilityLabel={trn('Informe en PDF')} />
+          <Button label={trn('Cobrar')} icon="receipt-outline" size="sm" kind="secondary" accessibilityLabel={trn('Hacer cuenta de cobro')}
             onPress={() => router.push(`/cobros?nueva=1&desde=${isoDay(range.from)}&hasta=${isoDay(new Date(range.to.getTime() - 86_400_000))}` as any)} />
         </View>
       </Card>
 
       <ChipRow style={{ marginBottom: 10 }}>
-        <FilterChip label="Por proyecto" active={by === 'project'} onPress={() => setBy('project')} />
-        <FilterChip label={`Por ${mv.subjectLower}`} active={by === 'subject'} onPress={() => setBy('subject')} />
-        <FilterChip label="Por día" active={by === 'day'} onPress={() => setBy('day')} />
-        {kind === 'week' && <FilterChip label="Hoja semanal" icon={<Ionicons name="grid-outline" size={14} color={view === 'hoja' ? C.onBrand : C.muted} />} active={view === 'hoja'} onPress={() => setView(view === 'hoja' ? 'resumen' : 'hoja')} />}
+        <FilterChip label={trn('Por proyecto')} active={by === 'project'} onPress={() => setBy('project')} />
+        <FilterChip label={trn('Por {subjectLower}', { subjectLower: mv.subjectLower })} active={by === 'subject'} onPress={() => setBy('subject')} />
+        <FilterChip label={trn('Por día')} active={by === 'day'} onPress={() => setBy('day')} />
+        {kind === 'week' && <FilterChip label={trn('Hoja semanal')} icon={<Ionicons name="grid-outline" size={14} color={view === 'hoja' ? C.onBrand : C.muted} />} active={view === 'hoja'} onPress={() => setView(view === 'hoja' ? 'resumen' : 'hoja')} />}
       </ChipRow>
 
       {kind === 'week' && view === 'hoja' && list !== null && (
@@ -156,8 +157,8 @@ function Horas() {
       )}
 
       {kind === 'week' && view === 'hoja' ? null : list === null ? <><Skeleton height={56} /><Skeleton height={56} style={{ marginTop: 8 }} /></> : !list.length ? (
-        <EmptyState icon="time-outline" title="Sin horas en este periodo" text="El tiempo de Enfoque se anota solo (elige el proyecto antes de empezar). También puedes anotar horas a mano."
-          action={{ label: 'Anotar horas', icon: 'add', onPress: () => setAdding(true) }} />
+        <EmptyState icon="time-outline" title={trn('Sin horas en este periodo')} text={trn('El tiempo de Enfoque se anota solo (elige el proyecto antes de empezar). También puedes anotar horas a mano.')}
+          action={{ label: trn('Anotar horas'), icon: 'add', onPress: () => setAdding(true) }} />
       ) : (
         <Card padded={false} style={{ marginBottom: 16 }}>
           {rows.map((r, i) => {
@@ -177,13 +178,13 @@ function Horas() {
                 {(canRate || project) && (
                   <View style={{ flexDirection: 'row', gap: 14 }}>
                     {canRate && (
-                      <Pressable onPress={() => setRateFor({ id: r.key, name: r.name })} accessibilityRole="button" accessibilityLabel={`Tarifa por hora de ${r.name}`} hitSlop={4} style={{ paddingVertical: 10, marginVertical: -6 }}>
-                        <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>{rates[r.key] ? `${cop(rates[r.key])} la hora` : 'Poner tarifa por hora'}</Text>
+                      <Pressable onPress={() => setRateFor({ id: r.key, name: r.name })} accessibilityRole="button" accessibilityLabel={trn('Tarifa por hora de {name}', { name: r.name })} hitSlop={4} style={{ paddingVertical: 10, marginVertical: -6 }}>
+                        <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>{rates[r.key] ? trn('{cop} la hora', { cop: cop(rates[r.key]) }) : trn('Poner tarifa por hora')}</Text>
                       </Pressable>
                     )}
                     {project && (
-                      <Pressable onPress={() => setTeam(project)} accessibilityRole="button" accessibilityLabel={`Horas del equipo en ${project.name}`} hitSlop={4} style={{ paddingVertical: 10, marginVertical: -6 }}>
-                        <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>Horas del equipo</Text>
+                      <Pressable onPress={() => setTeam(project)} accessibilityRole="button" accessibilityLabel={trn('Horas del equipo en {name}', { name: project.name })} hitSlop={4} style={{ paddingVertical: 10, marginVertical: -6 }}>
+                        <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>{trn('Horas del equipo')}</Text>
                       </Pressable>
                     )}
                   </View>
@@ -196,20 +197,20 @@ function Horas() {
 
       {!!list?.length && (
         <>
-          <SectionLabel text="Cada registro" count={list.length} right={list.length > 8 ? <Button label={showAll ? 'Ver menos' : 'Ver todos'} size="sm" kind="ghost" onPress={() => setShowAll(!showAll)} /> : undefined} />
+          <SectionLabel text={trn('Cada registro')} count={list.length} right={list.length > 8 ? <Button label={showAll ? trn('Ver menos') : trn('Ver todos')} size="sm" kind="ghost" onPress={() => setShowAll(!showAll)} /> : undefined} />
           <Card padded={false} style={{ marginBottom: 30 }}>
             {[...list].reverse().slice(0, showAll ? 500 : 8).map((s, i, arr) => {
               const d = new Date(s.created_at);
-              const what = [s.project_id && names[s.project_id]?.name, s.subject_id && names[s.subject_id]?.name].filter(Boolean).join(' · ') || 'Sin proyecto ni área';
+              const what = [s.project_id && names[s.project_id]?.name, s.subject_id && names[s.subject_id]?.name].filter(Boolean).join(' · ') || trn('Sin proyecto ni área');
               return (
                 <View key={s.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: i < arr.length - 1 ? 1 : 0, borderBottomColor: C.line }}>
-                  <Ionicons name={s.source === 'manual' ? 'create-outline' : s.source === 'timer' ? 'stopwatch-outline' : 'timer-outline'} size={17} color={C.muted} accessibilityLabel={s.source === 'manual' ? 'A mano' : s.source === 'timer' ? 'Cronómetro' : 'Enfoque'} />
+                  <Ionicons name={s.source === 'manual' ? 'create-outline' : s.source === 'timer' ? 'stopwatch-outline' : 'timer-outline'} size={17} color={C.muted} accessibilityLabel={s.source === 'manual' ? 'A mano' : s.source === 'timer' ? trn('Cronómetro') : trn('Enfoque')} />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={{ color: C.text, fontSize: 13.5 }} numberOfLines={1}>{what}</Text>
-                    <Text style={{ color: C.muted, fontSize: 12 }} numberOfLines={1}>{d.toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric', month: 'short' })}{s.note ? ` · ${s.note}` : ''}</Text>
+                    <Text style={{ color: C.muted, fontSize: 12 }} numberOfLines={1}>{d.toLocaleDateString(locale(), { weekday: 'short', day: 'numeric', month: 'short' })}{s.note ? ` · ${s.note}` : ''}</Text>
                   </View>
                   <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700', fontVariant: ['tabular-nums'] }}>{fmtHours(s.minutes)}</Text>
-                  <Pressable onPress={() => remove(s)} accessibilityRole="button" accessibilityLabel="Borrar registro" hitSlop={6} style={{ width: 40, height: 40, marginRight: -10, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="trash-outline" size={16} color={C.muted} /></Pressable>
+                  <Pressable onPress={() => remove(s)} accessibilityRole="button" accessibilityLabel={trn('Borrar registro')} hitSlop={6} style={{ width: 40, height: 40, marginRight: -10, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="trash-outline" size={16} color={C.muted} /></Pressable>
                 </View>
               );
             })}
@@ -238,10 +239,10 @@ function ManualSheet({ visible, subjects, projects, subjectWord, onClose, onSave
   useEffect(() => { if (visible) { setDate(isoDay(new Date())); setDur(''); setNote(''); setErr(null); } }, [visible]);
   const min = parseDuration(dur);
   async function save() {
-    if (!min || min < 1 || min > 720) { setErr('Escribe la duración: 1:30, 1,5 o 90 (minutos). Máximo 12 horas.'); return; }
+    if (!min || min < 1 || min > 720) { setErr(t('Escribe la duración: 1:30, 1,5 o 90 (minutos). Máximo 12 horas.')); return; }
     const d = new Date(date + 'T12:00:00');
-    if (isNaN(d.getTime())) { setErr('La fecha va como AAAA-MM-DD.'); return; }
-    if (d.getTime() > Date.now() + 86_400_000) { setErr('No se pueden anotar horas en el futuro.'); return; }
+    if (isNaN(d.getTime())) { setErr(t('La fecha va como AAAA-MM-DD.')); return; }
+    if (d.getTime() > Date.now() + 86_400_000) { setErr(t('No se pueden anotar horas en el futuro.')); return; }
     setBusy(true); setErr(null);
     try { await addManualHours({ date: d, minutes: min, subject_id: subject, project_id: project, note }); toast(`${fmtHours(min)} anotadas`, { tone: 'good' }); onSaved(); }
     catch (e) { setErr(friendlyError(e)); }
@@ -249,34 +250,34 @@ function ManualSheet({ visible, subjects, projects, subjectWord, onClose, onSave
   }
   const yesterday = isoDay(new Date(Date.now() - 86_400_000));
   return (
-    <Sheet visible={visible} onClose={onClose} title="Anotar horas" subtitle="Para lo que no hiciste con Enfoque: reuniones, llamadas, trabajo fuera de Kaderno."
-      footer={<><View style={{ flex: 1 }} /><Button label="Cancelar" kind="ghost" onPress={onClose} /><Button label={min ? `Anotar ${fmtHours(min)}` : 'Anotar'} icon="checkmark" busy={busy} onPress={save} /></>}>
+    <Sheet visible={visible} onClose={onClose} title={t('Anotar horas')} subtitle={t('Para lo que no hiciste con Enfoque: reuniones, llamadas, trabajo fuera de Kaderno.')}
+      footer={<><View style={{ flex: 1 }} /><Button label={t('Cancelar')} kind="ghost" onPress={onClose} /><Button label={min ? t('Anotar {min}', { min: fmtHours(min) }) : t('Anotar')} icon="checkmark" busy={busy} onPress={save} /></>}>
       <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-end' }}>
         <View style={{ flex: 1 }}>
           {Platform.OS === 'web'
-            ? <View style={{ marginBottom: 12 }}><Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600', marginBottom: 6 }}>Fecha</Text>
-                {React.createElement('input', { type: 'date', value: date, max: isoDay(new Date()), 'aria-label': 'Fecha', onChange: (e: any) => setDate(e.target.value),
+            ? <View style={{ marginBottom: 12 }}><Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600', marginBottom: 6 }}>{t('Fecha')}</Text>
+                {React.createElement('input', { type: 'date', value: date, max: isoDay(new Date()), 'aria-label': t('Fecha'), onChange: (e: any) => setDate(e.target.value),
                   style: { background: C.surface2, color: C.text, border: `1px solid ${C.line}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, width: '100%', boxSizing: 'border-box', colorScheme: 'dark' } })}</View>
-            : <Field label="Fecha (AAAA-MM-DD)" value={date} onChangeText={setDate} />}
+            : <Field label={t('Fecha (AAAA-MM-DD)')} value={date} onChangeText={setDate} />}
         </View>
-        <View style={{ flex: 1 }}><Field label="Duración" value={dur} onChangeText={setDur} placeholder="1:30" accessibilityLabel="Duración" hint={min ? fmtHours(min) : undefined} /></View>
+        <View style={{ flex: 1 }}><Field label={t('Duración')} value={dur} onChangeText={setDur} placeholder="1:30" accessibilityLabel={t('Duración')} hint={min ? fmtHours(min) : undefined} /></View>
       </View>
       <ChipRow>
-        <FilterChip label="Hoy" active={date === isoDay(new Date())} onPress={() => setDate(isoDay(new Date()))} />
-        <FilterChip label="Ayer" active={date === yesterday} onPress={() => setDate(yesterday)} />
+        <FilterChip label={t('Hoy')} active={date === isoDay(new Date())} onPress={() => setDate(isoDay(new Date()))} />
+        <FilterChip label={t('Ayer')} active={date === yesterday} onPress={() => setDate(yesterday)} />
         {[30, 60, 90, 120].map((m) => <FilterChip key={m} label={fmtHours(m)} active={min === m} onPress={() => setDur(String(m))} />)}
       </ChipRow>
-      <SubjectPicker subjects={subjects} value={subject} onChange={setSubject} placeholder={`Sin ${subjectWord}`} />
+      <SubjectPicker subjects={subjects} value={subject} onChange={setSubject} placeholder={t('Sin {subjectWord}', { subjectWord })} />
       {projects.length > 0 && (
         <View style={{ gap: 6 }}>
-          <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600' }}>Proyecto</Text>
+          <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600' }}>{t('Proyecto')}</Text>
           <ChipRow>
-            <FilterChip label="Ninguno" active={!project} onPress={() => setProject(null)} />
+            <FilterChip label={t('Ninguno')} active={!project} onPress={() => setProject(null)} />
             {projects.slice(0, 12).map((p) => <FilterChip key={p.id} label={`${p.icon ? p.icon + ' ' : ''}${p.name}`} active={project === p.id} onPress={() => setProject(p.id)} />)}
           </ChipRow>
         </View>
       )}
-      <Field label="Nota (opcional)" value={note} onChangeText={setNote} placeholder="Ej: llamada con el cliente" maxLength={300} />
+      <Field label={t('Nota (opcional)')} value={note} onChangeText={setNote} placeholder={t('Ej: llamada con el cliente')} maxLength={300} />
       {err && <Text style={{ color: C.badText, fontSize: 13 }}>{err}</Text>}
     </Sheet>
   );
@@ -290,12 +291,12 @@ function RateSheet({ target, value, onClose, onSaved }: { target: { id: string; 
   async function save(v: number | null) {
     if (!target) return;
     setBusy(true);
-    try { onSaved(await setRate(target.id, v)); } catch (e) { notify('No se pudo guardar', friendlyError(e)); } finally { setBusy(false); }
+    try { onSaved(await setRate(target.id, v)); } catch (e) { notify(t('No se pudo guardar'), friendlyError(e)); } finally { setBusy(false); }
   }
   return (
-    <Sheet visible={!!target} onClose={onClose} title="Tarifa por hora" subtitle={target ? `Para ${target.name}. Solo la ves tú; sirve para el valor del informe.` : undefined} maxWidth={440}
-      footer={<>{value ? <Button label="Quitar" kind="ghost" onPress={() => save(null)} /> : null}<View style={{ flex: 1 }} /><Button label="Guardar" busy={busy} disabled={!n} onPress={() => save(n)} /></>}>
-      <Field label="Pesos por hora" value={txt ? cop(n).replace('$', '') : ''} onChangeText={(v) => setTxt(v.replace(/\D/g, '').slice(0, 9))} keyboardType="number-pad" placeholder="50.000" accessibilityLabel="Pesos por hora" />
+    <Sheet visible={!!target} onClose={onClose} title={t('Tarifa por hora')} subtitle={target ? t('Para {name}. Solo la ves tú; sirve para el valor del informe.', { name: target.name }) : undefined} maxWidth={440}
+      footer={<>{value ? <Button label={t('Quitar')} kind="ghost" onPress={() => save(null)} /> : null}<View style={{ flex: 1 }} /><Button label={t('Guardar')} busy={busy} disabled={!n} onPress={() => save(n)} /></>}>
+      <Field label={t('Pesos por hora')} value={txt ? cop(n).replace('$', '') : ''} onChangeText={(v) => setTxt(v.replace(/\D/g, '').slice(0, 9))} keyboardType="number-pad" placeholder="50.000" accessibilityLabel={t('Pesos por hora')} />
     </Sheet>
   );
 }
@@ -307,21 +308,21 @@ function TeamSheet({ project, range, week, isTeam, onClose }: { project: Project
   useEffect(() => {
     if (!project) return;
     setRows(null); setErr(null); setSheets([]);
-    if (!isTeam) { setErr('Las horas de todo el equipo en un proyecto vienen con el plan Equipo de Kaderno Pro.'); return; }
+    if (!isTeam) { setErr(t('Las horas de todo el equipo en un proyecto vienen con el plan Equipo de Kaderno Pro.')); return; }
     projectHours(project.id, range.from, range.to).then(setRows).catch((e) => setErr(friendlyError(e)));
     if (week) getTimesheets(week, project.id).then(setSheets).catch(() => {});
   }, [project?.id, range.from.getTime(), isTeam]);
   async function decide(t: Timesheet, status: 'aprobada' | 'devuelta') {
-    try { const r = await decideWeek(t.project_id, t.user_id, t.week_start, status); setSheets((l) => l.map((x) => (x.user_id === r.user_id ? r : x))); toast(status === 'aprobada' ? 'Semana aprobada' : 'Semana devuelta para corregir'); }
-    catch (e) { notify('No se pudo', friendlyError(e)); }
+    try { const r = await decideWeek(t.project_id, t.user_id, t.week_start, status); setSheets((l) => l.map((x) => (x.user_id === r.user_id ? r : x))); toast(status === 'aprobada' ? trn('Semana aprobada') : trn('Semana devuelta para corregir')); }
+    catch (e) { notify(trn('No se pudo'), friendlyError(e)); }
   }
   const total = (rows ?? []).reduce((a, r) => a + r.minutes, 0);
   return (
-    <Sheet visible={!!project} onClose={onClose} title={project ? `Horas del equipo en ${project.name}` : ''} subtitle={range.label} maxWidth={520}>
+    <Sheet visible={!!project} onClose={onClose} title={project ? t('Horas del equipo en {name}', { name: project.name }) : ''} subtitle={range.label} maxWidth={520}>
       {err && <Text style={{ color: C.muted, fontSize: 13.5 }}>{err}</Text>}
-      {err && !isTeam && <Button label="Ver planes" onPress={() => { onClose(); import('expo-router').then((m) => m.router.push('/plan' as any)); }} />}
+      {err && !isTeam && <Button label={t('Ver planes')} onPress={() => { onClose(); import('expo-router').then((m) => m.router.push('/plan' as any)); }} />}
       {!err && rows === null && <ActivityIndicator color={C.brand} />}
-      {rows?.length === 0 && <Text style={{ color: C.muted, fontSize: 13.5 }}>Nadie ha anotado horas en este proyecto en el periodo.</Text>}
+      {rows?.length === 0 && <Text style={{ color: C.muted, fontSize: 13.5 }}>{t('Nadie ha anotado horas en este proyecto en el periodo.')}</Text>}
       {rows?.map((r) => (
         <View key={r.user_id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 }}>
           <Ionicons name="person-circle-outline" size={20} color={C.muted} />
@@ -332,26 +333,26 @@ function TeamSheet({ project, range, week, isTeam, onClose }: { project: Project
       ))}
       {sheets.length > 0 && (
         <View style={{ gap: 8, borderTopWidth: 1, borderTopColor: C.line, paddingTop: 10 }}>
-          <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '800' }}>Semanas enviadas para aprobar</Text>
+          <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '800' }}>{t('Semanas enviadas para aprobar')}</Text>
           {sheets.map((t) => {
-            const who = rows?.find((r) => r.user_id === t.user_id)?.name ?? 'Integrante';
+            const who = rows?.find((r) => r.user_id === t.user_id)?.name ?? trn('Integrante');
             return (
               <View key={t.user_id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 <Text style={{ color: C.text, fontSize: 13.5, flex: 1 }} numberOfLines={1}>{who} · {fmtHours(t.minutes)}{t.note ? ` · ${t.note}` : ''}</Text>
-                <Badge text={t.status === 'enviada' ? 'Por aprobar' : t.status === 'aprobada' ? 'Aprobada' : 'Devuelta'} color={t.status === 'aprobada' ? C.good : t.status === 'devuelta' ? C.bad : C.warn} />
-                {t.status === 'enviada' && <Button label="Aprobar" size="sm" onPress={() => decide(t, 'aprobada')} />}
-                {t.status !== 'devuelta' && <Button label="Devolver" size="sm" kind="ghost" onPress={() => decide(t, 'devuelta')} />}
+                <Badge text={t.status === 'enviada' ? trn('Por aprobar') : t.status === 'aprobada' ? trn('Aprobada') : trn('Devuelta')} color={t.status === 'aprobada' ? C.good : t.status === 'devuelta' ? C.bad : C.warn} />
+                {t.status === 'enviada' && <Button label={trn('Aprobar')} size="sm" onPress={() => decide(t, 'aprobada')} />}
+                {t.status !== 'devuelta' && <Button label={trn('Devolver')} size="sm" kind="ghost" onPress={() => decide(t, 'devuelta')} />}
               </View>
             );
           })}
         </View>
       )}
-      {!!rows?.length && <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700', textAlign: 'right' }}>Total {fmtHours(total)}</Text>}
+      {!!rows?.length && <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700', textAlign: 'right' }}>{t('Total {total}', { total: fmtHours(total) })}</Text>}
     </Sheet>
   );
 }
 
-const DAY_SHORT = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+const DAY_SHORT = [t('Lun'), t('Mar'), t('Mié'), t('Jue'), t('Vie'), t('Sáb'), t('Dom')];
 const cellText = (m: number) => (m ? `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}` : '');
 
 /** Hoja semanal (v25, fase 2): proyecto o área por día; se edita como una hoja de cálculo. */
@@ -375,9 +376,9 @@ function WeekSheet({ list, from, names, projects, subjects, sheets, isTeam, onCh
     if (txt === undefined) return;
     setDraft((d) => { const n = { ...d }; delete n[id]; return n; });
     const target = txt.trim() === '' ? 0 : parseDuration(txt);
-    if (target == null || target > 720) { toast('Escribe la duración como 1:30, 1,5 o 90 (máximo 12 horas).', { tone: 'bad' }); return; }
+    if (target == null || target > 720) { toast(t('Escribe la duración como 1:30, 1,5 o 90 (máximo 12 horas).'), { tone: 'bad' }); return; }
     const d = day(i);
-    if (isoDay(d) > today) { toast('No se pueden anotar horas en el futuro.', { tone: 'bad' }); return; }
+    if (isoDay(d) > today) { toast(t('No se pueden anotar horas en el futuro.'), { tone: 'bad' }); return; }
     const kind = rowKey.slice(0, 1), rid = rowKey.slice(2);
     const cell = list.filter((s) => isoDay(new Date(s.created_at)) === isoDay(d) && (kind === 'p' ? s.project_id === rid : kind === 's' ? !s.project_id && s.subject_id === rid : !s.project_id && !s.subject_id));
     const plan = planCellEdit(cell, target);
@@ -387,24 +388,24 @@ function WeekSheet({ list, from, names, projects, subjects, sheets, isTeam, onCh
       if (plan.add) await addManualHours({ date: d, minutes: plan.add, project_id: kind === 'p' ? rid : null, subject_id: kind === 's' ? rid : null, note: '' });
       for (const u of plan.updates) await updateHours(u.id, u.minutes);
       for (const x of plan.deletes) await deleteHours(x);
-      if (plan.blocked) toast(`${fmtHours(plan.blocked)} son del enfoque o del cronómetro: bórralos en "Cada registro".`);
+      if (plan.blocked) toast(t('{blocked} son del enfoque o del cronómetro: bórralos en "Cada registro".', { blocked: fmtHours(plan.blocked) }));
       onChanged();
-    } catch (e) { notify('No se pudo cambiar', friendlyError(e)); onChanged(); }
+    } catch (e) { notify(t('No se pudo cambiar'), friendlyError(e)); onChanged(); }
     finally { setBusy(false); }
   }
   async function submit(pid: string) {
-    try { onSubmitted(await submitWeek(pid, isoDay(from))); toast('Semana enviada al dueño del proyecto'); }
-    catch (e) { notify('No se pudo mandar', friendlyError(e)); }
+    try { onSubmitted(await submitWeek(pid, isoDay(from))); toast(t('Semana enviada al dueño del proyecto')); }
+    catch (e) { notify(t('No se pudo mandar'), friendlyError(e)); }
   }
   const cellW = 58;
   return (
-    <Card padded={false} style={{ marginBottom: 16, overflow: 'hidden' }} accessibilityLabel="Hoja semanal">
+    <Card padded={false} style={{ marginBottom: 16, overflow: 'hidden' }} accessibilityLabel={t('Hoja semanal')}>
       <View style={Platform.OS === 'web' ? ({ overflowX: 'auto' } as any) : undefined}>
         <View style={{ minWidth: 200 + cellW * 8 }}>
           <View style={{ flexDirection: 'row', backgroundColor: C.surface2, borderBottomWidth: 1, borderBottomColor: C.line }}>
-            <Text style={{ width: 200, padding: 10, color: C.muted, fontSize: 12, fontWeight: '700' }}>Proyecto o área</Text>
+            <Text style={{ width: 200, padding: 10, color: C.muted, fontSize: 12, fontWeight: '700' }}>{t('Proyecto o área')}</Text>
             {DAY_SHORT.map((d, i) => <Text key={d} style={{ width: cellW, paddingVertical: 10, textAlign: 'center', color: isoDay(day(i)) === today ? C.brand : C.muted, fontSize: 12, fontWeight: '700' }}>{d} {day(i).getDate()}</Text>)}
-            <Text style={{ width: cellW, paddingVertical: 10, textAlign: 'center', color: C.muted, fontSize: 12, fontWeight: '700' }}>Total</Text>
+            <Text style={{ width: cellW, paddingVertical: 10, textAlign: 'center', color: C.muted, fontSize: 12, fontWeight: '700' }}>{t('Total')}</Text>
           </View>
           {rows.map((r) => {
             const pid = r.key.startsWith('p:') ? r.key.slice(2) : null;
@@ -419,12 +420,12 @@ function WeekSheet({ list, from, names, projects, subjects, sheets, isTeam, onCh
                   </View>
                   {pid && isTeam && (
                     st ? <Text style={{ color: st.status === 'aprobada' ? C.good : st.status === 'devuelta' ? C.badText : C.warnText, fontSize: 11.5, fontWeight: '700' }}>
-                      {st.status === 'aprobada' ? 'Aprobada' : st.status === 'devuelta' ? 'Devuelta: corrige y manda otra vez' : 'Enviada'}{st.status !== 'aprobada' ? '' : ''}
+                      {st.status === 'aprobada' ? t('Aprobada') : st.status === 'devuelta' ? t('Devuelta: corrige y manda otra vez') : t('Enviada')}{st.status !== 'aprobada' ? '' : ''}
                     </Text> : null
                   )}
                   {pid && isTeam && (!st || st.status !== 'aprobada') && r.total > 0 && (
-                    <Pressable onPress={() => submit(pid)} accessibilityRole="button" accessibilityLabel={`Mandar la semana de ${r.name}`} hitSlop={4}>
-                      <Text style={{ color: C.brand, fontSize: 11.5, fontWeight: '700' }}>{st?.status === 'enviada' ? 'Mandar otra vez' : 'Mandar para aprobar'}</Text>
+                    <Pressable onPress={() => submit(pid)} accessibilityRole="button" accessibilityLabel={t('Mandar la semana de {name}', { name: r.name })} hitSlop={4}>
+                      <Text style={{ color: C.brand, fontSize: 11.5, fontWeight: '700' }}>{st?.status === 'enviada' ? t('Mandar otra vez') : t('Mandar para aprobar')}</Text>
                     </Pressable>
                   )}
                 </View>
@@ -443,14 +444,14 @@ function WeekSheet({ list, from, names, projects, subjects, sheets, isTeam, onCh
             );
           })}
           <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: C.surface2 }}>
-            <Text style={{ width: 200, padding: 10, color: C.text, fontSize: 13, fontWeight: '800' }}>Total</Text>
+            <Text style={{ width: 200, padding: 10, color: C.text, fontSize: 13, fontWeight: '800' }}>{t('Total')}</Text>
             {totals.map((m, i) => <Text key={i} style={{ width: cellW, textAlign: 'center', color: C.text, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] }}>{cellText(m)}</Text>)}
             <Text style={{ width: cellW, textAlign: 'center', color: C.text, fontSize: 13, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{cellText(totals.reduce((a, b) => a + b, 0))}</Text>
           </View>
         </View>
       </View>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, padding: 10, alignItems: 'center' }}>
-        <Text style={{ color: C.muted, fontSize: 12 }}>Agregar fila:</Text>
+        <Text style={{ color: C.muted, fontSize: 12 }}>{t('Agregar fila:')}</Text>
         {projects.filter((p) => !rows.some((r) => r.key === `p:${p.id}`)).slice(0, 6).map((p) => <FilterChip key={p.id} label={p.name} active={false} onPress={() => setExtra([...extra, `p:${p.id}`])} />)}
         {subjects.filter((x) => !rows.some((r) => r.key === `s:${x.id}`)).slice(0, 4).map((x) => <FilterChip key={x.id} label={x.name} active={false} onPress={() => setExtra([...extra, `s:${x.id}`])} />)}
       </View>
@@ -465,20 +466,20 @@ function TimerSheet({ visible, projects, subjects, subjectWord, onClose }: { vis
   useEffect(() => { if (visible) { setTitle(''); } }, [visible]);
   async function start() {
     const p = projects.find((x) => x.id === project);
-    await startStopwatch({ title: title.trim() || p?.name || 'Trabajo', projectId: project, subjectId: subject });
-    toast('Cronómetro corriendo'); onClose();
+    await startStopwatch({ title: title.trim() || p?.name || t('Trabajo'), projectId: project, subjectId: subject });
+    toast(t('Cronómetro corriendo')); onClose();
   }
   return (
-    <Sheet visible={visible} onClose={onClose} title="Iniciar cronómetro" subtitle="Cuenta hasta que lo pares, desde cualquier pantalla." maxWidth={500}
-      footer={<><View style={{ flex: 1 }} /><Button label="Cancelar" kind="ghost" onPress={onClose} /><Button label="Iniciar" icon="play" onPress={start} /></>}>
-      <Field label="¿En qué vas a trabajar?" value={title} onChangeText={setTitle} placeholder="Ej: revisar la propuesta" maxLength={140} onSubmitEditing={start} autoFocus />
+    <Sheet visible={visible} onClose={onClose} title={t('Iniciar cronómetro')} subtitle={t('Cuenta hasta que lo pares, desde cualquier pantalla.')} maxWidth={500}
+      footer={<><View style={{ flex: 1 }} /><Button label={t('Cancelar')} kind="ghost" onPress={onClose} /><Button label={t('Iniciar')} icon="play" onPress={start} /></>}>
+      <Field label={t('¿En qué vas a trabajar?')} value={title} onChangeText={setTitle} placeholder={t('Ej: revisar la propuesta')} maxLength={140} onSubmitEditing={start} autoFocus />
       {projects.length > 0 && (
         <ChipRow>
-          <FilterChip label="Sin proyecto" active={!project} onPress={() => setProject(null)} />
+          <FilterChip label={t('Sin proyecto')} active={!project} onPress={() => setProject(null)} />
           {projects.slice(0, 12).map((p) => <FilterChip key={p.id} label={`${p.icon ? p.icon + ' ' : ''}${p.name}`} active={project === p.id} onPress={() => setProject(p.id)} />)}
         </ChipRow>
       )}
-      <SubjectPicker subjects={subjects} value={subject} onChange={setSubject} placeholder={`Sin ${subjectWord}`} />
+      <SubjectPicker subjects={subjects} value={subject} onChange={setSubject} placeholder={t('Sin {subjectWord}', { subjectWord })} />
     </Sheet>
   );
 }

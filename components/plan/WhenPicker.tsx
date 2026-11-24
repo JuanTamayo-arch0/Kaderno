@@ -8,6 +8,7 @@ import { slotLabel, planPhrase, DEFAULT_PLACES } from '../../lib/planSlots';
 import { combine, isoDate, fromISODate } from '../../lib/time';
 import { DateField, TimeField } from '../DateTime';
 import { toast, friendlyError } from '../../lib/feedback';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  "¿Cuándo lo haces?" (v20, sección E): tres horarios libres sugeridos,
@@ -68,37 +69,37 @@ export function WhenPicker({ title, dueDate, dueTime, value, onChange, excludeId
     <View style={{ marginTop: 14, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: C.line, backgroundColor: C.surface2 + '66' }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
         <Ionicons name="time-outline" size={15} color={C.brand} />
-        <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700', flex: 1 }}>¿Cuándo lo haces?</Text>
+        <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700', flex: 1 }}>{t('¿Cuándo lo haces?')}</Text>
         {!!value.at && (
           <Pressable onPress={() => { setOther(false); onChange({ at: null, place: null }); }} accessibilityRole="button" hitSlop={8}>
-            <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600' }}>Quitar</Text>
+            <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600' }}>{t('Quitar')}</Text>
           </Pressable>
         )}
       </View>
-      <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }} accessibilityRole="radiogroup" accessibilityLabel="Horario para empezar">
+      <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }} accessibilityRole="radiogroup" accessibilityLabel={t('Horario para empezar')}>
         {chips.map((c) => chip(c.key, slotLabel(c.at, now), !!at && at.getTime() === c.at.getTime(), () => pick(c.at)))}
-        {chip('otro', 'Otro', other, () => { setOther(!other); if (!other) { setODate(at ? isoDate(at) : isoDate(now)); setOTime(null); } }, 'calendar-outline')}
+        {chip('otro', t('Otro'), other, () => { setOther(!other); if (!other) { setODate(at ? isoDate(at) : isoDate(now)); setOTime(null); } }, 'calendar-outline')}
       </View>
       {sugg.length === 0 && !other && (
-        <Text style={{ color: C.muted, fontSize: 12, marginTop: 6 }}>No encontré huecos libres antes de la entrega. Elige "Otro".</Text>
+        <Text style={{ color: C.muted, fontSize: 12, marginTop: 6 }}>{t('No encontré huecos libres antes de la entrega. Elige "Otro".')}</Text>
       )}
       {other && (
         <View style={{ flexDirection: 'row', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
-          <DateField label="Día" value={oDate} onChange={(v) => applyOther(v, oTime)} allowClear={false} />
-          <TimeField label="Hora" value={oTime} onChange={(v) => applyOther(oDate, v)} />
+          <DateField label={t('Día')} value={oDate} onChange={(v) => applyOther(v, oTime)} allowClear={false} />
+          <TimeField label={t('Hora')} value={oTime} onChange={(v) => applyOther(oDate, v)} />
         </View>
       )}
       {!!value.at && (
         <>
-          <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600', marginTop: 12, marginBottom: 6 }}>Dónde</Text>
-          <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }} accessibilityRole="radiogroup" accessibilityLabel="Lugar">
+          <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600', marginTop: 12, marginBottom: 6 }}>{t('Dónde')}</Text>
+          <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }} accessibilityRole="radiogroup" accessibilityLabel={t('Lugar')}>
             {places.map((p) => chip('p' + p, p, (value.place ?? '').toLowerCase() === p.toLowerCase(), () => onChange({ ...value, place: (value.place ?? '').toLowerCase() === p.toLowerCase() ? null : p })))}
             {value.place && !places.some((p) => p.toLowerCase() === value.place!.toLowerCase()) && chip('pv', value.place, true, () => onChange({ ...value, place: null }))}
             {newPlace === null
-              ? chip('padd', 'Otro lugar', false, () => setNewPlace(''), 'add')
+              ? chip('padd', t('Otro lugar'), false, () => setNewPlace(''), 'add')
               : (
-                <TextInput value={newPlace} onChangeText={setNewPlace} autoFocus placeholder="Ej: Café" placeholderTextColor={C.muted} maxLength={40}
-                  onSubmitEditing={savePlace} onBlur={savePlace} accessibilityLabel="Nuevo lugar"
+                <TextInput value={newPlace} onChangeText={setNewPlace} autoFocus placeholder={t('Ej: Café')} placeholderTextColor={C.muted} maxLength={40}
+                  onSubmitEditing={savePlace} onBlur={savePlace} accessibilityLabel={t('Nuevo lugar')}
                   style={{ minWidth: 120, minHeight: 34, borderRadius: 99, borderWidth: 1, borderColor: C.brand, color: C.text, paddingHorizontal: 12, fontSize: 12.5 }} />
               )}
           </View>

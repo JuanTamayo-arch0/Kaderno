@@ -4,6 +4,7 @@
 // ============================================================
 import { addDaysISO, weekStartISO, dayCounts, type StudyDayRow } from './streaks';
 import { planVsReal } from './estimate';
+import { t } from './i18n';
 
 export type Priority =
   | { kind: 'task'; taskId: string; title: string }
@@ -79,7 +80,7 @@ export function lastWeekSummary(rows: StudyDayRow[], weekStart: string, goal: nu
   const met = days >= goal;
   const h = Math.floor(focusMin / 60), m = focusMin % 60;
   const hours = focusMin ? `${h ? `${h} h ` : ''}${m ? `${m} min` : ''}`.trim() : '0 min';
-  const text = `${met ? 'Cumpliste la meta' : 'No alcanzaste la meta'}: estudiaste ${days} de ${goal} días, ${hours} de enfoque.`;
+  const text = t('{v}: estudiaste {days} de {goal} días, {hours} de enfoque.', { v: met ? t('Cumpliste la meta') : t('No alcanzaste la meta'), days, goal, hours });
   return { days, met, text, vs: planVsReal(plannedMin, focusMin) };
 }
 
@@ -91,27 +92,27 @@ export function shouldOfferSemester(subjects: { created_at?: string | null }[], 
 }
 
 // ---------- WOOP ----------
-export const OBSTACLES = ['me distraigo con el celular', 'dejo todo para el final', 'no entiendo y no pregunto', 'me cuesta empezar', 'estudio solo la noche antes'];
+export const OBSTACLES = [t('me distraigo con el celular'), t('dejo todo para el final'), t('no entiendo y no pregunto'), t('me cuesta empezar'), t('estudio solo la noche antes')];
 export const PLAN_HINTS: Record<string, string> = {
-  'me distraigo con el celular': 'lo dejo en otra habitación y pongo un pomodoro',
-  'dejo todo para el final': 'hago 25 minutos el mismo día que me dejan la tarea',
-  'no entiendo y no pregunto': 'escribo la duda y la pregunto en la siguiente clase',
-  'me cuesta empezar': 'empiezo con el paso más fácil durante 2 minutos',
-  'estudio solo la noche antes': 'repaso 15 minutos el día de la clase',
+  'me distraigo con el celular': t('lo dejo en otra habitación y pongo un pomodoro'),
+  'dejo todo para el final': t('hago 25 minutos el mismo día que me dejan la tarea'),
+  'no entiendo y no pregunto': t('escribo la duda y la pregunto en la siguiente clase'),
+  'me cuesta empezar': t('empiezo con el paso más fácil durante 2 minutos'),
+  'estudio solo la noche antes': t('repaso 15 minutos el día de la clase'),
 };
 
 export type GoalDraft = { wish: string; outcome?: string | null; obstacle?: string | null; plan?: string | null; target_grade?: number | null };
 
 export function planTemplate(obstacle: string | null | undefined): string {
   const o = (obstacle ?? '').trim();
-  return o ? `Si ${o}, entonces ` : 'Si…, entonces ';
+  return o ? t('Si {o}, entonces ', { o }) : t('Si…, entonces ');
 }
 
 /** Lo que va después de "Si…, entonces " (la plantilla de este u otro obstáculo de la lista). */
 export function planThen(raw: string | null | undefined, obstacle?: string | null): string {
   const r = String(raw ?? '');
   const low = r.toLowerCase();
-  const tpls = [planTemplate(obstacle), 'Si…, entonces ', ...OBSTACLES.map((o) => planTemplate(o))];
+  const tpls = [planTemplate(obstacle), t('Si…, entonces '), ...OBSTACLES.map((o) => planTemplate(o))];
   const hit = tpls.find((t) => low.startsWith(t.toLowerCase()));
   return hit ? r.slice(hit.length) : r;
 }
@@ -127,13 +128,13 @@ export function fullPlan(obstacle: string | null | undefined, then: string): str
 
 export function wishExample(subject: string | null, scale = 5): string {
   const grade = scale >= 20 ? '80' : '4.0';
-  return subject ? `Pasar ${subject} con ${grade}` : `Terminar el semestre con promedio de ${grade}`;
+  return subject ? t('Pasar {subject} con {grade}', { subject, grade }) : t('Terminar el semestre con promedio de {grade}', { grade });
 }
 
 export function goalError(g: GoalDraft, scale = 5): string | null {
-  if (!g.wish?.trim()) return 'Escribe tu meta.';
-  if (g.wish.trim().length > 200) return 'La meta es muy larga (máximo 200 caracteres).';
-  if (g.target_grade != null && (!Number.isFinite(g.target_grade) || g.target_grade < 0 || g.target_grade > scale)) return `La nota debe estar entre 0 y ${scale}.`;
+  if (!g.wish?.trim()) return t('Escribe tu meta.');
+  if (g.wish.trim().length > 200) return t('La meta es muy larga (máximo 200 caracteres).');
+  if (g.target_grade != null && (!Number.isFinite(g.target_grade) || g.target_grade < 0 || g.target_grade > scale)) return t('La nota debe estar entre 0 y {scale}.', { scale });
   return null;
 }
 

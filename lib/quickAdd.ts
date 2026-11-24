@@ -8,6 +8,7 @@
 // ============================================================
 import { addDays, isoDate, startOfDay } from './time';
 import { parseRepeat, firstDate, nextDate, type RepeatRule } from './repeat';
+import { t } from './i18n';
 
 export type QuickSubject = { id: string; name: string };
 export type QuickType = { key: string; label: string };
@@ -193,7 +194,7 @@ export function parseQuickAdd(input: string, subjects: QuickSubject[], types: Qu
   while (rest.length && FILLER.has(norm(rest[0])) && rest.length > 1) rest.shift();
   let title = rest.join(' ').trim();
   if (!title) {
-    const tl = types.find((t) => t.key === typeKey)?.label ?? 'Tarea';
+    const tl = types.find((t) => t.key === typeKey)?.label ?? t('Tarea');
     const sn = subjects.find((s) => s.id === subjectId)?.name;
     title = sn ? `${tl} de ${sn}` : tl;
   }

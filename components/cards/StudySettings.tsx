@@ -5,6 +5,7 @@ import { getStudyPrefs, saveStudyPrefs, DEFAULT_STUDY, type StudyPrefs } from '.
 import { toast, friendlyError } from '../../lib/feedback';
 import { Toggle } from '../ds';
 import { streakChanged } from '../../lib/uiBus';
+import { t } from '../../lib/i18n';
 
 // Ajustes de estudio: nuevas por día, retención deseada, escribir antes de ver y meta semanal.
 export function StudySettings({ onChange, hideGoal }: { onChange?: (p: StudyPrefs) => void; hideGoal?: boolean }) {
@@ -29,10 +30,10 @@ export function StudySettings({ onChange, hideGoal }: { onChange?: (p: StudyPref
     <View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14 }}>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: C.text, fontSize: 15, fontWeight: '600' }}>Tarjetas nuevas por día</Text>
-          <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>Entran poco a poco para que el repaso no se acumule. Primero las de materias con examen cerca.</Text>
+          <Text style={{ color: C.text, fontSize: 15, fontWeight: '600' }}>{t('Tarjetas nuevas por día')}</Text>
+          <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{t('Entran poco a poco para que el repaso no se acumule. Primero las de materias con examen cerca.')}</Text>
         </View>
-        <TextInput value={txt} keyboardType="number-pad" accessibilityLabel="Tarjetas nuevas por día" maxLength={3}
+        <TextInput value={txt} keyboardType="number-pad" accessibilityLabel={t('Tarjetas nuevas por día')} maxLength={3}
           onChangeText={(v) => setTxt(v.replace(/\D/g, ''))}
           onBlur={() => { const n = Math.max(0, Math.min(100, parseInt(txt || '0', 10))); setTxt(String(n)); if (n !== p.newPerDay) save({ newPerDay: n }); }}
           style={{ width: 64, textAlign: 'center', backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 10, color: C.text, padding: 10, fontSize: 15 }} />
@@ -40,28 +41,28 @@ export function StudySettings({ onChange, hideGoal }: { onChange?: (p: StudyPref
       <View style={{ height: 1, backgroundColor: C.line, marginLeft: 14 }} />
       <View style={{ paddingVertical: 12, paddingHorizontal: 14, gap: 8 }}>
         <View>
-          <Text style={{ color: C.text, fontSize: 15, fontWeight: '600' }}>Retención deseada</Text>
-          <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>Más alto = recuerdas más, pero repasas más seguido.</Text>
+          <Text style={{ color: C.text, fontSize: 15, fontWeight: '600' }}>{t('Retención deseada')}</Text>
+          <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{t('Más alto = recuerdas más, pero repasas más seguido.')}</Text>
         </View>
-        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }} accessibilityRole="radiogroup" accessibilityLabel="Retención deseada">
+        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }} accessibilityRole="radiogroup" accessibilityLabel={t('Retención deseada')}>
           {opt(0.85, '85%')}{opt(0.9, '90%')}{opt(0.95, '95%')}
         </View>
       </View>
       <View style={{ height: 1, backgroundColor: C.line, marginLeft: 14 }} />
-      <Toggle label="Escribir antes de ver" hint="Escribes tu respuesta y al voltear la ves al lado de la correcta." value={p.typeAnswer} onChange={(v) => save({ typeAnswer: v })} />
+      <Toggle label={t('Escribir antes de ver')} hint={t('Escribes tu respuesta y al voltear la ves al lado de la correcta.')} value={p.typeAnswer} onChange={(v) => save({ typeAnswer: v })} />
       {!hideGoal && (
         <>
           <View style={{ height: 1, backgroundColor: C.line, marginLeft: 14 }} />
           <View style={{ paddingVertical: 12, paddingHorizontal: 14, gap: 8 }}>
             <View>
-              <Text style={{ color: C.text, fontSize: 15, fontWeight: '600' }}>Meta semanal</Text>
-              <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>Días por semana en que quieres estudiar algo. Tu racha principal cuenta las semanas que la cumples.</Text>
+              <Text style={{ color: C.text, fontSize: 15, fontWeight: '600' }}>{t('Meta semanal')}</Text>
+              <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{t('Días por semana en que quieres estudiar algo. Tu racha principal cuenta las semanas que la cumples.')}</Text>
             </View>
-            <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }} accessibilityRole="radiogroup" accessibilityLabel="Meta semanal">
+            <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }} accessibilityRole="radiogroup" accessibilityLabel={t('Meta semanal')}>
               {[2, 3, 4, 5, 6, 7].map((n) => {
                 const on = p.weeklyGoal === n;
                 return (
-                  <Pressable key={n} onPress={() => { save({ weeklyGoal: n }); streakChanged(0); }} accessibilityRole="radio" accessibilityState={{ checked: on }} accessibilityLabel={`${n} días`}
+                  <Pressable key={n} onPress={() => { save({ weeklyGoal: n }); streakChanged(0); }} accessibilityRole="radio" accessibilityState={{ checked: on }} accessibilityLabel={t('{n} días', { n })}
                     style={{ minWidth: 44, minHeight: 36, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12, borderRadius: 99, borderWidth: 1, borderColor: on ? C.brand : C.line, backgroundColor: on ? C.brand : 'transparent' }}>
                     <Text style={{ color: on ? C.onBrand : C.text, fontSize: 13.5, fontWeight: on ? '700' : '600' }}>{n}</Text>
                   </Pressable>

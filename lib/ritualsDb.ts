@@ -6,6 +6,7 @@ import { supabase, currentUserId } from './supabase';
 import { fetchPrefs, savePrefs, getTasks } from './db';
 import { addDaysISO, type StudyDayRow } from './streaks';
 import { cleanPriorities, type Priority, type WeekPlan, type GoalDraft } from './rituals';
+import { t } from './i18n';
 
 const missingTable = (e: any) => !!e && (e.code === '42P01' || e.code === 'PGRST205' || /does not exist|Could not find the table/i.test(String(e.message ?? '')));
 let RITUAL_DB: boolean | null = null;
@@ -41,7 +42,7 @@ export async function saveWeekPlan(weekStart: string, patch: Partial<Omit<WeekPl
   if (patch.priorities) row.priorities = cleanPriorities(patch.priorities as Priority[]);
   const { error } = await supabase.from('week_plans').upsert(row, { onConflict: 'user_id,week_start' });
   if (error) {
-    if (missingTable(error)) { RITUAL_DB = false; throw new Error('Para el ritual del lunes falta correr schema_v19.sql (fase 4) en Supabase.'); }
+    if (missingTable(error)) { RITUAL_DB = false; throw new Error(t('Para el ritual del lunes falta correr schema_v19.sql (fase 4) en Supabase.')); }
     throw error;
   }
 }
@@ -83,7 +84,7 @@ export async function saveGoal(g: GoalDraft, subjectId: string | null, id?: stri
     : supabase.from('goals').insert({ ...row, subject_id: subjectId }).select('*').single();
   const { data, error } = await q;
   if (error) {
-    if (missingTable(error)) throw new Error('Para las metas falta correr schema_v19.sql (fase 4) en Supabase.');
+    if (missingTable(error)) throw new Error(t('Para las metas falta correr schema_v19.sql (fase 4) en Supabase.'));
     throw error;
   }
   return data as Goal;

@@ -1,4 +1,6 @@
+import { t, trn } from './i18n';
 // ============================================================
+import { locale } from './i18n';
 //  Registro de horas (v24, fase 5). Puro, con pruebas: periodos, sumas por
 //  área, proyecto o día, valor con tarifa por hora, CSV e informe en HTML.
 // ============================================================
@@ -12,7 +14,7 @@ export type GroupBy = 'subject' | 'project' | 'day';
 export type Rates = Record<string, number>;
 
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-const DAYS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+const DAYS = ['dom', 'lun', 'mar', t('mié'), 'jue', 'vie', t('sáb')];
 const pad = (n: number) => String(n).padStart(2, '0');
 export const isoDay = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -29,8 +31,8 @@ export function periodRange(kind: 'week' | 'month', offset = 0, now = new Date()
   const to = new Date(from.getFullYear(), from.getMonth(), from.getDate() + 7);
   const last = new Date(to.getFullYear(), to.getMonth(), to.getDate() - 1);
   const label = from.getMonth() === last.getMonth()
-    ? `${from.getDate()} al ${last.getDate()} de ${MONTHS[last.getMonth()]}`
-    : `${from.getDate()} de ${MONTHS[from.getMonth()]} al ${last.getDate()} de ${MONTHS[last.getMonth()]}`;
+    ? t('{getDate} al {getDate2} de {v}', { getDate: from.getDate(), getDate2: last.getDate(), v: MONTHS[last.getMonth()] })
+    : t('{getDate} de {v} al {getDate2} de {v2}', { getDate: from.getDate(), v: MONTHS[from.getMonth()], getDate2: last.getDate(), v2: MONTHS[last.getMonth()] });
   return { from, to, label };
 }
 
@@ -57,7 +59,7 @@ export function groupHours(list: HourSession[], by: GroupBy, names: Record<strin
     if (!r) {
       const n = key ? names[key] : null;
       const d = by === 'day' ? new Date(key + 'T12:00:00') : null;
-      r = { key, name: d ? `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()].slice(0, 3)}` : n?.name ?? (by === 'project' ? 'Sin proyecto' : 'Sin área'), color: n?.color, minutes: 0, sessions: 0, amount: 0 };
+      r = { key, name: d ? `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()].slice(0, 3)}` : n?.name ?? (by === 'project' ? t('Sin proyecto') : t('Sin área')), color: n?.color, minutes: 0, sessions: 0, amount: 0 };
       map.set(key, r);
     }
     r.minutes += s.minutes; r.sessions++;
@@ -87,12 +89,12 @@ const csvCell = (v: string | number) => {
 };
 /** CSV con punto y coma (Excel en español lo abre en columnas). */
 export function hoursCsv(list: HourSession[], names: Record<string, Named>, rates: Rates = {}): string {
-  const head = ['Fecha', 'Hora', 'Minutos', 'Horas', 'Área o materia', 'Proyecto', 'Nota', 'Origen', 'Tarifa por hora', 'Valor'];
+  const head = [t('Fecha'), t('Hora'), t('Minutos'), t('Horas'), t('Área o materia'), t('Proyecto'), t('Nota'), t('Origen'), t('Tarifa por hora'), t('Valor')];
   const rows = [...list].sort((a, b) => a.created_at.localeCompare(b.created_at)).map((s) => {
     const d = new Date(s.created_at), rate = rateFor(s, rates);
     return [isoDay(d), `${pad(d.getHours())}:${pad(d.getMinutes())}`, s.minutes, decHours(s.minutes),
       s.subject_id ? names[s.subject_id]?.name ?? '' : '', s.project_id ? names[s.project_id]?.name ?? '' : '', s.note ?? '',
-      s.source === 'manual' ? 'A mano' : s.source === 'timer' ? 'Cronómetro' : 'Enfoque', rate || '', rate ? amountOf(s.minutes, rate) : ''];
+      s.source === 'manual' ? 'A mano' : s.source === 'timer' ? t('Cronómetro') : t('Enfoque'), rate || '', rate ? amountOf(s.minutes, rate) : ''];
   });
   return '﻿' + [head, ...rows].map((r) => r.map(csvCell).join(';')).join('\r\n') + '\r\n';
 }
@@ -118,9 +120,9 @@ export function hoursReportHtml(o: { who: string; period: string; list: HourSess
 <h1>Informe de horas</h1>
 <p>${esc(o.who)}</p>
 <p>Periodo: ${esc(o.period)}</p>
-<p>Total: ${esc(fmtHours(t.minutes))} (${decHours(t.minutes)} horas) en ${t.days} ${t.days === 1 ? 'día' : 'días'}${money ? `. Valor: ${pesos(t.amount)}` : ''}.</p>
+<p>Total: ${esc(fmtHours(t.minutes))} (${decHours(t.minutes)} horas) en ${t.days} ${t.days === 1 ? trn('día') : trn('días')}${money ? `. Valor: ${pesos(t.amount)}` : ''}.</p>
 <h2>Resumen</h2>
-<table><thead><tr><th>${o.by === 'subject' ? 'Área o materia' : o.by === 'day' ? 'Día' : 'Proyecto'}</th><th class="n">Horas</th>${money ? '<th class="n">Valor</th>' : ''}</tr></thead><tbody>
+<table><thead><tr><th>${o.by === 'subject' ? trn('Área o materia') : o.by === 'day' ? trn('Día') : trn('Proyecto')}</th><th class="n">Horas</th>${money ? '<th class="n">Valor</th>' : ''}</tr></thead><tbody>
 ${groups.map((g) => `<tr><td>${esc(g.name)}</td><td class="n">${decHours(g.minutes)}</td>${money ? `<td class="n">${g.amount ? pesos(g.amount) : ''}</td>` : ''}</tr>`).join('\n')}
 </tbody></table>
 <h2>Detalle</h2>
@@ -128,11 +130,11 @@ ${groups.map((g) => `<tr><td>${esc(g.name)}</td><td class="n">${decHours(g.minut
 ${detail.map((s) => {
     const d = new Date(s.created_at); const rate = rateFor(s, rates);
     return `<tr><td>${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}</td><td>${esc(s.subject_id ? o.names[s.subject_id]?.name ?? '' : '')}</td>`
-      + `<td>${esc(s.project_id ? o.names[s.project_id]?.name ?? '' : '')}</td><td>${esc(s.note ?? (s.source === 'manual' ? '' : 'Enfoque'))}</td>`
+      + `<td>${esc(s.project_id ? o.names[s.project_id]?.name ?? '' : '')}</td><td>${esc(s.note ?? (s.source === 'manual' ? '' : trn('Enfoque')))}</td>`
       + `<td class="n">${decHours(s.minutes)}</td>${money ? `<td class="n">${rate ? pesos(amountOf(s.minutes, rate)) : ''}</td>` : ''}</tr>`;
   }).join('\n')}
 </tbody></table>
-<p style="margin-top:18px">Generado con Kaderno el ${new Date().toLocaleDateString('es-CO')}.</p>
+<p style="margin-top:18px">Generado con Kaderno el ${new Date().toLocaleDateString(locale())}.</p>
 </body></html>`;
 }
 
@@ -161,7 +163,7 @@ export function weekGrid(list: HourSession[], from: Date, names: Record<string, 
     if (i < 0 || i > 6) continue;
     const key = s.project_id ? `p:${s.project_id}` : s.subject_id ? `s:${s.subject_id}` : 'none';
     const id = key.slice(2);
-    const r = map.get(key) ?? { key, name: key === 'none' ? 'Sin proyecto ni área' : names[id]?.name ?? '…', color: key === 'none' ? undefined : names[id]?.color, days: [0, 0, 0, 0, 0, 0, 0], total: 0 };
+    const r = map.get(key) ?? { key, name: key === 'none' ? t('Sin proyecto ni área') : names[id]?.name ?? '…', color: key === 'none' ? undefined : names[id]?.color, days: [0, 0, 0, 0, 0, 0, 0], total: 0 };
     r.days[i] += s.minutes; r.total += s.minutes;
     map.set(key, r);
   }

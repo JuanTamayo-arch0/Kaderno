@@ -2,6 +2,7 @@
 //  Cierre del día (schema_v20, fase 1): lo hecho, lo movido y una línea.
 // ============================================================
 import { supabase, currentUserId } from './supabase';
+import { t } from './i18n';
 
 export type DayReview = { day: string; done: { tasks?: number; focus?: number; cards?: number }; moved: { id: string; to: string }[]; note: string | null };
 const missingTable = (e: any) => !!e && (e.code === '42P01' || e.code === 'PGRST205' || /does not exist|Could not find the table/i.test(String(e.message ?? '')));
@@ -21,7 +22,7 @@ export async function saveDayReview(r: DayReview): Promise<void> {
   if (!u) return;
   const { error } = await supabase.from('day_reviews').upsert({ user_id: u, ...r, note: r.note?.trim() ? r.note.trim().slice(0, 500) : null }, { onConflict: 'user_id,day' });
   if (error) {
-    if (missingTable(error)) { DAY_DB = false; throw new Error('Para cerrar el día falta correr schema_v20.sql en Supabase.'); }
+    if (missingTable(error)) { DAY_DB = false; throw new Error(t('Para cerrar el día falta correr schema_v20.sql en Supabase.')); }
     throw error;
   }
   // La mascota se despide (también en Trabajo, donde casi no habla).

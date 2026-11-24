@@ -21,6 +21,7 @@ import { logoToneFor } from '../lib/brand';
 import { PetChooser } from '../components/pets/PetChooser';
 import { loadPets, usePets } from '../lib/pets/store';
 import { MODES, saveMode, useMode, type Mode } from '../lib/mode';
+import { t } from '../lib/i18n';
 
 // ============================================================
 //  Bienvenida en cinco pasos: para qué usas Kaderno (v24: estudio, trabajo
@@ -28,8 +29,8 @@ import { MODES, saveMode, useMode, type Mode } from '../lib/mode';
 //  Pide lo mínimo para que "Hoy" no aparezca vacío la primera vez.
 // ============================================================
 
-const SUGGEST = ['Cálculo', 'Física', 'Química', 'Programación', 'Inglés', 'Estadística', 'Álgebra lineal', 'Ética'];
-const SUGGEST_WORK = ['Ventas', 'Marketing', 'Operaciones', 'Finanzas', 'Clientes', 'Proyecto interno', 'Administrativo'];
+const SUGGEST = [t('Cálculo'), t('Física'), t('Química'), t('Programación'), t('Inglés'), t('Estadística'), t('Álgebra lineal'), t('Ética')];
+const SUGGEST_WORK = [t('Ventas'), 'Marketing', t('Operaciones'), t('Finanzas'), t('Clientes'), t('Proyecto interno'), t('Administrativo')];
 
 function Bienvenida() {
   const router = useRouter();
@@ -54,7 +55,7 @@ function Bienvenida() {
       const i = subjects.length;
       await addSubject(nm, SUBJECT_COLORS[i % SUBJECT_COLORS.length], SUBJECT_ICONS[i % SUBJECT_ICONS.length], 0);
       setSubjects(await getSubjects()); setName('');
-    } catch (e) { notify('No se pudo crear', friendlyError(e)); } finally { setBusy(false); }
+    } catch (e) { notify(t('No se pudo crear'), friendlyError(e)); } finally { setBusy(false); }
   }
   const parsed = useMemo(() => task.trim() ? parseQuickAdd(task, subjects, taskTypeList()) : null, [task, subjects]);
   async function addT() {
@@ -67,7 +68,7 @@ function Bienvenida() {
         due_at: parsed.dueDate && parsed.dueTime ? combine(parsed.dueDate, parsed.dueTime) : null, remind_days: remindDays(choice), remind_at: at?.toISOString() ?? null };
       await addTask(row);
       setAdded((a) => [...a, `${parsed.title}${fmtDue(row) ? ' · ' + fmtDue(row) : ''}`]); setTask('');
-    } catch (e) { notify('No se pudo agregar', friendlyError(e)); } finally { setBusy(false); }
+    } catch (e) { notify(t('No se pudo agregar'), friendlyError(e)); } finally { setBusy(false); }
   }
   async function finish(to: string = '/') {
     await AsyncStorage.setItem('onboarded', '1').catch(() => {});
@@ -75,7 +76,7 @@ function Bienvenida() {
     router.replace(to as any);
   }
 
-  const steps = ['Uso', mv.subjectsTab, 'Entregas', 'Compañero', 'Avisos'];
+  const steps = [t('Uso'), mv.subjectsTab, t('Entregas'), t('Compañero'), t('Avisos')];
   // En el teléfono solo el paso actual lleva nombre: los demás, su número (antes se partían las palabras).
   const narrow = useWindowDimensions().width < 520;
   const LAST = steps.length - 1;
@@ -84,7 +85,7 @@ function Bienvenida() {
       <Ionicons name="add" size={20} color={C.muted} />
       <TextInput value={value} onChangeText={set} placeholder={ph} placeholderTextColor={C.muted} onSubmitEditing={onSubmit} autoFocus={Platform.OS === 'web'} accessibilityLabel={label}
         style={[{ flex: 1, minWidth: 0, color: C.text, fontSize: 15, paddingVertical: 12, minHeight: 46 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
-      {!!value.trim() && <Button label="Agregar" size="sm" onPress={onSubmit} busy={busy} style={{ marginRight: 6 }} />}
+      {!!value.trim() && <Button label={t('Agregar')} size="sm" onPress={onSubmit} busy={busy} style={{ marginRight: 6 }} />}
     </View>
   );
 
@@ -94,13 +95,13 @@ function Bienvenida() {
         <View style={{ width: '100%', maxWidth: 560, flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 22 }}>
             {/* v28: al llegar, el lápiz escribe la K. */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }} accessible accessibilityRole="image" accessibilityLabel="Kaderno">
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }} accessible accessibilityRole="image" accessibilityLabel={t('Kaderno')}>
               <KadernoWrites size={36} tone={logoToneFor(uiScheme())} delay={0.5} />
               <KadernoWordmark size={26} />
             </View>
-            <Pressable onPress={() => finish()} accessibilityRole="button" style={{ padding: 8 }}><Text style={{ color: C.muted, fontWeight: '600' }}>Saltar</Text></Pressable>
+            <Pressable onPress={() => finish()} accessibilityRole="button" style={{ padding: 8 }}><Text style={{ color: C.muted, fontWeight: '600' }}>{t('Saltar')}</Text></Pressable>
           </View>
-          <View style={{ flexDirection: 'row', gap: 6, marginBottom: 22 }} accessibilityLabel={`Paso ${step + 1} de ${steps.length}`}>
+          <View style={{ flexDirection: 'row', gap: 6, marginBottom: 22 }} accessibilityLabel={t('Paso {v} de {length}', { v: step + 1, length: steps.length })}>
             {steps.map((s, i) => (
               <View key={s} style={{ flex: narrow && i === step ? 2.4 : 1, minWidth: 0 }}>
                 <View style={{ height: 4, borderRadius: 2, backgroundColor: i <= step ? C.brand : C.line }} />
@@ -111,8 +112,8 @@ function Bienvenida() {
 
           {step === 0 && (
             <>
-              <Text style={{ color: C.text, fontSize: 26, fontWeight: '800' }}>¿Para qué vas a usar Kaderno?</Text>
-              <Text style={{ color: C.muted, fontSize: 14.5, marginTop: 6, marginBottom: 18, lineHeight: 21 }}>Cambia los nombres y lo que ves primero. Lo puedes cambiar cuando quieras en Ajustes.</Text>
+              <Text style={{ color: C.text, fontSize: 26, fontWeight: '800' }}>{t('¿Para qué vas a usar Kaderno?')}</Text>
+              <Text style={{ color: C.muted, fontSize: 14.5, marginTop: 6, marginBottom: 18, lineHeight: 21 }}>{t('Cambia los nombres y lo que ves primero. Lo puedes cambiar cuando quieras en Ajustes.')}</Text>
               <View style={{ gap: 10 }}>
                 {MODES.map((m) => {
                   const on = mode === m.key;
@@ -134,12 +135,12 @@ function Bienvenida() {
 
           {step === 1 && (
             <>
-              <Text style={{ color: C.text, fontSize: 26, fontWeight: '800' }}>{work ? '¿En qué áreas o con qué clientes trabajas?' : mode === 'ambos' ? '¿Qué materias ves y en qué áreas trabajas?' : '¿Qué materias ves este semestre?'}</Text>
-              <Text style={{ color: C.muted, fontSize: 14.5, marginTop: 6, marginBottom: 18, lineHeight: 21 }}>{work ? 'Con ellas se organizan tus tareas, notas, agenda y horas. Luego puedes cambiarles color e ícono.' : 'Con ellas se organizan tus tareas, notas, horario y calificaciones. Luego puedes cambiarles color, ícono y créditos.'}</Text>
-              {input(name, setName, work ? 'Nombre del área o cliente' : 'Nombre de la materia', () => addSub(name), work ? 'Nombre del área o cliente' : 'Nombre de la materia')}
+              <Text style={{ color: C.text, fontSize: 26, fontWeight: '800' }}>{work ? t('¿En qué áreas o con qué clientes trabajas?') : mode === 'ambos' ? t('¿Qué materias ves y en qué áreas trabajas?') : t('¿Qué materias ves este semestre?')}</Text>
+              <Text style={{ color: C.muted, fontSize: 14.5, marginTop: 6, marginBottom: 18, lineHeight: 21 }}>{work ? t('Con ellas se organizan tus tareas, notas, agenda y horas. Luego puedes cambiarles color e ícono.') : t('Con ellas se organizan tus tareas, notas, horario y calificaciones. Luego puedes cambiarles color, ícono y créditos.')}</Text>
+              {input(name, setName, work ? t('Nombre del área o cliente') : t('Nombre de la materia'), () => addSub(name), work ? t('Nombre del área o cliente') : t('Nombre de la materia'))}
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
                 {(work ? SUGGEST_WORK : mode === 'ambos' ? [...SUGGEST.slice(0, 5), ...SUGGEST_WORK.slice(0, 3)] : SUGGEST).filter((s) => !subjects.some((x) => x.name.toLowerCase() === s.toLowerCase())).map((s) => (
-                  <Pressable key={s} onPress={() => addSub(s)} accessibilityRole="button" accessibilityLabel={`Agregar ${s}`}
+                  <Pressable key={s} onPress={() => addSub(s)} accessibilityRole="button" accessibilityLabel={t('Agregar {s}', { s })}
                     style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 36, paddingHorizontal: 12, borderRadius: 99, borderWidth: 1, borderColor: C.line }}>
                     <Ionicons name="add" size={14} color={C.muted} /><Text style={{ color: C.text, fontSize: 13 }}>{s}</Text>
                   </Pressable>
@@ -155,28 +156,28 @@ function Bienvenida() {
 
           {step === 2 && (
             <>
-              <Text style={{ color: C.text, fontSize: 26, fontWeight: '800' }}>Anota tus próximas entregas</Text>
-              <Text style={{ color: C.muted, fontSize: 14.5, marginTop: 6, marginBottom: 18, lineHeight: 21 }}>{work ? 'Escríbelas como hablas: "propuesta ventas viernes 10am" o "informe mensual el 30/11". Kaderno entiende el área, el día y la hora.' : 'Escríbelas como hablas: "parcial cálculo viernes 10am" o "informe física el 20/10". Kaderno entiende la materia, el día y la hora.'}</Text>
-              {input(task, setTask, work ? 'Ej: enviar cotización mañana' : 'Ej: taller de química mañana', addT, 'Entrega')}
-              {parsed && <Text style={{ color: C.muted, fontSize: 13, marginTop: 8 }}>Se guarda como: <Text style={{ color: C.text, fontWeight: '700' }}>{parsed.title}</Text>{parsed.subjectId ? ` · ${subjects.find((s) => s.id === parsed.subjectId)?.name}` : ''}{parsed.dueDate ? ` · ${fmtDue({ due_date: parsed.dueDate, due_at: parsed.dueTime ? combine(parsed.dueDate, parsed.dueTime) : null })}` : ' · sin fecha'}</Text>}
+              <Text style={{ color: C.text, fontSize: 26, fontWeight: '800' }}>{t('Anota tus próximas entregas')}</Text>
+              <Text style={{ color: C.muted, fontSize: 14.5, marginTop: 6, marginBottom: 18, lineHeight: 21 }}>{work ? t('Escríbelas como hablas: "propuesta ventas viernes 10am" o "informe mensual el 30/11". Kaderno entiende el área, el día y la hora.') : t('Escríbelas como hablas: "parcial cálculo viernes 10am" o "informe física el 20/10". Kaderno entiende la materia, el día y la hora.')}</Text>
+              {input(task, setTask, work ? t('Ej: enviar cotización mañana') : t('Ej: taller de química mañana'), addT, t('Entrega'))}
+              {parsed && <Text style={{ color: C.muted, fontSize: 13, marginTop: 8 }}>{t('Se guarda como: ')}<Text style={{ color: C.text, fontWeight: '700' }}>{parsed.title}</Text>{parsed.subjectId ? ` · ${subjects.find((s) => s.id === parsed.subjectId)?.name}` : ''}{parsed.dueDate ? ` · ${fmtDue({ due_date: parsed.dueDate, due_at: parsed.dueTime ? combine(parsed.dueDate, parsed.dueTime) : null })}` : t(' · sin fecha')}</Text>}
               {added.length > 0 && <Card style={{ marginTop: 16, gap: 8 }}>{added.map((a, i) => <View key={i} style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}><Ionicons name="checkmark-circle" size={17} color={C.goodText} /><Text style={{ color: C.text }}>{a}</Text></View>)}</Card>}
               {!work && <Pressable onPress={() => finish('/importar')} style={{ marginTop: 18, flexDirection: 'row', alignItems: 'center', gap: 6 }} accessibilityRole="link">
                 <Ionicons name="download-outline" size={16} color={C.brand} />
-                <Text style={{ color: C.brand, fontWeight: '700' }}>¿Tienes el cronograma del curso? Impórtalo completo</Text>
+                <Text style={{ color: C.brand, fontWeight: '700' }}>{t('¿Tienes el cronograma del curso? Impórtalo completo')}</Text>
               </Pressable>}
             </>
           )}
 
           {step === 3 && (
             <>
-              <Text style={{ color: C.text, fontSize: 26, fontWeight: '800' }}>{work ? 'Elige tu compañero' : 'Elige tu compañero de estudio'}</Text>
-              <Text style={{ color: C.muted, fontSize: 14.5, marginTop: 6, marginBottom: 18, lineHeight: 21 }}>Una mascota pixel que camina por la app, celebra lo que terminas y te da un empujón cuando lo necesitas. Es opcional.</Text>
+              <Text style={{ color: C.text, fontSize: 26, fontWeight: '800' }}>{work ? t('Elige tu compañero') : t('Elige tu compañero de estudio')}</Text>
+              <Text style={{ color: C.muted, fontSize: 14.5, marginTop: 6, marginBottom: 18, lineHeight: 21 }}>{t('Una mascota pixel que camina por la app, celebra lo que terminas y te da un empujón cuando lo necesitas. Es opcional.')}</Text>
               {pets.available === false ? (
-                <Card><Text style={{ color: C.muted }}>Las mascotas todavía no están activadas en este servidor. Puedes seguir.</Text></Card>
+                <Card><Text style={{ color: C.muted }}>{t('Las mascotas todavía no están activadas en este servidor. Puedes seguir.')}</Text></Card>
               ) : pets.pets.length > 0 ? (
                 <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <Ionicons name="checkmark-circle" size={20} color={C.goodText} />
-                  <Text style={{ color: C.text, fontWeight: '700' }}>Ya te acompaña {pets.pets.find((p) => p.active)?.name ?? pets.pets[0].name}.</Text>
+                  <Text style={{ color: C.text, fontWeight: '700' }}>{t('Ya te acompaña ')}{pets.pets.find((p) => p.active)?.name ?? pets.pets[0].name}.</Text>
                 </Card>
               ) : (
                 <PetChooser onDone={() => setStep(LAST)} />
@@ -186,22 +187,22 @@ function Bienvenida() {
 
           {step === LAST && (
             <>
-              <Text style={{ color: C.text, fontSize: 26, fontWeight: '800' }}>Que no se te pase nada</Text>
-              <Text style={{ color: C.muted, fontSize: 14.5, marginTop: 6, marginBottom: 18, lineHeight: 21 }}>{work ? 'Kaderno te avisa antes de cada entrega y cada mañana te dice qué tienes. También puedes cargar tu agenda fija para ver la reunión de ahora en Hoy.' : 'Kaderno te avisa antes de cada entrega y cada mañana te dice qué tienes. También puedes cargar tu horario para ver la clase de ahora en Hoy.'}</Text>
+              <Text style={{ color: C.text, fontSize: 26, fontWeight: '800' }}>{t('Que no se te pase nada')}</Text>
+              <Text style={{ color: C.muted, fontSize: 14.5, marginTop: 6, marginBottom: 18, lineHeight: 21 }}>{work ? t('Kaderno te avisa antes de cada entrega y cada mañana te dice qué tienes. También puedes cargar tu agenda fija para ver la reunión de ahora en Hoy.') : t('Kaderno te avisa antes de cada entrega y cada mañana te dice qué tienes. También puedes cargar tu horario para ver la clase de ahora en Hoy.')}</Text>
               <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 <Ionicons name="notifications-outline" size={22} color={C.brand} />
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: C.text, fontWeight: '700' }}>Notificaciones</Text>
-                  <Text style={{ color: C.muted, fontSize: 13 }}>{push === 'on' ? 'Activadas.' : push === 'needs-install' ? 'En iPhone, primero instala Kaderno en la pantalla de inicio.' : push === 'off' ? 'Recordatorios aunque la app esté cerrada.' : 'Las puedes activar después en Ajustes.'}</Text>
+                  <Text style={{ color: C.text, fontWeight: '700' }}>{t('Notificaciones')}</Text>
+                  <Text style={{ color: C.muted, fontSize: 13 }}>{push === 'on' ? t('Activadas.') : push === 'needs-install' ? t('En iPhone, primero instala Kaderno en la pantalla de inicio.') : push === 'off' ? t('Recordatorios aunque la app esté cerrada.') : t('Las puedes activar después en Ajustes.')}</Text>
                 </View>
-                {push === 'off' && <Button label="Activar" size="sm" onPress={async () => { try { setPush(await enablePush()); } catch (e) { notify('No se pudieron activar', friendlyError(e)); } }} />}
+                {push === 'off' && <Button label={t('Activar')} size="sm" onPress={async () => { try { setPush(await enablePush()); } catch (e) { notify(t('No se pudieron activar'), friendlyError(e)); } }} />}
                 {push === 'on' && <Ionicons name="checkmark-circle" size={22} color={C.goodText} />}
               </Card>
-              <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 }} onPress={() => finish('/horario')} accessibilityLabel={work ? 'Cargar mi agenda' : 'Cargar mi horario'}>
+              <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 }} onPress={() => finish('/horario')} accessibilityLabel={work ? t('Cargar mi agenda') : t('Cargar mi horario')}>
                 <Ionicons name="grid-outline" size={22} color={C.brand} />
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: C.text, fontWeight: '700' }}>{work ? 'Cargar mi agenda' : 'Cargar mi horario'}</Text>
-                  <Text style={{ color: C.muted, fontSize: 13 }}>Toca cada franja y elige {work ? 'el área' : 'la materia'}.</Text>
+                  <Text style={{ color: C.text, fontWeight: '700' }}>{work ? t('Cargar mi agenda') : t('Cargar mi horario')}</Text>
+                  <Text style={{ color: C.muted, fontSize: 13 }}>{t('Toca cada franja y elige {v}.', { v: work ? t('el área') : t('la materia') })}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={C.muted} />
               </Card>
@@ -210,10 +211,10 @@ function Bienvenida() {
 
           <View style={{ flex: 1, minHeight: 24 }} />
           <View style={{ flexDirection: 'row', gap: 10, paddingBottom: insets.bottom + 8 }}>
-            {step > 0 && <Button label="Atrás" kind="secondary" onPress={() => setStep(step - 1)} style={{ flex: 1 }} />}
+            {step > 0 && <Button label={t('Atrás')} kind="secondary" onPress={() => setStep(step - 1)} style={{ flex: 1 }} />}
             {step < LAST
-              ? <Button label={step === 1 && !subjects.length ? 'Lo hago después' : step === 3 && !pets.pets.length && pets.available !== false ? 'Ahora no' : 'Siguiente'} onPress={() => setStep(step + 1)} style={{ flex: 2 }} kind={(step === 1 && !subjects.length) || (step === 3 && !pets.pets.length) ? 'secondary' : 'primary'} />
-              : <Button label="Ir a Hoy" icon="arrow-forward" onPress={() => { toast(work ? 'Todo listo. ¡A darle!' : 'Todo listo. ¡Buen semestre!', { tone: 'good' }); finish(); }} style={{ flex: 2 }} />}
+              ? <Button label={step === 1 && !subjects.length ? t('Lo hago después') : step === 3 && !pets.pets.length && pets.available !== false ? t('Ahora no') : t('Siguiente')} onPress={() => setStep(step + 1)} style={{ flex: 2 }} kind={(step === 1 && !subjects.length) || (step === 3 && !pets.pets.length) ? 'secondary' : 'primary'} />
+              : <Button label={t('Ir a Hoy')} icon="arrow-forward" onPress={() => { toast(work ? t('Todo listo. ¡A darle!') : t('Todo listo. ¡Buen semestre!'), { tone: 'good' }); finish(); }} style={{ flex: 2 }} />}
           </View>
         </View>
       </ScrollView>

@@ -10,6 +10,7 @@ import { confirm, notify } from '../lib/confirm';
 import { countTasksByType, deleteTaskType, retypeTasks, upsertTaskType } from '../lib/db';
 import { TypeMeta, loadTaskTypes, taskTypeList, uniqueTypeKey } from '../lib/taskTypes';
 import { sheet, input, lbl, btnPrimary } from '../components/ui';
+import { t, trn } from '../lib/i18n';
 
 // ============================================================
 //  Tipos de tarea.
@@ -59,14 +60,14 @@ function Tipos() {
   async function save() {
     if (!draft) return;
     const label = draft.label.trim();
-    if (!label) { notify('Ponle un nombre al tipo'); return; }
+    if (!label) { notify(t('Ponle un nombre al tipo')); return; }
     setBusy(true);
     try {
       const key = draft.key ?? uniqueTypeKey(label);
       await upsertTaskType({ key, label, icon: draft.icon, color: draft.color, position: draft.position });
       await refresh();
       setDraft(null);
-    } catch (e: any) { notify('No se pudo guardar', e?.message ?? 'Intenta de nuevo'); }
+    } catch (e: any) { notify(t('No se pudo guardar'), e?.message ?? t('Intenta de nuevo')); }
     finally { setBusy(false); }
   }
 
@@ -75,25 +76,25 @@ function Tipos() {
     let n = 0;
     try { n = await countTasksByType(t.key); } catch { /* si falla el conteo, seguimos */ }
     const msg = n > 0
-      ? `${n} ${n === 1 ? 'tarea usa' : 'tareas usan'} este tipo. ${n === 1 ? 'Pasará' : 'Pasarán'} a "Tarea".`
-      : 'No hay tareas con este tipo.';
-    if (!(await confirm(`¿Borrar "${t.label}"?`, msg, 'Borrar'))) return;
+      ? trn('{n} {v} este tipo. {v2} a "Tarea".', { n, v: n === 1 ? trn('tarea usa') : trn('tareas usan'), v2: n === 1 ? trn('Pasará') : trn('Pasarán') })
+      : trn('No hay tareas con este tipo.');
+    if (!(await confirm(trn('¿Borrar "{label}"?', { label: t.label }), msg, trn('Borrar')))) return;
     setBusy(true);
     try {
       if (n > 0) await retypeTasks(t.key, 'tarea');
       await deleteTaskType(t.key);
       await refresh();
-    } catch (e: any) { notify('No se pudo borrar', e?.message ?? 'Intenta de nuevo'); }
+    } catch (e: any) { notify(trn('No se pudo borrar'), e?.message ?? trn('Intenta de nuevo')); }
     finally { setBusy(false); }
   }
 
   // Devuelve un builtin a su apariencia original borrando su fila.
   async function reset(t: TypeMeta) {
     if (!t.builtin) return;
-    if (!(await confirm(`¿Restablecer "${t.label}"?`, 'Volverá al nombre, ícono y color originales.', 'Restablecer'))) return;
+    if (!(await confirm(trn('¿Restablecer "{label}"?', { label: t.label }), trn('Volverá al nombre, ícono y color originales.'), trn('Restablecer')))) return;
     setBusy(true);
     try { await deleteTaskType(t.key); await refresh(); }
-    catch (e: any) { notify('No se pudo restablecer', e?.message ?? 'Intenta de nuevo'); }
+    catch (e: any) { notify(trn('No se pudo restablecer'), e?.message ?? trn('Intenta de nuevo')); }
     finally { setBusy(false); }
   }
 
@@ -109,7 +110,7 @@ function Tipos() {
       await upsertTaskType({ key: a.key, label: a.label, icon: a.icon, color: a.color, position: j });
       await upsertTaskType({ key: b.key, label: b.label, icon: b.icon, color: b.color, position: i });
       await refresh();
-    } catch (e: any) { notify('No se pudo reordenar', e?.message ?? 'Intenta de nuevo'); void refresh(); }
+    } catch (e: any) { notify(t('No se pudo reordenar'), e?.message ?? t('Intenta de nuevo')); void refresh(); }
   }
 
   useEffect(() => {
@@ -128,12 +129,10 @@ function Tipos() {
   const customCount = types.filter((t) => !t.builtin).length;
 
   return (
-    <Screen title="Tipos de tarea" back="/ajustes" nav="tipos" maxWidth={760}
-      right={<Button label="Nuevo tipo" icon="add" size="sm" onPress={openNew} />}>
+    <Screen title={t('Tipos de tarea')} back="/ajustes" nav="tipos" maxWidth={760}
+      right={<Button label={t('Nuevo tipo')} icon="add" size="sm" onPress={openNew} />}>
         <Text style={{ color: C.muted, fontSize: 13, marginBottom: 14, lineHeight: 19 }}>
-          Además de los cuatro de siempre puedes crear los tuyos: laboratorio, exposición, lectura…
-          Los cuatro originales no se borran, pero puedes cambiarles nombre, ícono y color.
-        </Text>
+          {t('Además de los cuatro de siempre puedes crear los tuyos: laboratorio, exposición, lectura… Los cuatro originales no se borran, pero puedes cambiarles nombre, ícono y color.')}</Text>
 
         <View style={{ gap: 10 }}>
           {types.map((t, i) => (
@@ -141,25 +140,25 @@ function Tipos() {
               <View style={{ width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: t.color + '22' }}>
                 <Text style={{ fontSize: 19 }}>{t.icon}</Text>
               </View>
-              <Pressable style={{ flex: 1, minWidth: 0 }} onPress={() => openEdit(t)} accessibilityRole="button" accessibilityLabel={`Editar ${t.label}`}>
+              <Pressable style={{ flex: 1, minWidth: 0 }} onPress={() => openEdit(t)} accessibilityRole="button" accessibilityLabel={trn('Editar {label}', { label: t.label })}>
                 <Text style={{ color: C.text, fontSize: 15, fontWeight: '700' }}>{t.label}</Text>
                 <Text style={{ color: C.muted, fontSize: 11.5, marginTop: 2 }}>
-                  {t.builtin ? 'Original' : 'Propio'}
+                  {t.builtin ? trn('Original') : trn('Propio')}
                   {counts[t.key] !== undefined ? ` · ${counts[t.key]} ${counts[t.key] === 1 ? 'tarea' : 'tareas'}` : ''}
                 </Text>
               </Pressable>
 
               <View>
-                <Pressable onPress={() => move(i, -1)} disabled={i === 0} accessibilityRole="button" accessibilityLabel="Subir" style={ARROW}>
+                <Pressable onPress={() => move(i, -1)} disabled={i === 0} accessibilityRole="button" accessibilityLabel={trn('Subir')} style={ARROW}>
                   <Ionicons name="chevron-up" size={16} color={i === 0 ? C.line : C.muted} />
                 </Pressable>
-                <Pressable onPress={() => move(i, 1)} disabled={i === types.length - 1} accessibilityRole="button" accessibilityLabel="Bajar" style={ARROW}>
+                <Pressable onPress={() => move(i, 1)} disabled={i === types.length - 1} accessibilityRole="button" accessibilityLabel={trn('Bajar')} style={ARROW}>
                   <Ionicons name="chevron-down" size={16} color={i === types.length - 1 ? C.line : C.muted} />
                 </Pressable>
               </View>
 
               {!narrow && (
-                <Pressable onPress={() => openEdit(t)} accessibilityRole="button" accessibilityLabel={`Editar ${t.label}`} style={ICON}>
+                <Pressable onPress={() => openEdit(t)} accessibilityRole="button" accessibilityLabel={trn('Editar {label}', { label: t.label })} style={ICON}>
                   <Ionicons name="create-outline" size={18} color={C.muted} />
                 </Pressable>
               )}
@@ -168,7 +167,7 @@ function Tipos() {
                   <Ionicons name="refresh-outline" size={18} color={C.muted} />
                 </Pressable>
               ) : (
-                <Pressable onPress={() => remove(t)} accessibilityRole="button" accessibilityLabel={`Borrar ${t.label}`} style={ICON}>
+                <Pressable onPress={() => remove(t)} accessibilityRole="button" accessibilityLabel={trn('Borrar {label}', { label: t.label })} style={ICON}>
                   <Ionicons name="trash-outline" size={18} color={C.muted} />
                 </Pressable>
               )}
@@ -179,8 +178,8 @@ function Tipos() {
         {customCount === 0 && (
           <Pressable onPress={openNew} style={{ marginTop: 14, borderWidth: 1, borderStyle: 'dashed', borderColor: C.line, borderRadius: R.lg, padding: 18, alignItems: 'center' }}>
             <Ionicons name="pricetags-outline" size={22} color={C.muted} />
-            <Text style={{ color: C.text, fontSize: 14, fontWeight: '700', marginTop: 8 }}>Crear mi primer tipo</Text>
-            <Text style={{ color: C.muted, fontSize: 12, marginTop: 3, textAlign: 'center' }}>Laboratorio, exposición, lectura, entrega parcial…</Text>
+            <Text style={{ color: C.text, fontSize: 14, fontWeight: '700', marginTop: 8 }}>{t('Crear mi primer tipo')}</Text>
+            <Text style={{ color: C.muted, fontSize: 12, marginTop: 3, textAlign: 'center' }}>{t('Laboratorio, exposición, lectura, entrega parcial…')}</Text>
           </Pressable>
         )}
       <TypeEditor
@@ -201,7 +200,7 @@ function TypeEditor({ draft, busy, isWide, onChange, onClose, onSave }: {
   const body = d && (
     <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
       <Text style={{ color: C.text, fontSize: 18, fontWeight: '700', marginBottom: 12 }}>
-        {d.key ? 'Editar tipo' : 'Nuevo tipo'}
+        {d.key ? t('Editar tipo') : t('Nuevo tipo')}
       </Text>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.surface2, borderRadius: 12, padding: 12, marginBottom: 12 }}>
@@ -209,22 +208,21 @@ function TypeEditor({ draft, busy, isWide, onChange, onClose, onSave }: {
           <Text style={{ fontSize: 20 }}>{d.icon}</Text>
         </View>
         <View style={{ paddingVertical: 4, paddingHorizontal: 10, borderRadius: 999, backgroundColor: d.color + '22', borderWidth: 1, borderColor: d.color + '55' }}>
-          <Text style={{ color: d.color, fontSize: 13, fontWeight: '700' }}>{d.icon} {d.label.trim() || 'Sin nombre'}</Text>
+          <Text style={{ color: d.color, fontSize: 13, fontWeight: '700' }}>{d.icon} {d.label.trim() || t('Sin nombre')}</Text>
         </View>
       </View>
 
       <TextInput
         value={d.label} onChangeText={(v) => onChange({ label: v })}
-        placeholder="Ej: Laboratorio" placeholderTextColor={C.muted}
+        placeholder={t('Ej: Laboratorio')} placeholderTextColor={C.muted}
         style={input} maxLength={28}
       />
       {d.builtin && (
         <Text style={{ color: C.muted, fontSize: 11.5, marginTop: 6 }}>
-          Es uno de los originales: puedes cambiar cómo se ve, pero las tareas que ya lo usan no se tocan.
-        </Text>
+          {t('Es uno de los originales: puedes cambiar cómo se ve, pero las tareas que ya lo usan no se tocan.')}</Text>
       )}
 
-      <Text style={lbl}>Ícono</Text>
+      <Text style={lbl}>{t('Ícono')}</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         {TYPE_ICONS.map((ic) => {
           const active = d.icon === ic;
@@ -237,7 +235,7 @@ function TypeEditor({ draft, busy, isWide, onChange, onClose, onSave }: {
         })}
       </View>
 
-      <Text style={lbl}>Color</Text>
+      <Text style={lbl}>{t('Color')}</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
         {TYPE_COLORS.map((col) => {
           const active = d.color.toLowerCase() === col.toLowerCase();
@@ -251,10 +249,10 @@ function TypeEditor({ draft, busy, isWide, onChange, onClose, onSave }: {
       </View>
 
       <Pressable onPress={onSave} disabled={busy} style={[btnPrimary, busy && { opacity: 0.7 }]}>
-        <Text style={{ color: C.onBrand, fontWeight: '700' }}>{busy ? '…' : d.key ? 'Guardar cambios' : 'Crear tipo'}</Text>
+        <Text style={{ color: C.onBrand, fontWeight: '700' }}>{busy ? '…' : d.key ? t('Guardar cambios') : t('Crear tipo')}</Text>
       </Pressable>
       <Pressable onPress={onClose} style={{ alignItems: 'center', marginTop: 12 }}>
-        <Text style={{ color: C.muted }}>Cancelar</Text>
+        <Text style={{ color: C.muted }}>{t('Cancelar')}</Text>
       </Pressable>
     </ScrollView>
   );

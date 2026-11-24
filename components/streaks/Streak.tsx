@@ -12,6 +12,7 @@ import {
   todayHint, brokeMessage, repairProgress, weeksLabel, daysLabel,
 } from '../../lib/streaks';
 import { toast, friendlyError } from '../../lib/feedback';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Rachas amables (v20, sección D): meta semanal con siete puntos, racha
@@ -35,14 +36,14 @@ const DOT: Record<DotState, { bg: string; border: string; fg: string }> = {
   today: { bg: 'transparent', border: C.good, fg: C.text },
   future: { bg: 'transparent', border: C.line + '88', fg: C.muted },
 };
-const STATE_TXT: Record<DotState, string> = { done: 'estudiaste', protected: 'protegido con escudo', missed: 'sin estudio', today: 'hoy, aún no cuenta', future: 'por venir' };
-const DAY_NAMES = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+const STATE_TXT: Record<DotState, string> = { done: 'estudiaste', protected: t('protegido con escudo'), missed: t('sin estudio'), today: t('hoy, aún no cuenta'), future: t('por venir') };
+const DAY_NAMES = ['lunes', 'martes', t('miércoles'), 'jueves', 'viernes', t('sábado'), 'domingo'];
 
 /** L M M J V S D con el estado de cada día. */
 export function WeekDots({ s, size = 26 }: { s: StreakSummary; size?: number }) {
   return (
     <View style={{ flexDirection: 'row', gap: size > 22 ? 8 : 5 }} accessibilityRole="summary"
-      accessibilityLabel={`Esta semana: ${s.weekDone} de ${s.goal} días`}>
+      accessibilityLabel={t('Esta semana: {weekDone} de {goal} días', { weekDone: s.weekDone, goal: s.goal })}>
       {s.week.map((w, i) => {
         const st = DOT[w.state];
         return (
@@ -60,7 +61,7 @@ export function WeekDots({ s, size = 26 }: { s: StreakSummary; size?: number }) 
 
 function Shields({ n }: { n: number }) {
   return (
-    <View style={{ flexDirection: 'row', gap: 3 }} accessibilityLabel={`${n} de ${MAX_SHIELDS} escudos`}>
+    <View style={{ flexDirection: 'row', gap: 3 }} accessibilityLabel={t('{n} de {MAX_SHIELDS} escudos', { n, MAX_SHIELDS })}>
       {Array.from({ length: MAX_SHIELDS }, (_, i) => (
         <Ionicons key={i} name={i < n ? 'shield' : 'shield-outline'} size={15} color={i < n ? C.brand : C.muted} />
       ))}
@@ -78,7 +79,7 @@ export function StreakCard({ s, onChanged, style }: { s: StreakSummary; onChange
     setBusy(true);
     try {
       const n = await buyShield();
-      toast(`Escudo comprado. Tienes ${n} de ${MAX_SHIELDS}.`, { tone: 'good' });
+      toast(t('Escudo comprado. Tienes {n} de {MAX_SHIELDS}.', { n, MAX_SHIELDS }), { tone: 'good' });
       loadPets(true).catch(() => {});
       onChanged?.();
     } catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
@@ -88,14 +89,12 @@ export function StreakCard({ s, onChanged, style }: { s: StreakSummary; onChange
     <Card style={style}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: C.muted, fontSize: 12.5 }}>Racha semanal</Text>
+          <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Racha semanal')}</Text>
           <Text style={{ color: s.weekly ? C.goodText : C.text, fontSize: 26, fontWeight: '800' }}>{weeksLabel(s.weekly)}</Text>
-          <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>
-            Meta: {s.goal} días por semana · {goalMet ? 'cumplida esta semana' : `llevas ${s.weekDone}`}
-          </Text>
+          <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{t('Meta: {goal} días por semana · {v}', { goal: s.goal, v: goalMet ? t('cumplida esta semana') : `llevas ${s.weekDone}` })}</Text>
         </View>
         <View style={{ alignItems: 'flex-end', gap: 6 }}>
-          <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{s.daily} {s.daily === 1 ? 'día seguido' : 'días seguidos'}</Text>
+          <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{s.daily} {s.daily === 1 ? t('día seguido') : t('días seguidos')}</Text>
           <Shields n={s.shields} />
         </View>
       </View>
@@ -103,21 +102,20 @@ export function StreakCard({ s, onChanged, style }: { s: StreakSummary; onChange
       <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 10 }}>{todayHint(s)}</Text>
       {s.shieldWillCover > 0 && (
         <Text style={{ color: C.brand, fontSize: 12.5, marginTop: 4 }}>
-          {s.shieldWillCover === 1 ? 'Ayer no estudiaste: tu escudo lo cubre cuando hoy cuente.' : 'Tus escudos cubren los dos días que faltaste cuando hoy cuente.'}
+          {s.shieldWillCover === 1 ? t('Ayer no estudiaste: tu escudo lo cubre cuando hoy cuente.') : t('Tus escudos cubren los dos días que faltaste cuando hoy cuente.')}
         </Text>
       )}
       <RepairBox s={s} />
       {!!pet && s.shields < MAX_SHIELDS && (
-        <Pressable onPress={buy} disabled={busy} accessibilityRole="button" accessibilityLabel={`Comprar escudo por ${SHIELD_PRICE} monedas`}
+        <Pressable onPress={buy} disabled={busy} accessibilityRole="button" accessibilityLabel={t('Comprar escudo por {SHIELD_PRICE} monedas', { SHIELD_PRICE })}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, alignSelf: 'flex-start', opacity: busy ? 0.5 : 1 }}>
           <Ionicons name="shield-half-outline" size={15} color={C.brand} />
-          <Text style={{ color: C.brand, fontSize: 13, fontWeight: '700' }}>Comprar escudo · {SHIELD_PRICE} monedas</Text>
-          <Text style={{ color: C.muted, fontSize: 12 }}>(tienes {pet.coins})</Text>
+          <Text style={{ color: C.brand, fontSize: 13, fontWeight: '700' }}>{t('Comprar escudo · {SHIELD_PRICE} monedas', { SHIELD_PRICE })}</Text>
+          <Text style={{ color: C.muted, fontSize: 12 }}>{t('(tienes {coins})', { coins: pet.coins })}</Text>
         </Pressable>
       )}
       <Text style={{ color: C.muted, fontSize: 11.5, marginTop: 10 }}>
-        Un día cuenta con 10 min de enfoque, 1 tarea o 10 tarjetas. Cada 7 días seguidos ganas un escudo que protege un día sin estudio.
-      </Text>
+        {t('Un día cuenta con 10 min de enfoque, 1 tarea o 10 tarjetas. Cada 7 días seguidos ganas un escudo que protege un día sin estudio.')}</Text>
     </Card>
   );
 }
@@ -129,9 +127,7 @@ function RepairBox({ s }: { s: StreakSummary }) {
   return (
     <View style={{ marginTop: 12, padding: 12, borderRadius: 12, backgroundColor: C.warn + '14', borderWidth: 1, borderColor: C.warn + '55' }}>
       <Text style={{ color: C.text, fontSize: 13.5 }}>{msg}</Text>
-      <Text style={{ color: C.warnText, fontSize: 13, fontWeight: '700', marginTop: 6 }}>
-        Reparar racha: haz hoy el doble ({REPAIR_RULE.focus} min de enfoque o {REPAIR_RULE.cards} tarjetas)
-      </Text>
+      <Text style={{ color: C.warnText, fontSize: 13, fontWeight: '700', marginTop: 6 }}>{t('Reparar racha: haz hoy el doble ({focus} min de enfoque o {cards} tarjetas)', { focus: REPAIR_RULE.focus, cards: REPAIR_RULE.cards })}</Text>
       <View style={{ height: 6, borderRadius: 3, backgroundColor: C.surface2, marginTop: 8, overflow: 'hidden' }}>
         <View style={{ width: `${Math.round(pr.frac * 100)}%`, height: '100%', backgroundColor: C.warn }} />
       </View>
@@ -143,12 +139,12 @@ function RepairBox({ s }: { s: StreakSummary }) {
 /** Versión corta para Hoy: puntos y "2 de 4 esta semana". */
 export function StreakMini({ s, onPress }: { s: StreakSummary; onPress?: () => void }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`Racha: ${weeksLabel(s.weekly)}, ${s.weekDone} de ${s.goal} días esta semana`}
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={t('Racha: {weekly}, {weekDone} de {goal} días esta semana', { weekly: weeksLabel(s.weekly), weekDone: s.weekDone, goal: s.goal })}
       style={{ gap: 8 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <Ionicons name="flame" size={16} color={s.weekly ? C.good : C.muted} />
-        <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700', flex: 1 }}>{weeksLabel(s.weekly)} cumpliendo tu meta</Text>
-        <Text style={{ color: C.muted, fontSize: 12.5 }}>{s.weekDone} de {s.goal}</Text>
+        <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700', flex: 1 }}>{t('{weekly} cumpliendo tu meta', { weekly: weeksLabel(s.weekly) })}</Text>
+        <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('{weekDone} de {goal}', { weekDone: s.weekDone, goal: s.goal })}</Text>
       </View>
       <WeekDots s={s} size={22} />
     </Pressable>
@@ -163,14 +159,12 @@ export function StreakNudge({ s, onFocus }: { s: StreakSummary; onFocus: () => v
   return (
     <Card style={{ marginBottom: 12, borderLeftWidth: 4, borderLeftColor: C.warn }}>
       <Text style={{ color: C.text, fontSize: 14, fontWeight: '700' }}>{msg}</Text>
-      <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 4 }}>
-        Reparar racha: haz hoy el doble ({REPAIR_RULE.focus} min de enfoque o {REPAIR_RULE.cards} tarjetas). {pr.text}
-      </Text>
+      <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 4 }}>{t('Reparar racha: haz hoy el doble ({focus} min de enfoque o {cards} tarjetas). {text}', { focus: REPAIR_RULE.focus, cards: REPAIR_RULE.cards, text: pr.text })}</Text>
       <View style={{ height: 5, borderRadius: 3, backgroundColor: C.surface2, marginTop: 8, overflow: 'hidden' }}>
         <View style={{ width: `${Math.round(pr.frac * 100)}%`, height: '100%', backgroundColor: C.warn }} />
       </View>
       <View style={{ flexDirection: 'row', marginTop: 10 }}>
-        <Button label="Empezar enfoque" icon="timer-outline" size="sm" kind="secondary" onPress={onFocus} />
+        <Button label={t('Empezar enfoque')} icon="timer-outline" size="sm" kind="secondary" onPress={onFocus} />
       </View>
     </Card>
   );

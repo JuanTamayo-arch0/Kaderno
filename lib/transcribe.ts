@@ -1,4 +1,6 @@
+import { t } from './i18n';
 // ============================================================
+import {  } from './i18n';
 //  Transcripción en vivo (v22, fase 1). Hoy solo con el reconocimiento del
 //  navegador (gratis): Chrome, Edge y Safari. La pantalla usa esta interfaz,
 //  así que más adelante se puede agregar un servicio pagado sin cambiarla.
@@ -24,14 +26,14 @@ function speechCtor(): any {
 export function browserSpeechSupported(): boolean { return !!speechCtor(); }
 
 export const LANGS = [
-  { code: 'es-CO', label: 'Español' },
-  { code: 'en-US', label: 'Inglés' },
+  { code: t('es-CO'), label: t('Español') },
+  { code: t('en-US'), label: t('Inglés') },
 ] as const;
 
 /** Reconocimiento del navegador que se vuelve a encender solo tras un silencio o un corte. */
 export function createBrowserTranscriber(lang: string, ev: TranscriberEvents): Transcriber {
   const Ctor = speechCtor();
-  if (!Ctor) throw new Error('Este navegador no puede transcribir. Usa Chrome, Edge o Safari.');
+  if (!Ctor) throw new Error(t('Este navegador no puede transcribir. Usa Chrome, Edge o Safari.'));
   let rec: any = null;
   let want: TranscriberState = 'idle';
   let fails = 0;
@@ -58,16 +60,16 @@ export function createBrowserTranscriber(lang: string, ev: TranscriberEvents): T
     r.onerror = (e: any) => {
       const code = String(e?.error ?? '');
       if (code === 'not-allowed' || code === 'service-not-allowed') {
-        ev.onError?.('Kaderno no tiene permiso para usar el micrófono. Actívalo en el candado de la barra de direcciones.', true);
+        ev.onError?.(t('Kaderno no tiene permiso para usar el micrófono. Actívalo en el candado de la barra de direcciones.'), true);
         setState('stopped');
       } else if (code === 'audio-capture') {
-        ev.onError?.('No encontré un micrófono.', true);
+        ev.onError?.(t('No encontré un micrófono.'), true);
         setState('stopped');
       } else if (code === 'network') {
         fails++;
-        ev.onError?.('Sin conexión: el reconocimiento del navegador necesita internet. Reintentando…', false);
+        ev.onError?.(t('Sin conexión: el reconocimiento del navegador necesita internet. Reintentando…'), false);
       } else if (code === 'language-not-supported') {
-        ev.onError?.('El navegador no reconoce ese idioma.', true);
+        ev.onError?.(t('El navegador no reconoce ese idioma.'), true);
         setState('stopped');
       }
       // "no-speech" y "aborted" se arreglan solos al volver a encender.

@@ -4,6 +4,7 @@
 //  franjas, cierre del día, cuenta regresiva y bandeja.
 // ============================================================
 import { isMeaningful } from './estimate';
+import { t, trn } from './i18n';
 
 export type Block = { id: string; start: number; end: number };   // minutos del día
 export type Placed = Block & { lane: number; lanes: number };
@@ -13,9 +14,9 @@ export const DAY_END = 23 * 60;
 export const DEFAULT_MIN = 30;
 export type Band = 'manana' | 'tarde' | 'noche';
 export const BANDS: Record<Band, { label: string; start: number; end: number }> = {
-  manana: { label: 'Mañana', start: 6 * 60, end: 12 * 60 },
-  tarde: { label: 'Tarde', start: 12 * 60, end: 18 * 60 },
-  noche: { label: 'Noche', start: 18 * 60, end: 23 * 60 },
+  manana: { label: t('Mañana'), start: 6 * 60, end: 12 * 60 },
+  tarde: { label: t('Tarde'), start: 12 * 60, end: 18 * 60 },
+  noche: { label: t('Noche'), start: 18 * 60, end: 23 * 60 },
 };
 
 /** Bloques que se cruzan quedan lado a lado (carriles), como en un calendario. */
@@ -63,7 +64,7 @@ export function fmtHours(min: number): string {
 /** "Planeaste 7 h y te quedan 4 h libres hoy" (null si cabe). */
 export function overloadText(plannedMin: number, freeMin: number): string | null {
   if (plannedMin <= freeMin || plannedMin < 60) return null;
-  return `Planeaste ${fmtHours(plannedMin)} y te quedan ${fmtHours(freeMin)} libres hoy.`;
+  return t('Planeaste {plannedMin} y te quedan {freeMin} libres hoy.', { plannedMin: fmtHours(plannedMin), freeMin: fmtHours(freeMin) });
 }
 
 /** Minuto del día bajo una posición vertical, redondeado a 15. */
@@ -134,7 +135,7 @@ export type Countdown = { id: string; title: string; days: number; label: string
 export function examCountdown(tasks: (T & { title: string })[], todayISO: string, horizon = 30): Countdown[] {
   const day = (iso: string) => { const [y, m, d] = iso.split('-').map(Number); return Date.UTC(y, m - 1, d); };
   return tasks.filter((t) => t.status !== 'done' && ['examen', 'quiz'].includes(String(t.type)) && t.due_date && t.due_date >= todayISO)
-    .map((t) => { const days = Math.round((day(t.due_date!) - day(todayISO)) / 86_400_000); return { id: t.id, title: t.title, days, label: days === 0 ? 'hoy' : days === 1 ? 'mañana' : `${days} días`, tone: (days <= 2 ? 'bad' : days <= 7 ? 'warn' : 'muted') as Countdown['tone'] }; })
+    .map((t) => { const days = Math.round((day(t.due_date!) - day(todayISO)) / 86_400_000); return { id: t.id, title: t.title, days, label: days === 0 ? 'hoy' : days === 1 ? trn('mañana') : trn('{days} días', { days }), tone: (days <= 2 ? 'bad' : days <= 7 ? 'warn' : 'muted') as Countdown['tone'] }; })
     .filter((c) => c.days <= horizon)
     .sort((a, b) => a.days - b.days);
 }
@@ -197,6 +198,6 @@ export const clockLabel = (min: number) => `${Math.floor(min / 60)}:${String(min
 /** Cierre del día en modo Trabajo: el recordatorio de anotar horas (null si no hace falta). */
 export function hoursNudge(loggedMin: number, doneTasks: number): string | null {
   if (loggedMin >= 6 * 60) return null;
-  if (loggedMin === 0) return doneTasks ? `Terminaste ${doneTasks} ${doneTasks === 1 ? 'tarea' : 'tareas'} y no hay horas registradas hoy. ¿Las anotas?` : 'No hay horas registradas hoy. Si trabajaste fuera de Kaderno, anótalas.';
-  return `Llevas ${fmtHours(loggedMin)} registradas hoy. ¿Falta anotar alguna reunión o llamada?`;
+  if (loggedMin === 0) return doneTasks ? t('Terminaste {doneTasks} {v} y no hay horas registradas hoy. ¿Las anotas?', { doneTasks, v: doneTasks === 1 ? t('tarea') : t('tareas') }) : t('No hay horas registradas hoy. Si trabajaste fuera de Kaderno, anótalas.');
+  return t('Llevas {loggedMin} registradas hoy. ¿Falta anotar alguna reunión o llamada?', { loggedMin: fmtHours(loggedMin) });
 }

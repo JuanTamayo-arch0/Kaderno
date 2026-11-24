@@ -1,3 +1,4 @@
+import { t, trn } from './i18n';
 // ============================================================
 //  "¿Cuándo lo haces?" (v20, sección E). Puro, con pruebas.
 //  Busca huecos libres de 50 min entre 7:00 y 21:00, fuera de clases y de
@@ -5,13 +6,13 @@
 // ============================================================
 
 export const PLAN_MIN = 50;
-export const DEFAULT_PLACES = ['Casa', 'Biblioteca', 'Universidad'];
+export const DEFAULT_PLACES = [t('Casa'), t('Biblioteca'), t('Universidad')];
 const DAY_START = 7 * 60;
 const DAY_END = 21 * 60;
 // Si no hay costumbre, estas horas primero (tarde, media mañana...).
 const FALLBACK_HOURS = [16, 10, 14, 18, 9, 11, 15, 17, 19, 8, 12, 13, 20, 7];
-const DAY_NAMES = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-const DAY_SHORT = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const DAY_NAMES = ['domingo', 'lunes', 'martes', t('miércoles'), 'jueves', 'viernes', t('sábado')];
+const DAY_SHORT = [t('Dom'), t('Lun'), t('Mar'), t('Mié'), t('Jue'), t('Vie'), t('Sáb')];
 
 export type Range = { start: number; end: number };   // minutos del día
 export type Busy = { start: number; end: number };    // milisegundos
@@ -114,7 +115,7 @@ export function timeLabel(d: Date): string {
 /** "Hoy 4:00 pm", "Mañana 10:00 am", "Jue 2:00 pm" o "Jue 23 2:00 pm" si es más lejos. */
 export function slotLabel(at: Date, now: Date): string {
   const dd = dayDiff(at, now);
-  const day = dd === 0 ? 'Hoy' : dd === 1 ? 'Mañana' : dd < 7 ? DAY_SHORT[at.getDay()] : `${DAY_SHORT[at.getDay()]} ${at.getDate()}`;
+  const day = dd === 0 ? t('Hoy') : dd === 1 ? t('Mañana') : dd < 7 ? DAY_SHORT[at.getDay()] : `${DAY_SHORT[at.getDay()]} ${at.getDate()}`;
   return `${day} ${timeLabel(at)}`;
 }
 
@@ -123,19 +124,19 @@ export function placePhrase(place: string | null | undefined): string {
   const p = (place ?? '').trim();
   if (!p) return '';
   const low = p.toLowerCase();
-  if (low === 'casa') return 'en casa';
-  if (['biblioteca', 'universidad', 'oficina', 'cafetería', 'sala de estudio'].includes(low)) return `en la ${low}`;
+  if (low === 'casa') return t('en casa');
+  if (['biblioteca', 'universidad', 'oficina', t('cafetería'), t('sala de estudio')].includes(low)) return t('en la {low}', { low });
   return `en ${p}`;
 }
 
 /** "Si son las 4:00 pm del jueves, empiezo "Informe" en la biblioteca." */
 export function planPhrase(title: string, at: Date, place: string | null | undefined, now: Date): string {
   const dd = dayDiff(at, now);
-  const when = dd === 0 ? 'de hoy' : dd === 1 ? 'de mañana' : `del ${DAY_NAMES[at.getDay()]}`;
+  const when = dd === 0 ? trn('de hoy') : dd === 1 ? trn('de mañana') : `del ${DAY_NAMES[at.getDay()]}`;
   const one = (at.getHours() % 12 || 12) === 1;
   const where = placePhrase(place);
-  const t = title.trim() || 'la tarea';
-  return `${one ? 'Si es la' : 'Si son las'} ${timeLabel(at)} ${when}, empiezo "${t}"${where ? ' ' + where : ''}.`;
+  const t = title.trim() || trn('la tarea');
+  return `${one ? trn('Si es la') : trn('Si son las')} ${timeLabel(at)} ${when}, empiezo "${t}"${where ? ' ' + where : ''}.`;
 }
 
 /** Plan que pasó hace 30 min o más (y menos de 24 h) sin que arrancara. */

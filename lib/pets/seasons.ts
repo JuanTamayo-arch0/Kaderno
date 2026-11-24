@@ -5,6 +5,7 @@
 //  schema_v22.sql (_pet_season_ok), que es la que cobra.
 // ============================================================
 import type { ItemId } from './art';
+import { t } from '../i18n';
 
 export type SeasonId = 'carnaval' | 'vacaciones' | 'amor_amistad' | 'halloween' | 'navidad';
 export type Season = {
@@ -15,11 +16,11 @@ export type Season = {
 };
 
 export const SEASONS: Season[] = [
-  { id: 'carnaval', name: 'Carnaval', from: [1, 20], to: [3, 10], items: ['antifaz'] },
-  { id: 'vacaciones', name: 'Vacaciones de mitad de año', from: [6, 15], to: [7, 31], items: ['sombrero_vueltiao'] },
-  { id: 'amor_amistad', name: 'Amor y Amistad', from: [9, 1], to: [9, 30], items: ['gafas_corazon'] },
-  { id: 'halloween', name: 'Halloween', from: [10, 1], to: [11, 2], items: ['sombrero_bruja'] },
-  { id: 'navidad', name: 'Navidad', from: [12, 1], to: [1, 6], items: ['gorro_navidad', 'cuernos_reno', 'luces'] },
+  { id: 'carnaval', name: t('Carnaval'), from: [1, 20], to: [3, 10], items: ['antifaz'] },
+  { id: 'vacaciones', name: t('Vacaciones de mitad de año'), from: [6, 15], to: [7, 31], items: ['sombrero_vueltiao'] },
+  { id: 'amor_amistad', name: t('Amor y Amistad'), from: [9, 1], to: [9, 30], items: ['gafas_corazon'] },
+  { id: 'halloween', name: t('Halloween'), from: [10, 1], to: [11, 2], items: ['sombrero_bruja'] },
+  { id: 'navidad', name: t('Navidad'), from: [12, 1], to: [1, 6], items: ['gorro_navidad', 'cuernos_reno', 'luces'] },
 ];
 
 const key = (m: number, d: number) => m * 100 + d;

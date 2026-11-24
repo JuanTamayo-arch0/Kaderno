@@ -4,6 +4,7 @@
 //  nota en la escala de la materia y armar las tarjetas de los errores.
 // ============================================================
 import type { QuizQuestion } from '../supabase/functions/_shared/quiz';
+import { t } from './i18n';
 export type { QuizQuestion } from '../supabase/functions/_shared/quiz';
 
 export const NOTES_BUDGET = 12000;
@@ -23,7 +24,7 @@ export function pickNotes(notes: NoteLike[], selected: string[] | null, budget =
     if (left < 300) break;
     const content = (n.content ?? '').trim().slice(0, left);
     left -= content.length;
-    out.push({ id: n.id, title: n.title || 'Nota sin título', content });
+    out.push({ id: n.id, title: n.title || t('Nota sin título'), content });
   }
   return out;
 }
@@ -59,7 +60,7 @@ export function correctText(q: QuizQuestion): string {
 }
 
 export function givenText(q: QuizQuestion, a: QuizAnswer | undefined): string {
-  if (!a || a.given == null || String(a.given).trim() === '') return 'Sin responder';
+  if (!a || a.given == null || String(a.given).trim() === '') return t('Sin responder');
   return q.type === 'mc' ? (q.options?.[Number(a.given)] ?? '') : String(a.given);
 }
 
@@ -86,7 +87,7 @@ export function byNote(qs: QuizQuestion[], answers: QuizAnswer[], notes: { id: s
   qs.forEach((q, i) => {
     const n = q.note != null ? notes[q.note] : undefined;
     const key = n?.id ?? '-';
-    const row = map.get(key) ?? { id: n?.id ?? null, title: n?.title ?? 'Varias notas', points: 0, total: 0 };
+    const row = map.get(key) ?? { id: n?.id ?? null, title: n?.title ?? t('Varias notas'), points: 0, total: 0 };
     row.total += 1;
     const v = answers[i]?.verdict;
     row.points += v ? POINTS[v] : 0;
@@ -121,7 +122,7 @@ export function prepText(quizzes: { score: number | null; scale: number | null; 
   const done = quizzes.filter((q) => q.score != null).sort((a, b) => b.created_at.localeCompare(a.created_at));
   if (!done.length) return null;
   const s = (q: (typeof done)[number]) => fmtGrade(Number(q.score), Number(q.scale) || 5).split(' / ')[0];
-  return `Preparación: último simulacro ${s(done[0])}${done[1] ? ` (antes ${s(done[1])})` : ''}`;
+  return t('Preparación: último simulacro {s}{v}', { s: s(done[0]), v: done[1] ? t(' (antes {s})', { s: s(done[1]) }) : '' });
 }
 
 /** "Probada hace 3 días · 70%". */
@@ -130,7 +131,7 @@ export function recallLabel(at: string | null | undefined, score: number | null 
   const d = new Date(at);
   const day = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
   const diff = Math.round((day(now) - day(d)) / 86_400_000);
-  const when = diff <= 0 ? 'hoy' : diff === 1 ? 'ayer' : `hace ${diff} días`;
+  const when = diff <= 0 ? 'hoy' : diff === 1 ? 'ayer' : t('hace {diff} días', { diff });
   return `Probada ${when}${score != null ? ` · ${score}%` : ''}`;
 }
 

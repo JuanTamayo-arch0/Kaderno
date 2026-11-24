@@ -5,8 +5,9 @@ import { useEffect, useState } from 'react';
 import { supabase } from './supabase';
 import { fetchPrefs, savePrefs, isMissingColumn } from './db';
 import { cleanScale, DEFAULT_SCALE, suggestTermName, longestRun, type GradeScale, type Term, type TermSubject } from './terms';
+import { t } from './i18n';
 
-export const NEEDS_V25_3 = 'Para los semestres falta correr schema_v25.sql (fase 3) en Supabase.';
+export const NEEDS_V25_3 = t('Para los semestres falta correr schema_v25.sql (fase 3) en Supabase.');
 const missing = (e: any) => !!e && (e.code === '42P01' || e.code === 'PGRST205' || e.code === 'PGRST202' || e.code === '42883' || /does not exist|Could not find/i.test(String(e.message ?? '')));
 const errMsg = (e: any) => String(e?.message ?? e).replace(/^.*?ERROR:\s*/, '');
 

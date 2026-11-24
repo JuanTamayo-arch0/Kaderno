@@ -9,6 +9,7 @@ import { SubjectIcon, isPhotoIcon } from './SubjectIcon';
 import { shrinkToSquare } from '../lib/imageResize';
 import { useMode, type Space } from '../lib/mode';
 import { spaceOf } from '../lib/spaces';
+import { t } from '../lib/i18n';
 
 // Se carga al usarlo: así expo-image-picker no se descarga al abrir la app.
 const loadPicker = () => import('expo-image-picker');
@@ -56,12 +57,12 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
       const a = res.assets[0];
       const uri = a.uri?.startsWith('data:') ? a.uri : (a.base64 ? `data:${a.mimeType ?? 'image/jpeg'};base64,${a.base64}` : a.uri);
       if (uri) setIcon(await shrinkToSquare(uri).catch(() => uri));
-    } catch (e) { notify('No se pudo cargar la imagen', friendlyError(e)); }
+    } catch (e) { notify(t('No se pudo cargar la imagen'), friendlyError(e)); }
   }
   async function save() {
-    if (!name.trim()) { setErr(`Escribe el nombre de la ${mv.subjectLower}.`); return; }
+    if (!name.trim()) { setErr(t('Escribe el nombre de la {subjectLower}.', { subjectLower: mv.subjectLower })); return; }
     const l = cleanLink(link);
-    if (link.trim() && !l) { setLinkErr('Pega un enlace que empiece por https://'); return; }
+    if (link.trim() && !l) { setLinkErr(t('Pega un enlace que empiece por https://')); return; }
     setBusy(true);
     try {
       const cr = parseInt(credits || '0', 10) || 0;
@@ -71,25 +72,25 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
         await updateSubject(editSubject.id, { name: name.trim(), color, icon, credits: cr, ...(same ? {} : extra) });
         if (both && spaceSel !== spaceOf(editSubject, mode)) {
           const ok = await setSubjectsSpace([editSubject.id], spaceSel);
-          if (!ok) notify('Falta un paso en el servidor', 'Para mover entre Estudio y Trabajo hay que correr schema_v25.sql en Supabase.');
-          else { toast(`${name.trim()} pasó a ${spaceSel === 'trabajo' ? 'Trabajo' : 'Estudio'}`, { tone: 'good' }); onSaved(); return; }
+          if (!ok) notify(t('Falta un paso en el servidor'), t('Para mover entre Estudio y Trabajo hay que correr schema_v25.sql en Supabase.'));
+          else { toast(t('{trim} pasó a {v}', { trim: name.trim(), v: spaceSel === 'trabajo' ? t('Trabajo') : t('Estudio') }), { tone: 'good' }); onSaved(); return; }
         }
       } else await addSubject(name.trim(), color, icon, cr, extra);
       toast(editSubject ? `${mv.subject} guardada` : `${mv.subject} creada: ${name.trim()}`, { tone: 'good' });
       onSaved();
-    } catch (e) { notify('No se pudo guardar', friendlyError(e)); }
+    } catch (e) { notify(t('No se pudo guardar'), friendlyError(e)); }
     finally { setBusy(false); }
   }
   async function archive() {
     if (!editSubject) return;
-    const ok = await confirm(`¿Archivar ${editSubject.name}?`, 'Desaparece de tus listas, pero sus tareas, notas y calificaciones se conservan. Puedes restaurarla desde la Papelera.', 'Archivar');
+    const ok = await confirm(t('¿Archivar {name}?', { name: editSubject.name }), t('Desaparece de tus listas, pero sus tareas, notas y calificaciones se conservan. Puedes restaurarla desde la Papelera.'), t('Archivar'));
     if (!ok) return;
     try {
       await archiveSubject(editSubject.id);
       const id = editSubject.id;
-      toast(`${editSubject.name} archivada`, { actionLabel: 'Deshacer', onAction: () => { restoreSubject(id).then(onSaved).catch(() => {}); } });
+      toast(`${editSubject.name} archivada`, { actionLabel: t('Deshacer'), onAction: () => { restoreSubject(id).then(onSaved).catch(() => {}); } });
       onArchived?.();
-    } catch (e) { notify('No se pudo archivar', friendlyError(e)); }
+    } catch (e) { notify(t('No se pudo archivar'), friendlyError(e)); }
   }
 
   return (
@@ -97,30 +98,30 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
         <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} accessibilityViewIsModal style={{ backgroundColor: C.surface, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 440, maxHeight: '90%' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-            <Text style={{ color: C.text, fontSize: 18, fontWeight: '700', flex: 1 }} accessibilityRole="header">{editSubject ? `Editar ${mv.subjectLower}` : mv.newSubject}</Text>
-            <IconButton icon="close" label="Cerrar" onPress={onClose} />
+            <Text style={{ color: C.text, fontSize: 18, fontWeight: '700', flex: 1 }} accessibilityRole="header">{editSubject ? t('Editar {subjectLower}', { subjectLower: mv.subjectLower }) : mv.newSubject}</Text>
+            <IconButton icon="close" label={t('Cerrar')} onPress={onClose} />
           </View>
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-            <Field label="Nombre" value={name} onChangeText={(v) => { setName(v); setErr(null); }} placeholder={work ? 'Ej: Acme S.A.S. o Diseño' : 'Ej: Física'} error={err} autoFocus={!editSubject} />
+            <Field label={t('Nombre')} value={name} onChangeText={(v) => { setName(v); setErr(null); }} placeholder={work ? t('Ej: Acme S.A.S. o Diseño') : t('Ej: Física')} error={err} autoFocus={!editSubject} />
             {both && editSubject && (
               <View style={{ marginBottom: 12 }}>
-                <Text style={{ color: C.text, fontSize: 13, fontWeight: '700', marginBottom: 6 }}>Espacio</Text>
+                <Text style={{ color: C.text, fontSize: 13, fontWeight: '700', marginBottom: 6 }}>{t('Espacio')}</Text>
                 <View style={{ flexDirection: 'row', gap: 6 }} accessibilityRole="radiogroup">
                   {(['estudio', 'trabajo'] as Space[]).map((k) => (
                     <Pressable key={k} onPress={() => setSpaceSel(k)} accessibilityRole="radio" accessibilityState={{ checked: spaceSel === k }}
                       style={{ flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 10, borderWidth: 1, borderColor: spaceSel === k ? C.brand : C.line, backgroundColor: spaceSel === k ? C.brand + '1f' : 'transparent' }}>
-                      <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{k === 'trabajo' ? 'Trabajo' : 'Estudio'}</Text>
+                      <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{k === 'trabajo' ? t('Trabajo') : t('Estudio')}</Text>
                     </Pressable>
                   ))}
                 </View>
               </View>
             )}
-            {!work && <Field label="Créditos" value={credits} onChangeText={(v) => setCredits(v.replace(/\D/g, '').slice(0, 2))} keyboardType="number-pad" placeholder="Ej: 3" hint="Se usan para el promedio del semestre." />}
-            <Field label={work ? 'Responsable o contacto' : 'Profesor'} value={teacher} onChangeText={setTeacher} placeholder="Ej: Ana Pérez" autoFocus={focusField === 'teacher'} maxLength={120} />
-            <Field label={work ? 'Lugar' : 'Salón'} value={room} onChangeText={setRoom} placeholder={work ? 'Ej: Oficina 3 o remoto' : 'Ej: Bloque 11, 201'} autoFocus={focusField === 'room'} maxLength={80} />
-            <Field label={work ? 'Enlace' : 'Enlace del aula virtual'} value={link} onChangeText={(v) => { setLink(v); setLinkErr(null); }} placeholder="https://…" autoCapitalize="none" autoCorrect={false} keyboardType="url"
-              error={linkErr} autoFocus={focusField === 'link'} hint={work ? 'La carpeta compartida, el tablero o el sitio del cliente.' : 'Moodle, Teams, Classroom o la página del curso.'} />
-            <Text style={lbl()}>Color</Text>
+            {!work && <Field label={t('Créditos')} value={credits} onChangeText={(v) => setCredits(v.replace(/\D/g, '').slice(0, 2))} keyboardType="number-pad" placeholder={t('Ej: 3')} hint={t('Se usan para el promedio del semestre.')} />}
+            <Field label={work ? t('Responsable o contacto') : t('Profesor')} value={teacher} onChangeText={setTeacher} placeholder={t('Ej: Ana Pérez')} autoFocus={focusField === 'teacher'} maxLength={120} />
+            <Field label={work ? t('Lugar') : t('Salón')} value={room} onChangeText={setRoom} placeholder={work ? 'Ej: Oficina 3 o remoto' : 'Ej: Bloque 11, 201'} autoFocus={focusField === 'room'} maxLength={80} />
+            <Field label={work ? t('Enlace') : t('Enlace del aula virtual')} value={link} onChangeText={(v) => { setLink(v); setLinkErr(null); }} placeholder="https://…" autoCapitalize="none" autoCorrect={false} keyboardType="url"
+              error={linkErr} autoFocus={focusField === 'link'} hint={work ? t('La carpeta compartida, el tablero o el sitio del cliente.') : t('Moodle, Teams, Classroom o la página del curso.')} />
+            <Text style={lbl()}>{t('Color')}</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
               {SUBJECT_COLORS.map((c) => {
                 const on = color.toLowerCase() === c.toLowerCase();
@@ -130,18 +131,18 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10 }}>
               <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: color, borderWidth: 1, borderColor: C.line }} />
-              <TextInput value={hexText} onChangeText={onHex} autoCapitalize="none" autoCorrect={false} placeholder="#4F8CFF" placeholderTextColor={C.muted} maxLength={7} accessibilityLabel="Color en hexadecimal"
+              <TextInput value={hexText} onChangeText={onHex} autoCapitalize="none" autoCorrect={false} placeholder="#4F8CFF" placeholderTextColor={C.muted} maxLength={7} accessibilityLabel={t('Color en hexadecimal')}
                 style={{ flex: 1, backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 10, color: C.text, padding: 11, fontSize: 14 }} />
             </View>
-            <Text style={lbl()}>Ícono</Text>
+            <Text style={lbl()}>{t('Ícono')}</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
               {SUBJECT_ICONS.map((i) => (
-                <Pressable key={i} onPress={() => setIcon(i)} accessibilityRole="radio" accessibilityState={{ checked: icon === i }} accessibilityLabel={`Ícono ${i}`}
+                <Pressable key={i} onPress={() => setIcon(i)} accessibilityRole="radio" accessibilityState={{ checked: icon === i }} accessibilityLabel={t('Ícono {i}', { i })}
                   style={{ width: 42, height: 42, borderRadius: 10, backgroundColor: C.surface2, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: icon === i ? C.brand : 'transparent' }}>
                   <Text style={{ fontSize: 18 }}>{i}</Text>
                 </Pressable>
               ))}
-              <Pressable onPress={pickIcon} accessibilityRole="button" accessibilityLabel="Usar una foto como ícono"
+              <Pressable onPress={pickIcon} accessibilityRole="button" accessibilityLabel={t('Usar una foto como ícono')}
                 style={{ width: 42, height: 42, borderRadius: 10, backgroundColor: C.surface2, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: isPhotoIcon(icon) ? C.brand : C.line, borderStyle: isPhotoIcon(icon) ? 'solid' : 'dashed', overflow: 'hidden' }}>
                 {isPhotoIcon(icon) ? <SubjectIcon icon={icon} box={42} emoji={18} /> : <Ionicons name="image-outline" size={18} color={C.muted} />}
               </Pressable>
@@ -149,13 +150,13 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
             {editSubject && (
               <Pressable onPress={archive} accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 20, paddingVertical: 8 }}>
                 <Ionicons name="archive-outline" size={18} color={C.badText} />
-                <Text style={{ color: C.badText, fontWeight: '700' }}>Archivar {mv.subjectLower}</Text>
+                <Text style={{ color: C.badText, fontWeight: '700' }}>{t('Archivar {subjectLower}', { subjectLower: mv.subjectLower })}</Text>
               </Pressable>
             )}
           </ScrollView>
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
-            <Button label="Cancelar" kind="secondary" onPress={onClose} style={{ flex: 1 }} />
-            <Button label={editSubject ? 'Guardar' : `Crear ${mv.subjectLower}`} onPress={save} busy={busy} style={{ flex: 2 }} />
+            <Button label={t('Cancelar')} kind="secondary" onPress={onClose} style={{ flex: 1 }} />
+            <Button label={editSubject ? t('Guardar') : t('Crear {subjectLower}', { subjectLower: mv.subjectLower })} onPress={save} busy={busy} style={{ flex: 2 }} />
           </View>
         </Pressable>
       </Pressable>
@@ -178,14 +179,14 @@ export function GradeModal({ visible, subjectId, defaultScale = 5, editGrade, on
   }, [visible, defaultScale, editGrade]);
   const num = (v: string) => parseFloat(v.replace(',', '.'));
   async function save() {
-    if (!name.trim()) { setErr('Escribe el nombre de la evaluación.'); return; }
+    if (!name.trim()) { setErr(t('Escribe el nombre de la evaluación.')); return; }
     const w = num(weight), mx = num(maxScore || '5'), sc = score ? num(score) : null;
-    if (!(w > 0 && w <= 100)) { setErr('El peso va de 1 a 100 %.'); return; }
-    if (sc != null && (isNaN(sc) || sc < 0 || sc > mx)) { setErr(`La nota va de 0 a ${mx}.`); return; }
+    if (!(w > 0 && w <= 100)) { setErr(t('El peso va de 1 a 100 %.')); return; }
+    if (sc != null && (isNaN(sc) || sc < 0 || sc > mx)) { setErr(t('La nota va de 0 a {mx}.', { mx })); return; }
     setBusy(true);
     try {
-      if (editGrade) { await updateGrade(editGrade.id, { name: name.trim(), weight: w, score: sc, max_score: mx }); toast('Evaluación actualizada', { tone: 'good' }); }
-      else { await addGrade({ subject_id: subjectId, name: name.trim(), weight: w, score: sc, max_score: mx }); toast('Evaluación agregada', { tone: 'good' }); }
+      if (editGrade) { await updateGrade(editGrade.id, { name: name.trim(), weight: w, score: sc, max_score: mx }); toast(t('Evaluación actualizada'), { tone: 'good' }); }
+      else { await addGrade({ subject_id: subjectId, name: name.trim(), weight: w, score: sc, max_score: mx }); toast(t('Evaluación agregada'), { tone: 'good' }); }
       onSaved();
     }
     catch (e) { setErr(friendlyError(e)); } finally { setBusy(false); }
@@ -194,18 +195,18 @@ export function GradeModal({ visible, subjectId, defaultScale = 5, editGrade, on
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
         <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} style={{ backgroundColor: C.surface, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 460 }}>
-          <Text style={{ color: C.text, fontSize: 18, fontWeight: '700', marginBottom: 12 }}>{editGrade ? 'Editar evaluación' : 'Nueva evaluación'}</Text>
-          <Field label="Nombre" value={name} onChangeText={setName} placeholder="Ej: Parcial 1" autoFocus={!editGrade} />
+          <Text style={{ color: C.text, fontSize: 18, fontWeight: '700', marginBottom: 12 }}>{editGrade ? t('Editar evaluación') : t('Nueva evaluación')}</Text>
+          <Field label={t('Nombre')} value={name} onChangeText={setName} placeholder={t('Ej: Parcial 1')} autoFocus={!editGrade} />
           <View style={{ flexDirection: 'row', gap: 10 }}>
-            <Field label="Peso (%)" value={weight} onChangeText={setWeight} keyboardType="decimal-pad" placeholder="30" style={{ flex: 1 }} />
-            <Field label="Nota" value={score} onChangeText={setScore} keyboardType="decimal-pad" placeholder="Pendiente" style={{ flex: 1 }} />
-            <Field label="Sobre" value={maxScore} onChangeText={setMaxScore} keyboardType="decimal-pad" placeholder="5" style={{ flex: 1 }} />
+            <Field label={t('Peso (%)')} value={weight} onChangeText={setWeight} keyboardType="decimal-pad" placeholder="30" style={{ flex: 1 }} />
+            <Field label={t('Nota')} value={score} onChangeText={setScore} keyboardType="decimal-pad" placeholder={t('Pendiente')} style={{ flex: 1 }} />
+            <Field label={t('Sobre')} value={maxScore} onChangeText={setMaxScore} keyboardType="decimal-pad" placeholder="5" style={{ flex: 1 }} />
           </View>
           {!!err && <Text style={{ color: C.badText, fontSize: 13, marginBottom: 6 }}>{err}</Text>}
-          <Text style={{ color: C.muted, fontSize: 12 }}>Deja la nota vacía si aún no te la han dado: sirve para calcular cuánto necesitas.</Text>
+          <Text style={{ color: C.muted, fontSize: 12 }}>{t('Deja la nota vacía si aún no te la han dado: sirve para calcular cuánto necesitas.')}</Text>
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
-            <Button label="Cancelar" kind="secondary" onPress={onClose} style={{ flex: 1 }} />
-            <Button label="Guardar" onPress={save} busy={busy} style={{ flex: 1 }} />
+            <Button label={t('Cancelar')} kind="secondary" onPress={onClose} style={{ flex: 1 }} />
+            <Button label={t('Guardar')} onPress={save} busy={busy} style={{ flex: 1 }} />
           </View>
         </Pressable>
       </Pressable>

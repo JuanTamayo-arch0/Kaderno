@@ -9,6 +9,7 @@ import { MiniCalendar } from '../MiniCalendar';
 import { focusRingStyle } from '../ds';
 import { classWhen, shortDate } from './SubjectParts';
 import { useMode } from '../../lib/mode';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Columna derecha de la materia (computador): próxima clase, calendario,
@@ -75,41 +76,41 @@ export function SubjectRail({ subject, nextCls, scheduleLoaded = true, tasks, no
 
   return (
     <View style={{ gap: 12 }}>
-      <Box title={work ? 'Próxima reunión' : 'Próxima clase'}>
-        {!scheduleLoaded ? <Text style={{ color: C.muted, fontSize: 13, marginTop: -4 }}>Cargando…</Text> : nextCls ? (
+      <Box title={work ? t('Próxima reunión') : t('Próxima clase')}>
+        {!scheduleLoaded ? <Text style={{ color: C.muted, fontSize: 13, marginTop: -4 }}>{t('Cargando…')}</Text> : nextCls ? (
           <View style={{ gap: 3, marginTop: -4 }}>
             <Text style={{ color: nextCls.now ? C.goodText : C.text, fontSize: 17, fontWeight: '800' }}>{classWhen(nextCls)}</Text>
-            <Text style={{ color: C.muted, fontSize: 13 }}>{[subject.room, nextCls.now ? null : shortDate(nextCls.start)].filter(Boolean).join(' · ') || (work ? 'Según tu agenda' : 'Según tu horario')}</Text>
+            <Text style={{ color: C.muted, fontSize: 13 }}>{[subject.room, nextCls.now ? null : shortDate(nextCls.start)].filter(Boolean).join(' · ') || (work ? t('Según tu agenda') : t('Según tu horario'))}</Text>
           </View>
         ) : (
           <View style={{ gap: 6, marginTop: -4 }}>
-            <Text style={{ color: C.muted, fontSize: 13, lineHeight: 18 }}>{work ? 'Esta área no tiene reuniones en tu agenda.' : 'Esta materia no está en tu horario.'}</Text>
-            <LinkText text={work ? 'Agregarla a la agenda' : 'Agregarla al horario'} onPress={onSchedule} />
+            <Text style={{ color: C.muted, fontSize: 13, lineHeight: 18 }}>{work ? t('Esta área no tiene reuniones en tu agenda.') : t('Esta materia no está en tu horario.')}</Text>
+            <LinkText text={work ? t('Agregarla a la agenda') : t('Agregarla al horario')} onPress={onSchedule} />
           </View>
         )}
       </Box>
 
       <MiniCalendar tasks={tasks} subjects={[subject]} embedded onTaskPress={onTask} />
 
-      <Box title="Notas recientes" right={notes.length > 0 ? <LinkText text="Ver todas" onPress={onAllNotes} /> : undefined}>
-        {recent.length === 0 && <Text style={{ color: C.muted, fontSize: 13 }}>Todavía no hay notas.</Text>}
+      <Box title={t('Notas recientes')} right={notes.length > 0 ? <LinkText text={t('Ver todas')} onPress={onAllNotes} /> : undefined}>
+        {recent.length === 0 && <Text style={{ color: C.muted, fontSize: 13 }}>{t('Todavía no hay notas.')}</Text>}
         {recent.map((n) => (
-          <Row key={n.id} title={n.title || 'Nota sin título'} onPress={() => onOpenNote(n)}
+          <Row key={n.id} title={n.title || t('Nota sin título')} onPress={() => onOpenNote(n)}
             sub={[notePreview(n.content, 40), shortDate(new Date(n.updated_at || n.created_at))].filter(Boolean).join(' · ')} />
         ))}
         <Pressable onPress={onQuickNote} accessibilityRole="button" dataSet={{ press: '1' }}
           style={({ pressed, focused }: any) => [{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: 9, borderRadius: 10, borderWidth: 1, borderStyle: 'dashed', borderColor: C.line, opacity: pressed ? 0.75 : 1 }, focused ? focusRingStyle() : null]}>
           <Ionicons name="add" size={16} color={C.muted} />
-          <Text style={{ color: C.muted, fontSize: 13, fontWeight: '600' }}>Nota rápida</Text>
+          <Text style={{ color: C.muted, fontSize: 13, fontWeight: '600' }}>{t('Nota rápida')}</Text>
         </Pressable>
       </Box>
 
-      <Box title="Archivos" right={files && files.length > 3 ? <LinkText text={`Ver los ${files.length}`} onPress={onAllFiles} /> : undefined}>
-        {files === null ? <Text style={{ color: C.muted, fontSize: 13 }}>Cargando…</Text>
+      <Box title={t('Archivos')} right={files && files.length > 3 ? <LinkText text={t('Ver los {length}', { length: files.length })} onPress={onAllFiles} /> : undefined}>
+        {files === null ? <Text style={{ color: C.muted, fontSize: 13 }}>{t('Cargando…')}</Text>
           : files.length === 0 ? (
             <View style={{ gap: 6 }}>
-              <Text style={{ color: C.muted, fontSize: 13 }}>Sube el programa, guías o lecturas.</Text>
-              <LinkText text="Subir archivo" onPress={onAllFiles} />
+              <Text style={{ color: C.muted, fontSize: 13 }}>{t('Sube el programa, guías o lecturas.')}</Text>
+              <LinkText text={t('Subir archivo')} onPress={onAllFiles} />
             </View>
           ) : files.slice(0, 3).map((f) => {
             const b = fileBadge(f);

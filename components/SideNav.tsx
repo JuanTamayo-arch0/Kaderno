@@ -35,33 +35,34 @@ export { navKeyOf };
 
 export type { NavKey } from '../lib/navKey';
 import type { NavKey } from '../lib/navKey';
+import { t } from '../lib/i18n';
 
 type Item = { key: NavKey; label: string; icon: any; iconOn: any; href: string };
 
 export const MAIN_ITEMS: Item[] = [
-  { key: 'index', label: 'Hoy', icon: 'today-outline', iconOn: 'today', href: '/' },
-  { key: 'materias', label: 'Materias', icon: 'book-outline', iconOn: 'book', href: '/materias' },
-  { key: 'horario', label: 'Horario', icon: 'grid-outline', iconOn: 'grid', href: '/horario' },
-  { key: 'proyectos', label: 'Proyectos', icon: 'people-outline', iconOn: 'people', href: '/proyectos' },
+  { key: 'index', label: t('Hoy'), icon: 'today-outline', iconOn: 'today', href: '/' },
+  { key: 'materias', label: t('Materias'), icon: 'book-outline', iconOn: 'book', href: '/materias' },
+  { key: 'horario', label: t('Horario'), icon: 'grid-outline', iconOn: 'grid', href: '/horario' },
+  { key: 'proyectos', label: t('Proyectos'), icon: 'people-outline', iconOn: 'people', href: '/proyectos' },
 ];
 export const STUDY_ITEMS: Item[] = [
-  { key: 'enfoque', label: 'Enfoque', icon: 'timer-outline', iconOn: 'timer', href: '/enfoque' },
-  { key: 'repaso', label: 'Repaso', icon: 'albums-outline', iconOn: 'albums', href: '/repaso' },
-  { key: 'oraculo', label: 'Oráculo', icon: 'sparkles-outline', iconOn: 'sparkles', href: '/oraculo' },
-  { key: 'capturar', label: 'Capturar', icon: 'camera-outline', iconOn: 'camera', href: '/capturar' },
-  { key: 'mascota', label: 'Mascota', icon: 'paw-outline', iconOn: 'paw', href: '/mascota' },
+  { key: 'enfoque', label: t('Enfoque'), icon: 'timer-outline', iconOn: 'timer', href: '/enfoque' },
+  { key: 'repaso', label: t('Repaso'), icon: 'albums-outline', iconOn: 'albums', href: '/repaso' },
+  { key: 'oraculo', label: t('Oráculo'), icon: 'sparkles-outline', iconOn: 'sparkles', href: '/oraculo' },
+  { key: 'capturar', label: t('Capturar'), icon: 'camera-outline', iconOn: 'camera', href: '/capturar' },
+  { key: 'mascota', label: t('Mascota'), icon: 'paw-outline', iconOn: 'paw', href: '/mascota' },
 ];
 /** v24: solo en modo Trabajo o los dos. */
-export const HOURS_ITEM: Item = { key: 'horas', label: 'Horas', icon: 'time-outline', iconOn: 'time', href: '/horas' };
+export const HOURS_ITEM: Item = { key: 'horas', label: t('Horas'), icon: 'time-outline', iconOn: 'time', href: '/horas' };
 /** v26: el historial académico, en Estudio. */
-export const HISTORY_ITEM: Item = { key: 'historial', label: 'Historial', icon: 'ribbon-outline', iconOn: 'ribbon', href: '/historial' };
-export const COBROS_ITEM: Item = { key: 'cobros', label: 'Cobrar', icon: 'receipt-outline', iconOn: 'receipt', href: '/cobros' };
+export const HISTORY_ITEM: Item = { key: 'historial', label: t('Historial'), icon: 'ribbon-outline', iconOn: 'ribbon', href: '/historial' };
+export const COBROS_ITEM: Item = { key: 'cobros', label: t('Cobrar'), icon: 'receipt-outline', iconOn: 'receipt', href: '/cobros' };
 /** Rutas que son pestañas (se navega con el navegador de pestañas para no perder su estado). */
 export const TAB_KEYS: NavKey[] = ['index', 'materias', 'horario', 'proyectos', 'estudiar', 'enfoque', 'oraculo', 'capturar'];
 
 function displayName(session: any): { name: string; initials: string; email: string } {
   const email = session?.user?.email ?? '';
-  const name = (session?.user?.user_metadata?.full_name as string | undefined)?.trim() || email.split('@')[0] || 'Tú';
+  const name = (session?.user?.user_metadata?.full_name as string | undefined)?.trim() || email.split('@')[0] || t('Tú');
   const parts = name.split(/[\s._-]+/).filter(Boolean);
   const initials = (parts.length >= 2 ? parts[0][0] + parts[1][0] : name.slice(0, 2)).toUpperCase();
   return { name, initials, email };
@@ -121,7 +122,7 @@ export function SideNav({ active, onNavigate }: { active: NavKey | null; onNavig
         <Text style={{ color: focus.state.mode === 'work' ? C.brand : C.goodText, fontSize: 12, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{focus.label}</Text>
         {showMute && (
           <Pressable onPress={() => updateAmbient({ muted: !amb.prefs.muted })} hitSlop={6} accessibilityRole="button"
-            accessibilityLabel={amb.prefs.muted ? 'Activar el sonido de fondo' : `Silenciar el sonido de fondo (${amb.status.label})`}
+            accessibilityLabel={amb.prefs.muted ? t('Activar el sonido de fondo') : t('Silenciar el sonido de fondo ({label})', { label: amb.status.label })}
             style={({ hovered }: any) => ({ width: 24, height: 24, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: hovered ? C.surface2 : 'transparent' })}>
             <Ionicons name={amb.prefs.muted ? 'volume-mute-outline' : 'musical-notes-outline'} size={14} color={C.muted} />
           </Pressable>
@@ -135,7 +136,7 @@ export function SideNav({ active, onNavigate }: { active: NavKey | null; onNavig
       <ScrollView contentContainerStyle={{ paddingTop: 22, paddingHorizontal: 12, paddingBottom: 12, flexGrow: 1 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 8, marginBottom: 16 }}>
           <KadernoLockup size={28} flex />
-          <Pressable onPress={openInbox} accessibilityRole="button" accessibilityLabel={counts.unread ? `Avisos, ${counts.unread} sin leer` : 'Avisos'}
+          <Pressable onPress={openInbox} accessibilityRole="button" accessibilityLabel={counts.unread ? t('Avisos, {unread} sin leer', { unread: counts.unread }) : t('Avisos')}
             style={({ hovered }: any) => ({ width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: hovered ? C.surface2 : 'transparent' })}>
             <Ionicons name={counts.unread ? 'notifications' : 'notifications-outline'} size={19} color={counts.unread ? C.brand : C.muted} />
             {counts.unread > 0 && <View style={{ position: 'absolute', top: 7, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: C.bad }} />}
@@ -143,24 +144,24 @@ export function SideNav({ active, onNavigate }: { active: NavKey | null; onNavig
         </View>
         <View style={{ marginBottom: 12 }}><SpaceSwitch /></View>
 
-        <Pressable onPress={openCommand} accessibilityRole="search" accessibilityLabel="Buscar o ir a… (Ctrl K)"
+        <Pressable onPress={openCommand} accessibilityRole="search" accessibilityLabel={t('Buscar o ir a… (Ctrl K)')}
           style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, paddingHorizontal: 10, borderRadius: 10, borderWidth: 1, borderColor: C.line, backgroundColor: hovered ? C.surface2 : C.bg, marginBottom: 8 })}>
           <Ionicons name="search" size={17} color={C.muted} />
-          <Text style={{ color: C.muted, fontSize: 13.5, flex: 1 }}>Buscar…</Text>
-          {Platform.OS === 'web' && <Kbd text="Ctrl K" />}
+          <Text style={{ color: C.muted, fontSize: 13.5, flex: 1 }}>{t('Buscar…')}</Text>
+          {Platform.OS === 'web' && <Kbd text={t('Ctrl K')} />}
         </Pressable>
-        <Pressable onPress={openAdd} accessibilityRole="button" accessibilityLabel="Agregar"
+        <Pressable onPress={openAdd} accessibilityRole="button" accessibilityLabel={t('Agregar')}
           style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 40, borderRadius: 10, backgroundColor: C.brand, opacity: pressed ? 0.85 : 1, marginBottom: 14 })}>
           <Ionicons name="add" size={19} color={C.onBrand} />
-          <Text style={{ color: C.onBrand, fontWeight: '800', fontSize: 14 }}>Agregar</Text>
+          <Text style={{ color: C.onBrand, fontWeight: '800', fontSize: 14 }}>{t('Agregar')}</Text>
         </Pressable>
 
         {row(MAIN_ITEMS[0], badge(counts.today))}
         {counts.inbox > 0 && (
-          <Pressable onPress={() => router.push({ pathname: '/', params: { bandeja: '1' } } as any)} accessibilityRole="link" accessibilityLabel={`Bandeja, ${counts.inbox} por ordenar`}
+          <Pressable onPress={() => router.push({ pathname: '/', params: { bandeja: '1' } } as any)} accessibilityRole="link" accessibilityLabel={t('Bandeja, {inbox} por ordenar', { inbox: counts.inbox })}
             style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6, paddingLeft: 40, paddingRight: 10, borderRadius: 10, backgroundColor: hovered ? C.surface2 : 'transparent' })}>
             <Ionicons name="file-tray-outline" size={15} color={C.muted} />
-            <Text style={{ color: C.muted, fontSize: 13, fontWeight: '600', flex: 1 }}>Bandeja</Text>
+            <Text style={{ color: C.muted, fontSize: 13, fontWeight: '600', flex: 1 }}>{t('Bandeja')}</Text>
             {badge(counts.inbox)}
           </Pressable>
         )}
@@ -183,12 +184,12 @@ export function SideNav({ active, onNavigate }: { active: NavKey | null; onNavig
 
         <View style={{ flex: 1, minHeight: 16 }} />
         <StopwatchPill inline />
-        <Pressable onPress={() => router.push('/ajustes')} accessibilityRole="link" accessibilityLabel="Ajustes y cuenta"
+        <Pressable onPress={() => router.push('/ajustes')} accessibilityRole="link" accessibilityLabel={t('Ajustes y cuenta')}
           style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, borderRadius: 12, borderTopWidth: 1, borderTopColor: C.line, backgroundColor: active === 'ajustes' ? C.brand + '22' : hovered ? C.surface2 : 'transparent' })}>
           <Avatar initials={me.initials} />
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700' }} numberOfLines={1}>{me.name}</Text>
-            <Text style={{ color: C.muted, fontSize: 12 }} numberOfLines={1}>Ajustes y cuenta</Text>
+            <Text style={{ color: C.muted, fontSize: 12 }} numberOfLines={1}>{t('Ajustes y cuenta')}</Text>
           </View>
           <Ionicons name="settings-outline" size={18} color={C.muted} />
         </Pressable>
@@ -271,16 +272,16 @@ export function BottomBar({ active, onNavigate, bottomInset }: { active: NavKey;
           <View style={{ width: 28, height: 3, borderRadius: 2, backgroundColor: C.brand }} />
         </Animated.View>
       )}
-      {tab('index', 'Hoy', 'today-outline', 'today', counts.today)}
+      {tab('index', t('Hoy'), 'today-outline', 'today', counts.today)}
       {tab('materias', v.subjectsTab, v.subjectIcon + '-outline', v.subjectIcon)}
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <Pressable onPress={openAdd} accessibilityRole="button" accessibilityLabel="Agregar" dataSet={{ petObstacle: '1' }}
+        <Pressable onPress={openAdd} accessibilityRole="button" accessibilityLabel={t('Agregar')} dataSet={{ petObstacle: '1' }}
           style={({ pressed }) => ({ width: 50, height: 44, borderRadius: 15, backgroundColor: C.brand, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.85 : 1 })}>
           <Ionicons name="add" size={28} color={C.onBrand} />
         </Pressable>
       </View>
       {tab('estudiar', v.studyTab, v.studyTab === 'Enfoque' ? 'timer-outline' : 'school-outline', v.studyTab === 'Enfoque' ? 'timer' : 'school', counts.repaso, timerLabel)}
-      {tab('proyectos', 'Proyectos', 'people-outline', 'people')}
+      {tab('proyectos', t('Proyectos'), 'people-outline', 'people')}
     </View>
   );
 }

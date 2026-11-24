@@ -4,9 +4,10 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { C, R } from '../lib/theme';
 import { Subject } from '../lib/db';
 import { SubjectIcon } from './SubjectIcon';
+import { t } from '../lib/i18n';
 
 // Selector de materia como desplegable (en vez de mostrar todos los chips).
-export function SubjectPicker({ subjects, value, onChange, allowNone = true, placeholder = 'Elegir materia' }: {
+export function SubjectPicker({ subjects, value, onChange, allowNone = true, placeholder = t('Elegir materia') }: {
   subjects: Subject[]; value: string | null; onChange: (id: string | null) => void; allowNone?: boolean; placeholder?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -22,7 +23,7 @@ export function SubjectPicker({ subjects, value, onChange, allowNone = true, pla
             <Text style={{ color: C.text, fontSize: 14, flex: 1 }}>{sel.name}</Text>
           </>
         ) : (
-          <Text style={{ color: C.muted, fontSize: 14, flex: 1 }}>{value === null && allowNone ? 'Ninguna' : placeholder}</Text>
+          <Text style={{ color: C.muted, fontSize: 14, flex: 1 }}>{value === null && allowNone ? t('Ninguna') : placeholder}</Text>
         )}
         <Ionicons name="chevron-down" size={18} color={C.muted} />
       </Pressable>
@@ -30,10 +31,10 @@ export function SubjectPicker({ subjects, value, onChange, allowNone = true, pla
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable onPress={() => setOpen(false)} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
           <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} style={{ backgroundColor: C.surface, borderRadius: 18, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 420, maxHeight: '70%', padding: 10 }}>
-            <Text style={{ color: C.text, fontSize: 15, fontWeight: '700', padding: 10 }}>Elegir materia</Text>
+            <Text style={{ color: C.text, fontSize: 15, fontWeight: '700', padding: 10 }}>{t('Elegir materia')}</Text>
             <ScrollView>
               {allowNone && (
-                <Row label="Ninguna" active={value === null} onPress={() => { onChange(null); setOpen(false); }} />
+                <Row label={t('Ninguna')} active={value === null} onPress={() => { onChange(null); setOpen(false); }} />
               )}
               {subjects.map((s) => (
                 <Row key={s.id} icon={s.icon} color={s.color} label={s.name} active={value === s.id} onPress={() => { onChange(s.id); setOpen(false); }} />

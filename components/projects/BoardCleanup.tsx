@@ -6,6 +6,7 @@ import { Button } from '../ds';
 import { confirm, friendlyError, notify } from '../../lib/feedback';
 import { bulkUpdateProjectTasks, getProjectTasksForBulk } from '../../lib/projectsBulk';
 import { findRepeated, type ExistingTask, type RepeatGroup } from '../../lib/import';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Ordenar el tablero.
@@ -29,7 +30,7 @@ export function BoardCleanup({ visible, projectId, cols, onClose, onDone }: {
 
   useEffect(() => {
     if (!visible) { setTasks(null); setOpen(null); return; }
-    getProjectTasksForBulk(projectId).then(setTasks).catch((e) => { notify('No se pudo leer el tablero', friendlyError(e)); onClose(); });
+    getProjectTasksForBulk(projectId).then(setTasks).catch((e) => { notify(t('No se pudo leer el tablero'), friendlyError(e)); onClose(); });
   }, [visible, projectId]);
 
   const groups: RepeatGroup[] = useMemo(() => (tasks ? findRepeated(tasks) : []), [tasks]);
@@ -41,24 +42,24 @@ export function BoardCleanup({ visible, projectId, cols, onClose, onDone }: {
     setBusy('dups');
     try {
       const r = await bulkUpdateProjectTasks(projectId, ids, { delete: true });
-      onDone({ batchId: r.batch_id, text: `Quité ${r.deleted} ${r.deleted === 1 ? 'tarjeta repetida' : 'tarjetas repetidas'}` });
-    } catch (e) { notify('No se pudieron quitar', friendlyError(e)); }
+      onDone({ batchId: r.batch_id, text: t('Quité {deleted} {v}', { deleted: r.deleted, v: r.deleted === 1 ? t('tarjeta repetida') : t('tarjetas repetidas') }) });
+    } catch (e) { notify(t('No se pudieron quitar'), friendlyError(e)); }
     finally { setBusy(null); }
   }
 
   async function emptyBoard() {
     if (!tasks?.length) return;
-    const ok = await confirm(`¿Borrar las ${tasks.length} tarjetas del tablero?`,
-      'Se borran para todo el equipo, con su checklist. Las columnas, los archivos y los integrantes se quedan. Puedes deshacerlo desde el aviso que aparece al terminar.',
-      'Borrar todo');
+    const ok = await confirm(t('¿Borrar las {length} tarjetas del tablero?', { length: tasks.length }),
+      t('Se borran para todo el equipo, con su checklist. Las columnas, los archivos y los integrantes se quedan. Puedes deshacerlo desde el aviso que aparece al terminar.'),
+      t('Borrar todo'));
     if (!ok) return;
     setBusy('all');
     try {
       // El servidor acepta lotes de hasta 500; un tablero normal cabe en uno.
       const ids = tasks.map((t) => t.id);
       const r = await bulkUpdateProjectTasks(projectId, ids.slice(0, 500), { delete: true });
-      onDone({ batchId: r.batch_id, text: `Tablero vacío: ${r.deleted} ${r.deleted === 1 ? 'tarjeta borrada' : 'tarjetas borradas'}` });
-    } catch (e) { notify('No se pudo vaciar', friendlyError(e)); }
+      onDone({ batchId: r.batch_id, text: t('Tablero vacío: {deleted} {v}', { deleted: r.deleted, v: r.deleted === 1 ? t('tarjeta borrada') : t('tarjetas borradas') }) });
+    } catch (e) { notify(t('No se pudo vaciar'), friendlyError(e)); }
     finally { setBusy(null); }
   }
 
@@ -70,8 +71,8 @@ export function BoardCleanup({ visible, projectId, cols, onClose, onDone }: {
           style={{ backgroundColor: C.surface, borderRadius: 20, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 560, maxHeight: '90%', overflow: 'hidden' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 18, borderBottomWidth: 1, borderBottomColor: C.line }}>
             <Ionicons name="sparkles-outline" size={20} color={C.brand} />
-            <Text style={{ color: C.text, fontSize: 17, fontWeight: '800', flex: 1 }}>Ordenar el tablero</Text>
-            <Pressable onPress={onClose} hitSlop={10} accessibilityLabel="Cerrar"><Ionicons name="close" size={20} color={C.muted} /></Pressable>
+            <Text style={{ color: C.text, fontSize: 17, fontWeight: '800', flex: 1 }}>{t('Ordenar el tablero')}</Text>
+            <Pressable onPress={onClose} hitSlop={10} accessibilityLabel={t('Cerrar')}><Ionicons name="close" size={20} color={C.muted} /></Pressable>
           </View>
 
           {tasks === null ? (
@@ -80,15 +81,12 @@ export function BoardCleanup({ visible, projectId, cols, onClose, onDone }: {
             <ScrollView contentContainerStyle={{ padding: 18, gap: 16 }}>
               {/* repetidas */}
               <View style={{ borderWidth: 1, borderColor: C.line, borderRadius: 14, padding: 14 }}>
-                <Text style={{ color: C.text, fontSize: 15, fontWeight: '700' }}>Quitar repetidas</Text>
+                <Text style={{ color: C.text, fontSize: 15, fontWeight: '700' }}>{t('Quitar repetidas')}</Text>
                 {groups.length === 0 ? (
-                  <Text style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>No encontré tarjetas repetidas. Todo en orden.</Text>
+                  <Text style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>{t('No encontré tarjetas repetidas. Todo en orden.')}</Text>
                 ) : (
                   <>
-                    <Text style={{ color: C.muted, fontSize: 13, marginTop: 4, lineHeight: 19 }}>
-                      {groups.length} {groups.length === 1 ? 'tarea aparece' : 'tareas aparecen'} más de una vez (mismo código o mismo título).
-                      De cada una se queda la más trabajada y se {toRemove === 1 ? 'borra 1 copia' : `borran ${toRemove} copias`}.
-                    </Text>
+                    <Text style={{ color: C.muted, fontSize: 13, marginTop: 4, lineHeight: 19 }}>{t('{length} {v} más de una vez (mismo código o mismo título). De cada una se queda la más trabajada y se {v2}.', { length: groups.length, v: groups.length === 1 ? t('tarea aparece') : t('tareas aparecen'), v2: toRemove === 1 ? t('borra 1 copia') : `borran ${toRemove} copias` })}</Text>
                     <View style={{ marginTop: 10 }}>
                       {groups.slice(0, 40).map((g) => (
                         <Pressable key={g.key} onPress={() => setOpen(open === g.key ? null : g.key)}
@@ -100,14 +98,14 @@ export function BoardCleanup({ visible, projectId, cols, onClose, onDone }: {
                           </View>
                           {open === g.key && (
                             <Text style={{ color: C.muted, fontSize: 12, marginTop: 4, lineHeight: 17 }}>
-                              Se queda: {describe(g.keep, cols)}.{'\n'}Se borra{g.remove.length === 1 ? '' : 'n'}: {g.remove.map((t) => describe(t, cols)).join(' · ')}
+                              {t('Se queda: ')}{describe(g.keep, cols)}.{'\n'}{t('Se borra')}{g.remove.length === 1 ? '' : 'n'}: {g.remove.map((t) => describe(t, cols)).join(' · ')}
                             </Text>
                           )}
                         </Pressable>
                       ))}
-                      {groups.length > 40 && <Text style={{ color: C.muted, fontSize: 12, marginTop: 6 }}>Y {groups.length - 40} más.</Text>}
+                      {groups.length > 40 && <Text style={{ color: C.muted, fontSize: 12, marginTop: 6 }}>{t('Y {v} más.', { v: groups.length - 40 })}</Text>}
                     </View>
-                    <Button label={`Quitar ${toRemove} ${toRemove === 1 ? 'repetida' : 'repetidas'}`} icon="git-merge-outline" busy={busy === 'dups'}
+                    <Button label={t('Quitar {toRemove} {v}', { toRemove, v: toRemove === 1 ? t('repetida') : t('repetidas') })} icon="git-merge-outline" busy={busy === 'dups'}
                       onPress={removeDups} style={{ marginTop: 12, alignSelf: 'flex-start' }} />
                   </>
                 )}
@@ -115,12 +113,9 @@ export function BoardCleanup({ visible, projectId, cols, onClose, onDone }: {
 
               {/* vaciar */}
               <View style={{ borderWidth: 1, borderColor: C.bad + '55', borderRadius: 14, padding: 14 }}>
-                <Text style={{ color: C.text, fontSize: 15, fontWeight: '700' }}>Vaciar el tablero</Text>
-                <Text style={{ color: C.muted, fontSize: 13, marginTop: 4, lineHeight: 19 }}>
-                  Borra las {tasks.length} tarjetas para empezar de cero, por ejemplo antes de importar el plan completo. Columnas, archivos e integrantes se quedan.
-                  Otra opción es importar con "Reemplazar el tablero con este archivo": deja solo lo que viene en el archivo y conserva el avance de lo que coincide.
-                </Text>
-                <Button label="Vaciar el tablero" kind="danger" icon="trash-outline" busy={busy === 'all'} disabled={!tasks.length}
+                <Text style={{ color: C.text, fontSize: 15, fontWeight: '700' }}>{t('Vaciar el tablero')}</Text>
+                <Text style={{ color: C.muted, fontSize: 13, marginTop: 4, lineHeight: 19 }}>{t('Borra las {length} tarjetas para empezar de cero, por ejemplo antes de importar el plan completo. Columnas, archivos e integrantes se quedan. Otra opción es importar con "Reemplazar el tablero con este archivo": deja solo lo que viene en el archivo y conserva el avance de lo que coincide.', { length: tasks.length })}</Text>
+                <Button label={t('Vaciar el tablero')} kind="danger" icon="trash-outline" busy={busy === 'all'} disabled={!tasks.length}
                   onPress={emptyBoard} style={{ marginTop: 12, alignSelf: 'flex-start' }} />
               </View>
             </ScrollView>

@@ -20,6 +20,7 @@ import type {
   ProjectContext,
   RowIssue,
 } from './types';
+import { t, trn } from '../i18n';
 
 // ---------- Responsables ----------
 
@@ -81,7 +82,7 @@ function isBlank(v: unknown): boolean {
  */
 export function normalizeRows(parsed: ParsedFile, mapping: ColumnMapping, ctx: ProjectContext): NormalizeResult {
   const { members, columns } = ctx;
-  const firstLabel = columns[0]?.label ?? 'la primera columna';
+  const firstLabel = columns[0]?.label ?? t('la primera columna');
   const issues: RowIssue[] = [];
   const tasks: NormalizedTask[] = [];
   const colFor = new Map<Field, string>();
@@ -122,9 +123,9 @@ export function normalizeRows(parsed: ParsedFile, mapping: ColumnMapping, ctx: P
     if (!isBlank(idRaw)) {
       const id = String(idRaw).trim();
       if (!UUID_RE.test(id)) {
-        issue('id', 'error', `El id "${id}" no es válido. No lo edites: viene de la exportación`);
+        issue('id', 'error', trn('El id "{id}" no es válido. No lo edites: viene de la exportación', { id }));
       } else if (seenIds.has(id.toLowerCase())) {
-        issue('id', 'error', 'Este id está repetido en el archivo');
+        issue('id', 'error', trn('Este id está repetido en el archivo'));
       } else {
         seenIds.add(id.toLowerCase());
         t.id = id.toLowerCase();
@@ -141,7 +142,7 @@ export function normalizeRows(parsed: ParsedFile, mapping: ColumnMapping, ctx: P
         t.delete = true;
         present.push('delete');
       } else {
-        issue('delete', 'warning', 'Solo se puede eliminar una tarea que ya existe (con id). Esta fila se ignorará');
+        issue('delete', 'warning', trn('Solo se puede eliminar una tarea que ya existe (con id). Esta fila se ignorará'));
         t.skip = true;
       }
     }
@@ -150,17 +151,17 @@ export function normalizeRows(parsed: ParsedFile, mapping: ColumnMapping, ctx: P
     const title = cleanText(get(row, 'title'));
     if (title) {
       const oneLine = title.replace(/\s*\n\s*/g, ' ');
-      if (oneLine.length > MAX_TITLE) issue('title', 'warning', `El título se recortó a ${MAX_TITLE} caracteres`);
+      if (oneLine.length > MAX_TITLE) issue('title', 'warning', trn('El título se recortó a {MAX_TITLE} caracteres', { MAX_TITLE }));
       t.title = oneLine.slice(0, MAX_TITLE);
       present.push('title');
     } else if (!isUpdate && !t.skip) {
-      issue('title', 'error', 'Falta el título');
+      issue('title', 'error', trn('Falta el título'));
     }
 
     // descripción
     const desc = cleanText(get(row, 'description'));
     if (desc) {
-      if (desc.length > MAX_DESCRIPTION) issue('description', 'warning', `La descripción se recortó a ${MAX_DESCRIPTION} caracteres`);
+      if (desc.length > MAX_DESCRIPTION) issue('description', 'warning', trn('La descripción se recortó a {MAX_DESCRIPTION} caracteres', { MAX_DESCRIPTION }));
       t.description = desc.slice(0, MAX_DESCRIPTION);
       present.push('description');
     }
@@ -173,7 +174,7 @@ export function normalizeRows(parsed: ParsedFile, mapping: ColumnMapping, ctx: P
         t.status = st.value;
         present.push('status');
       } else if (!st.ok) {
-        issue('status', 'warning', isUpdate ? `${st.error}. No se moverá` : `${st.error}. Quedará en ${firstLabel}`);
+        issue('status', 'warning', isUpdate ? trn('{error}. No se moverá', { error: st.error }) : trn('{error}. Quedará en {firstLabel}', { error: st.error, firstLabel }));
       }
     }
 
@@ -186,9 +187,9 @@ export function normalizeRows(parsed: ParsedFile, mapping: ColumnMapping, ctx: P
         t.assignee_id = m.user_id;
         present.push('assignee');
       } else if (m.kind === 'ambiguous') {
-        issue('assignee', 'warning', `"${t.assignee_input}" coincide con varios integrantes. Usa el correo. ${isUpdate ? 'No se cambiará' : 'Quedará sin asignar'}`);
+        issue('assignee', 'warning', trn('"{assignee_input}" coincide con varios integrantes. Usa el correo. {v}', { assignee_input: t.assignee_input, v: isUpdate ? trn('No se cambiará') : trn('Quedará sin asignar') }));
       } else if (m.kind === 'unknown') {
-        issue('assignee', 'warning', `"${t.assignee_input}" no es integrante del proyecto. ${isUpdate ? 'No se cambiará' : 'Quedará sin asignar'}`);
+        issue('assignee', 'warning', trn('"{assignee_input}" no es integrante del proyecto. {v}', { assignee_input: t.assignee_input, v: isUpdate ? trn('No se cambiará') : trn('Quedará sin asignar') }));
       }
     }
 
@@ -206,7 +207,7 @@ export function normalizeRows(parsed: ParsedFile, mapping: ColumnMapping, ctx: P
       present.push('due');
     }
     if (t.start_at && t.due_at && Date.parse(t.start_at) > Date.parse(t.due_at)) {
-      issue('start', 'error', 'El inicio queda después de la entrega');
+      issue('start', 'error', trn('El inicio queda después de la entrega'));
     }
 
     // checklist
@@ -223,7 +224,7 @@ export function normalizeRows(parsed: ParsedFile, mapping: ColumnMapping, ctx: P
     if (!isUpdate && t.title && !t.skip) {
       const key = normalizeKey(t.title) + '|' + (t.due_at ?? '');
       const prev = seenKeys.get(key);
-      if (prev !== undefined) issue('row', 'warning', `Parece repetida con la fila ${prev}`);
+      if (prev !== undefined) issue('row', 'warning', trn('Parece repetida con la fila {prev}', { prev }));
       else seenKeys.set(key, rowNo);
     }
 

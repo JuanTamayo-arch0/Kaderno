@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { savePrefs } from './db';
+import { t } from './i18n';
 
 // ============================================================
 //  Configuración del horario (bloques de hora personalizables)
@@ -21,8 +22,8 @@ import { savePrefs } from './db';
 export type TimeBlock = { id: string; start: string; end: string }; // 'HH:MM' 24h
 export type ScheduleCfg = { blocks: TimeBlock[]; days: number; fmt24: boolean };
 
-export const DAY_NAMES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-export const DAY_NAMES_LONG = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+export const DAY_NAMES = [t('Lun'), t('Mar'), t('Mié'), t('Jue'), t('Vie'), t('Sáb'), t('Dom')];
+export const DAY_NAMES_LONG = [t('Lunes'), t('Martes'), t('Miércoles'), t('Jueves'), t('Viernes'), t('Sábado'), t('Domingo')];
 
 // Los siete de siempre, para que nadie note el cambio si no lo toca.
 export const DEFAULT_BLOCKS: TimeBlock[] = [

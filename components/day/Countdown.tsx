@@ -5,6 +5,7 @@ import { C } from '../../lib/theme';
 import type { Task } from '../../lib/db';
 import { examCountdown, localISO } from '../../lib/day';
 import { openTask } from '../../lib/uiBus';
+import { t } from '../../lib/i18n';
 
 // Cuenta regresiva de exámenes (v21, sección 5): una tira con los próximos.
 export function Countdown({ tasks, style }: { tasks: Task[]; style?: any }) {
@@ -13,7 +14,7 @@ export function Countdown({ tasks, style }: { tasks: Task[]; style?: any }) {
   const tone = { bad: C.bad, warn: C.warn, muted: C.muted };
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[{ marginBottom: 12, flexGrow: 0 }, style]} contentContainerStyle={{ gap: 8 }}
-      accessibilityLabel="Próximos exámenes">
+      accessibilityLabel={t('Próximos exámenes')}>
       {list.map((c) => {
         const t = tasks.find((x) => x.id === c.id)!;
         return (

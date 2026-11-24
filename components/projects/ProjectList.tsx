@@ -6,6 +6,7 @@ import { C, R } from '../../lib/theme';
 import { useAuth } from '../../lib/auth';
 import { BoardColumn, Member, PStep, PTask, colorOf, initialsOf, nameOf } from '../../lib/projects';
 import { SelectBox, dueInfo } from './projectUi';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Vista Lista del proyecto.
@@ -37,7 +38,7 @@ export function Lista({ tasks, cols, steps, members, editable, isWide, selecting
     } else if (orden === 'responsable') {
       const nameFor = (uid: string | null) => {
         const m = members.find((x) => x.user_id === uid);
-        return m ? nameOf(m.profile).toLowerCase() : 'zzz sin asignar';
+        return m ? nameOf(m.profile).toLowerCase() : t('zzz sin asignar');
       };
       copy.sort((a, b) => nameFor(a.assignee_id).localeCompare(nameFor(b.assignee_id)) || a.position - b.position);
     } else {
@@ -53,22 +54,20 @@ export function Lista({ tasks, cols, steps, members, editable, isWide, selecting
         {(['fecha', 'responsable', 'columna'] as const).map((o) => (
           <Pressable key={o} onPress={() => setOrden(o)}
             style={{ paddingVertical: 7, paddingHorizontal: 13, borderRadius: R.pill, borderWidth: 1, backgroundColor: orden === o ? C.surface2 : 'transparent', borderColor: orden === o ? C.brand : C.line }}>
-            <Text style={{ color: orden === o ? C.brand : C.muted, fontSize: 12.5, fontWeight: orden === o ? '700' : '500' }}>
-              Por {o}
-            </Text>
+            <Text style={{ color: orden === o ? C.brand : C.muted, fontSize: 12.5, fontWeight: orden === o ? '700' : '500' }}>{t('Por {o}', { o })}</Text>
           </Pressable>
         ))}
         <View style={{ flex: 1 }} />
         <Pressable onPress={() => setSoloMias((v) => !v)}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 7, paddingHorizontal: 13, borderRadius: R.pill, borderWidth: 1, backgroundColor: soloMias ? C.brand + '1f' : 'transparent', borderColor: soloMias ? C.brand : C.line }}>
           <Ionicons name={soloMias ? 'person' : 'person-outline'} size={13} color={soloMias ? C.brand : C.muted} />
-          <Text style={{ color: soloMias ? C.brand : C.muted, fontSize: 12.5, fontWeight: soloMias ? '700' : '500' }}>Solo lo mío</Text>
+          <Text style={{ color: soloMias ? C.brand : C.muted, fontSize: 12.5, fontWeight: soloMias ? '700' : '500' }}>{t('Solo lo mío')}</Text>
         </Pressable>
       </View>
 
       {shown.length === 0 ? (
         <Text style={{ color: C.muted, paddingVertical: 24, textAlign: 'center' }}>
-          {tasks.length === 0 ? 'Todavía no hay tareas en este proyecto.' : 'Nada con ese filtro.'}
+          {tasks.length === 0 ? t('Todavía no hay tareas en este proyecto.') : t('Nada con ese filtro.')}
         </Text>
       ) : shown.map((t) => {
         const col = cols.find((c) => c.key === t.status) ?? cols[0];
@@ -84,7 +83,7 @@ export function Lista({ tasks, cols, steps, members, editable, isWide, selecting
               borderWidth: 1, borderColor: sel ? C.brand : C.line, borderRadius: 12, padding: 12, marginBottom: 8, opacity: pressed ? 0.8 : 1,
             })}>
             {selecting ? (
-              <Pressable onPress={() => onToggleSelect(t.id)} hitSlop={8} accessibilityLabel={sel ? 'Quitar de la selección' : 'Seleccionar'}>
+              <Pressable onPress={() => onToggleSelect(t.id)} hitSlop={8} accessibilityLabel={sel ? trn('Quitar de la selección') : trn('Seleccionar')}>
                 <SelectBox on={sel} />
               </Pressable>
             ) : (
@@ -102,7 +101,7 @@ export function Lista({ tasks, cols, steps, members, editable, isWide, selecting
                   <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: col?.color ?? C.muted }} />
                   <Text style={{ color: C.muted, fontSize: 11.5 }}>{col?.label ?? t.status}</Text>
                 </View>
-                <Text style={{ color: C.muted, fontSize: 11.5 }}>· {who ? nameOf(who.profile) : 'sin asignar'}</Text>
+                <Text style={{ color: C.muted, fontSize: 11.5 }}>· {who ? nameOf(who.profile) : trn('sin asignar')}</Text>
                 {due && <Text style={{ color: due.color, fontSize: 11.5, fontWeight: '700' }}>· {due.label}</Text>}
                 {st.length > 0 && <Text style={{ color: C.muted, fontSize: 11.5 }}>· {st.filter((s) => s.done).length}/{st.length}</Text>}
                 {!!comments?.[t.id] && <Text style={{ color: C.muted, fontSize: 11.5 }} accessibilityLabel={`${comments[t.id]} comentarios`}>· 💬 {comments[t.id]}</Text>}
@@ -122,7 +121,7 @@ export function Lista({ tasks, cols, steps, members, editable, isWide, selecting
         <Pressable onPress={onAdd}
           style={{ flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: C.brand, borderRadius: 12, padding: 13, marginTop: 12, alignSelf: isWide ? 'flex-start' : 'stretch', paddingHorizontal: 20 }}>
           <Ionicons name="add" size={18} color="#0f1115" />
-          <Text style={{ color: C.onBrand, fontWeight: '700' }}>Nueva tarea</Text>
+          <Text style={{ color: C.onBrand, fontWeight: '700' }}>{t('Nueva tarea')}</Text>
         </Pressable>
       )}
     </ScrollView>

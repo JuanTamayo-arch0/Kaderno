@@ -10,6 +10,7 @@ import { supabase } from './supabase';
 import { toBulkPatch, type BulkPatch, type RpcTask } from './import/payload';
 import type { BoardColumnRef, DuplicatePolicy, ExistingTask, Member as ImportMember } from './import/types';
 import { columnsOf, type Member, type Project } from './projects';
+import { t } from './i18n';
 
 export interface BatchResult {
   batch_id: string;
@@ -40,22 +41,22 @@ export function importColumns(project: Pick<Project, 'board_columns'> | null): B
 // ---------- Errores legibles ----------
 
 const NEEDS_MIGRATION =
-  'Falta correr supabase/schema_v13.sql en Supabase (SQL Editor). Sin eso no se puede importar ni editar en masa.';
+  t('Falta correr supabase/schema_v13.sql en Supabase (SQL Editor). Sin eso no se puede importar ni editar en masa.');
 
 function friendly(error: { message?: string; code?: string } | null): Error {
-  const msg = error?.message ?? 'Error desconocido';
+  const msg = error?.message ?? t('Error desconocido');
   const code = error?.code ?? '';
   if (code === 'PGRST202' || code === '42883' || code === '42703' || /schema cache|does not exist/i.test(msg)) {
     return new Error(NEEDS_MIGRATION);
   }
-  if (msg.includes('KADERNO_FORBIDDEN')) return new Error('No tienes permiso para editar este proyecto');
-  if (msg.includes('KADERNO_TOO_MANY')) return new Error('Máximo 500 tareas por archivo');
-  if (msg.includes('KADERNO_NO_TITLE')) return new Error('Hay una tarea sin título');
-  if (msg.includes('KADERNO_NOT_MEMBER')) return new Error('Esa persona no es integrante del proyecto');
-  if (msg.includes('KADERNO_UNDO_NOT_LATEST')) return new Error('Solo se puede deshacer el último cambio masivo del proyecto');
-  if (msg.includes('KADERNO_UNDO_EXPIRED')) return new Error('Ese cambio tiene más de 7 días y ya no se puede deshacer');
-  if (msg.includes('KADERNO_UNDO_DONE')) return new Error('Ese cambio ya se deshizo');
-  if (msg.includes('KADERNO_BAD_DATES')) return new Error('Alguna tarea quedaría con el inicio después de la entrega. No se cambió nada');
+  if (msg.includes('KADERNO_FORBIDDEN')) return new Error(t('No tienes permiso para editar este proyecto'));
+  if (msg.includes('KADERNO_TOO_MANY')) return new Error(t('Máximo 500 tareas por archivo'));
+  if (msg.includes('KADERNO_NO_TITLE')) return new Error(t('Hay una tarea sin título'));
+  if (msg.includes('KADERNO_NOT_MEMBER')) return new Error(t('Esa persona no es integrante del proyecto'));
+  if (msg.includes('KADERNO_UNDO_NOT_LATEST')) return new Error(t('Solo se puede deshacer el último cambio masivo del proyecto'));
+  if (msg.includes('KADERNO_UNDO_EXPIRED')) return new Error(t('Ese cambio tiene más de 7 días y ya no se puede deshacer'));
+  if (msg.includes('KADERNO_UNDO_DONE')) return new Error(t('Ese cambio ya se deshizo'));
+  if (msg.includes('KADERNO_BAD_DATES')) return new Error(t('Alguna tarea quedaría con el inicio después de la entrega. No se cambió nada'));
   return new Error(msg);
 }
 

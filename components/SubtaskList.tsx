@@ -5,6 +5,7 @@ import { C } from '../lib/theme';
 import { Step, addStep, deleteStep, renameStep, reorderSteps, toggleStep } from '../lib/db';
 import { ProgressBar } from './ProgressBar';
 import { play } from '../lib/sound';
+import { t } from '../lib/i18n';
 
 // ============================================================
 //  Microtareas (checklist dentro de una tarea)
@@ -152,14 +153,14 @@ export function SubtaskList({
           {editable && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
               {sorted.length > 1 && (<>
-                <Pressable onPress={() => onMove(s, -1)} hitSlop={6} disabled={i === 0} accessibilityLabel="Subir">
+                <Pressable onPress={() => onMove(s, -1)} hitSlop={6} disabled={i === 0} accessibilityLabel={t('Subir')}>
                   <Ionicons name="chevron-up" size={16} color={i === 0 ? C.line : C.muted} />
                 </Pressable>
-                <Pressable onPress={() => onMove(s, 1)} hitSlop={6} disabled={i === sorted.length - 1} accessibilityLabel="Bajar">
+                <Pressable onPress={() => onMove(s, 1)} hitSlop={6} disabled={i === sorted.length - 1} accessibilityLabel={t('Bajar')}>
                   <Ionicons name="chevron-down" size={16} color={i === sorted.length - 1 ? C.line : C.muted} />
                 </Pressable>
               </>)}
-              <Pressable onPress={() => onDelete(s)} hitSlop={6} accessibilityLabel="Borrar microtarea" style={{ paddingLeft: 4 }}>
+              <Pressable onPress={() => onDelete(s)} hitSlop={6} accessibilityLabel={t('Borrar microtarea')} style={{ paddingLeft: 4 }}>
                 <Ionicons name="close" size={16} color={C.muted} />
               </Pressable>
             </View>
@@ -174,7 +175,7 @@ export function SubtaskList({
             value={draft}
             onChangeText={setDraft}
             onSubmitEditing={onAdd}
-            placeholder="Agregar paso…"
+            placeholder={t('Agregar paso…')}
             placeholderTextColor={C.muted}
             autoFocus={autoFocusInput}
             returnKeyType="done"
@@ -185,7 +186,7 @@ export function SubtaskList({
             }}
           />
           {!!draft.trim() && (
-            <Pressable onPress={onAdd} hitSlop={8} accessibilityLabel="Agregar">
+            <Pressable onPress={onAdd} hitSlop={8} accessibilityLabel={t('Agregar')}>
               <Ionicons name="arrow-forward-circle" size={24} color={C.brand} />
             </Pressable>
           )}

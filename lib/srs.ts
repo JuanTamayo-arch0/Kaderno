@@ -1,3 +1,4 @@
+import { t } from './i18n';
 // ============================================================
 //  Repetición espaciada (variante de SM-2, la de Anki simplificada).
 //
@@ -58,8 +59,8 @@ export function sm2(card: SrsCard, grade: 0 | 1 | 2 | 3, now: Date): SrsUpdate {
 /** Texto para cada botón: "en 1 día", "en 6 días"... */
 export function nextLabel(card: SrsCard, grade: 0 | 1 | 2 | 3): string {
   const d = sm2(card, grade, new Date()).interval_days;
-  if (grade === 0) return 'mañana';
-  if (d < 30) return d === 1 ? '1 día' : `${d} días`;
+  if (grade === 0) return t('mañana');
+  if (d < 30) return d === 1 ? t('1 día') : t('{d} días', { d });
   const m = Math.round(d / 30);
-  return m === 1 ? '1 mes' : `${m} meses`;
+  return m === 1 ? t('1 mes') : `${m} meses`;
 }

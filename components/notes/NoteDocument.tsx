@@ -28,6 +28,7 @@ import { recallLabel } from '../../lib/quiz';
 import { extractLinks, refreshLinkTitles } from '../../lib/noteLinks';
 import { noteTitles } from '../../lib/cardsDb';
 import { searchNoteTitles, getBacklinks, getRelated, syncNoteCards, saveTemplate, type NoteRef } from '../../lib/notesDb';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Una nota abierta: título, texto (se lee y se edita en el mismo lugar),
@@ -114,11 +115,11 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
     if (wasEditing.current && !editing && note) {
       const md = ed.current?.flush() ?? content;
       syncNoteCards(noteId, md).then(({ create, updated }) => {
-        if (updated) toast(updated === 1 ? '1 tarjeta actualizada desde la nota' : `${updated} tarjetas actualizadas desde la nota`);
+        if (updated) toast(updated === 1 ? t('1 tarjeta actualizada desde la nota') : t('{updated} tarjetas actualizadas desde la nota', { updated }));
         if (create.length) {
-          toast(`Encontré ${create.length} ${create.length === 1 ? 'tarjeta' : 'tarjetas'} en tu nota`);
+          toast(t('Encontré {length} {v} en tu nota', { length: create.length, v: create.length === 1 ? t('tarjeta') : t('tarjetas') }));
           maker.review(create.map((c) => ({ kind: c.kind, front: c.front, back: c.back })), {
-            noteId, subjectId: note.subject_id ?? null, title: title || 'Nota', from: 'note', lines: Object.fromEntries(create.map((c) => [c.front, c.line])),
+            noteId, subjectId: note.subject_id ?? null, title: title || t('Nota'), from: 'note', lines: Object.fromEntries(create.map((c) => [c.front, c.line])),
           });
         }
       }).catch(() => {});
@@ -141,7 +142,7 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
     if (t === saved.current.title && c === saved.current.content) return;
     if (!final) setStatus('saving');
     try {
-      const cleanTitle = t.trim() || 'Nota sin título';
+      const cleanTitle = t.trim() || trn('Nota sin título');
       await updateNote(noteId, { title: cleanTitle, content: c });
       saved.current = { title: t, content: c };
       if (!final) setStatus('saved');
@@ -175,27 +176,27 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
       if (error) throw error;
       setNote({ ...note, subject_id: sid });
       cbRef.current?.({ id: noteId, subject_id: sid });
-      toast(sid ? `Nota movida a ${subjects.find((s) => s.id === sid)?.name ?? 'otra materia'}` : 'Nota sin materia');
-    } catch (e) { notify('No se pudo mover', friendlyError(e)); }
+      toast(sid ? t('Nota movida a {v}', { v: subjects.find((s) => s.id === sid)?.name ?? t('otra materia') }) : t('Nota sin materia'));
+    } catch (e) { notify(t('No se pudo mover'), friendlyError(e)); }
   }
   async function togglePin() {
     if (!note) return;
     const next = !note.pinned;
     setNote({ ...note, pinned: next });
-    try { await setNotePinned(noteId, next); cbRef.current?.({ id: noteId, pinned: next }); toast(next ? 'Nota fijada arriba' : 'Nota sin fijar'); }
-    catch (e) { setNote({ ...note, pinned: !next }); notify('No se pudo fijar', friendlyError(e)); }
+    try { await setNotePinned(noteId, next); cbRef.current?.({ id: noteId, pinned: next }); toast(next ? t('Nota fijada arriba') : t('Nota sin fijar')); }
+    catch (e) { setNote({ ...note, pinned: !next }); notify(t('No se pudo fijar'), friendlyError(e)); }
   }
   async function makeSummary() {
     const c = ed.current?.flush() ?? content;
-    if (!c.trim()) { notify('La nota está vacía', 'Escribe o digitaliza algo antes de resumir.'); return; }
+    if (!c.trim()) { notify(t('La nota está vacía'), t('Escribe o digitaliza algo antes de resumir.')); return; }
     setGenSum(true);
     try { const s = await aiSummary(c); setSummary(s); await updateNote(noteId, { summary: s }); }
-    catch (e) { notify('No se pudo resumir', friendlyError(e)); } finally { setGenSum(false); }
+    catch (e) { notify(t('No se pudo resumir'), friendlyError(e)); } finally { setGenSum(false); }
   }
   function makeFlashcards(text?: string) {
     const md = ed.current?.flush() ?? content;
     const c = text ?? md;
-    maker.start(c, text ? 'selection' : 'note', { noteId, subjectId: note?.subject_id ?? null, title: title || 'Nota', markdown: md });
+    maker.start(c, text ? 'selection' : 'note', { noteId, subjectId: note?.subject_id ?? null, title: title || t('Nota'), markdown: md });
   }
   function goHeading(text: string) {
     const want = text.trim().toLowerCase();
@@ -204,24 +205,24 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
   }
   function startRecall() {
     const md = ed.current?.flush() ?? content;
-    if (md.trim().length < 80) { notify('La nota es muy corta', 'Escribe un poco más antes de ponerte a prueba.'); return; }
+    if (md.trim().length < 80) { notify(t('La nota es muy corta'), t('Escribe un poco más antes de ponerte a prueba.')); return; }
     if (editing) setEditing(false);
     setRecallMd(md);
     setRecall(true);
   }
   function askOracle(q?: string) {
-    router.push({ pathname: '/oraculo', params: { mode: 'note', noteId, subjectId: note?.subject_id ?? '', noteTitle: title || 'Nota', ...(q ? { q } : {}) } } as any);
+    router.push({ pathname: '/oraculo', params: { mode: 'note', noteId, subjectId: note?.subject_id ?? '', noteTitle: title || t('Nota'), ...(q ? { q } : {}) } } as any);
   }
   function onSelection(kind: SelectionAction, text: string) {
     if (kind === 'whenSaid') {
       const m = whenSaid(recMarks, text);
-      if (!m) { toast('Ese texto no se escribió durante una clase grabada.'); return; }
+      if (!m) { toast(t('Ese texto no se escribió durante una clase grabada.')); return; }
       setSaid({ t: m.t, tid: m.tid, key: Date.now() });
       setTimeout(() => { (panelRef.current as any)?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }); }, 120);
       return;
     }
     if (kind === 'flashcard') makeFlashcards(text);
-    else askOracle(`Explícame esto de mi nota "${title || 'Nota'}": ${text.slice(0, 600)}`);
+    else askOracle(t('Explícame esto de mi nota "{v}": {slice}', { v: title || t('Nota'), slice: text.slice(0, 600) }));
   }
   // Fuente de una cita de PDF: abre el visor en esa página, en la misma pestaña
   // (atrás vuelve a la nota). El visor busca la dirección del archivo solo.
@@ -232,10 +233,10 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
   }
   async function uploadImage(file: Blob): Promise<string> {
     try {
-      toast('Subiendo imagen…');
+      toast(t('Subiendo imagen…'));
       const b64 = await shrinkForNote(file);
       return await uploadPhoto(b64);
-    } catch (e) { notify('No se pudo subir la imagen', friendlyError(e)); throw e; }
+    } catch (e) { notify(t('No se pudo subir la imagen'), friendlyError(e)); throw e; }
   }
   async function remove() {
     if (!note) return;
@@ -243,26 +244,26 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
       const c = ed.current?.flush(); if (c != null) await save(latest.current.title, c, true);
       await deleteNote(noteId);
       onDeleted?.(note);
-      toast(hasV14() ? 'Nota enviada a la papelera' : 'Nota borrada', hasV14() ? { actionLabel: 'Deshacer', onAction: () => { restoreNote(noteId).then(() => router.push(`/nota/${noteId}`)).catch(() => {}); } } : {});
-    } catch (e) { notify('No se pudo borrar', friendlyError(e)); }
+      toast(hasV14() ? t('Nota enviada a la papelera') : t('Nota borrada'), hasV14() ? { actionLabel: t('Deshacer'), onAction: () => { restoreNote(noteId).then(() => router.push(`/nota/${noteId}`)).catch(() => {}); } } : {});
+    } catch (e) { notify(t('No se pudo borrar'), friendlyError(e)); }
   }
 
   if (note === undefined) return <View style={{ flex: scroll ? 1 : undefined, padding: 40, alignItems: 'center' }}><ActivityIndicator color={C.brand} /></View>;
   if (note === null) return (
     <View style={{ flex: scroll ? 1 : undefined }}>
-      <EmptyState icon="document-outline" title="No encontramos esta nota" text="Puede que esté en la papelera." action={{ label: 'Ir a la Papelera', onPress: () => router.push('/papelera') }} />
+      <EmptyState icon="document-outline" title={t('No encontramos esta nota')} text={t('Puede que esté en la papelera.')} action={{ label: t('Ir a la Papelera'), onPress: () => router.push('/papelera') }} />
     </View>
   );
 
   const { words, minutes } = readingStats(content);
   const d = new Date(note.created_at);
-  const dateText = `${d.getDate()} de ${MONTH_LONG[d.getMonth()]} de ${d.getFullYear()}`;
-  const statusText = status === 'saving' ? 'Guardando…' : status === 'saved' ? 'Guardado' : status === 'error' ? 'No se pudo guardar. Revisa tu conexión.' : '';
+  const dateText = t('{getDate} de {v} de {getFullYear}', { getDate: d.getDate(), v: MONTH_LONG[d.getMonth()], getFullYear: d.getFullYear() });
+  const statusText = status === 'saving' ? t('Guardando…') : status === 'saved' ? t('Guardado') : status === 'error' ? t('No se pudo guardar. Revisa tu conexión.') : '';
 
   const meta = (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
-      {note.pinned && <Ionicons name="pin" size={14} color={C.warnText} accessibilityLabel="Fijada" />}
-      <Text style={{ color: C.muted, fontSize: 12.5 }}>{dateText} · {words} {words === 1 ? 'palabra' : 'palabras'} · {minutes} min de lectura</Text>
+      {note.pinned && <Ionicons name="pin" size={14} color={C.warnText} accessibilityLabel={t('Fijada')} />}
+      <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('{dateText} · {words} {v} · {minutes} min de lectura', { dateText, words, v: words === 1 ? t('palabra') : t('palabras'), minutes })}</Text>
       <View style={{ flex: 1 }} />
       {!!statusText && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }} accessibilityLiveRegion="polite">
@@ -271,8 +272,8 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
         </View>
       )}
       <RecordButton rec={rec} onStarted={() => setEditing(true)} />
-      <Button label={editing ? 'Listo' : 'Editar'} icon={editing ? 'checkmark' : 'create-outline'} size="sm" kind={editing ? 'primary' : 'secondary'} onPress={() => setEditing((v) => !v)} />
-      <IconButton icon="ellipsis-horizontal" label="Más opciones de la nota" onPress={() => setMenu(true)} color={C.text} />
+      <Button label={editing ? t('Listo') : t('Editar')} icon={editing ? 'checkmark' : 'create-outline'} size="sm" kind={editing ? 'primary' : 'secondary'} onPress={() => setEditing((v) => !v)} />
+      <IconButton icon="ellipsis-horizontal" label={t('Más opciones de la nota')} onPress={() => setMenu(true)} color={C.text} />
     </View>
   );
 
@@ -280,7 +281,7 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
     <View style={{ width: '100%', maxWidth: 720, alignSelf: 'center' }}>
       <RecorderBar rec={rec} />
       {meta}
-      <TextInput value={title} onChangeText={setTitle} placeholder="Título de la nota" placeholderTextColor={C.muted} multiline accessibilityLabel="Título"
+      <TextInput value={title} onChangeText={setTitle} placeholder={t('Título de la nota')} placeholderTextColor={C.muted} multiline accessibilityLabel={t('Título')}
         onContentSizeChange={(e) => setTitleH(e.nativeEvent.contentSize.height)} blurOnSubmit
         style={[{ color: C.text, fontSize: scroll ? 36 : 28, fontWeight: '800', letterSpacing: -0.3, paddingVertical: 4, marginBottom: 14, height: Math.max(scroll ? 50 : 40, titleH) }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
       <NoteEditor key={`${noteId}:${edKey}`} ref={ed} value={content} onChange={setContent} editing={editing} onRequestEdit={() => setEditing(true)} onRequestRead={() => setEditing(false)}
@@ -291,7 +292,7 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
         <TranscriptPanel noteId={noteId} version={rec.version} focus={said} subjectName={subjects.find((s) => s.id === note.subject_id)?.name ?? null}
           getMd={() => ed.current?.flush() ?? content} onHasMarks={setRecMarks}
           onInsert={(md) => { const cur = (ed.current?.flush() ?? content).trimEnd(); setContent(cur ? `${cur}\n\n${md}` : md); setEdKey((k) => k + 1); }}
-          onCards={(txt) => maker.start(txt, 'note', { noteId, subjectId: note.subject_id ?? null, title: title || 'Nota' })} />
+          onCards={(txt) => maker.start(txt, 'note', { noteId, subjectId: note.subject_id ?? null, title: title || t('Nota') })} />
       </View>
     </View>
   );
@@ -299,8 +300,8 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
   const study = (
     <View style={{ gap: 18 }}>
       {heads.length > 1 && (
-        <View role={"navigation" as any} accessibilityLabel="Índice de la nota">
-          <Label text="En esta nota" />
+        <View role={"navigation" as any} accessibilityLabel={t('Índice de la nota')}>
+          <Label text={t('En esta nota')} />
           {heads.map((h) => (
             <Pressable key={h.index} onPress={() => ed.current?.scrollToHeading(h.index)} accessibilityRole="link"
               style={({ focused, hovered }: any) => [{ paddingVertical: 5, paddingRight: 8, paddingLeft: 10 + (h.level - 1) * 12, borderLeftWidth: 2, borderLeftColor: hovered ? C.brand : C.line, marginLeft: 2 }, focused ? focusRingStyle() : null]}>
@@ -311,33 +312,33 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
       )}
 
       <View dataSet={{ petPerch: '1' }} style={{ padding: 16, borderRadius: 14, backgroundColor: C.surface, borderWidth: 1, borderColor: C.line, gap: 10 }}>
-        <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>Estudiar esta nota</Text>
+        <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>{t('Estudiar esta nota')}</Text>
         {(() => {
           const lab = recallLabel(note.last_recall_at, note.last_recall_score, new Date());
           return lab
             ? <Text style={{ color: (note.last_recall_score ?? 0) >= 70 ? C.goodText : C.muted, fontSize: 12.5, fontWeight: '600' }}>{lab}</Text>
-            : <Text style={{ color: C.muted, fontSize: 13, lineHeight: 18 }}>Lo que más ayuda a recordar es ponerte a prueba. También puedes seleccionar una parte del texto.</Text>;
+            : <Text style={{ color: C.muted, fontSize: 13, lineHeight: 18 }}>{t('Lo que más ayuda a recordar es ponerte a prueba. También puedes seleccionar una parte del texto.')}</Text>;
         })()}
-        <Button label="Ponme a prueba" icon="bulb-outline" size="sm" onPress={startRecall} />
-        <Button label="Crear flashcards" icon="albums-outline" kind="secondary" size="sm" busy={genCards} onPress={() => makeFlashcards()} />
-        <Button label="Preguntar al Oráculo" icon="sparkles-outline" kind="secondary" size="sm" onPress={() => askOracle()} />
+        <Button label={t('Ponme a prueba')} icon="bulb-outline" size="sm" onPress={startRecall} />
+        <Button label={t('Crear flashcards')} icon="albums-outline" kind="secondary" size="sm" busy={genCards} onPress={() => makeFlashcards()} />
+        <Button label={t('Preguntar al Oráculo')} icon="sparkles-outline" kind="secondary" size="sm" onPress={() => askOracle()} />
         <View style={{ height: 1, backgroundColor: C.line, marginVertical: 2 }} />
         {summary && <Text style={{ color: C.text, fontSize: 13.5, lineHeight: 20 }}>{summary}</Text>}
-        <Button label={summary ? 'Rehacer resumen' : 'Resumir'} icon="reader-outline" kind="ghost" size="sm" busy={genSum} onPress={makeSummary} />
-        <Text style={{ color: C.muted, fontSize: 11.5, lineHeight: 16 }}>Resumir ayuda a ordenar; para recordar, ponte a prueba.</Text>
+        <Button label={summary ? t('Rehacer resumen') : t('Resumir')} icon="reader-outline" kind="ghost" size="sm" busy={genSum} onPress={makeSummary} />
+        <Text style={{ color: C.muted, fontSize: 11.5, lineHeight: 16 }}>{t('Resumir ayuda a ordenar; para recordar, ponte a prueba.')}</Text>
       </View>
 
       {(backlinks.length > 0 || related.length > 0) && (
         <View style={{ gap: 14 }}>
           {backlinks.length > 0 && (
             <View>
-              <Label text="Mencionada en" />
+              <Label text={t('Mencionada en')} />
               {backlinks.map((n) => <NoteLinkRow key={n.id} n={n} icon="return-up-back-outline" onPress={() => router.push(`/nota/${n.id}`)} />)}
             </View>
           )}
           {related.length > 0 && (
             <View>
-              <Label text="Notas relacionadas" />
+              <Label text={t('Notas relacionadas')} />
               {related.map((n) => <NoteLinkRow key={n.id} n={n} icon="git-network-outline" subject={subjects.find((s) => s.id === n.subject_id)?.name} onPress={() => router.push(`/nota/${n.id}`)} />)}
             </View>
           )}
@@ -345,14 +346,14 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
       )}
 
       <View>
-        <Label text="Materia" />
-        <SubjectPicker subjects={subjects} value={note.subject_id} onChange={changeSubject} placeholder="Sin materia" />
+        <Label text={t('Materia')} />
+        <SubjectPicker subjects={subjects} value={note.subject_id} onChange={changeSubject} placeholder={t('Sin materia')} />
       </View>
 
       {photo && (
         <View>
-          <Label text="Foto original" />
-          <Pressable onPress={() => setZoom(true)} accessibilityRole="button" accessibilityLabel="Ver la foto original del apunte"
+          <Label text={t('Foto original')} />
+          <Pressable onPress={() => setZoom(true)} accessibilityRole="button" accessibilityLabel={t('Ver la foto original del apunte')}
             style={{ borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: C.line, backgroundColor: C.surface2 }}>
             <Image source={{ uri: photo }} style={{ width: '100%', height: 150 }} resizeMode="cover" />
           </Pressable>
@@ -363,17 +364,17 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
   );
 
   const menuEl = (
-    <ActionMenu visible={menu} title={title || 'Nota'} onClose={() => setMenu(false)} actions={[
-      { label: note.pinned ? 'Quitar de fijadas' : 'Fijar arriba', icon: note.pinned ? 'pin-outline' : 'pin', onPress: togglePin },
-      ...(photo ? [{ label: 'Ver foto original', icon: 'image-outline' as const, onPress: () => setZoom(true) }] : []),
-      { label: 'Preguntar al Oráculo', icon: 'sparkles-outline', onPress: () => askOracle() },
-      { label: 'Compartir con un enlace', icon: 'link-outline', onPress: () => setShare('link') },
-      { label: 'Copiar a un proyecto', icon: 'folder-open-outline', onPress: () => setShare('project') },
-      { label: 'Guardar como plantilla', icon: 'copy-outline', onPress: async () => {
-        try { await saveTemplate(title || 'Mi plantilla', ed.current?.flush() ?? content); toast('Plantilla guardada: sale al crear una nota nueva', { tone: 'good' }); }
-        catch (e) { notify('No se pudo guardar', friendlyError(e)); }
+    <ActionMenu visible={menu} title={title || t('Nota')} onClose={() => setMenu(false)} actions={[
+      { label: note.pinned ? t('Quitar de fijadas') : t('Fijar arriba'), icon: note.pinned ? 'pin-outline' : 'pin', onPress: togglePin },
+      ...(photo ? [{ label: t('Ver foto original'), icon: 'image-outline' as const, onPress: () => setZoom(true) }] : []),
+      { label: t('Preguntar al Oráculo'), icon: 'sparkles-outline', onPress: () => askOracle() },
+      { label: t('Compartir con un enlace'), icon: 'link-outline', onPress: () => setShare('link') },
+      { label: t('Copiar a un proyecto'), icon: 'folder-open-outline', onPress: () => setShare('project') },
+      { label: t('Guardar como plantilla'), icon: 'copy-outline', onPress: async () => {
+        try { await saveTemplate(title || t('Mi plantilla'), ed.current?.flush() ?? content); toast(t('Plantilla guardada: sale al crear una nota nueva'), { tone: 'good' }); }
+        catch (e) { notify(t('No se pudo guardar'), friendlyError(e)); }
       } },
-      { label: 'Borrar nota', icon: 'trash-outline', danger: true, onPress: remove },
+      { label: t('Borrar nota'), icon: 'trash-outline', danger: true, onPress: remove },
     ]} />
   );
   const shareEl = (
@@ -381,18 +382,18 @@ export function NoteDocument({ noteId, subjects, scroll, side, startEditing, onN
   );
   const zoomEl = (
     <Modal visible={zoom} transparent onRequestClose={() => setZoom(false)}>
-      <Pressable onPress={() => setZoom(false)} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', alignItems: 'center' }} accessibilityLabel="Cerrar foto">
+      <Pressable onPress={() => setZoom(false)} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', alignItems: 'center' }} accessibilityLabel={t('Cerrar foto')}>
         {photo && <Image source={{ uri: photo }} style={{ width: '94%', height: '84%' }} resizeMode="contain" />}
-        <Text style={{ color: '#ccc', marginTop: 16, fontSize: 13 }}>Toca para cerrar</Text>
+        <Text style={{ color: '#ccc', marginTop: 16, fontSize: 13 }}>{t('Toca para cerrar')}</Text>
       </Pressable>
     </Modal>
   );
 
 
   const recallEl = (
-    <RecallTest visible={recall} onClose={() => setRecall(false)} noteId={noteId} title={title || 'Nota'} markdown={recallMd}
+    <RecallTest visible={recall} onClose={() => setRecall(false)} noteId={noteId} title={title || t('Nota')} markdown={recallMd}
       onHeading={goHeading}
-      onCards={(txt) => maker.start(txt, 'selection', { noteId, subjectId: note.subject_id ?? null, title: title || 'Nota', from: 'recall' })}
+      onCards={(txt) => maker.start(txt, 'selection', { noteId, subjectId: note.subject_id ?? null, title: title || t('Nota'), from: 'recall' })}
       onSaved={(score) => { const at = new Date().toISOString(); setNote((n) => (n ? { ...n, last_recall_at: at, last_recall_score: score } : n)); cbRef.current?.({ id: noteId, last_recall_at: at, last_recall_score: score } as any); }} />
   );
 
@@ -427,7 +428,7 @@ function Label({ text }: { text: string }) {
 
 function NoteLinkRow({ n, icon, subject, onPress }: { n: NoteRef; icon: React.ComponentProps<typeof Ionicons>['name']; subject?: string; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="link" accessibilityLabel={`Abrir nota ${n.title}`}
+    <Pressable onPress={onPress} accessibilityRole="link" accessibilityLabel={t('Abrir nota {title}', { title: n.title })}
       style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 7, paddingHorizontal: 8, borderRadius: 8, backgroundColor: hovered ? C.surface2 : 'transparent' })}>
       <Ionicons name={icon} size={14} color={C.muted} />
       <View style={{ flex: 1, minWidth: 0 }}>

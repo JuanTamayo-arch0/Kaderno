@@ -6,6 +6,8 @@
 import type { ItemId, Slot, Species } from './art';
 import { HOME_ITEMS, homeHas, type Home, type HomeItemId } from './home';
 import { isSeasonal, seasonOfItem, inSeason } from './seasons';
+import { t } from '../i18n';
+import { locale } from '../i18n';
 
 export const ITEM_RULES: Record<ItemId, { price: number; level: number; slot: Slot }> = {
   gorro: { price: 60, level: 1, slot: 'cabeza' },
@@ -45,23 +47,23 @@ export const ITEM_SETS: Record<Exclude<ItemSet, 'lucirse'>, ItemId[]> = {
   estudio: ['lapiz', 'lapiz_oreja', 'lentes', 'gafas', 'mochila', 'birrete'],
   trabajo: ['taza', 'carne', 'corbata', 'corbatin', 'maletin', 'diadema'],
 };
-export const SET_LABEL: Record<ItemSet, string> = { estudio: 'Para estudiar', trabajo: 'Para trabajar', lucirse: 'Para lucirse' };
+export const SET_LABEL: Record<ItemSet, string> = { estudio: t('Para estudiar'), trabajo: t('Para trabajar'), lucirse: t('Para lucirse') };
 export function setOf(id: ItemId): ItemSet {
   if (ITEM_SETS.estudio.includes(id)) return 'estudio';
   if (ITEM_SETS.trabajo.includes(id)) return 'trabajo';
   return 'lucirse';
 }
 /** Nombre de cada lugar, para la tienda. */
-export const SLOT_LABEL: Record<Slot, string> = { cabeza: 'Cabeza', ojos: 'Ojos', cuello: 'Cuello', espalda: 'Espalda', mano: 'Mano' };
+export const SLOT_LABEL: Record<Slot, string> = { cabeza: t('Cabeza'), ojos: t('Ojos'), cuello: t('Cuello'), espalda: t('Espalda'), mano: t('Mano') };
 
 /** Nombre corto para las tarjetas de la tienda. */
 export const ITEM_SHORT: Record<ItemId, string> = {
-  gorro: 'Gorro', corbatin: 'Corbatín', collar: 'Collar', gafas: 'Gafas', bufanda: 'Bufanda',
-  boina: 'Boina', audifonos: 'Audífonos', gafas_sol: 'Gafas de sol', birrete: 'Birrete', corona: 'Corona',
-  gorro_navidad: 'Gorro navideño', cuernos_reno: 'Cuernos', luces: 'Luces', antifaz: 'Antifaz',
-  gafas_corazon: 'Gafas corazón', sombrero_bruja: 'Bruja', sombrero_vueltiao: 'Vueltiao',
-  lapiz: 'Lápiz', lapiz_oreja: 'Lápiz en oreja', taza: 'Taza', carne: 'Carné', lentes: 'Lentes',
-  corbata: 'Corbata', mochila: 'Mochila', maletin: 'Maletín', diadema: 'Diadema', capa: 'Capa',
+  gorro: t('Gorro'), corbatin: t('Corbatín'), collar: t('Collar'), gafas: t('Gafas'), bufanda: t('Bufanda'),
+  boina: t('Boina'), audifonos: t('Audífonos'), gafas_sol: t('Gafas de sol'), birrete: t('Birrete'), corona: t('Corona'),
+  gorro_navidad: t('Gorro navideño'), cuernos_reno: t('Cuernos'), luces: t('Luces'), antifaz: t('Antifaz'),
+  gafas_corazon: t('Gafas corazón'), sombrero_bruja: t('Bruja'), sombrero_vueltiao: t('Vueltiao'),
+  lapiz: t('Lápiz'), lapiz_oreja: t('Lápiz en oreja'), taza: t('Taza'), carne: t('Carné'), lentes: t('Lentes'),
+  corbata: t('Corbata'), mochila: t('Mochila'), maletin: t('Maletín'), diadema: t('Diadema'), capa: t('Capa'),
 };
 
 /** Orden de la tienda: por precio. Sin las de temporada, que van aparte. */
@@ -112,9 +114,9 @@ export function itemState(id: ItemId, pet: { xp: number; coins: number; outfit: 
   return pet.coins >= r.price ? 'comprable' : 'cara';
 }
 
-export const DEFAULT_NAMES: Record<Species, string> = { pinguino: 'Pingu', gato: 'Michi', perro: 'Toby', loro: 'Kiwi' };
+export const DEFAULT_NAMES: Record<Species, string> = { pinguino: t('Pingu'), gato: t('Michi'), perro: t('Toby'), loro: t('Kiwi') };
 
 /** Plural correcto de la moneda: "1 pescado", "5 pescados". */
 export function coinLabel(n: number, coin: { one: string; many: string }): string {
-  return `${n.toLocaleString('es-CO')} ${n === 1 ? coin.one : coin.many}`;
+  return `${n.toLocaleString(locale())} ${n === 1 ? coin.one : coin.many}`;
 }

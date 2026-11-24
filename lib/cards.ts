@@ -3,6 +3,7 @@
 //  pronóstico y estadísticas). Probada en tests/v20.test.ts.
 // ============================================================
 import { dueOf, stateOf, localISODate, type FsrsRow } from './fsrs';
+import { t } from './i18n';
 
 export type CardKind = 'basic' | 'cloze';
 export type CardLike = FsrsRow & {
@@ -62,14 +63,14 @@ export function clozeText(text: string, reveal: boolean): string {
 /** Valida una tarjeta antes de guardarla. Devuelve el error o null. */
 export function cardError(d: { kind: CardKind; front: string; back: string }): string | null {
   const f = d.front.trim(), b = d.back.trim();
-  if (!f) return 'Falta el anverso.';
-  if (f.length > 400 || b.length > 400) return 'Máximo 400 letras por lado.';
+  if (!f) return t('Falta el anverso.');
+  if (f.length > 400 || b.length > 400) return t('Máximo 400 letras por lado.');
   if (d.kind === 'cloze') {
     const n = clozeCount(f);
-    if (n !== 1) return n === 0 ? 'Marca la palabra que se oculta con {{ }}.' : 'Solo un espacio {{ }} por tarjeta.';
+    if (n !== 1) return n === 0 ? t('Marca la palabra que se oculta con {{ }}.') : t('Solo un espacio {{ }} por tarjeta.');
     return null;
   }
-  if (!b) return 'Falta la respuesta.';
+  if (!b) return t('Falta la respuesta.');
   return null;
 }
 /** Pasar de pregunta a completar (y al revés) sin perder lo escrito. */
@@ -162,7 +163,7 @@ export function secondsPerCard(reviews: ReviewStat[]): number {
 export function estimateLabel(n: number, secs: number): string {
   if (n <= 0) return '';
   const min = Math.max(1, Math.round((n * secs) / 60));
-  return `unos ${min} min`;
+  return t('unos {min} min', { min });
 }
 /** Porcentaje recordado (Bien o Fácil o Difícil sobre los repasos de tarjetas ya aprendidas). */
 export function retentionPct(reviews: ReviewStat[], sinceMs: number): number | null {

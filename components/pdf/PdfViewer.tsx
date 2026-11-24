@@ -9,6 +9,7 @@ import { getHighlights, addHighlight, updateHighlight, deleteHighlight, type Hig
 import { toast, friendlyError, confirm } from '../../lib/feedback';
 import { useCardMaker } from '../cards/CardMaker';
 import { SendToNoteSheet } from './SendToNoteSheet';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Visor de PDF con resaltados (v22, fase 2). Solo web.
@@ -81,7 +82,7 @@ export function PdfViewer({ url, name, kind, fileId, subjectId, startPage }: {
       setLib(l);
       setSizes(Array.from({ length: d.numPages }, () => ({ w: v.width, h: v.height })));
       setDoc(d);
-    }).catch((e) => live && setError(String(e?.message ?? e).includes('password') ? 'Este PDF tiene contraseña.' : 'No se pudo abrir el PDF.'));
+    }).catch((e) => live && setError(String(e?.message ?? e).includes('password') ? t('Este PDF tiene contraseña.') : t('No se pudo abrir el PDF.')));
     return () => { live = false; };
   }, [url]);
   useEffect(() => { if (canMark) getHighlights(kind!, fileId!).then(setHls); }, [kind, fileId]);
@@ -184,7 +185,7 @@ export function PdfViewer({ url, name, kind, fileId, subjectId, startPage }: {
     const p = pending;
     if (canMark && !hls.some((h) => h.page === p.page && h.text === p.text)) await mark('yellow');
     else { window.getSelection()?.removeAllRanges(); setPending(null); }
-    setSend({ md: canMark ? quoteMarkdown(p.text, name, kind!, fileId!, p.page) : `> ${p.text}\n>\n> ${name}, pág. ${p.page}\n`, text: p.text });
+    setSend({ md: canMark ? quoteMarkdown(p.text, name, kind!, fileId!, p.page) : t('> {text}\n>\n> {name}, pág. {page}\n', { text: p.text, name, page: p.page }), text: p.text });
   }
   function cards(text: string) {
     window.getSelection()?.removeAllRanges(); setPending(null); setPop(null);
@@ -198,7 +199,7 @@ export function PdfViewer({ url, name, kind, fileId, subjectId, startPage }: {
   if (error) return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 12 }}>
       <Text style={{ color: C.text, fontSize: 15, fontWeight: '700' }}>{error}</Text>
-      <Button label="Abrir en una pestaña" icon="open-outline" onPress={() => Linking.openURL(url)} />
+      <Button label={t('Abrir en una pestaña')} icon="open-outline" onPress={() => Linking.openURL(url)} />
     </View>
   );
 
@@ -213,27 +214,27 @@ export function PdfViewer({ url, name, kind, fileId, subjectId, startPage }: {
         {/* Barra superior */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: isWide ? 6 : 0, paddingHorizontal: isWide ? 12 : 4, paddingVertical: isWide ? 8 : 4, borderBottomWidth: 1, borderBottomColor: C.line, flexWrap: 'wrap' }}>
           {isWide
-            ? <Button label="Anterior" size="sm" kind="ghost" icon="chevron-up" onPress={() => goPage(current - 1)} disabled={current <= 1} />
-            : <IconButton icon="chevron-up" label="Página anterior" onPress={() => goPage(current - 1)} color={C.text} />}
+            ? <Button label={t('Anterior')} size="sm" kind="ghost" icon="chevron-up" onPress={() => goPage(current - 1)} disabled={current <= 1} />
+            : <IconButton icon="chevron-up" label={t('Página anterior')} onPress={() => goPage(current - 1)} color={C.text} />}
           <form onSubmit={(e) => { e.preventDefault(); const n = parseInt(pageInput, 10); if (n) goPage(n); setPageInput(''); }} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <input aria-label="Ir a la página" value={pageInput} placeholder={String(current)} onChange={(e) => setPageInput(e.target.value.replace(/\D/g, ''))} inputMode="numeric"
+            <input aria-label={t('Ir a la página')} value={pageInput} placeholder={String(current)} onChange={(e) => setPageInput(e.target.value.replace(/\D/g, ''))} inputMode="numeric"
               style={{ width: 38, textAlign: 'center', padding: '5px 4px', borderRadius: 8, border: `1px solid ${C.line}`, background: C.surface2, color: C.text, font: '600 13px system-ui' }} />
-            <span style={{ color: C.muted, font: '500 13px system-ui' }}>de {total || '…'}</span>
+            <span style={{ color: C.muted, font: '500 13px system-ui' }}>{t('de {v}', { v: total || '…' })}</span>
           </form>
           {isWide
-            ? <Button label="Siguiente" size="sm" kind="ghost" icon="chevron-down" onPress={() => goPage(current + 1)} disabled={current >= total} />
-            : <IconButton icon="chevron-down" label="Página siguiente" onPress={() => goPage(current + 1)} color={C.text} />}
+            ? <Button label={t('Siguiente')} size="sm" kind="ghost" icon="chevron-down" onPress={() => goPage(current + 1)} disabled={current >= total} />
+            : <IconButton icon="chevron-down" label={t('Página siguiente')} onPress={() => goPage(current + 1)} color={C.text} />}
           <View style={{ flex: 1 }} />
-          <IconButton icon="remove" label="Alejar" onPress={() => changeZoom(ZOOMS[Math.max(0, ZOOMS.findIndex((z) => z >= zoom) - 1)])} color={C.text} />
+          <IconButton icon="remove" label={t('Alejar')} onPress={() => changeZoom(ZOOMS[Math.max(0, ZOOMS.findIndex((z) => z >= zoom) - 1)])} color={C.text} />
           <Text style={{ color: C.muted, fontSize: 12.5, minWidth: isWide ? 40 : 34, textAlign: 'center' }}>{Math.round(scale * 100)}%</Text>
-          <IconButton icon="add" label="Acercar" onPress={() => changeZoom(ZOOMS[Math.min(ZOOMS.length - 1, ZOOMS.findIndex((z) => z > zoom))])} color={C.text} />
+          <IconButton icon="add" label={t('Acercar')} onPress={() => changeZoom(ZOOMS[Math.min(ZOOMS.length - 1, ZOOMS.findIndex((z) => z > zoom))])} color={C.text} />
           {canMark && (isWide
             ? <Button label={`Resaltados${hls.length ? ` (${hls.length})` : ''}`} size="sm" kind={panel ? 'primary' : 'secondary'} icon="bookmark-outline" onPress={() => setPanel(!panel)} />
             : <IconButton icon={panel ? 'bookmark' : 'bookmark-outline'} label={`Resaltados (${hls.length})`} onPress={() => setPanel(!panel)} color={panel ? C.brand : C.text} />)}
         </View>
         {/* Páginas */}
         <div ref={scroller} className="kd-pdf" onScroll={onScroll} onClick={onClick} style={{ flex: 1, overflow: 'auto', background: C.surface2, position: 'relative', minHeight: 0 }}>
-          {!doc && <View style={{ padding: 40, alignItems: 'center' }}><ActivityIndicator color={C.brand} /><Text style={{ color: C.muted, marginTop: 10 }}>Abriendo el PDF…</Text></View>}
+          {!doc && <View style={{ padding: 40, alignItems: 'center' }}><ActivityIndicator color={C.brand} /><Text style={{ color: C.muted, marginTop: 10 }}>{t('Abriendo el PDF…')}</Text></View>}
           {doc && <div style={{ height: tops[total] ?? 0, position: 'relative', minWidth: (sizes[0]?.w ?? 0) * scale + 24 }}>
             {visible.map((i) => (
               <PageView key={i} doc={doc} lib={lib} index={i} top={tops[i]} size={sizes[i]} scale={scale}
@@ -249,16 +250,16 @@ export function PdfViewer({ url, name, kind, fileId, subjectId, startPage }: {
           ? { width: 300, borderLeftWidth: 1, borderLeftColor: C.line, backgroundColor: C.surface }
           : { position: 'absolute', left: 0, right: 0, bottom: 0, height: '55%', backgroundColor: C.surface, borderTopWidth: 1, borderTopColor: C.line, borderTopLeftRadius: 16, borderTopRightRadius: 16, zIndex: 20 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: C.line }}>
-            <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '800', flex: 1 }}>Resaltados · {hls.length}</Text>
-            <Button label="Cerrar" size="sm" kind="ghost" onPress={() => setPanel(false)} />
+            <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '800', flex: 1 }}>{t('Resaltados · {length}', { length: hls.length })}</Text>
+            <Button label={t('Cerrar')} size="sm" kind="ghost" onPress={() => setPanel(false)} />
           </View>
           <div style={{ overflow: 'auto', flex: 1, padding: 10 }}>
-            {sorted.length === 0 && <Text style={{ color: C.muted, fontSize: 13, padding: 6 }}>Selecciona texto en el PDF para resaltarlo o comentarlo.</Text>}
+            {sorted.length === 0 && <Text style={{ color: C.muted, fontSize: 13, padding: 6 }}>{t('Selecciona texto en el PDF para resaltarlo o comentarlo.')}</Text>}
             {sorted.map((h) => (
               <button key={h.id} type="button" onClick={() => { goPage(h.page); setFlash(h.id); setTimeout(() => setFlash(null), 1300); if (!isWide) setPanel(false); }}
                 style={{ all: 'unset', boxSizing: 'border-box', display: 'block', width: '100%', cursor: 'pointer', padding: 10, borderRadius: 10, marginBottom: 6, border: `1px solid ${C.line}`, borderLeft: `4px solid ${hlColor(h.color).dot}` }}>
-                <div style={{ color: C.muted, font: '700 11px system-ui', marginBottom: 4 }}>PÁG. {h.page}</div>
-                <div style={{ color: C.text, font: '400 13px/1.4 system-ui', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as any}>{h.text || '(sin texto)'}</div>
+                <div style={{ color: C.muted, font: '700 11px system-ui', marginBottom: 4 }}>{t('PÁG. {page}', { page: h.page })}</div>
+                <div style={{ color: C.text, font: '400 13px/1.4 system-ui', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as any}>{h.text || t('(sin texto)')}</div>
                 {h.comment && <div style={{ color: C.text, font: 'italic 400 12.5px/1.4 system-ui', marginTop: 6 }}>💬 {h.comment}</div>}
               </button>
             ))}
@@ -267,21 +268,21 @@ export function PdfViewer({ url, name, kind, fileId, subjectId, startPage }: {
       )}
 
       {pending && (
-        <div className="kd-pdf-bar" role="toolbar" aria-label="Texto seleccionado" style={{ left: pending.x, top: pending.y }} onMouseDown={(e) => e.preventDefault()}>
-          {canMark && HL_COLORS.map((c) => <button key={c.key} type="button" className="dot" aria-label={`Resaltar en ${c.label.toLowerCase()}`} style={{ background: c.dot }} onClick={() => mark(c.key)} />)}
-          {canMark && <button type="button" onClick={() => mark('yellow', true)}>💬 Comentar</button>}
-          <button type="button" onClick={sendPending}>📝 A una nota</button>
-          <button type="button" onClick={() => cards(pending.text)}>🗂 Tarjeta</button>
+        <div className="kd-pdf-bar" role="toolbar" aria-label={t('Texto seleccionado')} style={{ left: pending.x, top: pending.y }} onMouseDown={(e) => e.preventDefault()}>
+          {canMark && HL_COLORS.map((c) => <button key={c.key} type="button" className="dot" aria-label={t('Resaltar en {toLowerCase}', { toLowerCase: c.label.toLowerCase() })} style={{ background: c.dot }} onClick={() => mark(c.key)} />)}
+          {canMark && <button type="button" onClick={() => mark('yellow', true)}>{t('💬 Comentar')}</button>}
+          <button type="button" onClick={sendPending}>{t('📝 A una nota')}</button>
+          <button type="button" onClick={() => cards(pending.text)}>{t('🗂 Tarjeta')}</button>
         </div>
       )}
 
       {pop && popH && (
         <HighlightPop h={popH} x={pop.x} y={pop.y} startEditing={!!pop.editing}
           onColor={async (c) => { try { await updateHighlight(popH.id, { color: c }); setHls((l) => l.map((x) => (x.id === popH.id ? { ...x, color: c } : x))); } catch (e) { toast(friendlyError(e), { tone: 'bad' }); } }}
-          onComment={async (txt) => { try { await updateHighlight(popH.id, { comment: txt }); setHls((l) => l.map((x) => (x.id === popH.id ? { ...x, comment: txt.trim() || null } : x))); toast('Comentario guardado'); setPop(null); } catch (e) { toast(friendlyError(e), { tone: 'bad' }); } }}
+          onComment={async (txt) => { try { await updateHighlight(popH.id, { comment: txt }); setHls((l) => l.map((x) => (x.id === popH.id ? { ...x, comment: txt.trim() || null } : x))); toast(t('Comentario guardado')); setPop(null); } catch (e) { toast(friendlyError(e), { tone: 'bad' }); } }}
           onSend={() => { setPop(null); setSend({ md: quoteMarkdown(popH.text, name, popH.file_kind, popH.file_id, popH.page, popH.comment), text: popH.text }); }}
           onCards={() => cards(popH.text)}
-          onDelete={async () => { setPop(null); if (!(await confirm('¿Borrar el resaltado?', undefined, 'Borrar'))) return; try { await deleteHighlight(popH.id); setHls((l) => l.filter((x) => x.id !== popH.id)); } catch (e) { toast(friendlyError(e), { tone: 'bad' }); } }}
+          onDelete={async () => { setPop(null); if (!(await confirm(t('¿Borrar el resaltado?'), undefined, t('Borrar')))) return; try { await deleteHighlight(popH.id); setHls((l) => l.filter((x) => x.id !== popH.id)); } catch (e) { toast(friendlyError(e), { tone: 'bad' }); } }}
           onClose={() => setPop(null)} />
       )}
 
@@ -321,7 +322,7 @@ function PageView({ doc, lib, index, top, size, scale, hls, flash, onSize }: {
     return () => { cancelled = true; try { task?.cancel(); } catch { /* noop */ } try { tl?.cancel(); } catch { /* noop */ } };
   }, [doc, index, scale]);
   return (
-    <div className="kd-pdf-page" data-page={index + 1} style={{ top, width: w, height: h }} aria-label={`Página ${index + 1}`}>
+    <div className="kd-pdf-page" data-page={index + 1} style={{ top, width: w, height: h }} aria-label={t('Página {v}', { v: index + 1 })}>
       <canvas ref={canvas} />
       {hls.map((hl) => hl.rects.map((r, k) => (
         <div key={hl.id + k} className={`kd-pdf-hl${flash === hl.id ? ' kd-flash' : ''}`}
@@ -340,29 +341,29 @@ function HighlightPop({ h, x, y, startEditing, onColor, onComment, onSend, onCar
   const [editing, setEditing] = useState(startEditing);
   const [txt, setTxt] = useState(h.comment ?? '');
   return (
-    <div className="kd-pdf-bar" role="dialog" aria-label="Resaltado" style={{ left: x, top: y, flexDirection: 'column', alignItems: 'stretch', gap: 6 }}
+    <div className="kd-pdf-bar" role="dialog" aria-label={t('Resaltado')} style={{ left: x, top: y, flexDirection: 'column', alignItems: 'stretch', gap: 6 }}
       onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}>
       <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
         {HL_COLORS.map((c) => <button key={c.key} type="button" className={`dot${h.color === c.key ? ' on' : ''}`} aria-label={`Color ${c.label.toLowerCase()}`} style={{ background: c.dot }} onClick={() => onColor(c.key)} />)}
         <span style={{ flex: 1 }} />
-        <button type="button" aria-label="Cerrar" onClick={onClose}>✕</button>
+        <button type="button" aria-label={t('Cerrar')} onClick={onClose}>✕</button>
       </div>
       {editing ? (
         <>
-          <textarea autoFocus aria-label="Comentario" value={txt} maxLength={2000} placeholder="Tu comentario" onChange={(e) => setTxt(e.target.value)} />
+          <textarea autoFocus aria-label={t('Comentario')} value={txt} maxLength={2000} placeholder={t('Tu comentario')} onChange={(e) => setTxt(e.target.value)} />
           <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-            <button type="button" onClick={() => { setEditing(false); setTxt(h.comment ?? ''); }}>Cancelar</button>
-            <button type="button" style={{ background: C.brand, color: C.onBrand }} onClick={() => onComment(txt)}>Guardar</button>
+            <button type="button" onClick={() => { setEditing(false); setTxt(h.comment ?? ''); }}>{t('Cancelar')}</button>
+            <button type="button" style={{ background: C.brand, color: C.onBrand }} onClick={() => onComment(txt)}>{t('Guardar')}</button>
           </div>
         </>
       ) : (
         <>
           {h.comment && <div style={{ maxWidth: 260, font: 'italic 400 13px/1.4 system-ui', padding: '2px 6px' }}>{h.comment}</div>}
           <div style={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-            <button type="button" onClick={() => setEditing(true)}>💬 {h.comment ? 'Editar' : 'Comentar'}</button>
-            <button type="button" onClick={onSend}>📝 A una nota</button>
-            <button type="button" onClick={onCards}>🗂 Tarjeta</button>
-            <button type="button" onClick={onDelete} style={{ color: C.badText }}>Borrar</button>
+            <button type="button" onClick={() => setEditing(true)}>💬 {h.comment ? t('Editar') : t('Comentar')}</button>
+            <button type="button" onClick={onSend}>{t('📝 A una nota')}</button>
+            <button type="button" onClick={onCards}>{t('🗂 Tarjeta')}</button>
+            <button type="button" onClick={onDelete} style={{ color: C.badText }}>{t('Borrar')}</button>
           </div>
         </>
       )}

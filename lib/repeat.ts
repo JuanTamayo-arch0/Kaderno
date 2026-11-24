@@ -1,3 +1,4 @@
+import { t, trn } from './i18n';
 // ============================================================
 //  Tareas que se repiten (v21, sección 1). Puro, con pruebas.
 //  Texto en español → regla, regla → siguiente fecha, regla → texto.
@@ -25,7 +26,7 @@ const MONTHS: Record<string, number> = {
   enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5, julio: 6, agosto: 7, septiembre: 8, setiembre: 8, octubre: 9, noviembre: 10, diciembre: 11,
   ene: 0, feb: 1, abr: 3, may: 4, jun: 5, jul: 6, ago: 7, sep: 8, sept: 8, oct: 9, nov: 10, dic: 11,
 };
-const DAY_NAME = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const DAY_NAME = ['domingo', 'lunes', 'martes', t('miércoles'), 'jueves', 'viernes', t('sábado')];
 const MONTH_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/^[(\["'¿¡]+|[)\]"',;.:?]+$/g, '');
@@ -105,15 +106,15 @@ export function ruleText(rule: RepeatRule | null | undefined): string {
   if (!rule) return '';
   const n = Math.max(1, rule.interval || 1);
   let t: string;
-  if (rule.freq === 'day') t = n === 1 ? 'cada día' : `cada ${n} días`;
-  else if (rule.freq === 'month') t = (n === 1 ? 'cada mes' : `cada ${n} meses`) + (rule.monthDay ? ` el ${rule.monthDay}` : '');
+  if (rule.freq === 'day') t = n === 1 ? trn('cada día') : trn('cada {n} días', { n });
+  else if (rule.freq === 'month') t = (n === 1 ? trn('cada mes') : trn('cada {n} meses', { n })) + (rule.monthDay ? ` el ${rule.monthDay}` : '');
   else if (rule.days?.length) {
     const d = [...rule.days].sort();
-    if (n === 1 && d.join() === '1,2,3,4,5') t = 'cada día hábil';
-    else t = (n === 1 ? 'cada ' : `cada ${n} semanas: `) + joinY(d.map((x) => DAY_NAME[x]));
-  } else t = n === 1 ? 'cada semana' : `cada ${n} semanas`;
-  if (rule.until) { const u = toDate(rule.until); t += ` hasta el ${u.getUTCDate()} ${MONTH_SHORT[u.getUTCMonth()]}`; }
-  if (rule.fromDone) t += ' (desde que la terminas)';
+    if (n === 1 && d.join() === '1,2,3,4,5') t = trn('cada día hábil');
+    else t = (n === 1 ? 'cada ' : trn('cada {n} semanas: ', { n })) + joinY(d.map((x) => DAY_NAME[x]));
+  } else t = n === 1 ? trn('cada semana') : trn('cada {n} semanas', { n });
+  if (rule.until) { const u = toDate(rule.until); t += trn(' hasta el {getUTCDate} {v}', { getUTCDate: u.getUTCDate(), v: MONTH_SHORT[u.getUTCMonth()] }); }
+  if (rule.fromDone) t += trn(' (desde que la terminas)');
   return t;
 }
 

@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { t } from './i18n';
 
 // ============================================================
 //  Achicar imágenes antes de guardarlas (web).
@@ -20,7 +21,7 @@ export async function shrinkToSquare(src: string, px = ICON_PX, quality = 0.82):
     const i = new Image();
     i.crossOrigin = 'anonymous';
     i.onload = () => resolve(i);
-    i.onerror = () => reject(new Error('No se pudo leer la imagen'));
+    i.onerror = () => reject(new Error(t('No se pudo leer la imagen')));
     i.src = src;
   });
   const side = Math.min(img.naturalWidth, img.naturalHeight);
@@ -44,13 +45,13 @@ export async function shrinkForNote(file: Blob, max = 1600, quality = 0.85): Pro
   const src = await new Promise<string>((resolve, reject) => {
     const r = new FileReader();
     r.onload = () => resolve(String(r.result));
-    r.onerror = () => reject(new Error('No se pudo leer la imagen'));
+    r.onerror = () => reject(new Error(t('No se pudo leer la imagen')));
     r.readAsDataURL(file);
   });
   const img = await new Promise<HTMLImageElement>((resolve, reject) => {
     const i = new Image();
     i.onload = () => resolve(i);
-    i.onerror = () => reject(new Error('Ese archivo no parece una imagen'));
+    i.onerror = () => reject(new Error(t('Ese archivo no parece una imagen')));
     i.src = src;
   });
   const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
@@ -58,7 +59,7 @@ export async function shrinkForNote(file: Blob, max = 1600, quality = 0.85): Pro
   const canvas = document.createElement('canvas');
   canvas.width = w; canvas.height = h;
   const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('No se pudo procesar la imagen');
+  if (!ctx) throw new Error(t('No se pudo procesar la imagen'));
   ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h); // PNG con transparencia: fondo blanco en JPEG
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(img, 0, 0, w, h);

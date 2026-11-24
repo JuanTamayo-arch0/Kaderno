@@ -74,6 +74,7 @@ import { getTerms } from '../../lib/termsDb';
 import { shouldOfferClose as shouldOfferCloseTerm, type Term } from '../../lib/terms';
 import { otherSpaceLine } from '../../lib/spaces';
 import { switchSpace } from '../../lib/spaceSwitch';
+import { t, trn, locale } from '../../lib/i18n';
 
 // ============================================================
 //  Hoy.
@@ -244,8 +245,8 @@ export default function Hoy() {
       streakChanged();
       // Tu tiempo real: "Te tomó 50 min (calculaste 30)".
       const took = done ? tookText(focusBy[t.id], t.estimate_min) : null;
-      if (allDone) { setTimeout(() => celebrate(), 220); toast(took ? `¡Terminaste todo lo de hoy! ${took}.` : '¡Terminaste todo lo de hoy!', { tone: 'good', actionLabel: 'Deshacer', onAction: () => toggle({ ...t, status: 'done' }) }); }
-      else if (done) toast(took ? `Hecha: ${t.title}. ${took}.` : `Hecha: ${t.title}`, { tone: 'good', actionLabel: 'Deshacer', onAction: () => toggle({ ...t, status: 'done' }) });
+      if (allDone) { setTimeout(() => celebrate(), 220); toast(took ? trn('¡Terminaste todo lo de hoy! {took}.', { took }) : trn('¡Terminaste todo lo de hoy!'), { tone: 'good', actionLabel: trn('Deshacer'), onAction: () => toggle({ ...t, status: 'done' }) }); }
+      else if (done) toast(took ? trn('Hecha: {title}. {took}.', { title: t.title, took }) : trn('Hecha: {title}', { title: t.title }), { tone: 'good', actionLabel: trn('Deshacer'), onAction: () => toggle({ ...t, status: 'done' }) });
     } catch (e) {
       setTasks((xs) => xs?.map((x) => x.id === t.id ? t : x) ?? null);
       toast(friendlyError(e), { tone: 'bad' });
@@ -267,7 +268,7 @@ export default function Hoy() {
       await setSomeday(t.id, true);
       setHidden((h) => { const n = new Set(h); n.delete(t.id); return n; });
       setTasks((xs) => xs?.map((x) => x.id === t.id ? { ...x, someday: true, inbox: true, due_date: null, due_at: null } : x) ?? null);
-      toast(`"${t.title}" quedó para algún día`, { tone: 'good' }); refreshNavCounts(true);
+      toast(trn('"{title}" quedó para algún día', { title: t.title }), { tone: 'good' }); refreshNavCounts(true);
     } catch (e) { setHidden((h) => { const n = new Set(h); n.delete(t.id); return n; }); toast(friendlyError(e), { tone: 'bad' }); }
   }
   // Soltar en otro cuadrante: cambia la estrella; la fecha se ofrece, no se cambia sola.
@@ -275,24 +276,24 @@ export default function Hoy() {
     const c = dropChange(from, to);
     if (c.important !== null) star(t, c.important);
     const today = startOfDay(new Date());
-    if (to === 'soltar') toast(`¿Ni urgente ni importante? Puedes mandarla a Algún día: ${t.title}`, { actionLabel: 'Algún día', onAction: () => toSomeday(t) });
-    else if (c.offer === 'hoy') toast(`¿La pasas a hoy? Así queda urgente: ${t.title}`, { actionLabel: 'Mover a hoy', onAction: () => move(t, isoDate(today), 'hoy') });
-    else if (c.offer === 'despues') toast(`Sin afán: ¿la pasas a la próxima semana? ${t.title}`, { actionLabel: 'Mover', onAction: () => move(t, isoDate(addDays(today, 7 - ((today.getDay() + 6) % 7))), 'el lunes') });
+    if (to === 'soltar') toast(trn('¿Ni urgente ni importante? Puedes mandarla a Algún día: {title}', { title: t.title }), { actionLabel: trn('Algún día'), onAction: () => toSomeday(t) });
+    else if (c.offer === 'hoy') toast(trn('¿La pasas a hoy? Así queda urgente: {title}', { title: t.title }), { actionLabel: trn('Mover a hoy'), onAction: () => move(t, isoDate(today), 'hoy') });
+    else if (c.offer === 'despues') toast(trn('Sin afán: ¿la pasas a la próxima semana? {title}', { title: t.title }), { actionLabel: trn('Mover'), onAction: () => move(t, isoDate(addDays(today, 7 - ((today.getDay() + 6) % 7))), trn('el lunes')) });
   }
   async function move(t: Task, iso: string | null, label: string) {
     try { await moveTaskDate(t, iso); toast(`Movida a ${label}`); load(); }
     catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
   }
   async function hideProj(p: MyProjectTask, wholeProject: boolean) {
-    const name = p.project?.name ?? 'el proyecto';
+    const name = p.project?.name ?? t('el proyecto');
     const apply = (hidden: boolean) => setHiddenH((h) => wholeProject
       ? { ...h, projects: hidden ? [...h.projects, p.project_id] : h.projects.filter((x) => x !== p.project_id) }
       : { ...h, tasks: hidden ? [...h.tasks, p.id] : h.tasks.filter((x) => x !== p.id) });
     apply(true);
     try {
       if (wholeProject) await setProjectHidden(p.project_id, true); else await setTaskHidden(p.id, true);
-      toast(wholeProject ? `Ocultaste ${name} de Hoy` : 'Tarea oculta de Hoy (sigue en el tablero)', {
-        actionLabel: 'Deshacer',
+      toast(wholeProject ? t('Ocultaste {name} de Hoy', { name }) : t('Tarea oculta de Hoy (sigue en el tablero)'), {
+        actionLabel: t('Deshacer'),
         onAction: () => { apply(false); (wholeProject ? setProjectHidden(p.project_id, false) : setTaskHidden(p.id, false)).catch(() => {}); },
       });
     } catch (e) { apply(false); toast(friendlyError(e), { tone: 'bad' }); }
@@ -300,30 +301,30 @@ export default function Hoy() {
   async function showHidden() {
     const prev = hiddenH;
     setHiddenH({ tasks: [], projects: [] });
-    try { await clearHoyHidden(); toast('Volvieron a aparecer las tareas de proyecto ocultas'); }
+    try { await clearHoyHidden(); toast(t('Volvieron a aparecer las tareas de proyecto ocultas')); }
     catch (e) { setHiddenH(prev); toast(friendlyError(e), { tone: 'bad' }); }
   }
 
   const actionsFor = (t: Task): MenuAction[] => {
     const today = startOfDay(new Date());
     const list: MenuAction[] = [
-      { label: 'Abrir y editar', icon: 'create-outline', onPress: () => openTask(t) },
+      { label: trn('Abrir y editar'), icon: 'create-outline', onPress: () => openTask(t) },
       t.type === 'repaso' && t.session_kind === 'sim'
-        ? { label: 'Hacer el simulacro', icon: 'clipboard-outline', onPress: () => startTask(t) }
-        : { label: 'Enfocarme en esta tarea', icon: 'timer-outline', onPress: () => { startFocus({ taskId: t.id, taskTitle: t.title, subjectId: t.subject_id }); router.push('/enfoque'); } },
-      ...(t.status !== 'done' ? [{ label: 'Iniciar cronómetro', icon: 'play-circle-outline' as const, onPress: () => { startStopwatch({ title: t.title, subjectId: t.subject_id, assignmentId: t.id }); toast('Cronómetro: ' + t.title); } }] : []),
-      ...(['examen', 'quiz'].includes(String(t.type)) && t.status !== 'done' ? [{ label: 'Plan de repaso', icon: 'calendar-number-outline' as const, onPress: () => openTask(t) }] : []),
-      ...(t.repeat_rule && t.status !== 'done' ? [{ label: 'Saltar esta vez', icon: 'play-skip-forward-outline' as const, onPress: async () => {
-        try { await skipRepeat(t.id); toast(`Saltada. Sigue ${ruleText(t.repeat_rule)}.`, { actionLabel: 'Ver', onAction: load }); load(); refreshNavCounts(true); }
+        ? { label: trn('Hacer el simulacro'), icon: 'clipboard-outline', onPress: () => startTask(t) }
+        : { label: trn('Enfocarme en esta tarea'), icon: 'timer-outline', onPress: () => { startFocus({ taskId: t.id, taskTitle: t.title, subjectId: t.subject_id }); router.push('/enfoque'); } },
+      ...(t.status !== 'done' ? [{ label: trn('Iniciar cronómetro'), icon: 'play-circle-outline' as const, onPress: () => { startStopwatch({ title: t.title, subjectId: t.subject_id, assignmentId: t.id }); toast(trn('Cronómetro: ') + t.title); } }] : []),
+      ...(['examen', 'quiz'].includes(String(t.type)) && t.status !== 'done' ? [{ label: trn('Plan de repaso'), icon: 'calendar-number-outline' as const, onPress: () => openTask(t) }] : []),
+      ...(t.repeat_rule && t.status !== 'done' ? [{ label: trn('Saltar esta vez'), icon: 'play-skip-forward-outline' as const, onPress: async () => {
+        try { await skipRepeat(t.id); toast(`Saltada. Sigue ${ruleText(t.repeat_rule)}.`, { actionLabel: trn('Ver'), onAction: load }); load(); refreshNavCounts(true); }
         catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
       } }] : []),
-      { label: 'Mover a hoy', icon: 'today-outline', onPress: () => move(t, isoDate(today), 'hoy') },
-      { label: 'Mover a mañana', icon: 'arrow-forward-outline', onPress: () => move(t, isoDate(addDays(today, 1)), 'mañana') },
-      { label: 'Mover a la próxima semana', icon: 'play-skip-forward-outline', onPress: () => move(t, isoDate(addDays(today, 7 - ((today.getDay() + 6) % 7))), 'el lunes') },
-      { label: t.status === 'done' ? 'Marcar pendiente' : 'Marcar hecha', icon: 'checkmark-circle-outline', onPress: () => toggle(t) },
-      { label: t.important ? 'Quitar importante' : 'Marcar importante', icon: t.important ? 'star' : 'star-outline', onPress: () => star(t) },
-      { label: 'Mandar a Algún día', icon: 'cloud-outline', onPress: () => toSomeday(t) },
-      { label: 'Borrar', icon: 'trash-outline', danger: true, onPress: () => remove(t) },
+      { label: trn('Mover a hoy'), icon: 'today-outline', onPress: () => move(t, isoDate(today), 'hoy') },
+      { label: trn('Mover a mañana'), icon: 'arrow-forward-outline', onPress: () => move(t, isoDate(addDays(today, 1)), trn('mañana')) },
+      { label: trn('Mover a la próxima semana'), icon: 'play-skip-forward-outline', onPress: () => move(t, isoDate(addDays(today, 7 - ((today.getDay() + 6) % 7))), trn('el lunes')) },
+      { label: t.status === 'done' ? trn('Marcar pendiente') : trn('Marcar hecha'), icon: 'checkmark-circle-outline', onPress: () => toggle(t) },
+      { label: t.important ? trn('Quitar importante') : trn('Marcar importante'), icon: t.important ? 'star' : 'star-outline', onPress: () => star(t) },
+      { label: trn('Mandar a Algún día'), icon: 'cloud-outline', onPress: () => toSomeday(t) },
+      { label: trn('Borrar'), icon: 'trash-outline', danger: true, onPress: () => remove(t) },
     ];
     return list;
   };
@@ -374,8 +375,8 @@ export default function Hoy() {
     ...((!filter || vista === 'proyectos') ? ptasks.filter((p) => !filter || p.project?.id === filter) : []).map((p): MatrixItem => ({
       key: 'p' + p.id, quadrant: quadrantOf(p as any, todayIso, urgentDays), draggable: false,
       node: <ProjectRow p={p} onOpen={() => router.push(`/proyectos/${p.project_id}`)} actions={[
-        { label: 'Abrir el proyecto', icon: 'open-outline', onPress: () => router.push(`/proyectos/${p.project_id}`) },
-        { label: 'Ocultar esta tarea de Hoy', icon: 'eye-off-outline', onPress: () => hideProj(p, false) },
+        { label: t('Abrir el proyecto'), icon: 'open-outline', onPress: () => router.push(`/proyectos/${p.project_id}`) },
+        { label: t('Ocultar esta tarea de Hoy'), icon: 'eye-off-outline', onPress: () => hideProj(p, false) },
       ]} />,
     })),
   ];
@@ -417,7 +418,7 @@ export default function Hoy() {
         if (t.plan_at) { const d = new Date(t.plan_at); d.setFullYear(now.getFullYear(), now.getMonth(), now.getDate()); await updateTask(t.id, { plan_at: d.toISOString() }); }
         else await updateTask(t.id, { plan_day: dayISO(now) });
       }
-      toast(list.length === 1 ? 'Quedó para hoy' : `${list.length} quedaron para hoy`, { tone: 'good' }); load();
+      toast(list.length === 1 ? t('Quedó para hoy') : t('{length} quedaron para hoy', { length: list.length }), { tone: 'good' }); load();
     } catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
   }
   async function togglePriority(p: Priority, i: number) {
@@ -429,11 +430,11 @@ export default function Hoy() {
   }
 
   const summary: React.ReactNode[] = [];
-  summary.push(<Text key="t" style={{ color: C.text, fontWeight: '700' }}>{todayCount === 0 ? 'Nada para hoy' : todayCount === 1 ? '1 para hoy' : `${todayCount} para hoy`}</Text>);
-  if (overdueCount) summary.push(<Text key="o" style={{ color: C.badText, fontWeight: '600' }}>{overdueCount === 1 ? '1 vencida' : `${overdueCount} vencidas`}</Text>);
+  summary.push(<Text key="t" style={{ color: C.text, fontWeight: '700' }}>{todayCount === 0 ? t('Nada para hoy') : todayCount === 1 ? t('1 para hoy') : t('{todayCount} para hoy', { todayCount })}</Text>);
+  if (overdueCount) summary.push(<Text key="o" style={{ color: C.badText, fontWeight: '600' }}>{overdueCount === 1 ? t('1 vencida') : `${overdueCount} vencidas`}</Text>);
   if (nextExam) {
     const dd = dayDiff(dueDay(nextExam)!, now);
-    summary.push(<Text key="e">{`${nextExam.title.length > 32 ? nextExam.title.slice(0, 30) + '…' : nextExam.title} ${dd === 0 ? 'hoy' : dd === 1 ? 'mañana' : `en ${dd} días`}`}</Text>);
+    summary.push(<Text key="e">{`${nextExam.title.length > 32 ? nextExam.title.slice(0, 30) + '…' : nextExam.title} ${dd === 0 ? 'hoy' : dd === 1 ? t('mañana') : t('en {dd} días', { dd })}`}</Text>);
   }
 
   const me = (() => {
@@ -443,15 +444,15 @@ export default function Hoy() {
     return { first: parts[0] ? parts[0][0].toUpperCase() + parts[0].slice(1) : '', initials: (parts.length >= 2 ? parts[0][0] + parts[1][0] : name.slice(0, 2)).toUpperCase() };
   })();
   const hour = now.getHours();
-  const greet = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches';
+  const greet = hour < 12 ? t('Buenos días') : hour < 19 ? t('Buenas tardes') : t('Buenas noches');
 
   const headerRight = isWide ? (
-    <Button label="Nueva tarea" icon="add" onPress={() => openTask()} />
+    <Button label={t('Nueva tarea')} icon="add" onPress={() => openTask()} />
   ) : (
     <>
-      <IconButton icon="search" label="Buscar" onPress={openCommand} color={C.text} />
-      <IconButton icon={counts.unread ? 'notifications' : 'notifications-outline'} label="Avisos" onPress={openInbox} color={counts.unread ? C.brand : C.text} badge={counts.unread} />
-      <Pressable onPress={() => router.push('/ajustes')} accessibilityRole="button" accessibilityLabel="Ajustes y cuenta" style={{ padding: 4 }}>
+      <IconButton icon="search" label={t('Buscar')} onPress={openCommand} color={C.text} />
+      <IconButton icon={counts.unread ? 'notifications' : 'notifications-outline'} label={t('Avisos')} onPress={openInbox} color={counts.unread ? C.brand : C.text} badge={counts.unread} />
+      <Pressable onPress={() => router.push('/ajustes')} accessibilityRole="button" accessibilityLabel={t('Ajustes y cuenta')} style={{ padding: 4 }}>
         <Avatar initials={me.initials || 'K'} size={32} />
       </Pressable>
     </>
@@ -467,12 +468,12 @@ export default function Hoy() {
   const focusCard = focus.state.running || focus.remaining < focus.total ? (
     <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12, borderLeftWidth: 4, borderLeftColor: focus.state.mode === 'work' ? C.brand : C.good }}>
       <Ionicons name="timer-outline" size={22} color={focus.state.mode === 'work' ? C.brand : C.goodText} />
-      <Pressable style={{ flex: 1 }} onPress={() => router.push('/enfoque')} accessibilityRole="button" accessibilityLabel="Abrir enfoque">
-        <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>{focus.state.mode === 'work' ? 'Enfocado' : 'Descanso'}{focus.state.running ? '' : ' · en pausa'}</Text>
+      <Pressable style={{ flex: 1 }} onPress={() => router.push('/enfoque')} accessibilityRole="button" accessibilityLabel={t('Abrir enfoque')}>
+        <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>{focus.state.mode === 'work' ? t('Enfocado') : t('Descanso')}{focus.state.running ? '' : t(' · en pausa')}</Text>
         <Text style={{ color: C.text, fontSize: 22, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{focus.label}</Text>
         {!!focus.state.taskTitle && <Text style={{ color: C.muted, fontSize: 12.5 }} numberOfLines={1}>{focus.state.taskTitle}</Text>}
       </Pressable>
-      <Button label={focus.state.running ? 'Pausar' : 'Seguir'} kind="secondary" size="sm" icon={focus.state.running ? 'pause' : 'play'}
+      <Button label={focus.state.running ? t('Pausar') : t('Seguir')} kind="secondary" size="sm" icon={focus.state.running ? 'pause' : 'play'}
         onPress={() => focus.state.running ? pauseFocus() : startFocus()} />
     </Card>
   ) : null;
@@ -482,18 +483,18 @@ export default function Hoy() {
       <View style={{ width: 4, alignSelf: 'stretch', borderRadius: 2, backgroundColor: (classNow ?? classNext)!.color }} />
       <View style={{ flex: 1, minWidth: 150 }}>
         <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-          {classNow ? `Ahora · hasta ${minToLabel(classNow.end!)}` : `Siguiente ${mv.klass} · ${minToLabel(classNext!.start)}`}
+          {classNow ? t('Ahora · hasta {minToLabel}', { minToLabel: minToLabel(classNow.end!) }) : `Siguiente ${mv.klass} · ${minToLabel(classNext!.start)}`}
         </Text>
         <Text style={{ color: C.text, fontSize: 16, fontWeight: '700', marginTop: 2 }}>{(classNow ?? classNext)!.title}</Text>
-        {classNow && classNext && <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>Después: {classNext.title}, {minToLabel(classNext.start)}</Text>}
+        {classNow && classNext && <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{t('Después: {title}, {start}', { title: classNext.title, start: minToLabel(classNext.start) })}</Text>}
       </View>
       {classNow?.subjectId && (
-        <Button label={study ? 'Apuntes de hoy' : 'Notas de la reunión'} kind="secondary" size="sm" icon="create-outline" onPress={async () => {
+        <Button label={study ? t('Apuntes de hoy') : t('Notas de la reunión')} kind="secondary" size="sm" icon="create-outline" onPress={async () => {
           try { const r = await openClassNote(classNow.subjectId!); router.push({ pathname: '/nota/[id]', params: { id: r.id, edit: '1' } } as any); }
           catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
         }} />
       )}
-      <Button label="Enfocar" kind="secondary" size="sm" icon="timer-outline" onPress={() => { startFocus({ subjectId: (classNow ?? classNext)!.subjectId ?? null }); router.push('/enfoque'); }} />
+      <Button label={t('Enfocar')} kind="secondary" size="sm" icon="timer-outline" onPress={() => { startFocus({ subjectId: (classNow ?? classNext)!.subjectId ?? null }); router.push('/enfoque'); }} />
     </Card>
   ) : null;
 
@@ -506,9 +507,9 @@ export default function Hoy() {
         const on = day === iso;
         return (
           <Pressable key={iso} onPress={() => setDay(on ? null : iso)} accessibilityRole="button" accessibilityState={{ selected: on }}
-            accessibilityLabel={`${i === 0 ? 'Hoy' : DAY_SHORT[d.getDay()]} ${d.getDate()}, ${n} ${n === 1 ? 'entrega' : 'entregas'}`}
+            accessibilityLabel={`${i === 0 ? t('Hoy') : DAY_SHORT[d.getDay()]} ${d.getDate()}, ${n} ${n === 1 ? 'entrega' : 'entregas'}`}
             style={{ flex: 1, minWidth: isWide ? 64 : 44, alignItems: 'center', paddingVertical: 7, borderRadius: 12, backgroundColor: on ? C.brand : i === 0 ? C.surface : 'transparent', borderWidth: 1, borderColor: on ? C.brand : i === 0 ? C.line : 'transparent' }}>
-            <Text style={{ color: on ? C.onBrand : C.muted, fontSize: 11.5, fontWeight: '600' }}>{i === 0 ? 'Hoy' : capitalize(DAY_SHORT[d.getDay()])}</Text>
+            <Text style={{ color: on ? C.onBrand : C.muted, fontSize: 11.5, fontWeight: '600' }}>{i === 0 ? t('Hoy') : capitalize(DAY_SHORT[d.getDay()])}</Text>
             <Text style={{ color: on ? C.onBrand : C.text, fontSize: 16, fontWeight: '800', marginTop: 1 }}>{d.getDate()}</Text>
             <View style={{ flexDirection: 'row', gap: 2, height: 6, marginTop: 3 }}>
               {Array.from({ length: Math.min(3, n) }, (_, k) => <View key={k} style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: on ? C.onBrand : C.brand }} />)}
@@ -534,14 +535,14 @@ export default function Hoy() {
       {(nProyectos > 0 || vista !== 'todo') && (
         <ScopeSwitch value={vista} onChange={changeVista}
           items={[
-            { key: 'todo', label: 'Todo', count: nMaterias + nProyectos },
+            { key: 'todo', label: t('Todo'), count: nMaterias + nProyectos },
             { key: 'materias', label: mv.subjectsTab, count: nMaterias, icon: 'school-outline' },
-            { key: 'proyectos', label: 'Proyectos', count: nProyectos, icon: 'people-outline' },
+            { key: 'proyectos', label: t('Proyectos'), count: nProyectos, icon: 'people-outline' },
           ]} />
       )}
       {chips.length > 1 && (
         <ChipRow>
-          <FilterChip label={vista === 'proyectos' ? 'Todos' : 'Todas'} active={!filter} onPress={() => setFilter(null)} />
+          <FilterChip label={vista === 'proyectos' ? t('Todos') : t('Todas')} active={!filter} onPress={() => setFilter(null)} />
           {chips.map((c) => (
             <FilterChip key={c.id} label={c.label} color={c.color} active={filter === c.id} onPress={() => setFilter(filter === c.id ? null : c.id)} />
           ))}
@@ -551,12 +552,12 @@ export default function Hoy() {
   );
 
   const repasoCard = repaso > 0 ? (
-    <Card onPress={() => router.push('/repaso')} accessibilityLabel={`Repasar ${repaso} tarjetas`} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: isWide ? 0 : 12 }}>
+    <Card onPress={() => router.push('/repaso')} accessibilityLabel={t('Repasar {repaso} tarjetas', { repaso })} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: isWide ? 0 : 12 }}>
       <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: C.brand2 + '22', alignItems: 'center', justifyContent: 'center' }}>
         <Ionicons name="albums-outline" size={18} color={C.brand2} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ color: C.text, fontWeight: '700' }}>Repaso pendiente</Text>
+        <Text style={{ color: C.text, fontWeight: '700' }}>{t('Repaso pendiente')}</Text>
         <Text style={{ color: C.muted, fontSize: 12.5 }}>{repaso} {repaso === 1 ? 'tarjeta' : 'tarjetas'}, {estimateLabel(repaso, repasoSecs)}</Text>
       </View>
       <Ionicons name="chevron-forward" size={18} color={C.muted} />
@@ -566,14 +567,14 @@ export default function Hoy() {
   const renderRow = (r: Row) => r.kind === 'task' ? (
     <TaskRow key={r.t.id} task={leaving.has(r.t.id) ? { ...r.t, status: 'done' } : r.t} subject={subjOf(r.t.subject_id)} steps={steps[r.t.id]} focusMin={focusBy[r.t.id]}
       onToggle={toggle} onOpen={(t) => openTask(t)} actions={actionsFor(r.t)}
-      swipe={!isWide && r.t.status !== 'done' ? { onDone: () => toggle(r.t), onLater: () => move(r.t, tomorrowISO(new Date()), 'mañana') } : undefined}
+      swipe={!isWide && r.t.status !== 'done' ? { onDone: () => toggle(r.t), onLater: () => move(r.t, tomorrowISO(new Date()), t('mañana')) } : undefined}
       onStepsChange={(id, next) => setSteps((s) => ({ ...s, [id]: next }))} />
   ) : (
     <ProjectRow key={'p' + r.p.id} p={r.p} onOpen={() => router.push(`/proyectos/${r.p.project_id}`)}
       actions={[
-        { label: 'Abrir el proyecto', icon: 'open-outline', onPress: () => router.push(`/proyectos/${r.p.project_id}`) },
-        { label: 'Ocultar esta tarea de Hoy', icon: 'eye-off-outline', onPress: () => hideProj(r.p, false) },
-        { label: `Ocultar todo ${r.p.project?.name ?? 'este proyecto'} de Hoy`, icon: 'eye-off', onPress: () => hideProj(r.p, true) },
+        { label: t('Abrir el proyecto'), icon: 'open-outline', onPress: () => router.push(`/proyectos/${r.p.project_id}`) },
+        { label: t('Ocultar esta tarea de Hoy'), icon: 'eye-off-outline', onPress: () => hideProj(r.p, false) },
+        { label: t('Ocultar todo {v} de Hoy', { v: r.p.project?.name ?? t('este proyecto') }), icon: 'eye-off', onPress: () => hideProj(r.p, true) },
       ]} />
   );
 
@@ -582,18 +583,18 @@ export default function Hoy() {
   ) : error && !tasks.length ? (
     <ErrorState message={error} onRetry={load} />
   ) : subjects.length === 0 && live.length === 0 ? (
-    <EmptyState icon="school-outline" title={`Empecemos por tus ${mv.subjectsLower}`}
-      text={mv.subjectLower === 'área' ? 'Crea tus áreas o clientes y luego anota tus entregas.' : 'Crea las materias del semestre y luego anota tus entregas. También puedes importar el cronograma completo.'}
-      action={{ label: `Crear ${mv.subjectsLower}`, icon: 'add', onPress: () => router.push('/bienvenida') }} />
+    <EmptyState icon="school-outline" title={t('Empecemos por tus {subjectsLower}', { subjectsLower: mv.subjectsLower })}
+      text={mv.subjectLower === 'área' ? t('Crea tus áreas o clientes y luego anota tus entregas.') : t('Crea las materias del semestre y luego anota tus entregas. También puedes importar el cronograma completo.')}
+      action={{ label: t('Crear {subjectsLower}', { subjectsLower: mv.subjectsLower }), icon: 'add', onPress: () => router.push('/bienvenida') }} />
   ) : groups.length === 0 ? (
     vista === 'proyectos' && !day && !filter ? (
-      <EmptyState icon="people-outline" title="Nada de proyectos para ti"
-        text={hiddenCount > 0 ? 'Tienes tareas de proyecto ocultas. Puedes mostrarlas abajo.' : 'Cuando te asignen una tarea en un proyecto, aparecerá aquí.'}
-        action={{ label: 'Ver todo', icon: 'list-outline', onPress: () => changeVista('todo') }} compact />
+      <EmptyState icon="people-outline" title={t('Nada de proyectos para ti')}
+        text={hiddenCount > 0 ? t('Tienes tareas de proyecto ocultas. Puedes mostrarlas abajo.') : t('Cuando te asignen una tarea en un proyecto, aparecerá aquí.')}
+        action={{ label: t('Ver todo'), icon: 'list-outline', onPress: () => changeVista('todo') }} compact />
     ) : (
-    <EmptyState icon="checkmark-done-outline" title={day ? 'Nada para ese día' : filter ? (vista === 'proyectos' ? 'Nada pendiente en este proyecto' : `Nada pendiente en esta ${mv.subjectLower}`) : 'Todo al día'}
-      text={day || filter ? 'Toca de nuevo el filtro para ver todo.' : 'No tienes entregas pendientes. Agrega la próxima cuando te la pongan.'}
-      action={{ label: 'Agregar tarea', icon: 'add', onPress: openAdd }} compact />
+    <EmptyState icon="checkmark-done-outline" title={day ? t('Nada para ese día') : filter ? (vista === 'proyectos' ? t('Nada pendiente en este proyecto') : t('Nada pendiente en esta {subjectLower}', { subjectLower: mv.subjectLower })) : t('Todo al día')}
+      text={day || filter ? t('Toca de nuevo el filtro para ver todo.') : t('No tienes entregas pendientes. Agrega la próxima cuando te la pongan.')}
+      action={{ label: t('Agregar tarea'), icon: 'add', onPress: openAdd }} compact />
     )
   ) : (
     // v26: al mover o filtrar, las filas se deslizan a su nuevo lugar.
@@ -613,7 +614,7 @@ export default function Hoy() {
     <View style={{ marginTop: 8 }}>
       <Pressable onPress={() => setShowDone((v) => !v)} accessibilityRole="button" accessibilityState={{ expanded: showDone }}
         style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', borderColor: C.line, marginBottom: 8, minHeight: 48 }}>
-        <Text style={{ color: C.muted, fontSize: 13.5 }}>{doneRecent.length} {doneRecent.length === 1 ? 'completada' : 'completadas'} esta semana</Text>
+        <Text style={{ color: C.muted, fontSize: 13.5 }}>{t('{length} {v} esta semana', { length: doneRecent.length, v: doneRecent.length === 1 ? t('completada') : t('completadas') })}</Text>
         <Ionicons name={showDone ? 'chevron-up' : 'chevron-down'} size={18} color={C.muted} />
       </Pressable>
       {showDone && doneRecent.map((t) => (
@@ -625,17 +626,17 @@ export default function Hoy() {
   const agendaCard = (
     <Card>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-        <Text style={{ color: C.text, fontWeight: '700', fontSize: 14.5, flex: 1 }}>{day ? `Agenda del ${capitalize(fmtLongDate(new Date(day + 'T12:00:00')))}` : 'Agenda de hoy'}</Text>
+        <Text style={{ color: C.text, fontWeight: '700', fontSize: 14.5, flex: 1 }}>{day ? t('Agenda del {capitalize}', { capitalize: capitalize(fmtLongDate(new Date(day + 'T12:00:00'))) }) : t('Agenda de hoy')}</Text>
         <Pressable onPress={() => router.push('/horario')} accessibilityRole="link"><Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>{mv.schedule}</Text></Pressable>
       </View>
       {agenda.timed.length === 0 && agenda.allDay.length === 0 ? (
-        <Text style={{ color: C.muted, fontSize: 13 }}>Sin clases ni entregas con hora. {slots.length === 0 ? 'Carga tu horario para verlas aquí.' : ''}</Text>
+        <Text style={{ color: C.muted, fontSize: 13 }}>{t('Sin clases ni entregas con hora. {v}', { v: slots.length === 0 ? t('Carga tu horario para verlas aquí.') : '' })}</Text>
       ) : (
         <>
           {agenda.timed.map((it, i) => <AgendaRow key={i} it={it} now={now} isToday={!day || day === isoDate(now)}
             onPress={it.kind === 'plan' && it.taskId ? () => { const t = allPending.find((x) => x.id === it.taskId); if (t) startTask(t); } : undefined} />)}
           {agenda.allDay.length > 0 && (
-            <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 6 }}>Durante el día: {agenda.allDay.map((t) => t.title).join(', ')}</Text>
+            <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 6 }}>{t('Durante el día: ')}{agenda.allDay.map((t) => t.title).join(', ')}</Text>
           )}
         </>
       )}
@@ -644,13 +645,13 @@ export default function Hoy() {
 
   const focusMini = (
     <Card>
-      <Text style={{ color: C.text, fontWeight: '700', fontSize: 14.5 }}>Enfoque</Text>
+      <Text style={{ color: C.text, fontWeight: '700', fontSize: 14.5 }}>{t('Enfoque')}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
         <View style={{ flex: 1 }}>
           <Text style={{ color: C.text, fontSize: 22, fontWeight: '800' }}>{focusToday.todayMin >= 60 ? `${Math.floor(focusToday.todayMin / 60)} h ${focusToday.todayMin % 60} min` : `${focusToday.todayMin} min`}</Text>
-          <Text style={{ color: C.muted, fontSize: 12.5 }}>hoy{!streak.s && focusToday.streak > 0 ? ` · racha de ${focusToday.streak} ${focusToday.streak === 1 ? 'día' : 'días'}` : ''}</Text>
+          <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('hoy{v}', { v: !streak.s && focusToday.streak > 0 ? t(' · racha de {streak} {v}', { streak: focusToday.streak, v: focusToday.streak === 1 ? t('día') : t('días') }) : '' })}</Text>
         </View>
-        <Button label="Empezar" kind="secondary" size="sm" icon="play" onPress={() => { startFocus(); router.push('/enfoque'); }} />
+        <Button label={t('Empezar')} kind="secondary" size="sm" icon="play" onPress={() => { startFocus(); router.push('/enfoque'); }} />
       </View>
       {streak.s && <View style={{ marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.line }}><StreakMini s={streak.s} onPress={() => router.push('/estudiar')} /></View>}
     </Card>
@@ -661,7 +662,7 @@ export default function Hoy() {
       {!isWide && sp.both && <View style={{ marginTop: -4, marginBottom: 12, alignSelf: 'flex-start' }}><SpaceSwitch /></View>}
       {summaryLine}
       {otherDue > 0 && (
-        <Pressable onPress={() => switchSpace(otherSpace)} accessibilityRole="button" accessibilityLabel={`${otherSpaceLine(otherDue, otherSpace)}. Cambiar de espacio`}
+        <Pressable onPress={() => switchSpace(otherSpace)} accessibilityRole="button" accessibilityLabel={t('{otherDue}. Cambiar de espacio', { otherDue: otherSpaceLine(otherDue, otherSpace) })}
           style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', marginTop: -6, marginBottom: 14, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 99, borderWidth: 1, borderColor: C.line, backgroundColor: hovered ? C.surface2 : C.surface })}>
           <Ionicons name={otherSpace === 'trabajo' ? 'briefcase-outline' : 'school-outline'} size={14} color={C.muted} />
           <Text style={{ color: C.text, fontSize: 12.5, fontWeight: '600' }}>{otherSpaceLine(otherDue, otherSpace)}</Text>
@@ -673,44 +674,44 @@ export default function Hoy() {
         <Card style={{ marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap', borderLeftWidth: 4, borderLeftColor: C.brand2 }}>
           <Ionicons name="moon-outline" size={22} color={C.brand2} />
           <View style={{ flex: 1, minWidth: 180 }}>
-            <Text style={{ color: C.text, fontWeight: '700', fontSize: 14 }}>Cerrar el día</Text>
-            <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>1 minuto: lo que hiciste y qué pasa con lo que quedó.</Text>
+            <Text style={{ color: C.text, fontWeight: '700', fontSize: 14 }}>{t('Cerrar el día')}</Text>
+            <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{t('1 minuto: lo que hiciste y qué pasa con lo que quedó.')}</Text>
           </View>
-          <Button label="Cerrar el día" size="sm" onPress={() => setCloseOpen(true)} />
+          <Button label={t('Cerrar el día')} size="sm" onPress={() => setCloseOpen(true)} />
         </Card>
       )}
       {carry.length > 0 && (
         <Card style={{ marginBottom: 12, gap: 6 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Ionicons name="return-down-forward-outline" size={16} color={C.brand} />
-            <Text style={{ color: C.text, fontWeight: '700', fontSize: 14, flex: 1 }}>Quedó de ayer</Text>
-            <IconButton icon="close" label="Ocultar" onPress={() => setCarryHidden(true)} />
+            <Text style={{ color: C.text, fontWeight: '700', fontSize: 14, flex: 1 }}>{t('Quedó de ayer')}</Text>
+            <IconButton icon="close" label={t('Ocultar')} onPress={() => setCarryHidden(true)} />
           </View>
           {carry.slice(0, 4).map((t) => <Text key={t.id} style={{ color: C.text, fontSize: 13.5 }} numberOfLines={1}>· {t.title}</Text>)}
-          <Button label={carry.length === 1 ? 'Ponerla hoy' : 'Ponerlas hoy'} size="sm" kind="secondary" onPress={() => bringToday(carry)} style={{ alignSelf: 'flex-start' }} />
+          <Button label={carry.length === 1 ? t('Ponerla hoy') : t('Ponerlas hoy')} size="sm" kind="secondary" onPress={() => bringToday(carry)} style={{ alignSelf: 'flex-start' }} />
         </Card>
       )}
       {inboxTasks.length > 0 && (
-        <Pressable onPress={() => setInboxOpen(true)} accessibilityRole="button" accessibilityLabel={`Bandeja: ${inboxTasks.length} por ordenar`}
+        <Pressable onPress={() => setInboxOpen(true)} accessibilityRole="button" accessibilityLabel={t('Bandeja: {length} por ordenar', { length: inboxTasks.length })}
           style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: C.line, backgroundColor: hovered ? C.surface2 : C.surface, marginBottom: 12 })}>
           <Ionicons name="file-tray-outline" size={19} color={C.brand} />
-          <Text style={{ color: C.text, fontSize: 14, fontWeight: '700', flex: 1 }}>Bandeja: {inboxTasks.length} por ordenar</Text>
-          <Text style={{ color: C.brand, fontSize: 13, fontWeight: '700' }}>Ordenar</Text>
+          <Text style={{ color: C.text, fontSize: 14, fontWeight: '700', flex: 1 }}>{t('Bandeja: {length} por ordenar', { length: inboxTasks.length })}</Text>
+          <Text style={{ color: C.brand, fontSize: 13, fontWeight: '700' }}>{t('Ordenar')}</Text>
         </Pressable>
       )}
       {somedayTasks.length > 0 && modo !== 'dia' && (
-        <Pressable onPress={() => setSomedayOpen(true)} accessibilityRole="button" accessibilityLabel={`Algún día: ${somedayTasks.length}`}
+        <Pressable onPress={() => setSomedayOpen(true)} accessibilityRole="button" accessibilityLabel={t('Algún día: {length}', { length: somedayTasks.length })}
           style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12, backgroundColor: hovered ? C.surface2 : 'transparent', marginBottom: 8, alignSelf: 'flex-start' })}>
           <Ionicons name="cloud-outline" size={17} color={C.muted} />
-          <Text style={{ color: C.muted, fontSize: 13, fontWeight: '700' }}>Algún día: {somedayTasks.length}</Text>
+          <Text style={{ color: C.muted, fontSize: 13, fontWeight: '700' }}>{t('Algún día: {length}', { length: somedayTasks.length })}</Text>
         </Pressable>
       )}
       {priorities.length > 0 && (
         <Card style={{ marginBottom: 12, gap: 8 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Ionicons name="star" size={15} color={C.warn} />
-            <Text style={{ color: C.text, fontWeight: '800', fontSize: 14, flex: 1 }}>Lo importante esta semana</Text>
-            <Pressable onPress={() => setRitualOpen(true)} accessibilityRole="button"><Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>Cambiar</Text></Pressable>
+            <Text style={{ color: C.text, fontWeight: '800', fontSize: 14, flex: 1 }}>{t('Lo importante esta semana')}</Text>
+            <Pressable onPress={() => setRitualOpen(true)} accessibilityRole="button"><Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>{t('Cambiar')}</Text></Pressable>
           </View>
           {priorities.map((p, i) => {
             const t = p.kind === 'task' ? (tasks ?? []).find((x) => x.id === p.taskId) : null;
@@ -720,7 +721,7 @@ export default function Hoy() {
               <Pressable key={i} onPress={() => togglePriority(p, i)} accessibilityRole="checkbox" accessibilityState={{ checked: done }} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 34 }}>
                 <Ionicons name={done ? 'checkmark-circle' : 'ellipse-outline'} size={20} color={done ? C.good : C.muted} />
                 <Text style={{ color: done ? C.muted : C.text, fontSize: 14, flex: 1, textDecorationLine: done ? 'line-through' : 'none' }} numberOfLines={1}>{p.title}</Text>
-                {!!at && !done && <Text style={{ color: C.brand, fontSize: 12, fontWeight: '600' }}>{new Date(at).toLocaleDateString('es-CO', { weekday: 'short' })} {minToLabel(new Date(at).getHours() * 60 + new Date(at).getMinutes())}</Text>}
+                {!!at && !done && <Text style={{ color: C.brand, fontSize: 12, fontWeight: '600' }}>{new Date(at).toLocaleDateString(locale(), { weekday: 'short' })} {minToLabel(new Date(at).getHours() * 60 + new Date(at).getMinutes())}</Text>}
               </Pressable>
             );
           })}
@@ -730,32 +731,32 @@ export default function Hoy() {
         <Card style={{ marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap', borderLeftWidth: 4, borderLeftColor: C.brand }}>
           <Ionicons name="compass-outline" size={22} color={C.brand} />
           <View style={{ flex: 1, minWidth: 180 }}>
-            <Text style={{ color: C.text, fontWeight: '700', fontSize: 14 }}>Planea tu semana</Text>
-            <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>3 minutos: lo importante y cuándo lo haces.</Text>
+            <Text style={{ color: C.text, fontWeight: '700', fontSize: 14 }}>{t('Planea tu semana')}</Text>
+            <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{t('3 minutos: lo importante y cuándo lo haces.')}</Text>
           </View>
-          <Button label="Empezar" size="sm" onPress={() => setRitualOpen(true)} />
-          <Button label="Mañana" size="sm" kind="ghost" onPress={() => { const rw = ritualWeekStart(now); const until = tomorrowISO(now); setRitualPlan((p) => ({ ...(p ?? { week_start: rw, priorities: [], goal_days: null, done_at: null }), snoozed_until: until })); saveWeekPlan(rw, { snoozed_until: until }).catch(() => {}); }} />
+          <Button label={t('Empezar')} size="sm" onPress={() => setRitualOpen(true)} />
+          <Button label={t('Mañana')} size="sm" kind="ghost" onPress={() => { const rw = ritualWeekStart(now); const until = tomorrowISO(now); setRitualPlan((p) => ({ ...(p ?? { week_start: rw, priorities: [], goal_days: null, done_at: null }), snoozed_until: until })); saveWeekPlan(rw, { snoozed_until: until }).catch(() => {}); }} />
         </Card>
       )}
       {study && termToClose && (
         <Card style={{ marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <Ionicons name="ribbon-outline" size={22} color={C.brand} />
           <View style={{ flex: 1, minWidth: 180 }}>
-            <Text style={{ color: C.text, fontWeight: '700', fontSize: 14 }}>Cierra el semestre {termToClose.name}</Text>
-            <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>Con las notas finales queda tu resumen en el historial y empiezas el siguiente.</Text>
+            <Text style={{ color: C.text, fontWeight: '700', fontSize: 14 }}>{t('Cierra el semestre {name}', { name: termToClose.name })}</Text>
+            <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{t('Con las notas finales queda tu resumen en el historial y empiezas el siguiente.')}</Text>
           </View>
-          <Button label="Cerrar semestre" size="sm" onPress={() => router.push('/historial' as any)} />
+          <Button label={t('Cerrar semestre')} size="sm" onPress={() => router.push('/historial' as any)} />
         </Card>
       )}
       {offerSemester && (
         <Card style={{ marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <Ionicons name="flag-outline" size={22} color={C.brand2} />
           <View style={{ flex: 1, minWidth: 180 }}>
-            <Text style={{ color: C.text, fontWeight: '700', fontSize: 14 }}>Empieza el semestre con metas</Text>
-            <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>La nota que quieres en cada materia y tu meta de días por semana.</Text>
+            <Text style={{ color: C.text, fontWeight: '700', fontSize: 14 }}>{t('Empieza el semestre con metas')}</Text>
+            <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{t('La nota que quieres en cada materia y tu meta de días por semana.')}</Text>
           </View>
-          <Button label="Empezar" size="sm" onPress={() => setSemesterOpen(true)} />
-          <Button label="Ahora no" size="sm" kind="ghost" onPress={() => { setRitualPrefs((r) => (r ? { ...r, semesterDismissed: true } : r)); saveRitualPrefs({ semesterDismissed: true }).catch(() => {}); }} />
+          <Button label={t('Empezar')} size="sm" onPress={() => setSemesterOpen(true)} />
+          <Button label={t('Ahora no')} size="sm" kind="ghost" onPress={() => { setRitualPrefs((r) => (r ? { ...r, semesterDismissed: true } : r)); saveRitualPrefs({ semesterDismissed: true }).catch(() => {}); }} />
         </Card>
       )}
       {study && <ExamReviewCard tasks={live} />}
@@ -764,11 +765,11 @@ export default function Hoy() {
         <Card style={{ marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <Ionicons name="calendar-number-outline" size={22} color={C.brand} />
           <View style={{ flex: 1, minWidth: 180 }}>
-            <Text style={{ color: C.text, fontWeight: '700', fontSize: 14 }}>{examOffer.title}: faltan {daysUntil(new Date(examOffer.due_date + 'T12:00:00'), now)} días</Text>
-            <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>¿Armo tu plan de repaso? Sesiones cortas en tus horarios libres.</Text>
+            <Text style={{ color: C.text, fontWeight: '700', fontSize: 14 }}>{t('{title}: faltan {daysUntil} días', { title: examOffer.title, daysUntil: daysUntil(new Date(examOffer.due_date + 'T12:00:00'), now) })}</Text>
+            <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{t('¿Armo tu plan de repaso? Sesiones cortas en tus horarios libres.')}</Text>
           </View>
-          <Button label="Armar plan" size="sm" onPress={() => openExamPlan(examOffer)} />
-          <Button label="Ahora no" size="sm" kind="ghost" onPress={() => { markExamPlanAsked(examOffer.id); setNoOffer((x) => new Set([...(x ?? []), examOffer.id])); }} />
+          <Button label={t('Armar plan')} size="sm" onPress={() => openExamPlan(examOffer)} />
+          <Button label={t('Ahora no')} size="sm" kind="ghost" onPress={() => { markExamPlanAsked(examOffer.id); setNoOffer((x) => new Set([...(x ?? []), examOffer.id])); }} />
         </Card>
       )}
       {stalled && <StalledPlan t={stalled} onChanged={load} onStart={() => startTask(stalled)} onDismiss={() => setPlanDismissed((x) => new Set(x).add(stalled.id))} />}
@@ -795,8 +796,8 @@ export default function Hoy() {
       {hiddenCount > 0 && !filter && vista !== 'materias' && (
         <Pressable onPress={showHidden} accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10 }}>
           <Ionicons name="eye-off-outline" size={16} color={C.muted} />
-          <Text style={{ color: C.muted, fontSize: 13 }}>{hiddenCount} {hiddenCount === 1 ? 'tarea de proyecto oculta' : 'tareas de proyecto ocultas'} · </Text>
-          <Text style={{ color: C.brand, fontSize: 13, fontWeight: '700' }}>Mostrar</Text>
+          <Text style={{ color: C.muted, fontSize: 13 }}>{hiddenCount} {hiddenCount === 1 ? t('tarea de proyecto oculta') : t('tareas de proyecto ocultas')} · </Text>
+          <Text style={{ color: C.brand, fontSize: 13, fontWeight: '700' }}>{t('Mostrar')}</Text>
         </Pressable>
       )}
       {doneBlock}
@@ -806,7 +807,7 @@ export default function Hoy() {
   );
 
   return (
-    <Screen eyebrow={capitalize(fmtLongDate(now))} title={me.first && isWide ? `${greet}, ${me.first}` : 'Hoy'} right={headerRight} maxWidth={isWide ? 1180 : undefined}>
+    <Screen eyebrow={capitalize(fmtLongDate(now))} title={me.first && isWide ? `${greet}, ${me.first}` : t('Hoy')} right={headerRight} maxWidth={isWide ? 1180 : undefined}>
       {isWide ? (
         <View style={{ flexDirection: 'row', gap: 28, alignItems: 'flex-start' }}>
           <View style={{ flex: 1, minWidth: 0 }}>{left}</View>
@@ -836,14 +837,12 @@ function AgendaRow({ it, now, isToday, onPress }: { it: AgendaItem; now: Date; i
   const past = isToday && (it.end ?? it.start) < m;
   if (it.kind === 'plan') {
     return (
-      <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`Plan: ${it.title}, ${minToLabel(it.start)}. Empezar enfoque`}
+      <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={t('Plan: {title}, {start}. Empezar enfoque', { title: it.title, start: minToLabel(it.start) })}
         style={({ hovered }: any) => ({ flexDirection: 'row', gap: 10, paddingVertical: 6, opacity: past ? 0.55 : 1, borderRadius: 8, backgroundColor: hovered ? C.surface2 : 'transparent' })}>
         <Text style={{ width: 66, color: C.muted, fontSize: 12.5, fontVariant: ['tabular-nums'] }}>{minToLabel(it.start)}</Text>
         <View style={{ flex: 1, borderLeftWidth: 3, borderLeftColor: it.color, borderStyle: 'dashed', paddingLeft: 9 }}>
-          <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '600' }} numberOfLines={1}>Plan: {it.title}</Text>
-          <Text style={{ color: live ? C.brand : C.muted, fontSize: 12, fontWeight: live ? '700' : '400' }}>
-            {live ? 'Ahora · ' : ''}{it.place ? placePhrase(it.place).replace(/^en /, 'En ') + ' · ' : ''}toca para empezar
-          </Text>
+          <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '600' }} numberOfLines={1}>{t('Plan: {title}', { title: it.title })}</Text>
+          <Text style={{ color: live ? C.brand : C.muted, fontSize: 12, fontWeight: live ? '700' : '400' }}>{t('{v}{v2}toca para empezar', { v: live ? t('Ahora · ') : '', v2: it.place ? placePhrase(it.place).replace(/^en /, 'En ') + ' · ' : '' })}</Text>
         </View>
         <Ionicons name="play-circle-outline" size={18} color={C.brand} style={{ alignSelf: 'center' }} />
       </Pressable>
@@ -854,10 +853,10 @@ function AgendaRow({ it, now, isToday, onPress }: { it: AgendaItem; now: Date; i
       <Text style={{ width: 66, color: C.muted, fontSize: 12.5, fontVariant: ['tabular-nums'] }}>{minToLabel(it.start)}</Text>
       <View style={{ flex: 1, borderLeftWidth: 3, borderLeftColor: it.color, paddingLeft: 9 }}>
         <Text style={{ color: C.text, fontSize: 13.5, fontWeight: it.kind === 'class' ? '700' : '500' }} numberOfLines={1}>
-          {it.kind === 'due' ? 'Entrega: ' : ''}{it.title}
+          {it.kind === 'due' ? t('Entrega: ') : ''}{it.title}
         </Text>
-        {it.kind === 'event' && <Text style={{ color: live ? C.brand : C.muted, fontSize: 12, fontWeight: live ? '700' : '400' }}>{live ? 'Ahora · ' : ''}{it.end != null && it.end < 24 * 60 ? `hasta ${minToLabel(it.end)}` : 'hasta mañana'}</Text>}
-        {it.kind === 'class' && <Text style={{ color: live ? C.brand : C.muted, fontSize: 12, fontWeight: live ? '700' : '400' }}>{live ? 'Ahora · ' : ''}hasta {minToLabel(it.end!)}</Text>}
+        {it.kind === 'event' && <Text style={{ color: live ? C.brand : C.muted, fontSize: 12, fontWeight: live ? '700' : '400' }}>{live ? t('Ahora · ') : ''}{it.end != null && it.end < 24 * 60 ? `hasta ${minToLabel(it.end)}` : t('hasta mañana')}</Text>}
+        {it.kind === 'class' && <Text style={{ color: live ? C.brand : C.muted, fontSize: 12, fontWeight: live ? '700' : '400' }}>{t('{v}hasta {minToLabel}', { v: live ? t('Ahora · ') : '', minToLabel: minToLabel(it.end!) })}</Text>}
         {it.project && <Text style={{ color: C.muted, fontSize: 12 }}>{it.project}</Text>}
       </View>
     </View>
@@ -870,7 +869,7 @@ function ProjectRow({ p, onOpen, actions }: { p: MyProjectTask; onOpen: () => vo
   const [menu, setMenu] = useState(false);
   return (
     <>
-    <Pressable onPress={onOpen} onLongPress={() => setMenu(true)} delayLongPress={350} dataSet={{ press: '1' }} accessibilityRole="button" accessibilityLabel={`${p.title}, proyecto ${p.project?.name ?? ''}${due ? ', ' + due : ''}`}
+    <Pressable onPress={onOpen} onLongPress={() => setMenu(true)} delayLongPress={350} dataSet={{ press: '1' }} accessibilityRole="button" accessibilityLabel={t('{title}, proyecto {v}{v2}', { title: p.title, v: p.project?.name ?? '', v2: due ? ', ' + due : '' })}
       style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, paddingLeft: 14, minHeight: 54, backgroundColor: hovered ? C.surface2 : C.surface, borderColor: C.line, borderWidth: 1, borderRadius: 12, marginBottom: 8 })}>
       <View style={{ width: 22, height: 22, borderRadius: 7, backgroundColor: (p.project?.color ?? C.brand) + '26', alignItems: 'center', justifyContent: 'center' }}>
         <Text style={{ fontSize: 12 }}>{p.project?.icon ?? '📦'}</Text>
@@ -880,12 +879,12 @@ function ProjectRow({ p, onOpen, actions }: { p: MyProjectTask; onOpen: () => vo
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4, flexWrap: 'wrap' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
             <Dot color={p.project?.color ?? C.brand} />
-            <Text style={{ color: C.muted, fontSize: 12.5 }} numberOfLines={1}>{p.project?.name ?? 'Proyecto'} · en equipo</Text>
+            <Text style={{ color: C.muted, fontSize: 12.5 }} numberOfLines={1}>{t('{v} · en equipo', { v: p.project?.name ?? t('Proyecto') })}</Text>
           </View>
           {!!due && <Text style={{ color: b === 'overdue' ? C.badText : b === 'today' ? C.warnText : C.muted, fontSize: 12.5, fontWeight: b === 'overdue' || b === 'today' ? '700' : '500' }}>{due}</Text>}
         </View>
       </View>
-      <Pressable onPress={() => setMenu(true)} accessibilityRole="button" accessibilityLabel={`Más acciones para "${p.title}"`}
+      <Pressable onPress={() => setMenu(true)} accessibilityRole="button" accessibilityLabel={t('Más acciones para "{title}"', { title: p.title })}
         style={({ hovered }: any) => ({ width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginRight: -6, backgroundColor: hovered ? C.line : 'transparent' })}>
         <Ionicons name="ellipsis-horizontal" size={18} color={C.muted} />
       </Pressable>
@@ -899,11 +898,11 @@ function ProjectRow({ p, onOpen, actions }: { p: MyProjectTask; onOpen: () => vo
 type HoyModo = 'lista' | 'dia' | 'matriz';
 function ModoSwitch({ value, onChange }: { value: HoyModo; onChange: (v: HoyModo) => void }) {
   const items: { k: HoyModo; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
-    { k: 'lista', label: 'Lista', icon: 'list-outline' }, { k: 'dia', label: 'Mi día', icon: 'time-outline' },
-    { k: 'matriz', label: 'Matriz', icon: 'grid-outline' },
+    { k: 'lista', label: t('Lista'), icon: 'list-outline' }, { k: 'dia', label: t('Mi día'), icon: 'time-outline' },
+    { k: 'matriz', label: t('Matriz'), icon: 'grid-outline' },
   ];
   return (
-    <View accessibilityRole="radiogroup" accessibilityLabel="Cómo ver Hoy" style={{ flexDirection: 'row', alignSelf: 'flex-start', padding: 3, borderRadius: 12, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.line, marginBottom: 10 }}>
+    <View accessibilityRole="radiogroup" accessibilityLabel={t('Cómo ver Hoy')} style={{ flexDirection: 'row', alignSelf: 'flex-start', padding: 3, borderRadius: 12, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.line, marginBottom: 10 }}>
       {items.map((it) => {
         const on = it.k === value;
         return (
@@ -924,7 +923,7 @@ function ScopeSwitch({ value, onChange, items }: {
   items: { key: HoyVista; label: string; count: number; icon?: React.ComponentProps<typeof Ionicons>['name'] }[];
 }) {
   return (
-    <View accessibilityRole="radiogroup" accessibilityLabel="Qué mostrar en Hoy"
+    <View accessibilityRole="radiogroup" accessibilityLabel={t('Qué mostrar en Hoy')}
       style={{ flexDirection: 'row', alignSelf: 'flex-start', padding: 3, borderRadius: 12, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.line, maxWidth: '100%' }}>
       {items.map((it) => {
         const on = it.key === value;

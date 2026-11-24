@@ -8,6 +8,7 @@ import { openAdd } from '../../lib/uiBus';
 import { Card, focusRingStyle } from '../ds';
 import { useResponsive } from '../../lib/responsive';
 import { fmtMin } from '../TaskRow';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Partes del Enfoque v20: pausa guiada, "Anotar para después",
@@ -22,15 +23,15 @@ export function BreakCoach({ s }: { s: FocusState }) {
   if (!tip) return null;
   return (
     <View style={{ width: '100%', flexDirection: 'row', gap: 14, padding: 14, borderRadius: 14, backgroundColor: '#142a22', borderWidth: 1, borderColor: '#22604a' }}
-      accessibilityLabel={`Sugerencia para el descanso: ${tip.title}`}>
+      accessibilityLabel={t('Sugerencia para el descanso: {title}', { title: tip.title })}>
       <Ionicons name={done ? 'checkmark-circle' : (tip.icon as any)} size={28} color="#5fd8a4" style={{ marginTop: 2 }} />
       <View style={{ flex: 1, gap: 4 }}>
-        <Text style={{ color: C.text, fontSize: 15.5, fontWeight: '800' }}>{done ? 'Bien hecho' : tip.title}</Text>
-        <Text style={{ color: '#b9dccb', fontSize: 13, lineHeight: 18 }}>{done ? 'Disfruta lo que queda del descanso.' : tip.body}</Text>
+        <Text style={{ color: C.text, fontSize: 15.5, fontWeight: '800' }}>{done ? t('Bien hecho') : tip.title}</Text>
+        <Text style={{ color: '#b9dccb', fontSize: 13, lineHeight: 18 }}>{done ? t('Disfruta lo que queda del descanso.') : tip.body}</Text>
         {!done && (
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
-            <SmallBtn label="Hecho" solid onPress={() => setDone(true)} />
-            <SmallBtn label="Otra idea" onPress={nextTip} />
+            <SmallBtn label={t('Hecho')} solid onPress={() => setDone(true)} />
+            <SmallBtn label={t('Otra idea')} onPress={nextTip} />
           </View>
         )}
       </View>
@@ -86,29 +87,29 @@ export function ParkButton({ s, active }: { s: FocusState; active: boolean }) {
     return (
       <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 12, paddingRight: 6, minHeight: 46, borderRadius: 12, borderWidth: 1.5, borderColor: C.brand, backgroundColor: C.surface2 }}>
         <Ionicons name="bookmark-outline" size={16} color={C.muted} />
-        <TextInput ref={input} value={text} onChangeText={setText} placeholder="¿Qué se te vino a la cabeza?" placeholderTextColor={C.muted}
-          accessibilityLabel="Anotar para después" maxLength={200} returnKeyType="done" blurOnSubmit
+        <TextInput ref={input} value={text} onChangeText={setText} placeholder={t('¿Qué se te vino a la cabeza?')} placeholderTextColor={C.muted}
+          accessibilityLabel={t('Anotar para después')} maxLength={200} returnKeyType="done" blurOnSubmit
           onSubmitEditing={commit}
           onKeyPress={(e: any) => { if (e.nativeEvent?.key === 'Escape') { setText(''); setOpen(false); } }}
           style={{ flex: 1, minWidth: 0, color: C.text, fontSize: 14.5, minHeight: 40, outlineStyle: 'none' } as any} />
-        <Pressable onPress={commit} accessibilityRole="button" accessibilityLabel="Guardar"
+        <Pressable onPress={commit} accessibilityRole="button" accessibilityLabel={t('Guardar')}
           style={{ height: 34, paddingHorizontal: 12, borderRadius: 9, backgroundColor: C.brand, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ color: C.onBrand, fontWeight: '800', fontSize: 13 }}>Guardar</Text>
+          <Text style={{ color: C.onBrand, fontWeight: '800', fontSize: 13 }}>{t('Guardar')}</Text>
         </Pressable>
       </View>
     );
   }
   const n = s.parked?.length ?? 0;
   return (
-    <Pressable onPress={() => setOpen(true)} accessibilityRole="button" accessibilityLabel={`Anotar para después${n ? `, ${n} anotadas` : ''}`} dataSet={{ press: '1' }}
+    <Pressable onPress={() => setOpen(true)} accessibilityRole="button" accessibilityLabel={t('Anotar para después{v}', { v: n ? `, ${n} anotadas` : '' })} dataSet={{ press: '1' }}
       style={({ pressed, focused, hovered }: any) => [{
         width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 42, borderRadius: 12,
         borderWidth: 1, borderStyle: 'dashed', borderColor: hovered ? C.muted : C.line, opacity: pressed ? 0.8 : 1,
       }, focused ? focusRingStyle() : null]}>
       <Ionicons name={saved ? 'checkmark' : 'add'} size={16} color={saved ? C.goodText : C.muted} />
-      <Text style={{ color: saved ? C.goodText : C.muted, fontSize: 13.5, fontWeight: '600' }}>{saved ? 'Anotado. Sigue con lo tuyo.' : 'Anotar para después'}</Text>
+      <Text style={{ color: saved ? C.goodText : C.muted, fontSize: 13.5, fontWeight: '600' }}>{saved ? t('Anotado. Sigue con lo tuyo.') : t('Anotar para después')}</Text>
       {!saved && Platform.OS === 'web' && isWide && (
-        <View style={{ paddingHorizontal: 6, paddingVertical: 1, borderRadius: 5, borderWidth: 1, borderColor: C.line }}><Text style={{ color: C.muted, fontSize: 11, fontWeight: '700' }}>D</Text></View>
+        <View style={{ paddingHorizontal: 6, paddingVertical: 1, borderRadius: 5, borderWidth: 1, borderColor: C.line }}><Text style={{ color: C.muted, fontSize: 11, fontWeight: '700' }}>{t('D')}</Text></View>
       )}
       {!saved && n > 0 && <Text style={{ color: C.muted, fontSize: 12 }}>· {n}</Text>}
     </Pressable>
@@ -124,11 +125,11 @@ export function ParkedList({ parked }: { parked: Parked[] }) {
       {parked.map((p) => (
         <View key={p.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, borderTopWidth: 1, borderTopColor: C.surface2 }}>
           <Text style={{ flex: 1, color: C.text, fontSize: 13.5 }}>{p.text}</Text>
-          <Pressable onPress={() => { removeParked(p.id); openAdd(p.text); }} accessibilityRole="button" accessibilityLabel={`Hacer tarea: ${p.text}`}
+          <Pressable onPress={() => { removeParked(p.id); openAdd(p.text); }} accessibilityRole="button" accessibilityLabel={t('Hacer tarea: {text}', { text: p.text })}
             style={({ hovered }: any) => ({ minHeight: 32, paddingHorizontal: 10, borderRadius: 8, borderWidth: 1, borderColor: C.line, backgroundColor: hovered ? C.surface2 : 'transparent', justifyContent: 'center' })}>
-            <Text style={{ color: C.text, fontSize: 12.5, fontWeight: '600' }}>Hacer tarea</Text>
+            <Text style={{ color: C.text, fontSize: 12.5, fontWeight: '600' }}>{t('Hacer tarea')}</Text>
           </Pressable>
-          <Pressable onPress={() => removeParked(p.id)} accessibilityRole="button" accessibilityLabel={`Borrar: ${p.text}`} hitSlop={6}
+          <Pressable onPress={() => removeParked(p.id)} accessibilityRole="button" accessibilityLabel={t('Borrar: {text}', { text: p.text })} hitSlop={6}
             style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}>
             <Ionicons name="close" size={16} color={C.muted} />
           </Pressable>
@@ -143,14 +144,14 @@ export function PomodoroSummary({ s, todayMin }: { s: FocusState; todayMin: numb
   const l = s.last;
   if (!l || s.mode !== 'break') return null;
   const items: [string, string][] = [
-    ['Enfocado', l.minutes >= 1 ? `${l.minutes} min` : 'Menos de 1 min'],
-    ['Distracciones', String(l.distractions)],
-    ['Hoy en total', fmtMin(todayMin)],
+    [t('Enfocado'), l.minutes >= 1 ? `${l.minutes} min` : t('Menos de 1 min')],
+    [t('Distracciones'), String(l.distractions)],
+    [t('Hoy en total'), fmtMin(todayMin)],
   ];
   return (
     <Card>
       <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '800', marginBottom: 10 }} accessibilityRole="header">
-        {l.n > 0 ? `Pomodoro ${l.n} de hoy terminado` : 'Pomodoro terminado'}
+        {l.n > 0 ? t('Pomodoro {n} de hoy terminado', { n: l.n }) : t('Pomodoro terminado')}
       </Text>
       <View style={{ flexDirection: 'row', gap: 10 }}>
         {items.map(([k, v]) => (
@@ -162,8 +163,7 @@ export function PomodoroSummary({ s, todayMin }: { s: FocusState; todayMin: numb
       </View>
       {l.distractions > 0 && (
         <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 10, lineHeight: 17 }}>
-          Anotar lo que te distrae y seguir es justo lo que hay que hacer. Míralo ahora, en la pausa.
-        </Text>
+          {t('Anotar lo que te distrae y seguir es justo lo que hay que hacer. Míralo ahora, en la pausa.')}</Text>
       )}
     </Card>
   );

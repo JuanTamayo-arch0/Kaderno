@@ -1,3 +1,4 @@
+import { t } from './i18n';
 // ============================================================
 //  Fechas y horas de las tareas personales.
 //  Una tarea puede tener solo fecha (due_date) o fecha con hora (due_at,
@@ -7,8 +8,8 @@
 
 export type DueLike = { due_date?: string | null; due_at?: string | null };
 
-export const DAY_SHORT = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
-export const DAY_LONG = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+export const DAY_SHORT = ['dom', 'lun', 'mar', t('mié'), 'jue', 'vie', t('sáb')];
+export const DAY_LONG = ['domingo', 'lunes', 'martes', t('miércoles'), 'jueves', 'viernes', t('sábado')];
 export const MONTH_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 export const MONTH_LONG = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
@@ -68,11 +69,11 @@ export function fmtHHMM(hhmm: string): string {
 /** Fecha corta y amable: "Hoy", "Mañana", "Ayer", "vie 16", "25 oct". */
 export function fmtDay(d: Date, now = new Date()): string {
   const diff = dayDiff(d, now);
-  if (diff === 0) return 'Hoy';
-  if (diff === 1) return 'Mañana';
-  if (diff === -1) return 'Ayer';
+  if (diff === 0) return t('Hoy');
+  if (diff === 1) return t('Mañana');
+  if (diff === -1) return t('Ayer');
   if (diff > 1 && diff < 7) return `${DAY_SHORT[d.getDay()]} ${d.getDate()}`;
-  if (diff < 0 && diff > -7) return `Hace ${-diff} días`;
+  if (diff < 0 && diff > -7) return t('Hace {v} días', { v: -diff });
   return `${d.getDate()} ${MONTH_SHORT[d.getMonth()]}`;
 }
 /** "Hoy, 10:00 am", "Mañana", "vie 16, 6:00 pm"... o "" si no tiene fecha. */
@@ -96,8 +97,8 @@ export function isOverdue(t: DueLike & { status?: string | null }, now = new Dat
 
 export type Bucket = 'overdue' | 'today' | 'tomorrow' | 'week' | 'nextweek' | 'later' | 'none';
 export const BUCKET_LABEL: Record<Bucket, string> = {
-  overdue: 'Vencidas', today: 'Hoy', tomorrow: 'Mañana', week: 'Esta semana',
-  nextweek: 'Próxima semana', later: 'Más adelante', none: 'Sin fecha',
+  overdue: t('Vencidas'), today: t('Hoy'), tomorrow: t('Mañana'), week: t('Esta semana'),
+  nextweek: t('Próxima semana'), later: t('Más adelante'), none: t('Sin fecha'),
 };
 export const BUCKET_ORDER: Bucket[] = ['overdue', 'today', 'tomorrow', 'week', 'nextweek', 'later', 'none'];
 

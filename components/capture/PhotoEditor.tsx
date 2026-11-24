@@ -5,6 +5,7 @@ import { Button } from '../ds';
 import { processImage } from '../../lib/captureImage';
 import { clampCrop, type Crop } from '../../lib/capture';
 import type { PageEdit } from '../../lib/captureDraft';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Editar una foto antes de leerla (v22, fase 4): girar, recortar
@@ -61,14 +62,14 @@ export function PhotoEditor({ original, edit, onCancel, onApply }: {
   const onUp = () => { drag.current = null; };
 
   const handle = (corner: Corner, style: React.CSSProperties) => (
-    <div role="slider" aria-label={`Esquina del recorte`} onPointerDown={onDown(corner)}
+    <div role="slider" aria-label={t('Esquina del recorte')} onPointerDown={onDown(corner)}
       style={{ position: 'absolute', width: 26, height: 26, margin: -13, borderRadius: 13, background: C.brand, border: '3px solid #fff', boxShadow: '0 1px 4px rgba(0,0,0,.4)', touchAction: 'none', cursor: 'grab', ...style }} />
   );
 
   return (
     <Modal visible={!!original} transparent animationType="fade" onRequestClose={onCancel}>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.88)', padding: 16, gap: 12 }}>
-        <Text style={{ color: '#fff', fontSize: 16, fontWeight: '800' }}>Editar la foto</Text>
+        <Text style={{ color: '#fff', fontSize: 16, fontWeight: '800' }}>{t('Editar la foto')}</Text>
         <div ref={box} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
           style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0, touchAction: 'none' }}>
           {!preview ? <ActivityIndicator color="#fff" /> : (
@@ -78,7 +79,7 @@ export function PhotoEditor({ original, edit, onCancel, onApply }: {
               <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', boxShadow: 'none' }}>
                 <div style={{ position: 'absolute', left: `${crop.x * 100}%`, top: `${crop.y * 100}%`, width: `${crop.w * 100}%`, height: `${crop.h * 100}%`, boxShadow: '0 0 0 9999px rgba(0,0,0,.55)', outline: '2px solid #fff' }} />
               </div>
-              <div onPointerDown={onDown('move')} aria-label="Mover el recorte"
+              <div onPointerDown={onDown('move')} aria-label={t('Mover el recorte')}
                 style={{ position: 'absolute', left: `${crop.x * 100}%`, top: `${crop.y * 100}%`, width: `${crop.w * 100}%`, height: `${crop.h * 100}%`, cursor: 'move', touchAction: 'none' }}>
                 {handle('tl', { left: 0, top: 0 })}
                 {handle('tr', { right: 0, top: 0, margin: '-13px -13px 0 0' })}
@@ -89,14 +90,14 @@ export function PhotoEditor({ original, edit, onCancel, onApply }: {
           )}
         </div>
         <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-          <Button label="Girar a la izquierda" icon="arrow-undo-outline" size="sm" kind="secondary" onPress={() => turn(-90)} />
-          <Button label="Girar a la derecha" icon="arrow-redo-outline" size="sm" kind="secondary" onPress={() => turn(90)} />
-          <Button label={scan ? 'Escáner: sí' : 'Escáner: no'} icon="scan-outline" size="sm" kind={scan ? 'primary' : 'secondary'} onPress={() => setScan(!scan)} />
-          <Button label="Quitar recorte" size="sm" kind="ghost" onPress={() => setCrop(FULL)} />
+          <Button label={t('Girar a la izquierda')} icon="arrow-undo-outline" size="sm" kind="secondary" onPress={() => turn(-90)} />
+          <Button label={t('Girar a la derecha')} icon="arrow-redo-outline" size="sm" kind="secondary" onPress={() => turn(90)} />
+          <Button label={scan ? t('Escáner: sí') : t('Escáner: no')} icon="scan-outline" size="sm" kind={scan ? 'primary' : 'secondary'} onPress={() => setScan(!scan)} />
+          <Button label={t('Quitar recorte')} size="sm" kind="ghost" onPress={() => setCrop(FULL)} />
         </View>
         <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center' }}>
-          <Button label="Cancelar" kind="secondary" onPress={onCancel} />
-          <Button label="Aplicar y leer" icon="checkmark" onPress={() => onApply({ rotate, scan, crop: crop.w > 0.995 && crop.h > 0.995 ? null : crop })} />
+          <Button label={t('Cancelar')} kind="secondary" onPress={onCancel} />
+          <Button label={t('Aplicar y leer')} icon="checkmark" onPress={() => onApply({ rotate, scan, crop: crop.w > 0.995 && crop.h > 0.995 ? null : crop })} />
         </View>
       </View>
     </Modal>

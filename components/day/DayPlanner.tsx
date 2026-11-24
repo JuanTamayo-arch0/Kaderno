@@ -15,6 +15,7 @@ import { dayParts, plannedMinutes, freeMinutes, overloadText, moveCandidates, lo
 import { useMode } from '../../lib/mode';
 import { Timeline, useDraggableTask, type ExtEvent } from './Timeline';
 import { toast, friendlyError } from '../../lib/feedback';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  "Mi día" en Hoy (v21, sección 3): la línea de tiempo con lo pendiente
@@ -25,7 +26,7 @@ export type EventsLoader = (from: Date, to: Date) => Promise<ExtEvent[]>;
 
 function startOfDay(d: Date) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
 function addDays(d: Date, n: number) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
-const DAY_SHORT = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const DAY_SHORT = [t('Dom'), t('Lun'), t('Mar'), t('Mié'), t('Jue'), t('Vie'), t('Sáb')];
 
 export function DayPlanner({ tasks, slots, subjects, onChanged, onToggle, onFocusTask, loadEvents }: {
   tasks: Task[]; slots: Slot[]; subjects: Subject[]; onChanged: () => void; onToggle: (t: Task) => void; onFocusTask: (t: Task) => void; loadEvents?: EventsLoader;
@@ -69,7 +70,7 @@ export function DayPlanner({ tasks, slots, subjects, onChanged, onToggle, onFocu
   const frogSuggestion = frog ? null : suggestFrog(dayTasks, new Date(), ratio);
   const rule135 = limit135 && dayISO >= todayISO ? check135(dayTasks, ratio).text : null;
   async function chooseFrog(t: Task | null) {
-    try { await setFrog(t ? t.id : null, dayISO); toast(t ? `Lo primero: ${t.title}` : 'Sin rana para este día'); onChanged(); }
+    try { await setFrog(t ? t.id : null, dayISO); toast(t ? trn('Lo primero: {title}', { title: t.title }) : trn('Sin rana para este día')); onChanged(); }
     catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
   }
 
@@ -99,7 +100,7 @@ export function DayPlanner({ tasks, slots, subjects, onChanged, onToggle, onFocu
     const n = new Date();
     const from = isToday ? n.getHours() * 60 + n.getMinutes() : (work ? 8 : 7) * 60;
     const r = suggestSchedule(parts.loose, (t) => taskMinutes(t.estimate_min, ratio), dayBusy, { from, to: (work ? 19 : 22) * 60 });
-    if (!r.placed.length) { toast(r.left.length ? 'No quedan huecos libres para lo que falta hoy.' : 'No hay nada sin hora para acomodar.'); return; }
+    if (!r.placed.length) { toast(r.left.length ? t('No quedan huecos libres para lo que falta hoy.') : t('No hay nada sin hora para acomodar.')); return; }
     setPlan({ day: dayISO, ...r });
   }
   // v27, fase 4: juntar una tanda en un solo bloque, en el primer hueco donde quepa.
@@ -109,7 +110,7 @@ export function DayPlanner({ tasks, slots, subjects, onChanged, onToggle, onFocu
     const from = isToday ? Math.ceil((n.getHours() * 60 + n.getMinutes()) / 5) * 5 : (work ? 8 : 7) * 60;
     const minOf = (id: string) => taskMinutes(byId.get(id)?.estimate_min, ratio);
     const placed = placeBatch(b.ids, minOf, busyOfDay(), from, (work ? 19 : 22) * 60);
-    if (!placed) { toast(`No hay un hueco de ${fmtHours(b.minutes)} seguido para la tanda.`); return; }
+    if (!placed) { toast(t('No hay un hueco de {minutes} seguido para la tanda.', { minutes: fmtHours(b.minutes) })); return; }
     setPlan({ day: dayISO, placed, left: [], title: `Tanda: ${b.label}` });
   }
   const batches = dayISO >= todayISO ? findBatches(parts.loose, (t) => taskMinutes(t.estimate_min, ratio),
@@ -124,7 +125,7 @@ export function DayPlanner({ tasks, slots, subjects, onChanged, onToggle, onFocu
         await updateTask(p.id, { plan_at: at.toISOString() });
         ok++;
       }
-      toast(`${ok} ${ok === 1 ? 'tarea quedó' : 'tareas quedaron'} con hora`, { tone: 'good' });
+      toast(t('{ok} {v} con hora', { ok, v: ok === 1 ? t('tarea quedó') : t('tareas quedaron') }), { tone: 'good' });
     } catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
     finally { setSaving(false); setPlan(null); onChanged(); }
   }
@@ -134,25 +135,25 @@ export function DayPlanner({ tasks, slots, subjects, onChanged, onToggle, onFocu
   async function moveToTomorrow(t: Task) {
     try {
       const patch = t.plan_at ? { plan_at: addDays(new Date(t.plan_at), 1).toISOString() } : { plan_day: localISO(addDays(new Date(), 1)) };
-      await updateTask(t.id, patch); toast(`"${t.title}" pasa a mañana`); onChanged();
+      await updateTask(t.id, patch); toast(trn('"{title}" pasa a mañana', { title: t.title })); onChanged();
     } catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
   }
 
   const header = (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
-      <Pressable onPress={() => setDay(addDays(day, week ? -7 : -1))} accessibilityLabel={week ? 'Semana anterior' : 'Día anterior'} style={navBtn}><Ionicons name="chevron-back" size={18} color={C.text} /></Pressable>
+      <Pressable onPress={() => setDay(addDays(day, week ? -7 : -1))} accessibilityLabel={week ? t('Semana anterior') : t('Día anterior')} style={navBtn}><Ionicons name="chevron-back" size={18} color={C.text} /></Pressable>
       <Text style={{ color: C.text, fontSize: 15, fontWeight: '800', minWidth: 110, textAlign: 'center' }}>
-        {week ? `Semana del ${days[0].getDate()}` : isToday ? 'Hoy' : `${DAY_SHORT[day.getDay()]} ${day.getDate()}`}
+        {week ? t('Semana del {getDate}', { getDate: days[0].getDate() }) : isToday ? t('Hoy') : `${DAY_SHORT[day.getDay()]} ${day.getDate()}`}
       </Text>
-      <Pressable onPress={() => setDay(addDays(day, week ? 7 : 1))} accessibilityLabel={week ? 'Semana siguiente' : 'Día siguiente'} style={navBtn}><Ionicons name="chevron-forward" size={18} color={C.text} /></Pressable>
-      {!isToday && <Button label="Hoy" size="sm" kind="ghost" onPress={() => setDay(startOfDay(new Date()))} />}
+      <Pressable onPress={() => setDay(addDays(day, week ? 7 : 1))} accessibilityLabel={week ? t('Semana siguiente') : t('Día siguiente')} style={navBtn}><Ionicons name="chevron-forward" size={18} color={C.text} /></Pressable>
+      {!isToday && <Button label={t('Hoy')} size="sm" kind="ghost" onPress={() => setDay(startOfDay(new Date()))} />}
       <View style={{ flex: 1 }} />
       {isWide && width >= 900 && (
         <View style={{ flexDirection: 'row', padding: 3, borderRadius: 10, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.line }} accessibilityRole="radiogroup">
           {(['day', 'week'] as const).map((k) => (
             <Pressable key={k} onPress={() => setMode(k)} accessibilityRole="radio" accessibilityState={{ checked: mode === k }}
               style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: mode === k ? C.surface : 'transparent' }}>
-              <Text style={{ color: mode === k ? C.text : C.muted, fontSize: 12.5, fontWeight: '700' }}>{k === 'day' ? 'Día' : 'Semana'}</Text>
+              <Text style={{ color: mode === k ? C.text : C.muted, fontSize: 12.5, fontWeight: '700' }}>{k === 'day' ? t('Día') : t('Semana')}</Text>
             </Pressable>
           ))}
         </View>
@@ -162,36 +163,36 @@ export function DayPlanner({ tasks, slots, subjects, onChanged, onToggle, onFocu
 
   const loose = (
     <View style={{ gap: 8 }}>
-      <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '800' }}>Sin hora {isToday ? 'hoy' : ''} · {parts.loose.length}</Text>
-      {parts.loose.length === 0 && <Text style={{ color: C.muted, fontSize: 12.5 }}>Nada pendiente sin hora.</Text>}
+      <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '800' }}>{t('Sin hora {v} · {length}', { v: isToday ? t('hoy') : '', length: parts.loose.length })}</Text>
+      {parts.loose.length === 0 && <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Nada pendiente sin hora.')}</Text>}
       {parts.loose.map((t) => <LooseRow key={t.id} t={t} ratio={ratio} active={placing?.id === t.id} onPlace={() => setPlacing(placing?.id === t.id ? null : t)} onToggle={() => onToggle(t)}
         mark={t.id === frog?.id ? 'rana' : t.plan_day === dayISO && t.plan_order ? t.plan_order : null} />)}
-      {parts.loose.length > 0 && <Text style={{ color: C.muted, fontSize: 11.5 }}>{isWide ? 'Arrástrala a una hora, o toca "Poner hora" y luego la hora.' : 'Toca "Poner hora" y luego la hora en la línea.'}</Text>}
-      {parts.loose.length > 0 && dayISO >= todayISO && !plan && <Button label="Sugerir horario" icon="sparkles-outline" size="sm" kind="secondary" onPress={suggest} />}
+      {parts.loose.length > 0 && <Text style={{ color: C.muted, fontSize: 11.5 }}>{isWide ? t('Arrástrala a una hora, o toca "Poner hora" y luego la hora.') : t('Toca "Poner hora" y luego la hora en la línea.')}</Text>}
+      {parts.loose.length > 0 && dayISO >= todayISO && !plan && <Button label={t('Sugerir horario')} icon="sparkles-outline" size="sm" kind="secondary" onPress={suggest} />}
       {!plan && batches.slice(0, 2).map((b) => (
         <View key={b.key} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', borderColor: C.line }}>
           <Ionicons name="albums-outline" size={16} color={C.brand2} />
-          <Text style={{ color: C.text, fontSize: 12.5, flex: 1 }}>Tanda de {b.label}: {b.ids.length} cortas, {fmtHours(b.minutes)}</Text>
-          <Button label="Juntar" size="sm" kind="secondary" onPress={() => suggestBatch(b)} accessibilityLabel={`Juntar la tanda de ${b.label} en un bloque`} />
+          <Text style={{ color: C.text, fontSize: 12.5, flex: 1 }}>{t('Tanda de {label}: {length} cortas, {minutes}', { label: b.label, length: b.ids.length, minutes: fmtHours(b.minutes) })}</Text>
+          <Button label={t('Juntar')} size="sm" kind="secondary" onPress={() => suggestBatch(b)} accessibilityLabel={t('Juntar la tanda de {label} en un bloque', { label: b.label })} />
         </View>
       ))}
     </View>
   );
 
   const suggestion = plan && (
-    <Card style={{ marginBottom: 10, borderLeftWidth: 4, borderLeftColor: C.brand, gap: 8 }} accessibilityLabel="Horario sugerido">
-      <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>{plan.title ?? 'Horario sugerido'}</Text>
-      <Text style={{ color: C.muted, fontSize: 12.5 }}>{plan.title ? 'Una tras otra, en un solo bloque: cambiar de tema cuesta menos así.' : 'En los huecos libres, primero lo que vence antes.'} Nada se guarda hasta que aceptes.</Text>
+    <Card style={{ marginBottom: 10, borderLeftWidth: 4, borderLeftColor: C.brand, gap: 8 }} accessibilityLabel={t('Horario sugerido')}>
+      <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>{plan.title ?? t('Horario sugerido')}</Text>
+      <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('{v} Nada se guarda hasta que aceptes.', { v: plan.title ? t('Una tras otra, en un solo bloque: cambiar de tema cuesta menos así.') : t('En los huecos libres, primero lo que vence antes.') })}</Text>
       {plan.placed.map((p) => (
         <View key={p.id} style={{ flexDirection: 'row', gap: 10, alignItems: 'baseline' }}>
-          <Text style={{ width: 92, color: C.text, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] }}>{clockLabel(p.start)} a {clockLabel(p.end)}</Text>
-          <Text style={{ flex: 1, color: C.text, fontSize: 13.5 }} numberOfLines={2}>{byId.get(p.id)?.title ?? 'Tarea'}</Text>
+          <Text style={{ width: 92, color: C.text, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] }}>{t('{start} a {end}', { start: clockLabel(p.start), end: clockLabel(p.end) })}</Text>
+          <Text style={{ flex: 1, color: C.text, fontSize: 13.5 }} numberOfLines={2}>{byId.get(p.id)?.title ?? t('Tarea')}</Text>
         </View>
       ))}
-      {plan.left.length > 0 && <Text style={{ color: C.warnText, fontSize: 12.5 }}>No caben: {plan.left.map((id) => `"${byId.get(id)?.title ?? 'Tarea'}"`).join(', ')}. Pásalas a otro día o acorta algo.</Text>}
+      {plan.left.length > 0 && <Text style={{ color: C.warnText, fontSize: 12.5 }}>{t('No caben: ')}{plan.left.map((id) => `"${byId.get(id)?.title ?? t('Tarea')}"`).join(', ')}{t('. Pásalas a otro día o acorta algo.')}</Text>}
       <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-        <Button label="Aceptar" icon="checkmark" size="sm" busy={saving} onPress={acceptPlan} />
-        <Button label="Cancelar" size="sm" kind="ghost" onPress={() => setPlan(null)} />
+        <Button label={t('Aceptar')} icon="checkmark" size="sm" busy={saving} onPress={acceptPlan} />
+        <Button label={t('Cancelar')} size="sm" kind="ghost" onPress={() => setPlan(null)} />
       </View>
     </Card>
   );
@@ -204,8 +205,8 @@ export function DayPlanner({ tasks, slots, subjects, onChanged, onToggle, onFocu
           <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700' }}>{over}</Text>
           {cand && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <Text style={{ color: C.muted, fontSize: 12.5, flex: 1 }}>Lo que puede esperar: "{cand.title}"{cand.due_date ? `, vence el ${cand.due_date.slice(8, 10)}/${cand.due_date.slice(5, 7)}` : ''}.</Text>
-              <Button label="Pasarla a mañana" size="sm" kind="secondary" onPress={() => moveToTomorrow(cand)} />
+              <Text style={{ color: C.muted, fontSize: 12.5, flex: 1 }}>{t('Lo que puede esperar: "{title}"{v}.', { title: cand.title, v: cand.due_date ? t(', vence el {slice}/{slice2}', { slice: cand.due_date.slice(8, 10), slice2: cand.due_date.slice(5, 7) }) : '' })}</Text>
+              <Button label={t('Pasarla a mañana')} size="sm" kind="secondary" onPress={() => moveToTomorrow(cand)} />
             </View>
           )}
         </Card>
@@ -223,8 +224,8 @@ export function DayPlanner({ tasks, slots, subjects, onChanged, onToggle, onFocu
       {placing && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: 10, backgroundColor: C.brand + '18', marginBottom: 10 }} accessibilityLiveRegion="polite">
           <Ionicons name="hand-left-outline" size={16} color={C.brand} />
-          <Text style={{ color: C.text, fontSize: 13, flex: 1 }}>Toca la hora (o una franja) para "{placing.title}".</Text>
-          <Button label="Cancelar" size="sm" kind="ghost" onPress={() => setPlacing(null)} />
+          <Text style={{ color: C.text, fontSize: 13, flex: 1 }}>{t('Toca la hora (o una franja) para "{title}".', { title: placing.title })}</Text>
+          <Button label={t('Cancelar')} size="sm" kind="ghost" onPress={() => setPlacing(null)} />
         </View>
       )}
       {isWide ? (
@@ -243,7 +244,7 @@ export function DayPlanner({ tasks, slots, subjects, onChanged, onToggle, onFocu
         </View>
       )}
       {week && <View style={{ marginTop: 14 }}>{loose}</View>}
-      {isToday && <Text style={{ color: C.muted, fontSize: 11.5, marginTop: 8 }}>Planeado hoy: {fmtHours(planned)} · libre: {fmtHours(free)}</Text>}
+      {isToday && <Text style={{ color: C.muted, fontSize: 11.5, marginTop: 8 }}>{t('Planeado hoy: {planned} · libre: {free}', { planned: fmtHours(planned), free: fmtHours(free) })}</Text>}
     </View>
   );
 }
@@ -258,12 +259,12 @@ function LooseRow({ t, ratio, active, onPlace, onToggle, mark }: { t: Task; rati
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '600' }} numberOfLines={2}>{t.title}</Text>
         <Text style={{ color: mark === 'rana' ? C.brand : C.muted, fontSize: 11.5, fontWeight: mark === 'rana' ? '700' : '400' }}>
-          {mark === 'rana' ? 'Primero · ' : typeof mark === 'number' ? `${mark}.º de la lista · ` : ''}{fmtHours(taskMinutes(t.estimate_min, ratio))}
+          {mark === 'rana' ? 'Primero · ' : typeof mark === 'number' ? trn('{mark}.º de la lista · ', { mark }) : ''}{fmtHours(taskMinutes(t.estimate_min, ratio))}
         </Text>
       </View>
-      <Pressable onPress={onPlace} accessibilityRole="button" accessibilityLabel={`Poner hora a "${t.title}"`}
+      <Pressable onPress={onPlace} accessibilityRole="button" accessibilityLabel={trn('Poner hora a "{title}"', { title: t.title })}
         style={{ paddingHorizontal: 10, minHeight: 30, justifyContent: 'center', borderRadius: 8, backgroundColor: active ? C.brand : C.surface2 }}>
-        <Text style={{ color: active ? C.onBrand : C.text, fontSize: 12, fontWeight: '700' }}>{active ? 'Elige…' : 'Poner hora'}</Text>
+        <Text style={{ color: active ? C.onBrand : C.text, fontSize: 12, fontWeight: '700' }}>{active ? trn('Elige…') : trn('Poner hora')}</Text>
       </Pressable>
     </View>
   );
@@ -277,8 +278,8 @@ function FrogCard({ frog, suggestion, options, isToday, work, onChoose, onStart 
   onChoose: (t: Task | null) => void; onStart: (t: Task) => void;
 }) {
   const [picking, setPicking] = useState(false);
-  const title = work ? (isToday ? 'Lo primero de hoy' : 'Lo primero de ese día') : (isToday ? 'La rana de hoy' : 'La rana de ese día');
-  const hint = 'Lo más pesado e importante, antes que lo demás: después todo se siente más fácil.';
+  const title = work ? (isToday ? t('Lo primero de hoy') : t('Lo primero de ese día')) : (isToday ? t('La rana de hoy') : t('La rana de ese día'));
+  const hint = t('Lo más pesado e importante, antes que lo demás: después todo se siente más fácil.');
   return (
     <Card style={{ marginBottom: 10, gap: 8, borderLeftWidth: 4, borderLeftColor: C.brand }} accessibilityLabel={title}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -289,25 +290,25 @@ function FrogCard({ frog, suggestion, options, isToday, work, onChoose, onStart 
         <>
           <Text style={{ color: C.text, fontSize: 15, fontWeight: '700' }} numberOfLines={2}>{frog.title}</Text>
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-            {isToday && <Button label="Empezar" icon="play" size="sm" onPress={() => onStart(frog)} />}
-            <Button label="Cambiar" size="sm" kind="secondary" onPress={() => setPicking((v) => !v)} />
-            <Button label="Quitar" size="sm" kind="ghost" onPress={() => onChoose(null)} />
+            {isToday && <Button label={t('Empezar')} icon="play" size="sm" onPress={() => onStart(frog)} />}
+            <Button label={t('Cambiar')} size="sm" kind="secondary" onPress={() => setPicking((v) => !v)} />
+            <Button label={t('Quitar')} size="sm" kind="ghost" onPress={() => onChoose(null)} />
           </View>
         </>
       ) : (
         <>
           <Text style={{ color: C.muted, fontSize: 12.5 }}>{hint}</Text>
-          {suggestion && <Text style={{ color: C.text, fontSize: 13.5 }}>Sugerencia: <Text style={{ fontWeight: '700' }}>{suggestion.title}</Text></Text>}
+          {suggestion && <Text style={{ color: C.text, fontSize: 13.5 }}>{t('Sugerencia: ')}<Text style={{ fontWeight: '700' }}>{suggestion.title}</Text></Text>}
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-            {suggestion && <Button label="Esa" icon="checkmark" size="sm" onPress={() => onChoose(suggestion)} />}
-            <Button label={suggestion ? 'Elegir otra' : 'Elegir'} size="sm" kind="secondary" onPress={() => setPicking((v) => !v)} />
+            {suggestion && <Button label={t('Esa')} icon="checkmark" size="sm" onPress={() => onChoose(suggestion)} />}
+            <Button label={suggestion ? t('Elegir otra') : t('Elegir')} size="sm" kind="secondary" onPress={() => setPicking((v) => !v)} />
           </View>
         </>
       )}
       {picking && (
         <View style={{ gap: 6 }}>
           {options.filter((t) => t.id !== frog?.id).slice(0, 10).map((t) => (
-            <Pressable key={t.id} onPress={() => { setPicking(false); onChoose(t); }} accessibilityRole="button" accessibilityLabel={`Que lo primero sea "${t.title}"`}
+            <Pressable key={t.id} onPress={() => { setPicking(false); onChoose(t); }} accessibilityRole="button" accessibilityLabel={trn('Que lo primero sea "{title}"', { title: t.title })}
               style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 9, borderRadius: 10, borderWidth: 1, borderColor: C.line, backgroundColor: hovered ? C.surface2 : 'transparent' })}>
               <Ionicons name={t.important ? 'star' : 'ellipse-outline'} size={14} color={t.important ? C.warnText : C.muted} />
               <Text style={{ color: C.text, fontSize: 13.5, flex: 1 }} numberOfLines={1}>{t.title}</Text>

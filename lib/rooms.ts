@@ -24,6 +24,7 @@ import { unlockAmbient } from './ambient';
 import {
   type PresenceInfo, type Proposal, type Greeting, makeProposal, parseProposal, parsePresence, myPresence, proposalOpen, parseGreeting, cleanOutfit,
 } from './roomsLogic';
+import { t } from './i18n';
 
 export type LiveRoom = {
   room: { id: string; name: string } | null;
@@ -124,7 +125,7 @@ async function disconnect() {
 async function connect() {
   try { await connectInner(); } catch (e: any) {
     console.warn('Sala:', e?.message ?? e);
-    live.status = 'error'; live.error = 'No se pudo conectar a la sala.'; emit();
+    live.status = 'error'; live.error = t('No se pudo conectar a la sala.'); emit();
   }
 }
 
@@ -138,7 +139,7 @@ async function connectInner() {
   if (my !== gen) return;
   if (!user) { live.status = 'off'; emit(); return; }
   const full = String(user.user_metadata?.full_name ?? '').trim();
-  me = { uid: user.id, name: (full || String(user.email ?? '').split('@')[0] || 'Alguien').slice(0, 40), pet: activePet()?.species ?? null, outfit: cleanOutfit(activePet()?.outfit) };
+  me = { uid: user.id, name: (full || String(user.email ?? '').split('@')[0] || t('Alguien')).slice(0, 40), pet: activePet()?.species ?? null, outfit: cleanOutfit(activePet()?.outfit) };
   live.me = user.id;
 
   const rt = await realtimeClient();
@@ -164,7 +165,7 @@ async function connectInner() {
     if (status === 'SUBSCRIBED') { live.status = 'on'; live.error = null; lastSent = ''; void track(true); }
     else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
       live.status = 'error';
-      live.error = /unauthori|denied|permission/i.test(String(err?.message ?? '')) ? 'No tienes acceso a esta sala.' : 'No se pudo conectar a la sala. Reintentando...';
+      live.error = /unauthori|denied|permission/i.test(String(err?.message ?? '')) ? t('No tienes acceso a esta sala.') : t('No se pudo conectar a la sala. Reintentando...');
     } else if (status === 'CLOSED') live.status = 'off';
     emit();
   });
@@ -213,8 +214,8 @@ function onProposal(p: Proposal | null) {
   if (viewing === live.room?.id) return; // la pantalla de la sala ya lo muestra con su botón
   const f = getFocus();
   const busy = f.running && f.mode === 'work';
-  toast(`${p.name} propone empezar juntos un pomodoro de ${p.workMin} min${busy ? ' (reinicia tu reloj)' : ''}.`, {
-    actionLabel: 'Me uno', onAction: () => { acceptProposal(p); }, duration: Math.max(9000, Math.min(60000, p.startAt - now + 20000)),
+  toast(t('{name} propone empezar juntos un pomodoro de {workMin} min{v}.', { name: p.name, workMin: p.workMin, v: busy ? t(' (reinicia tu reloj)') : '' }), {
+    actionLabel: t('Me uno'), onAction: () => { acceptProposal(p); }, duration: Math.max(9000, Math.min(60000, p.startAt - now + 20000)),
   });
 }
 
@@ -224,16 +225,16 @@ export function acceptProposal(p: Proposal | null = live.proposal): boolean {
   unlockAmbient(); // es un toque: deja listo el sonido de fondo
   const ok = startFocusAt(p.startAt, p.workMin);
   if (ok) { live.joinedProposal = p.id; emit(); }
-  else toast('Ese pomodoro ya casi termina. Propón uno nuevo.', { tone: 'plain' });
+  else toast(t('Ese pomodoro ya casi termina. Propón uno nuevo.'), { tone: 'plain' });
   return ok;
 }
 
 /** Proponer un pomodoro con mi duración. Arranca en 10 s para todos. */
 export async function proposeTogether(): Promise<boolean> {
-  if (!channel || live.status !== 'on' || !me) { toast('Todavía no hay conexión con la sala.', { tone: 'plain' }); return false; }
+  if (!channel || live.status !== 'on' || !me) { toast(t('Todavía no hay conexión con la sala.'), { tone: 'plain' }); return false; }
   const p = makeProposal(me.uid, me.name, getFocus().workMin, Date.now());
   const res = await channel.send({ type: 'broadcast', event: 'propose', payload: p });
-  if (res !== 'ok') { toast('No se pudo enviar la propuesta. Intenta de nuevo.', { tone: 'bad' }); return false; }
+  if (res !== 'ok') { toast(t('No se pudo enviar la propuesta. Intenta de nuevo.'), { tone: 'bad' }); return false; }
   live.proposal = p;
   acceptProposal(p);
   return true;
@@ -288,7 +289,7 @@ function onGreeting(g: Greeting | null) {
   if (g.to !== me.uid || viewing === live.room?.id) return; // el patio ya lo muestra
   const f = getFocus();
   if (f.running && f.mode === 'work') { pending.push(g); return; } // no interrumpir el enfoque
-  toast(`${g.fromName} te saludó desde ${live.room?.name ?? 'la sala'}.`);
+  toast(t('{fromName} te saludó desde {v}.', { fromName: g.fromName, v: live.room?.name ?? t('la sala') }));
 }
 
 /** Al terminar el enfoque, los saludos que llegaron mientras tanto. */
@@ -296,7 +297,7 @@ function flushGreetings(f: FocusState) {
   if (!pending.length || (f.running && f.mode === 'work')) return;
   const names = [...new Set(pending.map((g) => g.fromName))];
   pending = [];
-  toast(names.length === 1 ? `${names[0]} te saludó mientras te enfocabas.` : `Te saludaron mientras te enfocabas: ${names.join(', ')}.`);
+  toast(names.length === 1 ? t('{v} te saludó mientras te enfocabas.', { v: names[0] }) : t('Te saludaron mientras te enfocabas: {join}.', { join: names.join(', ') }));
 }
 
 // ---------- Para las mascotas sueltas ----------

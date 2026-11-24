@@ -3,9 +3,10 @@
 // ============================================================
 import { supabase } from './supabase';
 import type { Health, Rule } from './projectWork';
+import { t } from './i18n';
 
 const missing = (e: any) => !!e && (e.code === '42P01' || e.code === 'PGRST205' || /does not exist|Could not find/i.test(String(e.message ?? '')));
-export const NEEDS_V24_3 = 'Para las reglas y el estado del proyecto falta correr schema_v24.sql (fase 3) en Supabase.';
+export const NEEDS_V24_3 = t('Para las reglas y el estado del proyecto falta correr schema_v24.sql (fase 3) en Supabase.');
 const fail = (e: any): never => { throw new Error(missing(e) ? NEEDS_V24_3 : String(e?.message ?? e)); };
 
 export async function getRules(projectId: string): Promise<Rule[] | null> {
@@ -48,7 +49,7 @@ export async function draftUpdate(reportMd: string): Promise<{ health: Health | 
   if (error) {
     let msg = '';
     try { const ctx: any = (error as any).context; const j = ctx?.json ? await ctx.json() : null; msg = j?.error ?? ''; } catch { /* noop */ }
-    throw new Error(msg || 'No se pudo redactar el estado. Intenta de nuevo.');
+    throw new Error(msg || t('No se pudo redactar el estado. Intenta de nuevo.'));
   }
   return data as { health: Health | null; body: string };
 }

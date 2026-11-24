@@ -9,6 +9,7 @@ import { DragCard, DragGhost, useBoardDrag } from './BoardDrag';
 import { Subject } from '../../lib/db';
 import { BoardColumn, Member, PStep, PTask, colorOf, initialsOf, nameOf } from '../../lib/projects';
 import { COARSE_POINTER, NO_STEPS, SelectBox, dueInfo, isWeb } from './projectUi';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Vista Tablero del proyecto: columnas, tarjetas, arrastrar y "Mover a" en el celular.
@@ -66,7 +67,7 @@ export function Tablero({ cols, grouped, steps, members, subject, editable, isWi
                 <Text numberOfLines={1} style={{ color: C.text, fontSize: 13.5, fontWeight: '700', flex: 1 }}>{col.label}</Text>
                 <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700' }}>{list.length}</Text>
                 {editable && (
-                  <Pressable onPress={() => onAdd(col.key)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Agregar tarjeta en ${col.label}`}
+                  <Pressable onPress={() => onAdd(col.key)} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('Agregar tarjeta en {label}', { label: col.label })}
                     style={{ width: 34, height: 34, margin: -8, alignItems: 'center', justifyContent: 'center' }}>
                     <Ionicons name="add" size={17} color={C.muted} />
                   </Pressable>
@@ -97,7 +98,7 @@ export function Tablero({ cols, grouped, steps, members, subject, editable, isWi
 
                 {list.length === 0 && !isOver && (
                   <View style={{ paddingVertical: 22, alignItems: 'center', borderWidth: 1, borderColor: C.line, borderStyle: 'dashed', borderRadius: 12 }}>
-                    <Text style={{ color: C.muted, fontSize: 12 }}>{dnd.isActive ? 'Arrastra una tarjeta aquí' : 'Nada por aquí'}</Text>
+                    <Text style={{ color: C.muted, fontSize: 12 }}>{dnd.isActive ? t('Arrastra una tarjeta aquí') : t('Nada por aquí')}</Text>
                   </View>
                 )}
 
@@ -105,7 +106,7 @@ export function Tablero({ cols, grouped, steps, members, subject, editable, isWi
                   <Pressable onPress={() => onAdd(col.key)}
                     style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, marginTop: 8, borderRadius: 10, borderWidth: 1, borderColor: C.line, borderStyle: 'dashed' }}>
                     <Ionicons name="add" size={14} color={C.muted} />
-                    <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600' }}>Agregar tarjeta</Text>
+                    <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600' }}>{t('Agregar tarjeta')}</Text>
                   </Pressable>
                 )}
               </ScrollView>
@@ -159,7 +160,7 @@ export function TaskCardView({ task, steps, members, subject, color, dim, mine, 
           {task.title}
         </Text>
         {showMove && (
-          <Pressable onPress={onMove} hitSlop={8} dataSet={{ nodrag: '1' }} accessibilityRole="button" accessibilityLabel={`Mover "${task.title}" a otra columna`}
+          <Pressable onPress={onMove} hitSlop={8} dataSet={{ nodrag: '1' }} accessibilityRole="button" accessibilityLabel={t('Mover "{title}" a otra columna', { title: task.title })}
             style={{ width: 34, height: 34, margin: -8, alignItems: 'center', justifyContent: 'center' }}>
             <Ionicons name="swap-horizontal" size={16} color={C.muted} />
           </Pressable>
@@ -183,7 +184,7 @@ export function TaskCardView({ task, steps, members, subject, color, dim, mine, 
             <Text style={{ color: C.muted, fontSize: 11 }}>{nameOf(who.profile)}</Text>
           </View>
         ) : (
-          <Text style={{ color: C.muted, fontSize: 11 }}>Sin asignar</Text>
+          <Text style={{ color: C.muted, fontSize: 11 }}>{t('Sin asignar')}</Text>
         )}
 
         <View style={{ flex: 1 }} />
@@ -220,7 +221,7 @@ export function MoveMenu({ task, cols, onClose, onPick }: {
     <Modal visible={!!task} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
         <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} style={{ backgroundColor: C.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18, paddingBottom: 34, borderTopWidth: 1, borderColor: C.line }}>
-          <Text style={{ color: C.text, fontSize: 16, fontWeight: '700' }}>Mover tarjeta</Text>
+          <Text style={{ color: C.text, fontSize: 16, fontWeight: '700' }}>{t('Mover tarjeta')}</Text>
           <Text numberOfLines={2} style={{ color: C.muted, fontSize: 12.5, marginTop: 3, marginBottom: 12 }}>{task?.title}</Text>
           {cols.map((c) => {
             const on = c.key === task?.status;
@@ -229,12 +230,12 @@ export function MoveMenu({ task, cols, onClose, onPick }: {
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 13, paddingHorizontal: 12, borderRadius: 12, backgroundColor: on ? C.surface2 : 'transparent' }}>
                 <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: c.color }} />
                 <Text style={{ color: C.text, fontSize: 14, fontWeight: on ? '700' : '500', flex: 1 }}>{c.label}</Text>
-                {on ? <Text style={{ color: C.muted, fontSize: 11.5 }}>aquí está</Text> : <Ionicons name="arrow-forward" size={15} color={C.muted} />}
+                {on ? <Text style={{ color: C.muted, fontSize: 11.5 }}>{t('aquí está')}</Text> : <Ionicons name="arrow-forward" size={15} color={C.muted} />}
               </Pressable>
             );
           })}
           <Pressable onPress={onClose} style={{ alignItems: 'center', marginTop: 10 }}>
-            <Text style={{ color: C.muted }}>Cancelar</Text>
+            <Text style={{ color: C.muted }}>{t('Cancelar')}</Text>
           </Pressable>
         </Pressable>
       </Pressable>
@@ -257,11 +258,11 @@ export function WorkBadges({ task, byId }: { task: PTask; byId: Record<string, P
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
       {p && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }} accessibilityLabel={`Prioridad ${p.label}`}><Ionicons name="flag" size={11} color={p.color} /><Text style={{ color: p.color, fontSize: 11.5, fontWeight: '800' }}>{p.label}</Text></View>}
       {!task.done && blockers.length > 0 && (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }} accessibilityLabel={`Bloqueada por ${blockers.map((b) => b.title).join(', ')}`}>
-          <Ionicons name="lock-closed" size={11} color={C.warnText} /><Text style={{ color: C.warnText, fontSize: 11.5, fontWeight: '700' }} numberOfLines={1}>Espera: {blockers[0].title}{blockers.length > 1 ? ` y ${blockers.length - 1} más` : ''}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }} accessibilityLabel={t('Bloqueada por {join}', { join: blockers.map((b) => b.title).join(', ') })}>
+          <Ionicons name="lock-closed" size={11} color={C.warnText} /><Text style={{ color: C.warnText, fontSize: 11.5, fontWeight: '700' }} numberOfLines={1}>{t('Espera: {title}{v}', { title: blockers[0].title, v: blockers.length > 1 ? t(' y {v} más', { v: blockers.length - 1 }) : '' })}</Text>
         </View>
       )}
-      {task.repeat_rule && <Ionicons name="repeat" size={12} color={C.muted} accessibilityLabel="Se repite" />}
+      {task.repeat_rule && <Ionicons name="repeat" size={12} color={C.muted} accessibilityLabel={t('Se repite')} />}
       {labels.slice(0, 3).map((l) => <Text key={l} style={{ color: C.muted, fontSize: 11.5, fontWeight: '600' }}>#{l}</Text>)}
     </View>
   );

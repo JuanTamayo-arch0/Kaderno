@@ -21,6 +21,7 @@ import { ensureOpenTerm, useGradeScale } from '../../lib/termsDb';
 import { useSpaceFilter } from '../../lib/useSpace';
 import { fmtGrade } from '../../lib/terms';
 import { vtNavigate, vtRef } from '../../lib/motion';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Materias: tarjetas con lo pendiente, la próxima entrega y el promedio.
@@ -64,9 +65,9 @@ export default function Materias() {
   const cardW = cols === 1 ? '100%' : `${100 / cols - 1.5}%`;
 
   return (
-    <Screen title={mv.subjects} subtitle={subjects?.length ? mv.subjectsCount(subjects.length) : mv.subjectLower === 'área' ? 'Organiza por área o cliente' : 'Organiza por asignatura'} maxWidth={1180}
+    <Screen title={mv.subjects} subtitle={subjects?.length ? mv.subjectsCount(subjects.length) : mv.subjectLower === 'área' ? t('Organiza por área o cliente') : t('Organiza por asignatura')} maxWidth={1180}
       right={<View style={{ flexDirection: 'row', gap: 8 }}>
-        {!work && <Button label={isWide ? 'Historial' : ''} icon="ribbon-outline" size="sm" kind="secondary" onPress={() => router.push('/historial' as any)} accessibilityLabel="Historial académico" />}
+        {!work && <Button label={isWide ? t('Historial') : ''} icon="ribbon-outline" size="sm" kind="secondary" onPress={() => router.push('/historial' as any)} accessibilityLabel={t('Historial académico')} />}
         {isWide && <Button label={mv.newSubject} icon="add" size="sm" onPress={() => setModal(true)} />}
       </View>}
       header={!isWide ? <Segmented value="materias" onChange={(k) => { if (k === 'horario') router.navigate('/horario'); }}
@@ -95,7 +96,7 @@ export default function Materias() {
             const soon = nc && (nc.now || dayWord(nc.start) === 'Hoy' || dayWord(nc.start) === 'Mañana');
             const who = [s.teacher, days].filter(Boolean).join(' · ');
             return (
-              <Card key={s.id} onPress={() => vtNavigate(() => router.push(`/materia/${s.id}`))} accessibilityLabel={`Abrir ${s.name}`}
+              <Card key={s.id} onPress={() => vtNavigate(() => router.push(`/materia/${s.id}`))} accessibilityLabel={t('Abrir {name}', { name: s.name })}
                 style={{ width: cardW as any, borderLeftWidth: 4, borderLeftColor: s.color }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                   <View ref={vtRef(`subj-${s.id}`)} style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: s.color + '26', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
@@ -104,24 +105,24 @@ export default function Materias() {
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={{ color: C.text, fontSize: 16, fontWeight: '700' }} numberOfLines={1}>{s.name}</Text>
                     <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }} numberOfLines={1}>
-                      {who || `${s.credits && !work ? `${s.credits} créditos · ` : ''}${notesN} ${notesN === 1 ? 'nota' : 'notas'}`}
+                      {who || `${s.credits && !work ? t('{credits} créditos · ', { credits: s.credits }) : ''}${notesN} ${notesN === 1 ? 'nota' : 'notas'}`}
                     </Text>
                   </View>
                   {!work && (
                     <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={{ color: avg == null ? C.muted : avg < scale.pass ? C.badText : C.text, fontSize: avg == null ? 12.5 : 18, fontWeight: '800' }}>{avg == null ? 'Sin notas' : fmtGrade(avg, scale)}</Text>
-                      {avg != null && <Text style={{ color: C.muted, fontSize: 11 }}>promedio</Text>}
+                      <Text style={{ color: avg == null ? C.muted : avg < scale.pass ? C.badText : C.text, fontSize: avg == null ? 12.5 : 18, fontWeight: '800' }}>{avg == null ? t('Sin notas') : fmtGrade(avg, scale)}</Text>
+                      {avg != null && <Text style={{ color: C.muted, fontSize: 11 }}>{t('promedio')}</Text>}
                     </View>
                   )}
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: C.line, flexWrap: 'wrap' }}>
-                  <Text style={{ color: st.length ? C.text : C.muted, fontSize: 13, fontWeight: '600' }}>{st.length ? `${st.length} ${st.length === 1 ? 'pendiente' : 'pendientes'}` : 'Nada pendiente'}</Text>
+                  <Text style={{ color: st.length ? C.text : C.muted, fontSize: 13, fontWeight: '600' }}>{st.length ? `${st.length} ${st.length === 1 ? 'pendiente' : 'pendientes'}` : t('Nada pendiente')}</Text>
                   {overdue > 0 && <Text style={{ color: C.badText, fontSize: 13, fontWeight: '700' }}>{overdue} {overdue === 1 ? 'vencida' : 'vencidas'}</Text>}
-                  {next && <Text style={{ color: C.muted, fontSize: 13, flex: 1, textAlign: 'right' }} numberOfLines={1}>Próxima: {fmtDue(next)}</Text>}
+                  {next && <Text style={{ color: C.muted, fontSize: 13, flex: 1, textAlign: 'right' }} numberOfLines={1}>{t('Próxima: {next}', { next: fmtDue(next) })}</Text>}
                 </View>
                 {soon && nc && (
                   <Text style={{ color: nc.now ? C.goodText : C.muted, fontSize: 12.5, fontWeight: '600', marginTop: 8 }} numberOfLines={1}>
-                    {nc.now ? (work ? 'En reunión ahora' : 'En clase ahora') : `${work ? 'Reunión' : 'Clase'} ${dayWord(nc.start).toLowerCase()} ${fmtHour(`${String(nc.start.getHours()).padStart(2, '0')}:${String(nc.start.getMinutes()).padStart(2, '0')}`)}`}{s.room ? ` · ${s.room}` : ''}
+                    {nc.now ? (work ? t('En reunión ahora') : t('En clase ahora')) : `${work ? t('Reunión') : t('Clase')} ${dayWord(nc.start).toLowerCase()} ${fmtHour(`${String(nc.start.getHours()).padStart(2, '0')}:${String(nc.start.getMinutes()).padStart(2, '0')}`)}`}{s.room ? ` · ${s.room}` : ''}
                   </Text>
                 )}
               </Card>
@@ -154,11 +155,11 @@ function Summary({ subjects, tasks, grades, slots, isWide, work, scaleMax, decim
   const tiles: { k: string; label: string; big: string; sub: string; tone?: string; onPress?: () => void }[] = [
     // v26: en Trabajo no hay promedio; se ve cuántas áreas o clientes hay activos.
     work
-      ? { k: 'avg', label: 'Áreas y clientes', big: String(subjects.length), sub: `${subjects.filter((s) => tasks.some((t) => t.subject_id === s.id && t.status !== 'done')).length} con pendientes` }
-      : { k: 'avg', label: 'Promedio del semestre', big: fmtGrade(sem.avg, { decimals }), sub: sem.avg == null ? 'Agrega notas en cada materia' : `Ponderado por créditos (${sem.credits})` },
-    { k: 'pend', label: 'Pendientes', big: String(pending.length), sub: overdue ? `${overdue} ${overdue === 1 ? 'vencida' : 'vencidas'}` : 'Ninguna vencida', tone: overdue ? C.badText : undefined },
-    { k: 'next', label: 'Próxima entrega', big: next ? next.title : 'Nada pronto', sub: next ? `${nextSub?.name ?? ''} · ${fmtDue(next)}` : 'Todo al día', onPress: next?.subject_id ? () => onOpen(next.subject_id!) : undefined },
-    { k: 'class', label: work ? 'Próxima reunión' : 'Próxima clase', big: nc ? nc.s.name : work ? 'Sin agenda' : 'Sin horario', sub: nc ? (nc.n!.now ? 'Ahora' : `${dayWord(nc.n!.start)}, ${fmtHour(hhmm(nc.n!.start))}`) + (nc.s.room ? ` · ${nc.s.room}` : '') : work ? 'Arma tu agenda para verla' : 'Arma tu horario para verla', onPress: nc ? () => onOpen(nc.s.id) : undefined },
+      ? { k: 'avg', label: t('Áreas y clientes'), big: String(subjects.length), sub: t('{length} con pendientes', { length: subjects.filter((s) => tasks.some((t) => t.subject_id === s.id && t.status !== 'done')).length }) }
+      : { k: 'avg', label: t('Promedio del semestre'), big: fmtGrade(sem.avg, { decimals }), sub: sem.avg == null ? t('Agrega notas en cada materia') : t('Ponderado por créditos ({credits})', { credits: sem.credits }) },
+    { k: 'pend', label: t('Pendientes'), big: String(pending.length), sub: overdue ? `${overdue} ${overdue === 1 ? 'vencida' : 'vencidas'}` : t('Ninguna vencida'), tone: overdue ? C.badText : undefined },
+    { k: 'next', label: t('Próxima entrega'), big: next ? next.title : t('Nada pronto'), sub: next ? `${nextSub?.name ?? ''} · ${fmtDue(next)}` : t('Todo al día'), onPress: next?.subject_id ? () => onOpen(next.subject_id!) : undefined },
+    { k: 'class', label: work ? t('Próxima reunión') : t('Próxima clase'), big: nc ? nc.s.name : work ? t('Sin agenda') : t('Sin horario'), sub: nc ? (nc.n!.now ? t('Ahora') : `${dayWord(nc.n!.start)}, ${fmtHour(hhmm(nc.n!.start))}`) + (nc.s.room ? ` · ${nc.s.room}` : '') : work ? t('Arma tu agenda para verla') : t('Arma tu horario para verla'), onPress: nc ? () => onOpen(nc.s.id) : undefined },
   ];
   const tile = (t: typeof tiles[number]) => (
     <Card key={t.k} onPress={t.onPress} accessibilityLabel={t.label} style={isWide ? { flex: 1, padding: 14 } : { width: tileW, padding: 14 }}>

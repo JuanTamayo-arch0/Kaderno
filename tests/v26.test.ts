@@ -111,7 +111,7 @@ test('espacios: en Trabajo no aparece lo del estudio', async () => {
   assert.match(parts, /work \? \['tareas', 'notas', 'files'\]/, 'sin pestaña de calificaciones en Trabajo');
   assert.match(parts, /subject\.credits && !work/, 'sin créditos en Trabajo');
   const modal = fs.readFileSync('components/SubjectModal.tsx', 'utf8');
-  assert.match(modal, /\{!work && <Field label="Créditos"/);
+  assert.match(modal, /\{!work && <Field label=\{t\('Créditos'\)\}/);
   const areas = fs.readFileSync('app/(tabs)/materias.tsx', 'utf8');
   assert.match(areas, /\{!work && \(/, 'sin promedio en las tarjetas de áreas');
   const hoy = fs.readFileSync('app/(tabs)/index.tsx', 'utf8');

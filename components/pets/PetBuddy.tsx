@@ -29,14 +29,15 @@ import { useAuth } from '../../lib/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getGoals } from '../../lib/ritualsDb';
 import { useMode } from '../../lib/mode';
+import { t, trn } from '../../lib/i18n';
 
 /** Después de 2 horas de enfoque casi seguidas (pausas de menos de 15 min) se ve cansada. */
 const TIRED_MS = 2 * 60 * 60_000;
 const TIRED_GAP_MS = 15 * 60_000;
 
 const LABELS: Record<ActionId, string> = {
-  enfocar: 'Enfocarme ya', mover_hoy: 'Mover a hoy', que_hago: '¿Qué hago ahora?', dos_min: 'Regla de 2 min',
-  luego: 'Luego', tienda: 'Tienda', terminar_enfoque: 'Ir al enfoque', seguir: 'Seguir', logros: 'Ver logros',
+  enfocar: t('Enfocarme ya'), mover_hoy: t('Mover a hoy'), que_hago: t('¿Qué hago ahora?'), dos_min: t('Regla de 2 min'),
+  luego: t('Luego'), tienda: t('Tienda'), terminar_enfoque: t('Ir al enfoque'), seguir: t('Seguir'), logros: t('Ver logros'),
 };
 /** Pantallas donde no aparece (o ya está en grande, como en Mascota y en el Oráculo). */
 const HIDDEN = ['/login', '/bienvenida', '/visor', '/mascota', '/oraculo'];
@@ -135,7 +136,7 @@ export function PetBuddy() {
         if (!t) return;
         await moveTaskDate(t, isoDate(startOfDay(new Date())));
         dataChanged();
-        toast(`Movida a hoy: ${t.title}`);
+        toast(trn('Movida a hoy: {title}', { title: t.title }));
       } else if (id === 'que_hago') {
         const h = await freshHints();
         const sug = suggestion(h.overdue, h.today, pet.species);
@@ -143,7 +144,7 @@ export function PetBuddy() {
         c.say(sug.say, sug.task ? [{ id: 'enfocar', label: LABELS.enfocar }, { id: 'dos_min', label: LABELS.dos_min }] : [], 9000);
       } else if (id === 'dos_min') {
         const t = ctx.current.task;
-        c.say(lineFor('dos_minutos', pet.species, { tarea: t?.title ?? 'lo primero' }), [{ id: 'enfocar', label: LABELS.enfocar }], 9000);
+        c.say(lineFor('dos_minutos', pet.species, { tarea: t?.title ?? trn('lo primero') }), [{ id: 'enfocar', label: LABELS.enfocar }], 9000);
       } else if (id === 'tienda') {
         router.push('/mascota');
       } else if (id === 'logros') {
@@ -253,7 +254,7 @@ export function PetBuddy() {
           const last = Number(await AsyncStorage.getItem('kd:goalNudge').catch(() => null)) || 0;
           if (Date.now() - last > 30 * 86_400_000) { goal = withPlan[0]; AsyncStorage.setItem('kd:goalNudge', String(Date.now())).catch(() => {}); }
         }
-        const goalHint = goal ? { materia: subs.find((x) => x.id === goal!.subject_id)?.name ?? 'el semestre', plan: String(goal.plan).slice(0, 140) } : null;
+        const goalHint = goal ? { materia: subs.find((x) => x.id === goal!.subject_id)?.name ?? t('el semestre'), plan: String(goal.plan).slice(0, 140) } : null;
         // v27: la rana de hoy, si la dejaste lista al cerrar el día.
         const todayIso = isoDate(startOfDay(now));
         const frogTask = h.all.find((t) => t.frog && t.plan_day === todayIso && t.status !== 'done' && !t.deleted_at);

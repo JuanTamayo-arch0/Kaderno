@@ -4,6 +4,7 @@ import Svg, { G, Path, Rect } from 'react-native-svg';
 import { C, uiScheme } from '../../lib/theme';
 import { getSpace } from '../../lib/mode';
 import { BRAND_FONT, LOGO, logoColors, logoToneFor, pencilShapes, type LogoSpace, type LogoTone, type Shape } from '../../lib/brand';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Logo de Kaderno: la margen del cuaderno como un lápiz (v28) junto a la K.
@@ -40,7 +41,7 @@ export function KadernoWordmark({ size = 20, color, style }: { size?: number; co
 /** Logo y nombre juntos. Lectores de pantalla oyen "Kaderno". */
 export function KadernoLockup({ size = 28, tone, color, gap = 10, flex }: { size?: number; tone?: LogoTone; color?: string; gap?: number; flex?: boolean }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap, ...(flex ? { flex: 1 } : null) }} accessible accessibilityRole="image" accessibilityLabel="Kaderno">
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap, ...(flex ? { flex: 1 } : null) }} accessible accessibilityRole="image" accessibilityLabel={t('Kaderno')}>
       <KadernoMark size={size} tone={tone} />
       <KadernoWordmark size={Math.round(size * 0.78)} color={color} />
     </View>

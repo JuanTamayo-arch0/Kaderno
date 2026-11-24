@@ -6,6 +6,7 @@ import { toast, notify, friendlyError } from '../../lib/feedback';
 import { refreshNavCounts } from '../../lib/navCounts';
 import { ReviewSheet } from './CardForms';
 import { saveNoteCards } from '../../lib/notesDb';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Crear tarjetas con IA desde una nota o una selección:
@@ -26,24 +27,24 @@ export function useCardMaker() {
 
   /** Pide tarjetas a la IA y abre la hoja de revisión. */
   const start = useCallback(async (text: string, mode: 'note' | 'selection', c: Ctx) => {
-    if (!text.trim()) { notify('No hay texto', 'Escribe o digitaliza algo antes de crear tarjetas.'); return; }
+    if (!text.trim()) { notify(t('No hay texto'), t('Escribe o digitaliza algo antes de crear tarjetas.')); return; }
     setBusy(true);
     try {
       const all = await getCards().catch(() => []);
       const existing = all.filter((x) => (c.subjectId ? x.subject_id === c.subjectId : !x.subject_id) || (c.noteId && x.note_id === c.noteId)).map((x) => ({ id: x.id, front: x.front }));
       const proposed = await aiCards(text, cardsWanted(text, mode === 'selection'), existing.map((e) => e.front), mode);
-      if (!proposed.length) throw new Error('La IA no devolvió tarjetas. Intenta con un texto más largo.');
+      if (!proposed.length) throw new Error(t('La IA no devolvió tarjetas. Intenta con un texto más largo.'));
       const heading = mode === 'selection' && c.markdown ? headingBefore(c.markdown, text) : null;
       setCtx({ ...c, mode, text, heading, existing });
       setDrafts(toDrafts(proposed, existing));
       setOpen(true);
-    } catch (e) { notify('No se pudieron crear', friendlyError(e)); }
+    } catch (e) { notify(t('No se pudieron crear'), friendlyError(e)); }
     finally { setBusy(false); }
   }, []);
 
   /** Abre la revisión con tarjetas ya armadas (errores del simulacro, lo que faltó en "Ponme a prueba"). */
   const review = useCallback(async (proposed: { kind?: string; front: string; back?: string }[], c: Ctx) => {
-    if (!proposed.length) { toast('No hay nada que convertir en tarjetas.'); return; }
+    if (!proposed.length) { toast(t('No hay nada que convertir en tarjetas.')); return; }
     const all = await getCards().catch(() => []);
     const existing = all.filter((x) => (c.subjectId ? x.subject_id === c.subjectId : !x.subject_id) || (c.noteId && x.note_id === c.noteId)).map((x) => ({ id: x.id, front: x.front }));
     setCtx({ ...c, mode: 'note', text: proposed.map((p) => `${p.front}\n${p.back ?? ''}`).join('\n\n'), heading: null, existing });
@@ -57,7 +58,7 @@ export function useCardMaker() {
     try {
       const others = drafts.filter((d) => d.key !== key).map((d) => d.front);
       const [one] = await aiCards(ctx.text, 1, [...ctx.existing.map((e) => e.front), ...others, ...drafts.filter((d) => d.key === key).map((d) => d.front)], ctx.mode === 'selection' ? 'selection' : 'note');
-      if (!one) throw new Error('La IA no devolvió otra. Intenta de nuevo.');
+      if (!one) throw new Error(t('La IA no devolvió otra. Intenta de nuevo.'));
       const [d] = toDrafts([one], [...ctx.existing, ...drafts.filter((x) => x.key !== key).map((x) => ({ id: x.key, front: x.front }))]);
       setDrafts((ds) => ds.map((x) => (x.key === key ? { ...d, key } : x)));
     } catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
@@ -74,8 +75,8 @@ export function useCardMaker() {
       const prefs = await getStudyPrefs();
       setOpen(false); setDrafts([]);
       refreshNavCounts(true);
-      toast(`${n} ${n === 1 ? 'tarjeta guardada' : 'tarjetas guardadas'}. Entran poco a poco: ${prefs.newPerDay} nuevas por día.`, { tone: 'good', actionLabel: 'Repasar ahora', onAction: () => router.push('/repaso') });
-    } catch (e) { notify('No se pudieron guardar', friendlyError(e)); }
+      toast(t('{n} {v}. Entran poco a poco: {newPerDay} nuevas por día.', { n, v: n === 1 ? t('tarjeta guardada') : t('tarjetas guardadas'), newPerDay: prefs.newPerDay }), { tone: 'good', actionLabel: t('Repasar ahora'), onAction: () => router.push('/repaso') });
+    } catch (e) { notify(t('No se pudieron guardar'), friendlyError(e)); }
     finally { setSaving(false); }
   }, [ctx, router]);
 

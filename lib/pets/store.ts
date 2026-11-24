@@ -15,6 +15,7 @@ import type { ItemId, Outfit, Slot, Species } from './art';
 import type { Home, HomeItemId } from './home';
 import type { PetEvent, TalkMode } from './brain';
 import { ACHIEVEMENTS, type AchievementRow } from './achievements';
+import { t } from '../i18n';
 
 export type Pet = {
   id: string; species: Species; name: string; outfit: Outfit;
@@ -212,7 +213,7 @@ export async function wearItem(petId: string, slot: Slot, item: ItemId | null): 
 export async function setHome(petId: string, slot: 'papel' | 'piso' | 'vista' | 'mueble', item: HomeItemId | null, on = true): Promise<Pet> {
   const { data, error } = await supabase.rpc('pet_home', { p_pet: petId, p_slot: slot, p_item: item, p_on: on });
   if (error) {
-    if (isMissingTable(error)) throw new Error('Falta activar la casa en la base: hay que correr supabase/schema_v17.sql.');
+    if (isMissingTable(error)) throw new Error(t('Falta activar la casa en la base: hay que correr supabase/schema_v17.sql.'));
     throw error;
   }
   replacePet(data as Pet);

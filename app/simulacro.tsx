@@ -19,6 +19,7 @@ import { toast, notify, friendlyError, confirm } from '../lib/feedback';
 import { streakChanged, dataChanged } from '../lib/uiBus';
 import { refreshNavCounts } from '../lib/navCounts';
 import { getGoal } from '../lib/ritualsDb';
+import { t } from '../lib/i18n';
 
 // ============================================================
 //  Simulacro (v20, sección H): preguntas de tus notas, mezcla de opción
@@ -29,10 +30,10 @@ import { getGoal } from '../lib/ritualsDb';
 type Phase = 'config' | 'loading' | 'answer' | 'grading' | 'result';
 const COUNTS = [5, 10, 20];
 const VERDICT: Record<Verdict, { label: string; color: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = {
-  ok: { label: 'Correcta', color: C.good, icon: 'checkmark-circle' },
-  partial: { label: 'A medias', color: C.warn, icon: 'remove-circle' },
-  wrong: { label: 'Incorrecta', color: C.bad, icon: 'close-circle' },
-  skip: { label: 'Sin responder', color: C.muted, icon: 'ellipse-outline' },
+  ok: { label: t('Correcta'), color: C.good, icon: 'checkmark-circle' },
+  partial: { label: t('A medias'), color: C.warn, icon: 'remove-circle' },
+  wrong: { label: t('Incorrecta'), color: C.bad, icon: 'close-circle' },
+  skip: { label: t('Sin responder'), color: C.muted, icon: 'ellipse-outline' },
 };
 
 function Simulacro() {
@@ -91,9 +92,9 @@ function Simulacro() {
   useEffect(() => { if (phase === 'answer' && timed && left === 0 && startedAt) finish(); }, [left]);
 
   async function start() {
-    if (!subjectId) { toast('Elige una materia.'); return; }
+    if (!subjectId) { toast(t('Elige una materia.')); return; }
     const picked = pickNotes(usable, selected);
-    if (!picked.length) { notify('No hay notas para preguntar', 'Escribe o digitaliza tus apuntes de esta materia primero.'); return; }
+    if (!picked.length) { notify(t('No hay notas para preguntar'), t('Escribe o digitaliza tus apuntes de esta materia primero.')); return; }
     setPhase('loading');
     try {
       const q = await aiQuiz(picked.map((n) => ({ title: n.title, content: n.content })), count, subject?.name ?? null);
@@ -102,7 +103,7 @@ function Simulacro() {
       setIdx(0); setDraft(''); setQuizId(null); finishing.current = false;
       setStartedAt(Date.now()); setNow(Date.now());
       setPhase('answer');
-    } catch (e) { notify('No se pudo armar el simulacro', friendlyError(e)); setPhase('config'); }
+    } catch (e) { notify(t('No se pudo armar el simulacro'), friendlyError(e)); setPhase('config'); }
   }
 
   const setGiven = (i: number, given: string | number | null) => putAnswers(ansRef.current.map((x, j) => (j === i ? { ...x, given } : x)));
@@ -137,10 +138,10 @@ function Simulacro() {
         const res = await aiGrade(pending.map((i) => ({ q: qs[i].q, expected: correctText(qs[i]), given: String(graded[i].given ?? '') })));
         pending.forEach((i, k) => {
           const r = res[k];
-          graded[i] = r ? { ...graded[i], verdict: r.verdict, why: r.why, by: 'ai' } : { ...graded[i], verdict: 'wrong', why: 'No se pudo corregir con IA: revísala tú y cambia el veredicto si estaba bien.', by: 'user' };
+          graded[i] = r ? { ...graded[i], verdict: r.verdict, why: r.why, by: 'ai' } : { ...graded[i], verdict: 'wrong', why: t('No se pudo corregir con IA: revísala tú y cambia el veredicto si estaba bien.'), by: 'user' };
         });
       } catch (e) {
-        pending.forEach((i) => { graded[i] = { ...graded[i], verdict: 'wrong', why: 'No se pudo corregir con IA: revísala tú y cambia el veredicto si estaba bien.', by: 'user' }; });
+        pending.forEach((i) => { graded[i] = { ...graded[i], verdict: 'wrong', why: t('No se pudo corregir con IA: revísala tú y cambia el veredicto si estaba bien.'), by: 'user' }; });
         toast(friendlyError(e), { tone: 'bad' });
       }
     }
@@ -153,7 +154,7 @@ function Simulacro() {
       });
       setQuizId(id);
       streakChanged();
-    } catch (e) { toast('No se pudo guardar el simulacro: ' + friendlyError(e), { tone: 'bad' }); }
+    } catch (e) { toast(t('No se pudo guardar el simulacro: ') + friendlyError(e), { tone: 'bad' }); }
     if (params.sesion) {
       toggleTask(params.sesion, true).then(() => { dataChanged(); refreshNavCounts(true); }).catch(() => {});
     }
@@ -182,18 +183,18 @@ function Simulacro() {
   });
 
   async function leave() {
-    if (phase === 'answer' && !(await confirm('¿Salir del simulacro?', 'Se pierden las respuestas.', 'Salir'))) return;
+    if (phase === 'answer' && !(await confirm(t('¿Salir del simulacro?'), t('Se pierden las respuestas.'), t('Salir')))) return;
     router.back();
   }
 
   // ---------- Pantallas ----------
   if (phase === 'loading' || phase === 'grading') {
     return (
-      <Screen title="Simulacro" back nav={null} maxWidth={760}>
+      <Screen title={t('Simulacro')} back nav={null} maxWidth={760}>
         <Card style={{ alignItems: 'center', gap: 14, paddingVertical: 40 }}>
           <ActivityIndicator color={C.brand} size="large" />
-          <Text style={{ color: C.text, fontSize: 16, fontWeight: '700' }}>{phase === 'loading' ? 'Armando tus preguntas…' : 'Corrigiendo…'}</Text>
-          <Text style={{ color: C.muted, fontSize: 13, textAlign: 'center' }}>{phase === 'loading' ? 'Salen de tus notas. Toma unos segundos.' : 'La opción múltiple ya está; las respuestas escritas las revisa la IA.'}</Text>
+          <Text style={{ color: C.text, fontSize: 16, fontWeight: '700' }}>{phase === 'loading' ? t('Armando tus preguntas…') : t('Corrigiendo…')}</Text>
+          <Text style={{ color: C.muted, fontSize: 13, textAlign: 'center' }}>{phase === 'loading' ? t('Salen de tus notas. Toma unos segundos.') : t('La opción múltiple ya está; las respuestas escritas las revisa la IA.')}</Text>
         </Card>
       </Screen>
     );
@@ -203,17 +204,17 @@ function Simulacro() {
     const q = qs[idx];
     const a = answers[idx];
     return (
-      <Screen title="Simulacro" nav={null} maxWidth={760} right={<Button label="Salir" kind="ghost" size="sm" onPress={leave} />}>
+      <Screen title={t('Simulacro')} nav={null} maxWidth={760} right={<Button label={t('Salir')} kind="ghost" size="sm" onPress={leave} />}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
           <View style={{ flex: 1, height: 6, borderRadius: 3, backgroundColor: C.surface2, overflow: 'hidden' }}>
             <View style={{ width: `${((idx + 1) / qs.length) * 100}%`, height: '100%', backgroundColor: C.brand }} />
           </View>
-          <Text style={{ color: C.muted, fontSize: 13, fontVariant: ['tabular-nums'] }}>{idx + 1} de {qs.length}</Text>
+          <Text style={{ color: C.muted, fontSize: 13, fontVariant: ['tabular-nums'] }}>{t('{v} de {length}', { v: idx + 1, length: qs.length })}</Text>
           {timed && <Text style={{ color: left < 60 ? C.badText : C.text, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] }} accessibilityLabel={`Quedan ${fmtClock(left)}`}>{fmtClock(left)}</Text>}
         </View>
         <Card style={{ gap: 16, padding: isWide ? 24 : 16 }}>
           <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            {q.type === 'mc' ? 'Opción múltiple' : q.type === 'num' ? 'Problema' : 'Respuesta corta'}{q.note != null && used[q.note] ? ` · ${used[q.note].title}` : ''}
+            {q.type === 'mc' ? t('Opción múltiple') : q.type === 'num' ? t('Problema') : t('Respuesta corta')}{q.note != null && used[q.note] ? ` · ${used[q.note].title}` : ''}
           </Text>
           <CardText text={q.q} size={18} align="left" />
           {q.type === 'mc' ? (
@@ -232,13 +233,13 @@ function Simulacro() {
               })}
             </View>
           ) : (
-            <TextInput value={draft} onChangeText={setDraft} multiline placeholder={q.type === 'num' ? 'Tu resultado, con unidades (puedes poner el procedimiento)' : 'Tu respuesta'} placeholderTextColor={C.muted}
-              accessibilityLabel="Tu respuesta" autoFocus={Platform.OS === 'web'}
+            <TextInput value={draft} onChangeText={setDraft} multiline placeholder={q.type === 'num' ? t('Tu resultado, con unidades (puedes poner el procedimiento)') : t('Tu respuesta')} placeholderTextColor={C.muted}
+              accessibilityLabel={t('Tu respuesta')} autoFocus={Platform.OS === 'web'}
               style={[{ minHeight: 110, textAlignVertical: 'top', backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 12, color: C.text, padding: 12, fontSize: 15 }, Platform.OS === 'web' ? ({ outlineColor: C.brand } as any) : null]} />
           )}
           <View style={{ flexDirection: 'row', gap: 10 }}>
-            <Button label="Saltar" kind="secondary" icon="play-skip-forward-outline" onPress={() => next(true)} style={{ flex: 1 }} />
-            <Button label={idx + 1 >= qs.length ? 'Terminar' : 'Siguiente'} icon={idx + 1 >= qs.length ? 'checkmark' : 'arrow-forward'} onPress={() => next()} style={{ flex: 2 }}
+            <Button label={t('Saltar')} kind="secondary" icon="play-skip-forward-outline" onPress={() => next(true)} style={{ flex: 1 }} />
+            <Button label={idx + 1 >= qs.length ? t('Terminar') : t('Siguiente')} icon={idx + 1 >= qs.length ? 'checkmark' : 'arrow-forward'} onPress={() => next()} style={{ flex: 2 }}
               disabled={q.type === 'mc' ? a?.given == null : !draft.trim()} />
           </View>
         </Card>
@@ -253,22 +254,22 @@ function Simulacro() {
     const notesRows = byNote(qs, answers, used);
     const prev = history.filter((h) => h.id !== quizId && h.score != null)[0];
     return (
-      <Screen title="Resultado del simulacro" back nav={null} maxWidth={860}>
+      <Screen title={t('Resultado del simulacro')} back nav={null} maxWidth={860}>
         <View style={{ flexDirection: isWide ? 'row' : 'column', gap: 14 }}>
           <Card style={{ flex: 1, alignItems: 'center', paddingVertical: 22 }}>
-            <Text style={{ color: C.muted, fontSize: 13 }}>{subject?.name ?? 'Simulacro'}</Text>
-            <Text style={{ color: grade / scale >= 0.6 ? C.goodText : C.badText, fontSize: 44, fontWeight: '800' }} accessibilityLabel={`Nota ${fmtGrade(grade, scale)}`}>{fmtGrade(grade, scale)}</Text>
-            <Text style={{ color: C.text, fontSize: 15, fontWeight: '600' }}>{pct}% · {qs.length - errs.length} de {qs.length} bien · {fmtClock(duration)}</Text>
-            {prev && <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 6 }}>Antes: {fmtGrade(Number(prev.score), Number(prev.scale) || scale)}</Text>}
-            {target != null && <Text style={{ color: grade >= target ? C.goodText : C.muted, fontSize: 12.5, marginTop: 2 }}>Tu meta: {fmtGrade(target, scale).split(' / ')[0]}{grade >= target ? ' · ¡la alcanzaste!' : ''}</Text>}
+            <Text style={{ color: C.muted, fontSize: 13 }}>{subject?.name ?? t('Simulacro')}</Text>
+            <Text style={{ color: grade / scale >= 0.6 ? C.goodText : C.badText, fontSize: 44, fontWeight: '800' }} accessibilityLabel={t('Nota {grade}', { grade: fmtGrade(grade, scale) })}>{fmtGrade(grade, scale)}</Text>
+            <Text style={{ color: C.text, fontSize: 15, fontWeight: '600' }}>{t('{pct}% · {v} de {length} bien · {duration}', { pct, v: qs.length - errs.length, length: qs.length, duration: fmtClock(duration) })}</Text>
+            {prev && <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 6 }}>{t('Antes: {fmtGrade}', { fmtGrade: fmtGrade(Number(prev.score), Number(prev.scale) || scale) })}</Text>}
+            {target != null && <Text style={{ color: grade >= target ? C.goodText : C.muted, fontSize: 12.5, marginTop: 2 }}>{t('Tu meta: {v}{v2}', { v: fmtGrade(target, scale).split(' / ')[0], v2: grade >= target ? t(' · ¡la alcanzaste!') : '' })}</Text>}
           </Card>
           <Card style={{ flex: 1, gap: 10 }}>
-            <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '700' }}>Por nota</Text>
+            <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '700' }}>{t('Por nota')}</Text>
             {notesRows.map((r, i) => (
               <Pressable key={i} disabled={!r.id} onPress={() => r.id && router.push(`/nota/${r.id}`)} accessibilityRole="link" style={{ gap: 4 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
                   <Text style={{ color: C.text, fontSize: 13, flex: 1 }} numberOfLines={1}>{r.title}</Text>
-                  <Text style={{ color: C.muted, fontSize: 12.5 }}>{String(r.points).replace('.', ',')} de {r.total}</Text>
+                  <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('{replace} de {total}', { replace: String(r.points).replace('.', ','), total: r.total })}</Text>
                 </View>
                 <View style={{ height: 6, borderRadius: 3, backgroundColor: C.surface2, overflow: 'hidden' }}>
                   <View style={{ width: `${(r.points / r.total) * 100}%`, height: '100%', backgroundColor: r.points / r.total >= 0.6 ? C.good : C.warn }} />
@@ -279,13 +280,13 @@ function Simulacro() {
         </View>
 
         <View style={{ flexDirection: 'row', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
-          {errs.length > 0 && <Button label={`Convertir ${errs.length} ${errs.length === 1 ? 'error' : 'errores'} en tarjetas`} icon="albums-outline"
-            onPress={() => maker.review(errorDrafts(qs, answers), { noteId: used.length === 1 ? used[0].id : null, subjectId, title: 'Errores del simulacro', from: 'quiz' })} />}
-          <Button label="Otro simulacro" kind="secondary" icon="refresh" onPress={() => setPhase('config')} />
-          <Button label="Listo" kind="ghost" onPress={() => router.back()} />
+          {errs.length > 0 && <Button label={t('Convertir {length} {v} en tarjetas', { length: errs.length, v: errs.length === 1 ? t('error') : t('errores') })} icon="albums-outline"
+            onPress={() => maker.review(errorDrafts(qs, answers), { noteId: used.length === 1 ? used[0].id : null, subjectId, title: t('Errores del simulacro'), from: 'quiz' })} />}
+          <Button label={t('Otro simulacro')} kind="secondary" icon="refresh" onPress={() => setPhase('config')} />
+          <Button label={t('Listo')} kind="ghost" onPress={() => router.back()} />
         </View>
 
-        <Text style={{ color: C.text, fontSize: 15, fontWeight: '800', marginTop: 22, marginBottom: 8 }}>{errs.length ? 'Para repasar' : '¡Todo bien!'}</Text>
+        <Text style={{ color: C.text, fontSize: 15, fontWeight: '800', marginTop: 22, marginBottom: 8 }}>{errs.length ? t('Para repasar') : t('¡Todo bien!')}</Text>
         {qs.map((q, i) => {
           const a = answers[i];
           const v = a?.verdict ?? 'skip';
@@ -294,10 +295,10 @@ function Simulacro() {
           return (
             <Card key={i} style={{ marginBottom: 10, gap: 8 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '700' }}>Pregunta {i + 1}</Text>
+                <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '700' }}>{t('Pregunta {v}', { v: i + 1 })}</Text>
                 <View style={{ flex: 1 }} />
                 <Pressable onPress={() => q.type !== 'mc' && changeVerdict(i)} disabled={q.type === 'mc'} accessibilityRole="button"
-                  accessibilityLabel={`${VERDICT[v].label}${q.type !== 'mc' ? '. Toca para cambiar el veredicto' : ''}`}
+                  accessibilityLabel={`${VERDICT[v].label}${q.type !== 'mc' ? t('. Toca para cambiar el veredicto') : ''}`}
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: VERDICT[v].color + '22' }}>
                   <Ionicons name={VERDICT[v].icon} size={14} color={VERDICT[v].color} />
                   <Text style={{ color: VERDICT[v].color, fontSize: 12.5, fontWeight: '700' }}>{VERDICT[v].label}</Text>
@@ -305,13 +306,13 @@ function Simulacro() {
                 </Pressable>
               </View>
               <CardText text={q.q} size={15} align="left" />
-              <Text style={{ color: C.muted, fontSize: 13 }}>Tu respuesta: <Text style={{ color: C.text }}>{givenText(q, a)}</Text></Text>
-              <Text style={{ color: C.muted, fontSize: 13 }}>Correcta: <Text style={{ color: C.goodText, fontWeight: '600' }}>{correctText(q)}</Text></Text>
+              <Text style={{ color: C.muted, fontSize: 13 }}>{t('Tu respuesta: ')}<Text style={{ color: C.text }}>{givenText(q, a)}</Text></Text>
+              <Text style={{ color: C.muted, fontSize: 13 }}>{t('Correcta: ')}<Text style={{ color: C.goodText, fontWeight: '600' }}>{correctText(q)}</Text></Text>
               {!!(a?.why || q.explain) && <Text style={{ color: C.text, fontSize: 13, lineHeight: 19 }}>{a?.why ? a.why + ' ' : ''}{q.explain}</Text>}
               {n && (
                 <Pressable onPress={() => router.push(`/nota/${n.id}`)} accessibilityRole="link" style={{ flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start' }}>
                   <Ionicons name="document-text-outline" size={14} color={C.brand} />
-                  <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>Ver en la nota: {n.title}</Text>
+                  <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>{t('Ver en la nota: {title}', { title: n.title })}</Text>
                 </Pressable>
               )}
             </Card>
@@ -326,23 +327,23 @@ function Simulacro() {
   const allOn = selected === null;
   const prep = prepText(history as any);
   return (
-    <Screen title="Simulacro" subtitle="Preguntas de tus notas, como en el parcial" back nav={null} maxWidth={760}>
+    <Screen title={t('Simulacro')} subtitle={t('Preguntas de tus notas, como en el parcial')} back nav={null} maxWidth={760}>
       <Card style={{ gap: 14 }}>
         <View>
-          <Text style={lbl}>Materia</Text>
+          <Text style={lbl}>{t('Materia')}</Text>
           <SubjectPicker subjects={subjects} value={subjectId} onChange={setSubjectId} allowNone={false} />
           {!!prep && <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 6 }}>{prep}</Text>}
         </View>
         {subjectId && notes === null && <ActivityIndicator color={C.brand} />}
         {subjectId && notes !== null && usable.length === 0 && (
-          <EmptyState compact icon="document-text-outline" title="No hay notas para preguntar" text="Escribe o digitaliza tus apuntes de esta materia y vuelve." />
+          <EmptyState compact icon="document-text-outline" title={t('No hay notas para preguntar')} text={t('Escribe o digitaliza tus apuntes de esta materia y vuelve.')} />
         )}
         {usable.length > 0 && (
           <View>
-            <Text style={lbl}>Notas</Text>
+            <Text style={lbl}>{t('Notas')}</Text>
             <Pressable onPress={() => setSelected(allOn ? [] : null)} accessibilityRole="checkbox" accessibilityState={{ checked: allOn }} style={rowStyle}>
               <Ionicons name={allOn ? 'checkbox' : 'square-outline'} size={19} color={allOn ? C.brand : C.muted} />
-              <Text style={{ color: C.text, fontSize: 14, fontWeight: '700' }}>Todas las notas ({usable.length})</Text>
+              <Text style={{ color: C.text, fontSize: 14, fontWeight: '700' }}>{t('Todas las notas ({length})', { length: usable.length })}</Text>
             </Pressable>
             {usable.slice(0, 40).map((n) => {
               const on = allOn || (selected ?? []).includes(n.id);
@@ -354,14 +355,14 @@ function Simulacro() {
                     setSelected(nextSel.length === usable.length ? null : nextSel);
                   }}>
                   <Ionicons name={on ? 'checkbox' : 'square-outline'} size={17} color={on ? C.brand : C.muted} />
-                  <Text style={{ color: C.text, fontSize: 13.5, flex: 1 }} numberOfLines={1}>{n.title || 'Nota sin título'}</Text>
+                  <Text style={{ color: C.text, fontSize: 13.5, flex: 1 }} numberOfLines={1}>{n.title || t('Nota sin título')}</Text>
                 </Pressable>
               );
             })}
           </View>
         )}
         <View>
-          <Text style={lbl}>Preguntas</Text>
+          <Text style={lbl}>{t('Preguntas')}</Text>
           <View style={{ flexDirection: 'row', gap: 8 }} accessibilityRole="radiogroup">
             {COUNTS.map((c) => (
               <Pressable key={c} onPress={() => setCount(c)} accessibilityRole="radio" accessibilityState={{ checked: count === c }}
@@ -372,10 +373,10 @@ function Simulacro() {
           </View>
         </View>
         <View style={{ marginHorizontal: -14 }}>
-          <Toggle label="Con tiempo" hint={`1,5 min por pregunta (${fmtClock(count * SECONDS_PER_Q)} en total).`} value={timed} onChange={setTimed} />
+          <Toggle label={t('Con tiempo')} hint={t('1,5 min por pregunta ({fmtClock} en total).', { fmtClock: fmtClock(count * SECONDS_PER_Q) })} value={timed} onChange={setTimed} />
         </View>
-        <Button label="Empezar simulacro" icon="play" size="lg" onPress={start} disabled={!subjectId || usable.length === 0 || selected?.length === 0} />
-        <Text style={{ color: C.muted, fontSize: 12 }}>Máximo 5 simulacros por día. La opción múltiple se corrige al instante; las respuestas escritas las corrige la IA y puedes cambiar su veredicto.</Text>
+        <Button label={t('Empezar simulacro')} icon="play" size="lg" onPress={start} disabled={!subjectId || usable.length === 0 || selected?.length === 0} />
+        <Text style={{ color: C.muted, fontSize: 12 }}>{t('Máximo 5 simulacros por día. La opción múltiple se corrige al instante; las respuestas escritas las corrige la IA y puedes cambiar su veredicto.')}</Text>
       </Card>
     </Screen>
   );

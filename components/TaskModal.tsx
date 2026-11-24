@@ -33,6 +33,7 @@ import { confirm } from '../lib/feedback';
 import { useRouter } from 'expo-router';
 import { cleanRule, ruleText, type RepeatRule } from '../lib/repeat';
 import { hasV20Cols } from '../lib/db';
+import { t, locale } from '../lib/i18n';
 
 // ============================================================
 //  Crear / editar tarea personal.
@@ -106,7 +107,7 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
   const v14 = hasV14();
 
   async function save() {
-    if (!title.trim()) { setTitleError('Escribe un título.'); return; }
+    if (!title.trim()) { setTitleError(t('Escribe un título.')); return; }
     setBusy(true);
     try {
       const at = remindAt(remind, date, time);
@@ -136,9 +137,9 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
       }
       if (at) scheduleLocalReminder(title.trim(), at).catch(() => {});
       const planChanged = plan.at && plan.at !== editTask?.plan_at;
-      if (planChanged && new Date(plan.at!).getTime() > Date.now()) scheduleLocalReminder('Toca: ' + title.trim(), new Date(plan.at!)).catch(() => {});
-      if (planChanged && !hasPlanCols()) toast('Tarea guardada. Para guardar cuándo la haces falta correr schema_v19.sql.', { tone: 'bad' });
-      else toast(editTask ? 'Cambios guardados' : 'Tarea creada', { tone: 'good' });
+      if (planChanged && new Date(plan.at!).getTime() > Date.now()) scheduleLocalReminder(t('Toca: ') + title.trim(), new Date(plan.at!)).catch(() => {});
+      if (planChanged && !hasPlanCols()) toast(t('Tarea guardada. Para guardar cuándo la haces falta correr schema_v19.sql.'), { tone: 'bad' });
+      else toast(editTask ? t('Cambios guardados') : t('Tarea creada'), { tone: 'good' });
       onSaved(id);
       // Plan de repaso del examen: ofrecerlo al crear (o al ponerle fecha) y mover las sesiones si cambia la fecha.
       const isExam = ['examen', 'quiz'].includes(type);
@@ -146,15 +147,15 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
       const pendingSessions = sessions.filter((x) => x.status !== 'done');
       if (isExam && id && date && dateChanged && pendingSessions.length && editTask?.due_date) {
         const delta = Math.round((new Date(date + 'T12:00:00').getTime() - new Date(editTask.due_date + 'T12:00:00').getTime()) / 86_400_000);
-        if (delta && await confirm('¿Muevo las sesiones que faltan?', `El examen se movió ${Math.abs(delta)} ${Math.abs(delta) === 1 ? 'día' : 'días'}. Las sesiones de repaso pendientes se corren igual.`, 'Moverlas')) {
+        if (delta && await confirm(t('¿Muevo las sesiones que faltan?'), t('El examen se movió {delta} {v}. Las sesiones de repaso pendientes se corren igual.', { delta: Math.abs(delta), v: Math.abs(delta) === 1 ? t('día') : t('días') }), t('Moverlas'))) {
           const r = shiftSessions(pendingSessions, delta, new Date(), new Date(date + 'T12:00:00'));
-          try { await applyShift(r.move); await trashTasks(r.drop); dataChanged(); toast(`Sesiones movidas${r.drop.length ? `; ${r.drop.length} ya no cabían y se quitaron` : ''}`, { tone: 'good' }); }
+          try { await applyShift(r.move); await trashTasks(r.drop); dataChanged(); toast(`Sesiones movidas${r.drop.length ? t('; {length} ya no cabían y se quitaron', { length: r.drop.length }) : ''}`, { tone: 'good' }); }
           catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
         }
       } else if (isExam && id && shouldOffer(type, date, new Date()) && (!editTask || dateChanged) && !sessions.length) {
         openExamPlan({ ...(editTask ?? {}), ...payload, id, status: editTask?.status ?? 'pending' } as Task);
       }
-    } catch (e) { notify('No se pudo guardar', friendlyError(e)); }
+    } catch (e) { notify(t('No se pudo guardar'), friendlyError(e)); }
     finally { setBusy(false); }
   }
 
@@ -164,7 +165,7 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
     if (editTask) {
       const added: Step[] = [];
       for (let i = 0; i < titles.length; i++) {
-        try { added.push(await addStep(editTask.id, titles[i], steps.length + i)); } catch (e) { notify('No se pudo agregar el paso', friendlyError(e)); break; }
+        try { added.push(await addStep(editTask.id, titles[i], steps.length + i)); } catch (e) { notify(t('No se pudo agregar el paso'), friendlyError(e)); break; }
       }
       setSteps((prev) => [...prev, ...added]);
     } else {
@@ -183,7 +184,7 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
       setTypesRev((n) => n + 1);
       setType(key);
       setNewType(null);
-    } catch (e) { notify('No se pudo crear el tipo', friendlyError(e)); }
+    } catch (e) { notify(t('No se pudo crear el tipo'), friendlyError(e)); }
   }
 
   async function remove() {
@@ -195,24 +196,24 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
   const body = (
     <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 8 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
-        <Text style={{ color: C.text, fontSize: 18, fontWeight: '700', flex: 1 }} accessibilityRole="header">{editTask ? 'Editar tarea' : 'Nueva tarea'}</Text>
-        {editTask && <IconButton icon="timer-outline" label="Enfocarme en esta tarea" onPress={() => { startFocus({ taskId: editTask.id, taskTitle: editTask.title, subjectId: editTask.subject_id }); onClose(); toast('Enfoque iniciado: ' + editTask.title); }} />}
-        {editTask && <IconButton icon="play-circle-outline" label="Iniciar cronómetro" onPress={() => { startStopwatch({ title: editTask.title, subjectId: editTask.subject_id, assignmentId: editTask.id }); onClose(); toast('Cronómetro: ' + editTask.title); }} />}
-        {editTask && <IconButton icon="trash-outline" label="Borrar tarea" onPress={remove} />}
-        <IconButton icon="close" label="Cerrar" onPress={onClose} />
+        <Text style={{ color: C.text, fontSize: 18, fontWeight: '700', flex: 1 }} accessibilityRole="header">{editTask ? t('Editar tarea') : t('Nueva tarea')}</Text>
+        {editTask && <IconButton icon="timer-outline" label={t('Enfocarme en esta tarea')} onPress={() => { startFocus({ taskId: editTask.id, taskTitle: editTask.title, subjectId: editTask.subject_id }); onClose(); toast(t('Enfoque iniciado: ') + editTask.title); }} />}
+        {editTask && <IconButton icon="play-circle-outline" label={t('Iniciar cronómetro')} onPress={() => { startStopwatch({ title: editTask.title, subjectId: editTask.subject_id, assignmentId: editTask.id }); onClose(); toast(t('Cronómetro: ') + editTask.title); }} />}
+        {editTask && <IconButton icon="trash-outline" label={t('Borrar tarea')} onPress={remove} />}
+        <IconButton icon="close" label={t('Cerrar')} onPress={onClose} />
       </View>
 
-      <Field value={title} onChangeText={(v) => { setTitle(v); if (titleError) setTitleError(null); }} placeholder="Ej: Taller de cálculo, ejercicios 1 a 10"
-        autoFocus={!editTask && Platform.OS === 'web'} error={titleError} onSubmitEditing={save} returnKeyType="done" label="Título" />
+      <Field value={title} onChangeText={(v) => { setTitle(v); if (titleError) setTitleError(null); }} placeholder={t('Ej: Taller de cálculo, ejercicios 1 a 10')}
+        autoFocus={!editTask && Platform.OS === 'web'} error={titleError} onSubmitEditing={save} returnKeyType="done" label={t('Título')} />
       <Pressable onPress={() => setImportant((v) => !v)} accessibilityRole="checkbox" accessibilityState={{ checked: important }}
-        accessibilityLabel="Importante" accessibilityHint="Lo importante va arriba en la vista Matriz de Hoy"
+        accessibilityLabel={t('Importante')} accessibilityHint={t('Lo importante va arriba en la vista Matriz de Hoy')}
         style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6, marginTop: 10, paddingVertical: 7, paddingHorizontal: 12, borderRadius: 99,
           borderWidth: 1, borderColor: important ? C.warnText : C.line, backgroundColor: important ? C.warn + '1f' : hovered ? C.surface2 : 'transparent' })}>
         <Ionicons name={important ? 'star' : 'star-outline'} size={15} color={important ? C.warnText : C.muted} />
-        <Text style={{ color: important ? C.text : C.muted, fontSize: 13, fontWeight: '700' }}>Importante</Text>
+        <Text style={{ color: important ? C.text : C.muted, fontSize: 13, fontWeight: '700' }}>{t('Importante')}</Text>
       </Pressable>
 
-      <Text style={lbl()}>Tipo</Text>
+      <Text style={lbl()}>{t('Tipo')}</Text>
       <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
         {types.map((m) => {
           const active = type === m.key;
@@ -228,34 +229,34 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
           <Pressable onPress={() => setNewType({ label: '', icon: '📌' })} accessibilityRole="button"
             style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 36, paddingVertical: 7, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, borderStyle: 'dashed', borderColor: C.line }}>
             <Ionicons name="add" size={14} color={C.muted} />
-            <Text style={{ color: C.muted, fontSize: 13, fontWeight: '600' }}>Nuevo tipo</Text>
+            <Text style={{ color: C.muted, fontSize: 13, fontWeight: '600' }}>{t('Nuevo tipo')}</Text>
           </Pressable>
         )}
       </View>
       {newType && (
         <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 10 }}>
-          <TextInput value={newType.icon} onChangeText={(v) => setNewType({ ...newType, icon: v.slice(-2) })} accessibilityLabel="Ícono del tipo"
+          <TextInput value={newType.icon} onChangeText={(v) => setNewType({ ...newType, icon: v.slice(-2) })} accessibilityLabel={t('Ícono del tipo')}
             style={{ width: 48, textAlign: 'center', backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 10, color: C.text, padding: 10, fontSize: 16 }} />
-          <TextInput value={newType.label} onChangeText={(v) => setNewType({ ...newType, label: v })} placeholder="Ej: Laboratorio" placeholderTextColor={C.muted} autoFocus
-            onSubmitEditing={createType} accessibilityLabel="Nombre del tipo"
+          <TextInput value={newType.label} onChangeText={(v) => setNewType({ ...newType, label: v })} placeholder={t('Ej: Laboratorio')} placeholderTextColor={C.muted} autoFocus
+            onSubmitEditing={createType} accessibilityLabel={t('Nombre del tipo')}
             style={{ flex: 1, backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 10, color: C.text, padding: 10, fontSize: 14 }} />
-          <Button label="Crear" size="sm" onPress={createType} />
-          <IconButton icon="close" label="Cancelar tipo nuevo" onPress={() => setNewType(null)} />
+          <Button label={t('Crear')} size="sm" onPress={createType} />
+          <IconButton icon="close" label={t('Cancelar tipo nuevo')} onPress={() => setNewType(null)} />
         </View>
       )}
 
-      <Text style={lbl()}>Materia</Text>
+      <Text style={lbl()}>{t('Materia')}</Text>
       <SubjectPicker subjects={subjects} value={subjectId} onChange={setSubjectId} />
 
       <View style={{ flexDirection: 'row', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
-        <DateField label="Entrega" value={date} onChange={(v) => { setDate(v); if (!v) setTime(null); }} />
-        {v14 && <TimeField label="Hora (opcional)" value={time} onChange={(v) => { setTime(v); if (v && remind === 'evening') setRemind('1h'); if (!v && REMIND_OPTIONS.find((o) => o.key === remind)?.needsTime) setRemind('evening'); }} disabled={!date} />}
+        <DateField label={t('Entrega')} value={date} onChange={(v) => { setDate(v); if (!v) setTime(null); }} />
+        {v14 && <TimeField label={t('Hora (opcional)')} value={time} onChange={(v) => { setTime(v); if (v && remind === 'evening') setRemind('1h'); if (!v && REMIND_OPTIONS.find((o) => o.key === remind)?.needsTime) setRemind('evening'); }} disabled={!date} />}
       </View>
       <DateShortcuts value={date} onChange={setDate} />
 
       {date && (
         <>
-          <Text style={lbl()}>Avisarme</Text>
+          <Text style={lbl()}>{t('Avisarme')}</Text>
           <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
             {REMIND_OPTIONS.filter((o) => !o.needsTime || time).filter((o) => v14 || ['none', '1d', '2d'].includes(o.key)).map((o) => {
               const on = remind === o.key;
@@ -280,7 +281,7 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
         <Pressable onPress={() => { const ex = { ...editTask, due_date: date, type }; onClose(); openExamReview(ex as Task); }} accessibilityRole="button"
           style={({ hovered }: any) => ({ marginTop: 14, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: C.brand2 + '66', backgroundColor: hovered ? C.surface2 : C.brand2 + '12' })}>
           <Ionicons name="school-outline" size={18} color={C.brand2} />
-          <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700', flex: 1 }}>¿Cómo te fue? Pon la nota y mira si el esfuerzo alcanzó</Text>
+          <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700', flex: 1 }}>{t('¿Cómo te fue? Pon la nota y mira si el esfuerzo alcanzó')}</Text>
           <Ionicons name="chevron-forward" size={16} color={C.muted} />
         </Pressable>
       )}
@@ -289,25 +290,25 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
         <View style={{ marginTop: 14, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: C.line, backgroundColor: C.surface2 + '66', gap: 8 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Ionicons name="calendar-number-outline" size={15} color={C.brand} />
-            <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700', flex: 1 }}>{sessions.length ? planProgress(sessions).text : 'Plan de repaso'}</Text>
+            <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700', flex: 1 }}>{sessions.length ? planProgress(sessions).text : t('Plan de repaso')}</Text>
           </View>
           {sessions.map((x) => (
-            <Pressable key={x.id} accessibilityRole="button" accessibilityLabel={`${x.title}${x.status === 'done' ? ', hecha' : ''}`}
+            <Pressable key={x.id} accessibilityRole="button" accessibilityLabel={`${x.title}${x.status === 'done' ? t(', hecha') : ''}`}
               onPress={() => { if (x.session_kind === 'sim' && x.status !== 'done') { onClose(); router.push({ pathname: '/simulacro', params: { materia: x.subject_id ?? '', examen: editTask.id, sesion: x.id } } as any); } }}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Ionicons name={x.status === 'done' ? 'checkmark-circle' : 'ellipse-outline'} size={16} color={x.status === 'done' ? C.good : C.muted} />
               <Text style={{ color: x.status === 'done' ? C.muted : C.text, fontSize: 13, flex: 1, textDecorationLine: x.status === 'done' ? 'line-through' : 'none' }} numberOfLines={1}>
                 {x.session_kind ? KIND_TEXT[x.session_kind].short : x.title.split(' · ')[0]}
               </Text>
-              <Text style={{ color: C.muted, fontSize: 12 }}>{x.due_date ? x.due_date.slice(8, 10) + '/' + x.due_date.slice(5, 7) : ''}{x.plan_at ? ' · ' + new Date(x.plan_at).toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' }) : ''}</Text>
+              <Text style={{ color: C.muted, fontSize: 12 }}>{x.due_date ? x.due_date.slice(8, 10) + '/' + x.due_date.slice(5, 7) : ''}{x.plan_at ? ' · ' + new Date(x.plan_at).toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' }) : ''}</Text>
             </Pressable>
           ))}
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
             {sessions.length === 0
-              ? <Button label="Armar plan de repaso" icon="sparkles-outline" size="sm" onPress={() => { const ex = { ...editTask, due_date: date, type }; onClose(); openExamPlan(ex as Task); }} />
+              ? <Button label={t('Armar plan de repaso')} icon="sparkles-outline" size="sm" onPress={() => { const ex = { ...editTask, due_date: date, type }; onClose(); openExamPlan(ex as Task); }} />
               : <>
-                <Button label="Rehacer" size="sm" kind="secondary" onPress={async () => { try { await removePlan(editTask.id); const ex = { ...editTask, due_date: date, type }; onClose(); dataChanged(); openExamPlan(ex as Task); } catch (e) { toast(friendlyError(e), { tone: 'bad' }); } }} />
-                <Button label="Quitar" size="sm" kind="ghost" onPress={async () => { try { await removePlan(editTask.id); setSessions((xs) => xs.filter((x) => x.status === 'done')); dataChanged(); toast('Plan quitado (las sesiones hechas se quedan)'); } catch (e) { toast(friendlyError(e), { tone: 'bad' }); } }} />
+                <Button label={t('Rehacer')} size="sm" kind="secondary" onPress={async () => { try { await removePlan(editTask.id); const ex = { ...editTask, due_date: date, type }; onClose(); dataChanged(); openExamPlan(ex as Task); } catch (e) { toast(friendlyError(e), { tone: 'bad' }); } }} />
+                <Button label={t('Quitar')} size="sm" kind="ghost" onPress={async () => { try { await removePlan(editTask.id); setSessions((xs) => xs.filter((x) => x.status === 'done')); dataChanged(); toast(t('Plan quitado (las sesiones hechas se quedan)')); } catch (e) { toast(friendlyError(e), { tone: 'bad' }); } }} />
               </>}
           </View>
         </View>
@@ -316,19 +317,19 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
       {!more ? (
         <Pressable onPress={() => setMore(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 16, alignSelf: 'flex-start', paddingVertical: 6 }} accessibilityRole="button">
           <Ionicons name="add-circle-outline" size={17} color={C.brand} />
-          <Text style={{ color: C.brand, fontWeight: '700', fontSize: 13.5 }}>Descripción y tiempo estimado</Text>
+          <Text style={{ color: C.brand, fontWeight: '700', fontSize: 13.5 }}>{t('Descripción y tiempo estimado')}</Text>
         </Pressable>
       ) : (
         <>
-          <Field label="Descripción" value={description} onChangeText={setDescription} multiline placeholder="Detalles, requisitos, página del libro…"
+          <Field label={t('Descripción')} value={description} onChangeText={setDescription} multiline placeholder={t('Detalles, requisitos, página del libro…')}
             inputStyle={{ minHeight: 72, textAlignVertical: 'top' }} style={{ marginTop: 14 }} />
           {v14 && (
             <>
-              <Text style={[lbl(), { marginTop: 2 }]}>Tiempo estimado</Text>
+              <Text style={[lbl(), { marginTop: 2 }]}>{t('Tiempo estimado')}</Text>
               <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
                 {[null, ...ESTIMATES, ...(estimate != null && !ESTIMATES.includes(estimate) ? [estimate] : [])].map((m) => {
                   const on = estimate === m;
-                  const label = m == null ? 'Sin estimar' : fmtMinutes(m);
+                  const label = m == null ? t('Sin estimar') : fmtMinutes(m);
                   return (
                     <Pressable key={String(m)} onPress={() => { setEstimate(m); setHintOff(false); }} accessibilityRole="radio" accessibilityState={{ checked: on }}
                       style={{ minHeight: 34, justifyContent: 'center', paddingHorizontal: 11, borderRadius: 99, borderWidth: 1, borderColor: on ? C.brand : C.line, backgroundColor: on ? C.brand : 'transparent' }}>
@@ -344,8 +345,8 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, padding: 10, borderRadius: 10, backgroundColor: C.brand + '14', borderWidth: 1, borderColor: C.brand + '44', flexWrap: 'wrap' }}>
                     <Ionicons name="hourglass-outline" size={15} color={C.brand} />
                     <Text style={{ color: C.text, fontSize: 12.5, flex: 1, minWidth: 180 }}>{h.text}</Text>
-                    <Button label={`Poner ${fmtMinutes(h.value)}`} size="sm" onPress={() => { setEstimate(h.value); setHintOff(true); }} />
-                    <IconButton icon="close" label="No, gracias" onPress={() => setHintOff(true)} />
+                    <Button label={t('Poner {value}', { value: fmtMinutes(h.value) })} size="sm" onPress={() => { setEstimate(h.value); setHintOff(true); }} />
+                    <IconButton icon="close" label={t('No, gracias')} onPress={() => setHintOff(true)} />
                   </View>
                 );
               })()}
@@ -356,12 +357,12 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 18, marginBottom: 6 }}>
         <Ionicons name="list-outline" size={15} color={C.muted} />
-        <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700', flex: 1 }}>Pasos</Text>
-        {steps.length > 0 && <Text style={{ color: C.muted, fontSize: 12 }}>{doneSteps} de {steps.length}</Text>}
+        <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700', flex: 1 }}>{t('Pasos')}</Text>
+        {steps.length > 0 && <Text style={{ color: C.muted, fontSize: 12 }}>{t('{doneSteps} de {length}', { doneSteps, length: steps.length })}</Text>}
       </View>
       <View style={{ backgroundColor: C.surface2 + '80', borderRadius: 12, borderWidth: 1, borderColor: C.line, padding: 10 }}>
         <SubtaskList assignmentId={editTask?.id ?? null} steps={steps} onChange={setSteps} />
-        {steps.length === 0 && <Text style={{ color: C.muted, fontSize: 12, marginTop: 8 }}>Divide la tarea en pasos y verás el avance.</Text>}
+        {steps.length === 0 && <Text style={{ color: C.muted, fontSize: 12, marginTop: 8 }}>{t('Divide la tarea en pasos y verás el avance.')}</Text>}
       </View>
       <StepSuggestions title={title} description={description} typeKey={type} existing={steps.map((s) => s.title)} onAdd={addSuggested} />
     </ScrollView>
@@ -369,8 +370,8 @@ export function TaskModal({ visible, subjects, editTask, draft, initialSubjectId
 
   const footer = (
     <View style={{ flexDirection: 'row', gap: 10, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.line, marginTop: 8 }}>
-      <Button label="Cancelar" kind="secondary" onPress={onClose} style={{ flex: 1 }} />
-      <Button label={editTask ? 'Guardar' : 'Crear tarea'} onPress={save} busy={busy} style={{ flex: 2 }} />
+      <Button label={t('Cancelar')} kind="secondary" onPress={onClose} style={{ flex: 1 }} />
+      <Button label={editTask ? t('Guardar') : t('Crear tarea')} onPress={save} busy={busy} style={{ flex: 2 }} />
     </View>
   );
 
@@ -408,12 +409,12 @@ export function RepeatPicker({ value, onChange, date }: { value: RepeatRule | nu
     : value.days?.join() === '1,2,3,4,5' && value.interval === 1 ? 'weekdays' : value.interval === 2 ? 'week2' : 'week';
   const keep = (r: RepeatRule) => ({ ...r, ...(value?.until ? { until: value.until } : {}), ...(value?.fromDone ? { fromDone: true } : {}) });
   const opts: { k: string; label: string; make: () => RepeatRule | null }[] = [
-    { k: 'none', label: 'No se repite', make: () => null },
-    { k: 'day', label: 'Cada día', make: () => keep({ freq: 'day', interval: 1 }) },
-    { k: 'weekdays', label: 'Días hábiles', make: () => keep({ freq: 'week', interval: 1, days: [1, 2, 3, 4, 5] }) },
-    { k: 'week', label: 'Cada semana', make: () => keep({ freq: 'week', interval: 1, days: [d.getDay()] }) },
-    { k: 'week2', label: 'Cada 2 semanas', make: () => keep({ freq: 'week', interval: 2, days: [d.getDay()] }) },
-    { k: 'month', label: 'Cada mes', make: () => keep({ freq: 'month', interval: 1, monthDay: d.getDate() }) },
+    { k: 'none', label: t('No se repite'), make: () => null },
+    { k: 'day', label: t('Cada día'), make: () => keep({ freq: 'day', interval: 1 }) },
+    { k: 'weekdays', label: t('Días hábiles'), make: () => keep({ freq: 'week', interval: 1, days: [1, 2, 3, 4, 5] }) },
+    { k: 'week', label: t('Cada semana'), make: () => keep({ freq: 'week', interval: 1, days: [d.getDay()] }) },
+    { k: 'week2', label: t('Cada 2 semanas'), make: () => keep({ freq: 'week', interval: 2, days: [d.getDay()] }) },
+    { k: 'month', label: t('Cada mes'), make: () => keep({ freq: 'month', interval: 1, monthDay: d.getDate() }) },
   ];
   const chip = (key: string, label: string, on: boolean, onPress: () => void, small = false) => (
     <Pressable key={key} onPress={onPress} accessibilityRole="radio" accessibilityState={{ checked: on }}
@@ -423,12 +424,12 @@ export function RepeatPicker({ value, onChange, date }: { value: RepeatRule | nu
   );
   return (
     <View>
-      <Text style={lbl()}>Repetir</Text>
-      <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }} accessibilityRole="radiogroup" accessibilityLabel="Repetir">
+      <Text style={lbl()}>{t('Repetir')}</Text>
+      <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }} accessibilityRole="radiogroup" accessibilityLabel={t('Repetir')}>
         {opts.map((o) => chip(o.k, o.label, kind === o.k, () => onChange(o.make())))}
       </View>
       {value && value.freq === 'week' && kind !== 'weekdays' && (
-        <View style={{ flexDirection: 'row', gap: 6, marginTop: 8 }} accessibilityLabel="Días de la semana">
+        <View style={{ flexDirection: 'row', gap: 6, marginTop: 8 }} accessibilityLabel={t('Días de la semana')}>
           {WEEK_ORDER.map((n) => {
             const on = !!value.days?.includes(n);
             return chip('d' + n, LETTERS[n], on, () => {
@@ -441,14 +442,14 @@ export function RepeatPicker({ value, onChange, date }: { value: RepeatRule | nu
       {value && (
         <View style={{ marginTop: 10, gap: 6 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <DateField label="Hasta (opcional)" value={value.until ?? null} onChange={(v) => onChange({ ...value, until: v })} />
+            <DateField label={t('Hasta (opcional)')} value={value.until ?? null} onChange={(v) => onChange({ ...value, until: v })} />
           </View>
           <Pressable onPress={() => onChange({ ...value, fromDone: !value.fromDone })} accessibilityRole="checkbox" accessibilityState={{ checked: !!value.fromDone }}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 }}>
             <Ionicons name={value.fromDone ? 'checkbox' : 'square-outline'} size={18} color={value.fromDone ? C.brand : C.muted} />
-            <Text style={{ color: C.text, fontSize: 13 }}>Contar desde que la termino</Text>
+            <Text style={{ color: C.text, fontSize: 13 }}>{t('Contar desde que la termino')}</Text>
           </Pressable>
-          <Text style={{ color: C.muted, fontSize: 12 }}>Se repite {ruleText(value)}. Al marcarla hecha aparece la siguiente.</Text>
+          <Text style={{ color: C.muted, fontSize: 12 }}>{t('Se repite {value}. Al marcarla hecha aparece la siguiente.', { value: ruleText(value) })}</Text>
         </View>
       )}
     </View>

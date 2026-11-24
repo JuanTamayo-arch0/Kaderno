@@ -10,6 +10,7 @@ import { uploadNewFile } from '../../lib/projectFiles';
 import { copyText } from '../../lib/fileIO';
 import { noteForExport } from '../../lib/noteLinks';
 import { confirm, toast, friendlyError } from '../../lib/feedback';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Compartir una nota (v21, sección 10): un enlace de solo lectura que
@@ -29,15 +30,15 @@ export function ShareNoteSheet({ visible, mode, noteId, title, getContent, onClo
   }, [visible, mode, noteId]);
 
   async function on(regen = false) {
-    if (regen && !(await confirm('¿Cambiar el enlace?', 'El enlace anterior deja de funcionar.', 'Cambiar'))) return;
+    if (regen && !(await confirm(t('¿Cambiar el enlace?'), t('El enlace anterior deja de funcionar.'), t('Cambiar')))) return;
     setBusy('on');
-    try { const t = await enableShare(noteId); setToken(t); const ok = await copyText(sharedNoteUrl(t)); toast(ok ? 'Enlace copiado' : 'Enlace listo'); }
+    try { const t = await enableShare(noteId); setToken(t); const ok = await copyText(sharedNoteUrl(t)); toast(ok ? trn('Enlace copiado') : trn('Enlace listo')); }
     catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
     finally { setBusy(null); }
   }
   async function off() {
     setBusy('off');
-    try { await disableShare(noteId); setToken(null); toast('Enlace desactivado: ya nadie la puede abrir'); }
+    try { await disableShare(noteId); setToken(null); toast(t('Enlace desactivado: ya nadie la puede abrir')); }
     catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
     finally { setBusy(null); }
   }
@@ -46,19 +47,19 @@ export function ShareNoteSheet({ visible, mode, noteId, title, getContent, onClo
     try {
       const md = noteForExport(title, getContent());
       const bytes = new TextEncoder().encode(md);
-      const name = `${(title || 'Nota').replace(/[\\/:*?"<>|]/g, ' ').trim().slice(0, 80) || 'Nota'}.md`;
-      await uploadNewFile(p.id, { name, bytes, mime: 'text/markdown', size: bytes.length }, { description: 'Copiada desde una nota de Kaderno' });
+      const name = `${(title || t('Nota')).replace(/[\\/:*?"<>|]/g, ' ').trim().slice(0, 80) || t('Nota')}.md`;
+      await uploadNewFile(p.id, { name, bytes, mime: 'text/markdown', size: bytes.length }, { description: t('Copiada desde una nota de Kaderno') });
       toast(`Copiada a ${p.name}`, { tone: 'good' }); onClose();
     } catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
     finally { setBusy(null); }
   }
 
   if (mode === 'project') return (
-    <Sheet visible={visible} onClose={onClose} title="Copiar a un proyecto" subtitle="Queda como archivo .md en Archivos. Los cambios en la nota no se copian solos.">
+    <Sheet visible={visible} onClose={onClose} title={t('Copiar a un proyecto')} subtitle={t('Queda como archivo .md en Archivos. Los cambios en la nota no se copian solos.')}>
       {projects === null && <ActivityIndicator color={C.brand} />}
-      {projects?.length === 0 && <Text style={{ color: C.muted, fontSize: 13 }}>No tienes proyectos activos.</Text>}
+      {projects?.length === 0 && <Text style={{ color: C.muted, fontSize: 13 }}>{t('No tienes proyectos activos.')}</Text>}
       {projects?.map((p) => (
-        <Pressable key={p.id} onPress={() => toProject(p)} disabled={!!busy} accessibilityRole="button" accessibilityLabel={`Copiar a ${p.name}`}
+        <Pressable key={p.id} onPress={() => toProject(p)} disabled={!!busy} accessibilityRole="button" accessibilityLabel={t('Copiar a {name}', { name: p.name })}
           style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: C.line, backgroundColor: hovered ? C.surface2 : 'transparent' })}>
           <Text style={{ fontSize: 18 }}>{p.icon || '📦'}</Text>
           <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '600', flex: 1 }} numberOfLines={1}>{p.name}</Text>
@@ -70,12 +71,12 @@ export function ShareNoteSheet({ visible, mode, noteId, title, getContent, onClo
 
   const url = token ? sharedNoteUrl(token) : '';
   return (
-    <Sheet visible={visible} onClose={onClose} title="Compartir con un enlace" subtitle="Quien tenga el enlace ve la nota (sin editarla). No necesita cuenta.">
+    <Sheet visible={visible} onClose={onClose} title={t('Compartir con un enlace')} subtitle={t('Quien tenga el enlace ve la nota (sin editarla). No necesita cuenta.')}>
       {token === undefined && <ActivityIndicator color={C.brand} />}
       {token === null && (
         <View style={{ gap: 10 }}>
-          <Text style={{ color: C.text, fontSize: 13.5 }}>La nota es privada. Al crear el enlace, verán el título, el contenido y las imágenes; nada más de tu cuenta.</Text>
-          <Button label="Crear enlace" icon="link-outline" busy={busy === 'on'} onPress={() => on()} />
+          <Text style={{ color: C.text, fontSize: 13.5 }}>{t('La nota es privada. Al crear el enlace, verán el título, el contenido y las imágenes; nada más de tu cuenta.')}</Text>
+          <Button label={t('Crear enlace')} icon="link-outline" busy={busy === 'on'} onPress={() => on()} />
         </View>
       )}
       {!!token && (
@@ -84,11 +85,11 @@ export function ShareNoteSheet({ visible, mode, noteId, title, getContent, onClo
             <Text selectable style={{ color: C.text, fontSize: 13 }} numberOfLines={2}>{url}</Text>
           </View>
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-            <Button label="Copiar" icon="copy-outline" onPress={async () => toast((await copyText(url)) ? 'Enlace copiado' : 'No se pudo copiar')} />
-            <Button label="Cambiar enlace" kind="secondary" busy={busy === 'on'} onPress={() => on(true)} />
-            <Button label="Desactivar" kind="ghost" busy={busy === 'off'} onPress={off} />
+            <Button label={t('Copiar')} icon="copy-outline" onPress={async () => toast((await copyText(url)) ? t('Enlace copiado') : t('No se pudo copiar'))} />
+            <Button label={t('Cambiar enlace')} kind="secondary" busy={busy === 'on'} onPress={() => on(true)} />
+            <Button label={t('Desactivar')} kind="ghost" busy={busy === 'off'} onPress={off} />
           </View>
-          <Text style={{ color: C.muted, fontSize: 12 }}>Siempre muestra la versión más reciente de la nota.</Text>
+          <Text style={{ color: C.muted, fontSize: 12 }}>{t('Siempre muestra la versión más reciente de la nota.')}</Text>
         </View>
       )}
     </Sheet>

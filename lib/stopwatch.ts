@@ -5,6 +5,7 @@
 //  registro de horas (focus_sessions, source 'timer').
 // ============================================================
 import { useEffect, useState } from 'react';
+import { t } from './i18n';
 
 export type Stopwatch = {
   startedAt: number; title: string;
@@ -29,7 +30,7 @@ export const getStopwatch = () => current;
 export async function startStopwatch(o: Omit<Stopwatch, 'startedAt' | 'snoozedUntil'>, now = Date.now()): Promise<{ saved: number | null }> {
   let saved: number | null = null;
   if (current) saved = (await stopStopwatch()).minutes;
-  publish({ ...o, title: o.title.trim().slice(0, 140) || 'Trabajo', startedAt: now, snoozedUntil: null });
+  publish({ ...o, title: o.title.trim().slice(0, 140) || t('Trabajo'), startedAt: now, snoozedUntil: null });
   return { saved };
 }
 /** Para y guarda. `minutes` permite corregir la duración (cronómetro olvidado). */

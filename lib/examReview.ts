@@ -7,6 +7,7 @@
 // ============================================================
 import { dueMoment, type DueLike } from './time';
 import { localISO, fmtHours } from './day';
+import { t } from './i18n';
 
 export const WINDOW_DAYS = 21;
 export const ASK_DAYS = 21;
@@ -90,65 +91,65 @@ export function verdict(score: number, maxScore: number, target: number | null, 
   const bad = (key: string, text: string) => r.push({ key, text, tone: 'bad' });
   const ok = (key: string, text: string) => r.push({ key, text, tone: 'good' });
 
-  if (e.minutes === 0) bad('nofocus', 'No hay enfoque registrado para este parcial ni para la materia en las 3 semanas antes.');
+  if (e.minutes === 0) bad('nofocus', t('No hay enfoque registrado para este parcial ni para la materia en las 3 semanas antes.'));
   else {
-    if (e.firstDaysBefore != null && e.firstDaysBefore <= 2) bad('late', `Empezaste ${e.firstDaysBefore === 0 ? 'el mismo día' : e.firstDaysBefore === 1 ? 'un día antes' : `${e.firstDaysBefore} días antes`}. Lo que mejor funciona es repartir el estudio en una o dos semanas.`);
-    else if (e.firstDaysBefore != null && e.firstDaysBefore >= 7) ok('early', `Empezaste ${e.firstDaysBefore} días antes.`);
-    if (e.last48Share >= 0.6 && e.minutes >= 30) bad('cram', `El ${Math.round(e.last48Share * 100)} % del estudio fue en las últimas 48 horas.`);
-    if (e.days >= 4) ok('spread', `Repartiste el estudio en ${e.days} días distintos.`);
-    else if (e.days <= 2 && e.minutes >= 60 && !r.some((x) => x.key === 'late')) bad('fewdays', `Estudiaste solo ${e.days === 1 ? 'un día' : `${e.days} días`} distintos.`);
+    if (e.firstDaysBefore != null && e.firstDaysBefore <= 2) bad('late', t('Empezaste {v}. Lo que mejor funciona es repartir el estudio en una o dos semanas.', { v: e.firstDaysBefore === 0 ? t('el mismo día') : e.firstDaysBefore === 1 ? t('un día antes') : t('{firstDaysBefore} días antes', { firstDaysBefore: e.firstDaysBefore }) }));
+    else if (e.firstDaysBefore != null && e.firstDaysBefore >= 7) ok('early', t('Empezaste {firstDaysBefore} días antes.', { firstDaysBefore: e.firstDaysBefore }));
+    if (e.last48Share >= 0.6 && e.minutes >= 30) bad('cram', t('El {round} % del estudio fue en las últimas 48 horas.', { round: Math.round(e.last48Share * 100) }));
+    if (e.days >= 4) ok('spread', t('Repartiste el estudio en {days} días distintos.', { days: e.days }));
+    else if (e.days <= 2 && e.minutes >= 60 && !r.some((x) => x.key === 'late')) bad('fewdays', t('Estudiaste solo {v} distintos.', { v: e.days === 1 ? t('un día') : t('{days} días', { days: e.days }) }));
     if (typicalGood != null && typicalGood > 0) {
-      if (e.minutes < typicalGood * 0.7) bad('less', `Menos horas que en los parciales donde te fue bien (${fmtHours(e.minutes)} contra unas ${fmtHours(typicalGood)}).`);
-      else if (e.minutes >= typicalGood) ok('more', `Tantas horas o más que en los parciales donde te fue bien (${fmtHours(e.minutes)}).`);
+      if (e.minutes < typicalGood * 0.7) bad('less', t('Menos horas que en los parciales donde te fue bien ({minutes} contra unas {typicalGood}).', { minutes: fmtHours(e.minutes), typicalGood: fmtHours(typicalGood) }));
+      else if (e.minutes >= typicalGood) ok('more', t('Tantas horas o más que en los parciales donde te fue bien ({minutes}).', { minutes: fmtHours(e.minutes) }));
     }
   }
-  if (e.sessionsTotal > 0 && e.sessionsDone < e.sessionsTotal) bad('plan', `${e.sessionsTotal - e.sessionsDone} de ${e.sessionsTotal} sesiones del plan sin hacer.`);
-  else if (e.sessionsTotal > 0) ok('plan', `Hiciste las ${e.sessionsTotal} sesiones del plan.`);
-  if (e.quizzes === 0) { if (!reached) bad('nosim', 'No hiciste simulacro.'); }
-  else if (e.bestQuiz != null && e.bestQuiz < 60 && !reached) bad('simlow', `En el simulacro sacaste ${Math.round(e.bestQuiz)} %: era una alerta.`);
-  else ok('sim', `Hiciste ${e.quizzes === 1 ? 'un simulacro' : `${e.quizzes} simulacros`}${e.bestQuiz != null ? ` (mejor: ${Math.round(e.bestQuiz)} %)` : ''}.`);
-  if (e.cardReviews >= 20) ok('cards', `Repasaste ${e.cardReviews} tarjetas de la materia.`);
-  if (e.recalls > 0) ok('recall', `Te pusiste a prueba con ${e.recalls === 1 ? 'una nota' : `${e.recalls} notas`}.`);
+  if (e.sessionsTotal > 0 && e.sessionsDone < e.sessionsTotal) bad('plan', t('{v} de {sessionsTotal} sesiones del plan sin hacer.', { v: e.sessionsTotal - e.sessionsDone, sessionsTotal: e.sessionsTotal }));
+  else if (e.sessionsTotal > 0) ok('plan', t('Hiciste las {sessionsTotal} sesiones del plan.', { sessionsTotal: e.sessionsTotal }));
+  if (e.quizzes === 0) { if (!reached) bad('nosim', t('No hiciste simulacro.')); }
+  else if (e.bestQuiz != null && e.bestQuiz < 60 && !reached) bad('simlow', t('En el simulacro sacaste {bestQuiz} %: era una alerta.', { bestQuiz: Math.round(e.bestQuiz) }));
+  else ok('sim', `Hiciste ${e.quizzes === 1 ? t('un simulacro') : `${e.quizzes} simulacros`}${e.bestQuiz != null ? ` (mejor: ${Math.round(e.bestQuiz)} %)` : ''}.`);
+  if (e.cardReviews >= 20) ok('cards', t('Repasaste {cardReviews} tarjetas de la materia.', { cardReviews: e.cardReviews }));
+  if (e.recalls > 0) ok('recall', t('Te pusiste a prueba con {v}.', { v: e.recalls === 1 ? t('una nota') : `${e.recalls} notas` }));
 
   const badN = r.filter((x) => x.tone === 'bad').length;
-  const targetText = target != null && target > 0 ? `la nota que querías (${fmtGrade(target)})` : `aprobar (${fmtGrade(maxScore * 0.6)})`;
+  const targetText = target != null && target > 0 ? t('la nota que querías ({target})', { target: fmtGrade(target) }) : `aprobar (${fmtGrade(maxScore * 0.6)})`;
   let headline: string, detail: string;
   if (reached) {
-    headline = 'El esfuerzo alcanzó';
+    headline = t('El esfuerzo alcanzó');
     detail = e.minutes < 60 && e.minutes > 0
-      ? `Llegaste a ${targetText} con poco tiempo de estudio registrado. Si el próximo es más difícil, quizás no alcance igual.`
-      : badN ? `Llegaste a ${targetText}. Aun así, ojo con esto para el próximo:` : `Llegaste a ${targetText}.`;
+      ? t('Llegaste a {targetText} con poco tiempo de estudio registrado. Si el próximo es más difícil, quizás no alcance igual.', { targetText })
+      : badN ? t('Llegaste a {targetText}. Aun así, ojo con esto para el próximo:', { targetText }) : `Llegaste a ${targetText}.`;
   } else if (badN === 0 && e.minutes > 0) {
-    headline = 'Le pusiste esfuerzo, pero no alcanzó';
-    detail = `Te faltó para ${targetText}. En los datos no se ve un problema de tiempo o de reparto: la diferencia parece estar en otra parte. ¿Qué pasó?`;
+    headline = t('Le pusiste esfuerzo, pero no alcanzó');
+    detail = t('Te faltó para {targetText}. En los datos no se ve un problema de tiempo o de reparto: la diferencia parece estar en otra parte. ¿Qué pasó?', { targetText });
   } else {
-    headline = 'El esfuerzo no alcanzó';
-    detail = `Te faltó para ${targetText}. Esto es lo que se ve en los datos:`;
+    headline = t('El esfuerzo no alcanzó');
+    detail = t('Te faltó para {targetText}. Esto es lo que se ve en los datos:', { targetText });
   }
   return { reached, pct, targetPct, headline, detail, reasons: r.sort((a, b) => (a.tone === b.tone ? 0 : a.tone === 'bad' ? -1 : 1)), typicalGood };
 }
 
 /** Lo que los datos no ven. */
 export const MY_REASONS: { key: string; label: string; tip: string }[] = [
-  { key: 'notunderstand', label: 'No entendía algunos temas', tip: 'Preguntar los temas difíciles al profesor o al Oráculo con tiempo' },
-  { key: 'different', label: 'El examen fue distinto a lo que estudié', tip: 'Estudiar con parciales anteriores y ejercicios tipo examen' },
-  { key: 'nerves', label: 'Nervios', tip: 'Hacer un simulacro con tiempo, como si fuera el examen' },
-  { key: 'careless', label: 'Errores por descuido', tip: 'Dejar 10 minutos al final para revisar' },
-  { key: 'time', label: 'Me faltó tiempo en el examen', tip: 'Practicar con tiempo y empezar por lo que más sé' },
-  { key: 'theory', label: 'Estudié teoría pero no practiqué ejercicios', tip: 'Practicar ejercicios, no solo leer' },
-  { key: 'sleep', label: 'Dormí poco', tip: 'Terminar de estudiar la noche anterior a una hora razonable' },
-  { key: 'other', label: 'Otra', tip: '' },
+  { key: 'notunderstand', label: t('No entendía algunos temas'), tip: t('Preguntar los temas difíciles al profesor o al Oráculo con tiempo') },
+  { key: 'different', label: t('El examen fue distinto a lo que estudié'), tip: t('Estudiar con parciales anteriores y ejercicios tipo examen') },
+  { key: 'nerves', label: t('Nervios'), tip: t('Hacer un simulacro con tiempo, como si fuera el examen') },
+  { key: 'careless', label: t('Errores por descuido'), tip: t('Dejar 10 minutos al final para revisar') },
+  { key: 'time', label: t('Me faltó tiempo en el examen'), tip: t('Practicar con tiempo y empezar por lo que más sé') },
+  { key: 'theory', label: t('Estudié teoría pero no practiqué ejercicios'), tip: t('Practicar ejercicios, no solo leer') },
+  { key: 'sleep', label: t('Dormí poco'), tip: t('Terminar de estudiar la noche anterior a una hora razonable') },
+  { key: 'other', label: t('Otra'), tip: '' },
 ];
 
 const DATA_TIPS: Record<string, string> = {
-  nofocus: 'Registrar el estudio con el enfoque para poder comparar',
-  late: 'Empezar el plan del parcial 14 días antes',
-  cram: 'Repartir el estudio en varios días, no dejarlo para el final',
-  fewdays: 'Estudiar un poco en más días distintos',
-  less: 'Darle más horas, como en los parciales donde me fue bien',
-  plan: 'Hacer todas las sesiones del plan',
-  nosim: 'Hacer al menos un simulacro',
-  simlow: 'Si el simulacro sale bajo, repasar esos temas antes del examen',
+  nofocus: t('Registrar el estudio con el enfoque para poder comparar'),
+  late: t('Empezar el plan del parcial 14 días antes'),
+  cram: t('Repartir el estudio en varios días, no dejarlo para el final'),
+  fewdays: t('Estudiar un poco en más días distintos'),
+  less: t('Darle más horas, como en los parciales donde me fue bien'),
+  plan: t('Hacer todas las sesiones del plan'),
+  nosim: t('Hacer al menos un simulacro'),
+  simlow: t('Si el simulacro sale bajo, repasar esos temas antes del examen'),
 };
 
 /** Sugerencias para "Qué harás distinto", según lo que pasó (sin repetir, máximo 4). */

@@ -6,6 +6,7 @@ import { supabase } from './supabase';
 import { addNote, addNoteImage, uploadPhoto, indexNote } from './db';
 import { appendToNote } from './highlightsDb';
 import type { Figure } from './capture';
+import { t } from './i18n';
 
 export type ReadResult = { markdown: string; figures: Figure[]; title: string | null };
 
@@ -14,7 +15,7 @@ export async function readPage(base64: string, mode: 'notes' | 'board' | 'plain'
   if (error) {
     let msg = '';
     try { const ctx: any = (error as any).context; const j = ctx?.json ? await ctx.json() : null; msg = j?.error ?? ''; } catch { /* noop */ }
-    throw new Error(msg || 'No se pudo leer la foto.');
+    throw new Error(msg || t('No se pudo leer la foto.'));
   }
   const d = data as any;
   return { markdown: String(d?.markdown ?? d?.text ?? ''), figures: Array.isArray(d?.figures) ? d.figures : [], title: d?.title ?? null };
@@ -27,7 +28,7 @@ export async function saveCapture(o: {
 }): Promise<string> {
   if (o.dest.kind === 'new') {
     const path = o.keepPhotos && o.photos[0] ? await uploadPhoto(o.photos[0]) : null;
-    const id = await addNote({ subject_id: o.subjectId, title: o.title.trim() || 'Nota sin título', content: o.markdown, image_path: path });
+    const id = await addNote({ subject_id: o.subjectId, title: o.title.trim() || t('Nota sin título'), content: o.markdown, image_path: path });
     if (o.keepPhotos) for (const p of o.photos.slice(1)) { try { await addNoteImage(id, p); } catch { /* la nota ya quedó */ } }
     indexNote(id, o.markdown, o.subjectId);
     return id;

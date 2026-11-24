@@ -5,6 +5,7 @@ import { C } from '../../lib/theme';
 import { isMutedToday, muteToday, savePetPrefs, usePets } from '../../lib/pets/store';
 import { friendlyError, toast } from '../../lib/feedback';
 import { Toggle } from '../ds';
+import { t } from '../../lib/i18n';
 
 function Choice<K extends string>({ label, hint, value, items, onChange }: { label: string; hint?: string; value: K; items: { key: K; label: string }[]; onChange: (k: K) => void }) {
   return (
@@ -35,21 +36,21 @@ export function PetSettings() {
   const save = (p: Parameters<typeof savePetPrefs>[0]) => savePetPrefs(p).catch((e) => toast(friendlyError(e), { tone: 'bad' }));
   return (
     <View>
-      <Toggle label="Mostrar la mascota" hint="Te acompaña en todas las pantallas. Solo en la versión web por ahora." value={prefs.enabled} onChange={(v) => save({ enabled: v })} />
+      <Toggle label={t('Mostrar la mascota')} hint={t('Te acompaña en todas las pantallas. Solo en la versión web por ahora.')} value={prefs.enabled} onChange={(v) => save({ enabled: v })} />
       {prefs.enabled && (
         <>
           <Divider />
-          <Choice label="Movimiento" hint="Con 'reducir movimiento' del sistema se queda quieta siempre." value={prefs.move}
-            items={[{ key: 'pasea', label: 'Pasea por la pantalla' }, { key: 'quieta', label: 'Quieta en su esquina' }]} onChange={(k) => save({ move: k })} />
+          <Choice label={t('Movimiento')} hint={t('Con \'reducir movimiento\' del sistema se queda quieta siempre.')} value={prefs.move}
+            items={[{ key: 'pasea', label: t('Pasea por la pantalla') }, { key: 'quieta', label: t('Quieta en su esquina') }]} onChange={(k) => save({ move: k })} />
           <Divider />
-          <Choice label="Cuánto habla" value={prefs.talk}
-            items={[{ key: 'importa', label: 'Solo cuando importa' }, { key: 'conversador', label: 'Conversador' }]} onChange={(k) => save({ talk: k })} />
+          <Choice label={t('Cuánto habla')} value={prefs.talk}
+            items={[{ key: 'importa', label: t('Solo cuando importa') }, { key: 'conversador', label: t('Conversador') }]} onChange={(k) => save({ talk: k })} />
           <Divider />
-          <Toggle label="Silenciar por hoy" hint="No habla sola hasta mañana. Si la tocas, sí responde." value={isMutedToday(prefs)}
+          <Toggle label={t('Silenciar por hoy')} hint={t('No habla sola hasta mañana. Si la tocas, sí responde.')} value={isMutedToday(prefs)}
             onChange={(v) => { muteToday(v).catch((e) => toast(friendlyError(e), { tone: 'bad' })); }} />
           <Divider />
-          <Toggle label="Ver las mascotas de mi sala en toda la app"
-            hint="Si estás en una sala de estudio, las de tus compañeros también andan por las demás pantallas: máximo 3, sin hablar y sin tapar botones. Si te enfocas, se quedan quietas."
+          <Toggle label={t('Ver las mascotas de mi sala en toda la app')}
+            hint={t('Si estás en una sala de estudio, las de tus compañeros también andan por las demás pantallas: máximo 3, sin hablar y sin tapar botones. Si te enfocas, se quedan quietas.')}
             value={prefs.friendsEverywhere} onChange={(v) => save({ friendsEverywhere: v })} />
         </>
       )}

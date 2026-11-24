@@ -106,7 +106,7 @@ test('v29 pantallas: Horario llena el ancho y los botones pequeños crecieron', 
   assert.match(tipos, /const ICON = \{ width: 40, height: 40/);
   const board = readFileSync('components/projects/ProjectBoard.tsx', 'utf8');
   assert.match(board, /scrollSnapType: 'x proximity'/);
-  assert.match(board, /accessibilityLabel=\{`Mover "\$\{task.title\}" a otra columna`\}\s+style=\{\{ width: 34, height: 34/);
+  assert.match(board, /accessibilityLabel=\{t\('Mover "\{title\}" a otra columna', \{ title: task\.title \}\)\}\s+style=\{\{ width: 34, height: 34/);
   assert.match(readFileSync('app/(tabs)/estudiar.tsx', 'utf8'), /flex: 1, minWidth: 0, color: C.text, fontSize: 15/);
   assert.match(readFileSync('components/pets/PetInvite.tsx', 'utf8'), /const narrow = useWindowDimensions\(\)\.width < 420/);
   assert.match(readFileSync('app/login.tsx', 'utf8'), /paddingTop: insets\.top \+ \(short \? 22 : 44\)/);

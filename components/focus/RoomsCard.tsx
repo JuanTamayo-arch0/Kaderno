@@ -11,6 +11,7 @@ import { useFocusTimer } from '../../lib/focusTimer';
 import { Button, Card, focusRingStyle } from '../ds';
 import { PetPatio, patioMembers } from '../rooms/PetPatio';
 import { usePets, activePet } from '../../lib/pets/store';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Tarjeta "Enfocar juntos" en la pantalla de Enfoque: la sala
@@ -56,11 +57,11 @@ export function RoomsCard() {
     if (busy) return;
     if (mode === 'join') {
       const code = normalizeCode(text);
-      if (!code) { toast('El código tiene 6 letras y números, por ejemplo KD7-X4P.', { tone: 'bad' }); return; }
+      if (!code) { toast(t('El código tiene 6 letras y números, por ejemplo KD7-X4P.'), { tone: 'bad' }); return; }
       setBusy(true);
       try {
         const r = await joinRoom(code);
-        if (!r) { toast('No encontramos una sala con ese código.', { tone: 'bad' }); return; }
+        if (!r) { toast(t('No encontramos una sala con ese código.'), { tone: 'bad' }); return; }
         setMode('none'); setText(''); await open(r);
       } catch (e: any) { toast(String(e.message ?? e), { tone: 'bad' }); } finally { setBusy(false); }
     } else if (mode === 'create') {
@@ -74,7 +75,7 @@ export function RoomsCard() {
   const header = (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
       <Ionicons name="people-outline" size={18} color={C.brand} />
-      <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '800', flex: 1 }} accessibilityRole="header">Enfocar juntos</Text>
+      <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '800', flex: 1 }} accessibilityRole="header">{t('Enfocar juntos')}</Text>
     </View>
   );
 
@@ -93,12 +94,12 @@ export function RoomsCard() {
     return (
       <Card>
         {header}
-        <Pressable onPress={() => router.push(`/sala/${live.room!.id}` as any)} accessibilityRole="button" accessibilityLabel={`Abrir la sala ${live.room.name}`}
+        <Pressable onPress={() => router.push(`/sala/${live.room!.id}` as any)} accessibilityRole="button" accessibilityLabel={t('Abrir la sala {name}', { name: live.room.name })}
           style={({ hovered, focused }: any) => [{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 12, backgroundColor: hovered ? C.surface2 : '#1a2036', borderWidth: 1, borderColor: '#34437a' }, focused ? focusRingStyle() : null]}>
           <View style={{ flex: 1, gap: 2 }}>
             <Text style={{ color: C.text, fontSize: 15, fontWeight: '800' }} numberOfLines={1}>{live.room.name}</Text>
             <Text style={{ color: C.muted, fontSize: 12.5 }}>
-              {live.status === 'on' ? stateCounts(rows) : live.status === 'error' ? (live.error ?? 'Sin conexión') : 'Conectando...'}
+              {live.status === 'on' ? stateCounts(rows) : live.status === 'error' ? (live.error ?? t('Sin conexión')) : 'Conectando...'}
             </Text>
           </View>
           <View style={{ flexDirection: 'row' }}>
@@ -110,12 +111,12 @@ export function RoomsCard() {
         {canJoin ? (
           <View style={{ marginTop: 10, padding: 12, borderRadius: 12, backgroundColor: '#142a22', borderWidth: 1, borderColor: '#22604a', gap: 8 }}>
             <Text style={{ color: C.text, fontSize: 13.5 }}>{proposalText(p!, now)}</Text>
-            <Button label="Me uno" icon="play" size="sm" onPress={() => acceptProposal(p!)} style={{ alignSelf: 'flex-start' }} />
+            <Button label={t('Me uno')} icon="play" size="sm" onPress={() => acceptProposal(p!)} style={{ alignSelf: 'flex-start' }} />
           </View>
         ) : waiting ? (
-          <Text style={{ color: C.goodText, fontSize: 13.5, fontWeight: '700', marginTop: 10 }} accessibilityLiveRegion="polite">Empiezan todos en {waiting} s</Text>
+          <Text style={{ color: C.goodText, fontSize: 13.5, fontWeight: '700', marginTop: 10 }} accessibilityLiveRegion="polite">{t('Empiezan todos en {waiting} s', { waiting })}</Text>
         ) : !f.state.running ? (
-          <Button label={`Empezar juntos (${f.state.workMin} min)`} icon="people" kind="secondary" size="sm" onPress={() => { void proposeTogether(); }}
+          <Button label={t('Empezar juntos ({workMin} min)', { workMin: f.state.workMin })} icon="people" kind="secondary" size="sm" onPress={() => { void proposeTogether(); }}
             disabled={live.status !== 'on'} style={{ marginTop: 10, alignSelf: 'flex-start' }} />
         ) : null}
       </Card>
@@ -127,30 +128,29 @@ export function RoomsCard() {
     <Card>
       {header}
       <Text style={{ color: C.muted, fontSize: 13, lineHeight: 18, marginBottom: 10 }}>
-        Estudia con tus compañeros: ven quién está enfocado, arrancan el pomodoro a la vez y suman a una meta del grupo.
-      </Text>
+        {t('Estudia con tus compañeros: ven quién está enfocado, arrancan el pomodoro a la vez y suman a una meta del grupo.')}</Text>
       {(rooms ?? []).slice(0, 4).map((r) => (
-        <Pressable key={r.id} onPress={() => open(r)} accessibilityRole="button" accessibilityLabel={`Entrar a la sala ${r.name}`}
+        <Pressable key={r.id} onPress={() => open(r)} accessibilityRole="button" accessibilityLabel={t('Entrar a la sala {name}', { name: r.name })}
           style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 8, borderRadius: 10, backgroundColor: hovered ? C.surface2 : 'transparent' })}>
           <Ionicons name={r.project_id ? 'briefcase-outline' : 'people-circle-outline'} size={18} color={C.muted} />
           <Text style={{ color: C.text, fontSize: 14, fontWeight: '600', flex: 1 }} numberOfLines={1}>{r.name}</Text>
-          <Text style={{ color: C.brand, fontSize: 13, fontWeight: '700' }}>Entrar</Text>
+          <Text style={{ color: C.brand, fontSize: 13, fontWeight: '700' }}>{t('Entrar')}</Text>
         </Pressable>
       ))}
       {mode === 'none' ? (
         <View style={{ flexDirection: 'row', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
-          <Button label="Crear sala" icon="add" size="sm" onPress={() => { setMode('create'); setText(''); }} />
-          <Button label="Unirme con código" kind="secondary" size="sm" onPress={() => { setMode('join'); setText(''); }} />
+          <Button label={t('Crear sala')} icon="add" size="sm" onPress={() => { setMode('create'); setText(''); }} />
+          <Button label={t('Unirme con código')} kind="secondary" size="sm" onPress={() => { setMode('join'); setText(''); }} />
         </View>
       ) : (
         <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
           <TextInput value={text} onChangeText={setText} autoFocus onSubmitEditing={submit} maxLength={mode === 'join' ? 9 : 60}
             autoCapitalize={mode === 'join' ? 'characters' : 'sentences'}
-            placeholder={mode === 'join' ? 'Código, p. ej. KD7-X4P' : 'Nombre, p. ej. Cálculo II juntos'} placeholderTextColor={C.muted}
-            accessibilityLabel={mode === 'join' ? 'Código de la sala' : 'Nombre de la sala'}
+            placeholder={mode === 'join' ? t('Código, p. ej. KD7-X4P') : t('Nombre, p. ej. Cálculo II juntos')} placeholderTextColor={C.muted}
+            accessibilityLabel={mode === 'join' ? t('Código de la sala') : t('Nombre de la sala')}
             style={{ flex: 1, minWidth: 0, backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 10, color: C.text, paddingHorizontal: 12, minHeight: 40, fontSize: 14 }} />
-          <Button label={mode === 'join' ? 'Unirme' : 'Crear'} size="sm" busy={busy} disabled={!text.trim()} onPress={submit} />
-          <Pressable onPress={() => setMode('none')} accessibilityRole="button" accessibilityLabel="Cancelar" style={{ width: 36, alignItems: 'center', justifyContent: 'center' }}>
+          <Button label={mode === 'join' ? t('Unirme') : t('Crear')} size="sm" busy={busy} disabled={!text.trim()} onPress={submit} />
+          <Pressable onPress={() => setMode('none')} accessibilityRole="button" accessibilityLabel={t('Cancelar')} style={{ width: 36, alignItems: 'center', justifyContent: 'center' }}>
             <Ionicons name="close" size={18} color={C.muted} />
           </Pressable>
         </View>

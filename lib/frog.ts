@@ -7,6 +7,7 @@
 //  · 1-3-5: un día realista tiene 1 cosa grande, 3 medianas y 5 pequeñas.
 // ============================================================
 import { taskMinutes } from './day';
+import { t } from './i18n';
 
 type T = {
   id: string; title?: string; status?: string | null; inbox?: boolean | null; important?: boolean | null;
@@ -59,7 +60,7 @@ export function check135(tasks: { estimate_min?: number | null }[], ratio?: numb
   const over = counts.grande > 1 || counts.mediana > 3 || counts.pequena > 5;
   const part = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
   const text = over
-    ? `Hoy hay ${part(counts.grande, 'grande', 'grandes')}, ${part(counts.mediana, 'mediana', 'medianas')} y ${part(counts.pequena, 'pequeña', 'pequeñas')}. Un día realista tiene 1 grande, 3 medianas y 5 pequeñas: ¿pasas algo a mañana?`
+    ? t('Hoy hay {grande}, {mediana} y {pequena}. Un día realista tiene 1 grande, 3 medianas y 5 pequeñas: ¿pasas algo a mañana?', { grande: part(counts.grande, 'grande', 'grandes'), mediana: part(counts.mediana, 'mediana', 'medianas'), pequena: part(counts.pequena, t('pequeña'), t('pequeñas')) })
     : null;
   return { counts, text };
 }

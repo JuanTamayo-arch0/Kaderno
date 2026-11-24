@@ -1,6 +1,7 @@
 import { supabase, currentUserId, dedupe } from './supabase';
 import { logActivity } from './projects';
 import { MAX_FILE_BYTES, guessMime, humanSize, versionPath } from './fileVersions';
+import { t } from './i18n';
 
 // ============================================================
 //  Archivos de un proyecto, con versiones (esquema v15).
@@ -32,7 +33,7 @@ export type Upload = { name: string; bytes: Uint8Array; mime: string | null; siz
 
 /** Error claro cuando falta correr schema_v15.sql. */
 export class NeedsV15 extends Error {
-  constructor() { super('Falta activar las versiones de archivos: corre supabase/schema_v15.sql en Supabase.'); this.name = 'NeedsV15'; }
+  constructor() { super(t('Falta activar las versiones de archivos: corre supabase/schema_v15.sql en Supabase.')); this.name = 'NeedsV15'; }
 }
 function isMissing(e: any): boolean {
   const code = e?.code ?? '';
@@ -42,14 +43,14 @@ function isMissing(e: any): boolean {
 
 async function uid(): Promise<string> {
   const id = await currentUserId();
-  if (!id) throw new Error('No hay sesión activa');
+  if (!id) throw new Error(t('No hay sesión activa'));
   return id;
 }
 
 function checkSize(u: Upload) {
-  if (!u.size && !u.bytes.byteLength) throw new Error('El archivo está vacío.');
+  if (!u.size && !u.bytes.byteLength) throw new Error(t('El archivo está vacío.'));
   if ((u.size || u.bytes.byteLength) > MAX_FILE_BYTES) {
-    throw new Error(`"${u.name}" pesa ${humanSize(u.size || u.bytes.byteLength)}. El máximo es ${humanSize(MAX_FILE_BYTES)}.`);
+    throw new Error(t('"{name}" pesa {humanSize}. El máximo es {MAX_FILE_BYTES}.', { name: u.name, humanSize: humanSize(u.size || u.bytes.byteLength), MAX_FILE_BYTES: humanSize(MAX_FILE_BYTES) }));
   }
 }
 
@@ -96,7 +97,7 @@ export async function hasFileVersions(): Promise<boolean> {
 export async function fileUrl(path: string, download?: string): Promise<string> {
   const { data, error } = await supabase.storage.from(BUCKET)
     .createSignedUrl(path, 3600, download ? { download } : undefined);
-  if (error || !data?.signedUrl) throw error ?? new Error('No se pudo generar el enlace.');
+  if (error || !data?.signedUrl) throw error ?? new Error(t('No se pudo generar el enlace.'));
   return data.signedUrl;
 }
 
@@ -126,7 +127,7 @@ export async function uploadNewFile(projectId: string, u: Upload, opts: { note?:
     await supabase.from('project_files').delete().eq('id', file.id);
     throw e;
   }
-  logActivity(projectId, 'file_added', `subió “${u.name}”`, { file_id: file.id });
+  logActivity(projectId, 'file_added', t('subió “{name}”', { name: u.name }), { file_id: file.id });
   return { ...file, path, current_version: 1 };
 }
 
@@ -145,7 +146,7 @@ export async function uploadVersion(file: ProjectFile, u: Upload, note?: string)
     throw error;
   }
   const n = (data as any)?.version ?? file.current_version + 1;
-  logActivity(file.project_id, 'file_version', `subió la versión ${n} de “${file.name}”`, { file_id: file.id, version: n });
+  logActivity(file.project_id, 'file_version', t('subió la versión {n} de “{name}”', { n, name: file.name }), { file_id: file.id, version: n });
   return n;
 }
 
@@ -153,11 +154,11 @@ export async function uploadVersion(file: ProjectFile, u: Upload, note?: string)
 export async function restoreVersion(file: ProjectFile, v: FileVersion, note?: string): Promise<number> {
   const { data, error } = await supabase.from('project_file_versions').insert({
     file_id: file.id, path: v.path, size: v.size, mime: v.mime, name: v.name ?? file.name,
-    note: note?.trim() || `Restaurada desde la versión ${v.version}`, restored_from: v.version,
+    note: note?.trim() || t('Restaurada desde la versión {version}', { version: v.version }), restored_from: v.version,
   }).select('version').single();
   if (error) { if (isMissing(error)) throw new NeedsV15(); throw error; }
   const n = (data as any)?.version ?? file.current_version + 1;
-  logActivity(file.project_id, 'file_restore', `restauró la versión ${v.version} de “${file.name}”`, { file_id: file.id, version: n });
+  logActivity(file.project_id, 'file_restore', t('restauró la versión {version} de “{name}”', { version: v.version, name: file.name }), { file_id: file.id, version: n });
   return n;
 }
 
@@ -165,7 +166,7 @@ export async function updateFileInfo(file: ProjectFile, patch: { name?: string; 
   const clean: Record<string, any> = {};
   if (patch.name !== undefined) {
     const n = patch.name.trim();
-    if (!n) throw new Error('El archivo necesita un nombre.');
+    if (!n) throw new Error(t('El archivo necesita un nombre.'));
     clean.name = n.slice(0, 200);
   }
   if (patch.description !== undefined) clean.description = patch.description?.trim() || null;
@@ -180,5 +181,5 @@ export async function deleteProjectFile(file: ProjectFile): Promise<void> {
   const { error } = await supabase.from('project_files').delete().eq('id', file.id);
   if (error) throw error;
   await removeObjects(paths);
-  logActivity(file.project_id, 'file_deleted', `eliminó “${file.name}”`, { file_id: file.id });
+  logActivity(file.project_id, 'file_deleted', t('eliminó “{name}”', { name: file.name }), { file_id: file.id });
 }

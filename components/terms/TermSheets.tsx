@@ -12,6 +12,7 @@ import {
 } from '../../lib/terms';
 import { addPastTerm, closeTerm, saveGradeScale, termActivity } from '../../lib/termsDb';
 import { fmtHours } from '../../lib/day';
+import { t, locale } from '../../lib/i18n';
 
 // ============================================================
 //  Semestres (v26, fase 3): cerrar el semestre, agregar uno pasado y la
@@ -51,20 +52,20 @@ function RowsEditor({ rows, setRows, scale, editableNames }: { rows: Row[]; setR
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               {r.color ? <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: r.color }} /> : null}
               {editableNames
-                ? <TextInput value={r.name} onChangeText={(t) => set(i, { name: t.slice(0, 80) })} placeholder="Materia" placeholderTextColor={C.muted} accessibilityLabel="Nombre de la materia" style={[inputStyle(), { flex: 1 }]} />
+                ? <TextInput value={r.name} onChangeText={(t) => set(i, { name: t.slice(0, 80) })} placeholder={t('Materia')} placeholderTextColor={C.muted} accessibilityLabel={t('Nombre de la materia')} style={[inputStyle(), { flex: 1 }]} />
                 : <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '700', flex: 1 }} numberOfLines={1}>{r.name}</Text>}
-              {editableNames && <Pressable onPress={() => setRows(rows.filter((_, k) => k !== i))} accessibilityRole="button" accessibilityLabel={`Quitar ${r.name || 'materia'}`} hitSlop={8}><Ionicons name="close" size={18} color={C.muted} /></Pressable>}
+              {editableNames && <Pressable onPress={() => setRows(rows.filter((_, k) => k !== i))} accessibilityRole="button" accessibilityLabel={t('Quitar {v}', { v: r.name || t('materia') })} hitSlop={8}><Ionicons name="close" size={18} color={C.muted} /></Pressable>}
             </View>
             <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              <Text style={{ color: C.muted, fontSize: 12.5 }}>Créditos</Text>
-              <TextInput value={r.credits} onChangeText={(t) => set(i, { credits: t.replace(/\D/g, '').slice(0, 2) })} keyboardType="number-pad" accessibilityLabel={`Créditos de ${r.name}`} style={[inputStyle(), { width: 56, textAlign: 'center' }]} />
-              <Text style={{ color: C.muted, fontSize: 12.5, marginLeft: 6 }}>Nota final</Text>
+              <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Créditos')}</Text>
+              <TextInput value={r.credits} onChangeText={(t) => set(i, { credits: t.replace(/\D/g, '').slice(0, 2) })} keyboardType="number-pad" accessibilityLabel={t('Créditos de {name}', { name: r.name })} style={[inputStyle(), { width: 56, textAlign: 'center' }]} />
+              <Text style={{ color: C.muted, fontSize: 12.5, marginLeft: 6 }}>{t('Nota final')}</Text>
               <TextInput value={r.grade} onChangeText={(t) => { const g2 = parseGrade(t); set(i, { grade: t.slice(0, 6), status: r.status === 'homologada' || r.status === 'retirada' ? r.status : statusFor(g2, scale) }); }}
-                keyboardType="decimal-pad" placeholder="–" placeholderTextColor={C.muted} accessibilityLabel={`Nota final de ${r.name}`} style={[inputStyle(), { width: 72, textAlign: 'center' }]} />
-              <Text style={{ color: C.muted, fontSize: 12.5 }}>de {scale.max}</Text>
-              {r.hours ? <Text style={{ color: C.muted, fontSize: 12.5, marginLeft: 'auto' }}>{fmtHours(r.hours * 60)} de estudio</Text> : null}
+                keyboardType="decimal-pad" placeholder="–" placeholderTextColor={C.muted} accessibilityLabel={t('Nota final de {name}', { name: r.name })} style={[inputStyle(), { width: 72, textAlign: 'center' }]} />
+              <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('de {max}', { max: scale.max })}</Text>
+              {r.hours ? <Text style={{ color: C.muted, fontSize: 12.5, marginLeft: 'auto' }}>{t('{fmtHours} de estudio', { fmtHours: fmtHours(r.hours * 60) })}</Text> : null}
             </View>
-            {bad && <Text style={{ color: C.badText, fontSize: 12.5 }}>La nota va entre 0 y {scale.max}.</Text>}
+            {bad && <Text style={{ color: C.badText, fontSize: 12.5 }}>{t('La nota va entre 0 y {max}.', { max: scale.max })}</Text>}
             <StatusPicker value={r.status} onChange={(s) => set(i, { status: s })} />
           </View>
         );
@@ -115,17 +116,17 @@ export function CloseTermSheet({ visible, term, subjects, scale, onClose, onClos
       const t = await closeTerm({ termId: term.id, subjects: list, scale, reflection: reflection.trim(), next: next.trim(), focusMinutes: act?.focusMinutes ?? 0, cards: act?.cards ?? 0, bestStreak: act?.bestStreak ?? 0 });
       toast(`Semestre ${term.name} cerrado${next.trim() ? `. Empieza ${next.trim()}` : ''}`, { tone: 'good' });
       onClosed(t);
-    } catch (e) { notify('No se pudo cerrar', friendlyError(e)); }
+    } catch (e) { notify(t('No se pudo cerrar'), friendlyError(e)); }
     finally { setBusy(false); }
   }
 
-  const steps = ['Notas finales', 'Resumen', 'Lo que te llevas'];
+  const steps = [t('Notas finales'), t('Resumen'), t('Lo que te llevas')];
   let body: React.ReactNode = null;
   if (step === 0) {
     body = (
       <>
-        <Text style={{ color: C.muted, fontSize: 13, lineHeight: 19 }}>Vienen del promedio de tus calificaciones. Corrige la que no coincida con la nota oficial.</Text>
-        {rows.length ? <RowsEditor rows={rows} setRows={setRows} scale={scale} editableNames={false} /> : <Text style={{ color: C.text, fontSize: 14 }}>Este semestre no tiene materias. Igual puedes cerrarlo.</Text>}
+        <Text style={{ color: C.muted, fontSize: 13, lineHeight: 19 }}>{t('Vienen del promedio de tus calificaciones. Corrige la que no coincida con la nota oficial.')}</Text>
+        {rows.length ? <RowsEditor rows={rows} setRows={setRows} scale={scale} editableNames={false} /> : <Text style={{ color: C.text, fontSize: 14 }}>{t('Este semestre no tiene materias. Igual puedes cerrarlo.')}</Text>}
       </>
     );
   } else if (step === 1) {
@@ -138,33 +139,33 @@ export function CloseTermSheet({ visible, term, subjects, scale, onClose, onClos
     body = (
       <>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {tile('Promedio', fmtGrade(avg.avg, scale))}
-          {tile('Créditos aprobados', String(avg.credits))}
-          {tile('Horas de estudio', act ? fmtHours(act.focusMinutes) : '…')}
-          {tile('Tarjetas repasadas', act ? act.cards.toLocaleString('es-CO') : '…')}
-          {tile('Racha más larga', act ? `${act.bestStreak} ${act.bestStreak === 1 ? 'día' : 'días'}` : '…')}
+          {tile(t('Promedio'), fmtGrade(avg.avg, scale))}
+          {tile(t('Créditos aprobados'), String(avg.credits))}
+          {tile(t('Horas de estudio'), act ? fmtHours(act.focusMinutes) : '…')}
+          {tile(t('Tarjetas repasadas'), act ? act.cards.toLocaleString(locale()) : '…')}
+          {tile(t('Racha más larga'), act ? `${act.bestStreak} ${act.bestStreak === 1 ? t('día') : t('días')}` : '…')}
         </View>
-        {best && <Text style={{ color: C.text, fontSize: 14 }}>Tu mejor materia: <Text style={{ fontWeight: '800' }}>{best.name}</Text> ({fmtGrade(best.grade, scale)}).</Text>}
-        <Text style={{ color: C.muted, fontSize: 12.5, lineHeight: 18 }}>Este resumen se guarda tal cual: no cambia aunque después borres materias o notas. Las materias del semestre se archivan; sus apuntes y archivos siguen en el historial.</Text>
+        {best && <Text style={{ color: C.text, fontSize: 14 }}>{t('Tu mejor materia: ')}<Text style={{ fontWeight: '800' }}>{best.name}</Text> ({fmtGrade(best.grade, scale)}).</Text>}
+        <Text style={{ color: C.muted, fontSize: 12.5, lineHeight: 18 }}>{t('Este resumen se guarda tal cual: no cambia aunque después borres materias o notas. Las materias del semestre se archivan; sus apuntes y archivos siguen en el historial.')}</Text>
       </>
     );
   } else {
     body = (
       <>
-        <Text style={{ color: C.text, fontSize: 14 }}>¿Qué te llevas de este semestre? (opcional)</Text>
-        <TextInput value={reflection} onChangeText={setReflection} multiline maxLength={1000} placeholder="Ej: empezar los talleres el mismo día que los dejan funcionó." placeholderTextColor={C.muted}
-          accessibilityLabel="Lo que te llevas del semestre" style={[inputStyle(), { minHeight: 90, textAlignVertical: 'top' }]} />
-        <Field label="Siguiente semestre" value={next} onChangeText={setNext} placeholder="Ej: 2027-1" maxLength={40} hint="Se abre vacío para que agregues sus materias. Déjalo en blanco si terminaste." />
+        <Text style={{ color: C.text, fontSize: 14 }}>{t('¿Qué te llevas de este semestre? (opcional)')}</Text>
+        <TextInput value={reflection} onChangeText={setReflection} multiline maxLength={1000} placeholder={t('Ej: empezar los talleres el mismo día que los dejan funcionó.')} placeholderTextColor={C.muted}
+          accessibilityLabel={t('Lo que te llevas del semestre')} style={[inputStyle(), { minHeight: 90, textAlignVertical: 'top' }]} />
+        <Field label={t('Siguiente semestre')} value={next} onChangeText={setNext} placeholder={t('Ej: 2027-1')} maxLength={40} hint={t('Se abre vacío para que agregues sus materias. Déjalo en blanco si terminaste.')} />
       </>
     );
   }
   return (
-    <Sheet visible={visible} onClose={onClose} title={`Cerrar el semestre ${term?.name ?? ''}`} subtitle={`Paso ${step + 1} de 3 · ${steps[step]}`} maxWidth={620}
+    <Sheet visible={visible} onClose={onClose} title={t('Cerrar el semestre {v}', { v: term?.name ?? '' })} subtitle={t('Paso {v} de 3 · {v2}', { v: step + 1, v2: steps[step] })} maxWidth={620}
       footer={<>
-        <Button label={step === 0 ? 'Cancelar' : 'Atrás'} kind="secondary" onPress={() => (step === 0 ? onClose() : setStep(step - 1))} style={{ flex: 1 }} />
+        <Button label={step === 0 ? t('Cancelar') : t('Atrás')} kind="secondary" onPress={() => (step === 0 ? onClose() : setStep(step - 1))} style={{ flex: 1 }} />
         {step < 2
-          ? <Button label="Siguiente" icon="arrow-forward" disabled={!rowsValid(rows, scale)} onPress={() => setStep(step + 1)} style={{ flex: 2 }} />
-          : <Button label="Cerrar el semestre" icon="checkmark" busy={busy} onPress={finish} style={{ flex: 2 }} />}
+          ? <Button label={t('Siguiente')} icon="arrow-forward" disabled={!rowsValid(rows, scale)} onPress={() => setStep(step + 1)} style={{ flex: 2 }} />
+          : <Button label={t('Cerrar el semestre')} icon="checkmark" busy={busy} onPress={finish} style={{ flex: 2 }} />}
       </>}>
       <View style={{ gap: 12 }}>{body}</View>
     </Sheet>
@@ -185,35 +186,35 @@ export function PastTermSheet({ visible, scale, onClose, onAdded }: { visible: b
   const list = toSubjects(rows);
   const avg = termAverage(list);
   async function save() {
-    if (!name.trim()) { notify('Falta el nombre', 'Escribe cuál semestre es, por ejemplo 2025-2.'); return; }
+    if (!name.trim()) { notify(t('Falta el nombre'), t('Escribe cuál semestre es, por ejemplo 2025-2.')); return; }
     setBusy(true);
     try { const t = await addPastTerm({ name: name.trim(), subjects: list, scale, startsOn: from, endsOn: to }); toast(`Semestre ${t.name} agregado`, { tone: 'good' }); onAdded(t); }
-    catch (e) { notify('No se pudo guardar', friendlyError(e)); }
+    catch (e) { notify(t('No se pudo guardar'), friendlyError(e)); }
     finally { setBusy(false); }
   }
   return (
-    <Sheet visible={visible} onClose={onClose} title="Agregar un semestre que ya terminó" subtitle="Para que el promedio acumulado esté completo. Copia las notas finales de tu certificado o del portal." maxWidth={620}
+    <Sheet visible={visible} onClose={onClose} title={t('Agregar un semestre que ya terminó')} subtitle={t('Para que el promedio acumulado esté completo. Copia las notas finales de tu certificado o del portal.')} maxWidth={620}
       footer={<>
-        <Text style={{ color: C.muted, fontSize: 13, flex: 1 }}>Promedio: <Text style={{ color: C.text, fontWeight: '800' }}>{fmtGrade(avg.avg, scale)}</Text> · {avg.credits} créditos</Text>
-        <Button label="Guardar" icon="checkmark" busy={busy} disabled={!list.length || !rowsValid(rows, scale)} onPress={save} />
+        <Text style={{ color: C.muted, fontSize: 13, flex: 1 }}>{t('Promedio: ')}<Text style={{ color: C.text, fontWeight: '800' }}>{fmtGrade(avg.avg, scale)}</Text> · {avg.credits} {t(' créditos')}</Text>
+        <Button label={t('Guardar')} icon="checkmark" busy={busy} disabled={!list.length || !rowsValid(rows, scale)} onPress={save} />
       </>}>
-      <Field label="Semestre" value={name} onChangeText={setName} placeholder="Ej: 2025-2" maxLength={40} autoFocus />
+      <Field label={t('Semestre')} value={name} onChangeText={setName} placeholder={t('Ej: 2025-2')} maxLength={40} autoFocus />
       <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
-        <View style={{ flex: 1, minWidth: 160 }}><DateField label="Empezó (opcional)" value={from} onChange={setFrom} /></View>
-        <View style={{ flex: 1, minWidth: 160 }}><DateField label="Terminó (opcional)" value={to} onChange={setTo} /></View>
+        <View style={{ flex: 1, minWidth: 160 }}><DateField label={t('Empezó (opcional)')} value={from} onChange={setFrom} /></View>
+        <View style={{ flex: 1, minWidth: 160 }}><DateField label={t('Terminó (opcional)')} value={to} onChange={setTo} /></View>
       </View>
       <RowsEditor rows={rows} setRows={setRows} scale={scale} editableNames />
-      <Button label="Otra materia" icon="add" kind="secondary" size="sm" onPress={() => setRows([...rows, emptyRow()])} style={{ alignSelf: 'flex-start', marginTop: 10 }} />
+      <Button label={t('Otra materia')} icon="add" kind="secondary" size="sm" onPress={() => setRows([...rows, emptyRow()])} style={{ alignSelf: 'flex-start', marginTop: 10 }} />
     </Sheet>
   );
 }
 
 // ---------- Escala de notas ----------
 const PRESETS: { label: string; s: GradeScale }[] = [
-  { label: '0 a 5, aprueba con 3,0', s: { max: 5, pass: 3, decimals: 1 } },
-  { label: '0 a 10, aprueba con 6', s: { max: 10, pass: 6, decimals: 1 } },
-  { label: '0 a 100, aprueba con 60', s: { max: 100, pass: 60, decimals: 1 } },
-  { label: '0 a 20, aprueba con 11', s: { max: 20, pass: 11, decimals: 1 } },
+  { label: t('0 a 5, aprueba con 3,0'), s: { max: 5, pass: 3, decimals: 1 } },
+  { label: t('0 a 10, aprueba con 6'), s: { max: 10, pass: 6, decimals: 1 } },
+  { label: t('0 a 100, aprueba con 60'), s: { max: 100, pass: 60, decimals: 1 } },
+  { label: t('0 a 20, aprueba con 11'), s: { max: 20, pass: 11, decimals: 1 } },
 ];
 export function ScaleSheet({ visible, scale, onClose }: { visible: boolean; scale: GradeScale; onClose: () => void }) {
   const [max, setMax] = useState(String(scale.max));
@@ -222,17 +223,17 @@ export function ScaleSheet({ visible, scale, onClose }: { visible: boolean; scal
   const [busy, setBusy] = useState(false);
   useEffect(() => { if (visible) { setMax(String(scale.max).replace('.', ',')); setPass(String(scale.pass).replace('.', ',')); setDec(scale.decimals); } }, [visible]);
   const m = parseGrade(max), p = parseGrade(pass);
-  const err = m == null || m <= 0 || m > 1000 ? 'La nota máxima va entre 1 y 1000.' : p == null || p <= 0 || p > m ? 'La nota para aprobar va entre 0 y la máxima.' : null;
+  const err = m == null || m <= 0 || m > 1000 ? t('La nota máxima va entre 1 y 1000.') : p == null || p <= 0 || p > m ? t('La nota para aprobar va entre 0 y la máxima.') : null;
   async function save() {
     if (err) return;
     setBusy(true);
-    try { await saveGradeScale(cleanScale({ max: m, pass: p, decimals: dec })); toast('Escala guardada', { tone: 'good' }); onClose(); }
-    catch (e) { notify('No se pudo guardar', friendlyError(e)); }
+    try { await saveGradeScale(cleanScale({ max: m, pass: p, decimals: dec })); toast(t('Escala guardada'), { tone: 'good' }); onClose(); }
+    catch (e) { notify(t('No se pudo guardar'), friendlyError(e)); }
     finally { setBusy(false); }
   }
   return (
-    <Sheet visible={visible} onClose={onClose} title="Escala de notas" subtitle="La de tu institución. Se usa en los promedios, el historial y lo que falta para aprobar." maxWidth={500}
-      footer={<Button label="Guardar" busy={busy} disabled={!!err} onPress={save} />}>
+    <Sheet visible={visible} onClose={onClose} title={t('Escala de notas')} subtitle={t('La de tu institución. Se usa en los promedios, el historial y lo que falta para aprobar.')} maxWidth={500}
+      footer={<Button label={t('Guardar')} busy={busy} disabled={!!err} onPress={save} />}>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
         {PRESETS.map((x) => (
           <Pressable key={x.label} onPress={() => { setMax(String(x.s.max)); setPass(String(x.s.pass)); setDec(x.s.decimals); }} accessibilityRole="button"
@@ -242,10 +243,10 @@ export function ScaleSheet({ visible, scale, onClose }: { visible: boolean; scal
         ))}
       </View>
       <View style={{ flexDirection: 'row', gap: 10 }}>
-        <View style={{ flex: 1 }}><Field label="Nota máxima" value={max} onChangeText={setMax} keyboardType="decimal-pad" /></View>
-        <View style={{ flex: 1 }}><Field label="Nota para aprobar" value={pass} onChangeText={setPass} keyboardType="decimal-pad" /></View>
+        <View style={{ flex: 1 }}><Field label={t('Nota máxima')} value={max} onChangeText={setMax} keyboardType="decimal-pad" /></View>
+        <View style={{ flex: 1 }}><Field label={t('Nota para aprobar')} value={pass} onChangeText={setPass} keyboardType="decimal-pad" /></View>
       </View>
-      <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600', marginBottom: 6 }}>Decimales</Text>
+      <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600', marginBottom: 6 }}>{t('Decimales')}</Text>
       <View style={{ flexDirection: 'row', gap: 6 }} accessibilityRole="radiogroup">
         {([1, 2] as const).map((d) => (
           <Pressable key={d} onPress={() => setDec(d)} accessibilityRole="radio" accessibilityState={{ checked: dec === d }}

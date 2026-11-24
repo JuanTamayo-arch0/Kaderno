@@ -8,6 +8,7 @@
 import { Platform } from 'react-native';
 import { VAPID_PUBLIC_KEY } from './supabase';
 import { savePushSubscription, deletePushSubscription } from './db';
+import { t } from './i18n';
 
 export type PushStatus = 'unsupported' | 'needs-install' | 'no-key' | 'denied' | 'off' | 'on';
 
@@ -93,6 +94,6 @@ export async function testLocalNotification(): Promise<boolean> {
   if (!isWeb() || !('serviceWorker' in navigator) || Notification.permission !== 'granted') return false;
   const reg = await navigator.serviceWorker.getRegistration();
   if (!reg) return false;
-  await reg.showNotification('Kaderno', { body: 'Así se verán tus recordatorios.', icon: '/icon-192.png', badge: '/badge-72.png', tag: 'prueba' });
+  await reg.showNotification('Kaderno', { body: t('Así se verán tus recordatorios.'), icon: '/icon-192.png', badge: '/badge-72.png', tag: 'prueba' });
   return true;
 }

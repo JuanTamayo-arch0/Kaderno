@@ -5,9 +5,10 @@
 import { useEffect, useState } from 'react';
 import { supabase } from './supabase';
 import { cardPayload, digits, type CardInput, type MyPlan, type Period } from './billing';
+import { t } from './i18n';
 
 const missing = (e: any) => !!e && (e.code === '42P01' || e.code === 'PGRST202' || e.code === 'PGRST205' || e.code === '42883' || /does not exist|Could not find/i.test(String(e.message ?? '')));
-export const NEEDS_V23 = 'Para los planes falta correr schema_v23.sql en Supabase.';
+export const NEEDS_V23 = t('Para los planes falta correr schema_v23.sql en Supabase.');
 
 let memo: { at: number; value: MyPlan | null } | null = null;
 const listeners = new Set<(p: MyPlan | null) => void>();
@@ -57,7 +58,7 @@ async function fnError(error: any, fallback: string): Promise<string> {
   try { const ctx = error?.context; const j = ctx?.json ? await ctx.json() : null; if (j?.error) return j.error; } catch { /* noop */ }
   return fallback;
 }
-async function billing<T = any>(body: Record<string, unknown>, fallback = 'No se pudo completar el pago. Intenta de nuevo.'): Promise<T> {
+async function billing<T = any>(body: Record<string, unknown>, fallback = t('No se pudo completar el pago. Intenta de nuevo.')): Promise<T> {
   const { data, error } = await supabase.functions.invoke('billing', { body });
   if (error) throw new Error(await fnError(error, fallback));
   return data as T;
@@ -67,7 +68,7 @@ export type BillingConfig = { publicKey: string; env: 'sandbox' | 'production'; 
 let cfgMemo: { at: number; v: BillingConfig } | null = null;
 export async function billingConfig(): Promise<BillingConfig> {
   if (cfgMemo && Date.now() - cfgMemo.at < 5 * 60_000) return cfgMemo.v;
-  const v = await billing<BillingConfig>({ action: 'config' }, 'Los pagos no están disponibles en este momento.');
+  const v = await billing<BillingConfig>({ action: 'config' }, t('Los pagos no están disponibles en este momento.'));
   cfgMemo = { at: Date.now(), v };
   return v;
 }
@@ -87,7 +88,7 @@ export async function tokenizeCard(cfg: BillingConfig, card: CardInput): Promise
   const j = await res.json().catch(() => null);
   if (!res.ok || j?.status !== 'CREATED' || !j?.data?.id) {
     const msgs = j?.error?.messages ? Object.values(j.error.messages).flat().join(' ') : '';
-    throw new Error(msgs ? `Wompi no aceptó la tarjeta: ${msgs}` : 'Wompi no aceptó la tarjeta. Revisa los datos.');
+    throw new Error(msgs ? t('Wompi no aceptó la tarjeta: {msgs}', { msgs }) : t('Wompi no aceptó la tarjeta. Revisa los datos.'));
   }
   return { token: j.data.id, brand: j.data.brand ?? '', last4: j.data.last_four ?? digits(card.number).slice(-4) };
 }
@@ -98,7 +99,7 @@ export async function tokenizeNequi(cfg: BillingConfig, phone: string): Promise<
     method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${cfg.publicKey}` }, body: JSON.stringify({ phone_number: digits(phone) }),
   });
   const j = await res.json().catch(() => null);
-  if (!res.ok || !j?.data?.id) throw new Error('Nequi no recibió la solicitud. Revisa el número.');
+  if (!res.ok || !j?.data?.id) throw new Error(t('Nequi no recibió la solicitud. Revisa el número.'));
   return j.data.id as string;
 }
 export async function nequiTokenStatus(cfg: BillingConfig, id: string): Promise<'PENDING' | 'APPROVED' | 'DECLINED' | string> {
@@ -121,7 +122,7 @@ export async function updateSource(o: { type: 'CARD' | 'NEQUI'; token: string; a
 
 export type PaymentInfo = { reference: string; status: string; kind: string; plan: string; period: string; seats: number; amount_in_cents: number; method: string | null; error: string | null };
 export async function paymentStatus(q: { reference?: string; id?: string }): Promise<PaymentInfo> {
-  const r = await billing<{ payment: PaymentInfo }>({ action: 'status', ...q }, 'No pudimos revisar el pago.');
+  const r = await billing<{ payment: PaymentInfo }>({ action: 'status', ...q }, t('No pudimos revisar el pago.'));
   return r.payment;
 }
 /** Espera hasta que el pago termine (máximo `ms`). */

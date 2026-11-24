@@ -7,6 +7,7 @@ import { ROOM_H, ROOM_W, roomSvg, type Home } from '../../lib/pets/home';
 import { PatioSim, frameFor, moodFor, hopHeight, ballPos, type PatioMember } from '../../lib/pets/patio';
 import { prefersReducedMotion } from '../../lib/motion';
 import { PetImage } from '../pets/PetArt';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  El patio de la sala: un cuarto de estudio en pixel art donde están
@@ -67,7 +68,7 @@ export function PetPatio({ members, height, compact, onTapPet, celebrate, greeti
     if (first) return; // al abrir la sala no se celebra lo de antes
     const now = Date.now();
     sim.current!.celebrate(now, celebrate.big ? 5000 : 2200);
-    if (celebrate.big) membersRef.current.forEach((m) => sim.current!.sayFor(m.uid, '¡Meta!', now, 4000));
+    if (celebrate.big) membersRef.current.forEach((m) => sim.current!.sayFor(m.uid, t('¡Meta!'), now, 4000));
   }, [celebrate?.key]);
 
   // Saludos.
@@ -137,7 +138,7 @@ export function PetPatio({ members, height, compact, onTapPet, celebrate, greeti
 
   const tap = (m: PatioMember) => {
     if (m.me) {
-      const lines = ['¡A estudiar!', '¡Vamos!', 'Aquí estoy', '¡Hola!'];
+      const lines = [t('¡A estudiar!'), t('¡Vamos!'), t('Aquí estoy'), t('¡Hola!')];
       sim.current!.hop(m.uid); sim.current!.sayFor(m.uid, lines[Math.floor(Math.random() * lines.length)], Date.now(), 2000);
     } else {
       sim.current!.hop(m.uid);
@@ -158,9 +159,9 @@ export function PetPatio({ members, height, compact, onTapPet, celebrate, greeti
   if (!web) {
     return (
       <View style={{ height, borderRadius: 14, overflow: 'hidden', backgroundColor: '#2b2433', flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 8, paddingBottom: 6 }}
-        accessibilityRole="image" accessibilityLabel={`Mascotas de la sala: ${members.map((m) => m.name).join(', ')}`}>
+        accessibilityRole="image" accessibilityLabel={t('Mascotas de la sala: {join}', { join: members.map((m) => m.name).join(', ') })}>
         {members.map((m) => (
-          <Pressable key={m.uid} onPress={() => onTapPet?.(m.uid)} accessibilityRole="button" accessibilityLabel={m.me ? 'Tu mascota' : `Saludar a ${m.name}`} style={{ alignItems: 'center' }}>
+          <Pressable key={m.uid} onPress={() => onTapPet?.(m.uid)} accessibilityRole="button" accessibilityLabel={m.me ? t('Tu mascota') : `Saludar a ${m.name}`} style={{ alignItems: 'center' }}>
             <PetImage species={m.species} outfit={m.outfit} mood={moodFor(m.state)} frame={m.state === 'away' ? 'sueno1' : 'quieto'} size={petSize} />
             {!compact && <Text style={{ color: '#e8eaf0', fontSize: 11, fontWeight: '700' }} numberOfLines={1}>{m.name.split(' ')[0]}</Text>}
           </Pressable>
@@ -172,11 +173,11 @@ export function PetPatio({ members, height, compact, onTapPet, celebrate, greeti
   return (
     <View onLayout={(e: LayoutChangeEvent) => setW(Math.round(e.nativeEvent.layout.width))}
       style={{ height, borderRadius: 14, overflow: 'hidden', backgroundColor: '#2b2433' }}
-      accessibilityLabel={`Patio de la sala con ${members.length} ${members.length === 1 ? 'mascota' : 'mascotas'}`}>
+      accessibilityLabel={t('Patio de la sala con {length} {v}', { length: members.length, v: members.length === 1 ? t('mascota') : t('mascotas') })}>
       {w > 0 && <SvgXml xml={roomXml} width={w} height={height} />}
       {w > 0 && members.map((m) => (
         <Pressable key={m.uid} ref={setNode(m.uid, 'box')} onPress={() => tap(m)}
-          accessibilityRole="button" accessibilityLabel={m.me ? 'Tu mascota' : `Saludar a la mascota de ${m.name}`}
+          accessibilityRole="button" accessibilityLabel={m.me ? t('Tu mascota') : t('Saludar a la mascota de {name}', { name: m.name })}
           style={{ position: 'absolute', left: 0, top: 0, width: petSize, height: petSize, alignItems: 'center', cursor: 'pointer' } as any}>
           <View ref={setNode(m.uid, 'sprite')} style={{ width: petSize, height: petSize }} />
           <Text ref={setNode(m.uid, 'bubble')}
@@ -185,7 +186,7 @@ export function PetPatio({ members, height, compact, onTapPet, celebrate, greeti
             style={{ display: 'none', position: 'absolute', bottom: petSize - 2, backgroundColor: 'rgba(26,32,54,0.92)', color: '#a9bbff', fontSize: 10, fontWeight: '800', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 6, whiteSpace: 'nowrap' } as any} />
           {!compact && (
             <Text numberOfLines={1} style={{ position: 'absolute', top: petSize - 2, color: '#fff', fontSize: 10.5, fontWeight: '800', textShadowColor: 'rgba(0,0,0,0.85)', textShadowRadius: 3, whiteSpace: 'nowrap' } as any}>
-              {m.me ? 'Tú' : m.name.split(' ')[0]}
+              {m.me ? t('Tú') : m.name.split(' ')[0]}
             </Text>
           )}
         </Pressable>
@@ -217,9 +218,9 @@ export function patioMembers(
 }
 
 export function PatioHint({ hasPet, count, enabled = true }: { hasPet: boolean; count: number; enabled?: boolean }) {
-  const text = !enabled ? 'Las mascotas están apagadas (Ajustes → Mascota).'
-    : !hasPet ? 'Adopta una mascota (en Mascota) para que ande por la sala con las de tus compañeros.'
-    : count > 1 ? 'Las mascotas de la sala andan por la pantalla. Toca la de alguien para saludar; en el descanso juegan juntas.'
-    : 'Cuando entren tus compañeros, sus mascotas aparecen por la pantalla.';
+  const text = !enabled ? t('Las mascotas están apagadas (Ajustes → Mascota).')
+    : !hasPet ? t('Adopta una mascota (en Mascota) para que ande por la sala con las de tus compañeros.')
+    : count > 1 ? t('Las mascotas de la sala andan por la pantalla. Toca la de alguien para saludar; en el descanso juegan juntas.')
+    : t('Cuando entren tus compañeros, sus mascotas aparecen por la pantalla.');
   return <Text style={{ color: C.muted, fontSize: 12.5, lineHeight: 17 }}>{text}</Text>;
 }

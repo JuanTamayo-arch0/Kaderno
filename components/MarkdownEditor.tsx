@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { LazyMarkdown as Markdown } from './LazyMarkdown';
 import { C, R } from '../lib/theme';
+import { t } from '../lib/i18n';
 
 // Editor de notas en Markdown con barra de formato y vista de lectura renderizada (estilo Notion).
 export function MarkdownEditor({ value, onChange, minHeight = 220, mode: modeProp }: {
@@ -31,13 +32,13 @@ export function MarkdownEditor({ value, onChange, minHeight = 220, mode: modePro
   const tools: { label: string; run: () => void }[] = [
     { label: 'H1', run: () => linePrefix('# ') },
     { label: 'H2', run: () => linePrefix('## ') },
-    { label: 'B', run: () => wrap('**') },
+    { label: t('B'), run: () => wrap('**') },
     { label: 'i', run: () => wrap('*') },
-    { label: '• Lista', run: () => linePrefix('- ') },
-    { label: '☐ Tarea', run: () => linePrefix('- [ ] ') },
+    { label: t('• Lista'), run: () => linePrefix('- ') },
+    { label: t('☐ Tarea'), run: () => linePrefix('- [ ] ') },
     { label: '❝ Cita', run: () => linePrefix('> ') },
     { label: '</>', run: () => wrap('`') },
-    { label: '― Línea', run: () => insert('\n---\n') },
+    { label: t('― Línea'), run: () => insert('\n---\n') },
   ];
 
   // Para la vista, convierte las casillas de tarea a símbolos visibles.
@@ -49,8 +50,8 @@ export function MarkdownEditor({ value, onChange, minHeight = 220, mode: modePro
     <View>
       {!modeProp && (
         <View style={{ flexDirection: 'row', gap: 6, marginBottom: 10 }}>
-          <Seg label="Ver" active={mode === 'view'} onPress={() => setMode('view')} />
-          <Seg label="Editar" active={mode === 'edit'} onPress={() => setMode('edit')} />
+          <Seg label={t('Ver')} active={mode === 'view'} onPress={() => setMode('view')} />
+          <Seg label={t('Editar')} active={mode === 'edit'} onPress={() => setMode('edit')} />
         </View>
       )}
 
@@ -67,7 +68,7 @@ export function MarkdownEditor({ value, onChange, minHeight = 220, mode: modePro
           <TextInput
             value={value} onChangeText={onChange} multiline
             onSelectionChange={(e) => setSel(e.nativeEvent.selection)}
-            placeholder="Escribe tu apunte… usa la barra de arriba para dar formato (Markdown)."
+            placeholder={t('Escribe tu apunte… usa la barra de arriba para dar formato (Markdown).')}
             placeholderTextColor={C.muted}
             style={{ backgroundColor: C.surface, borderColor: C.line, borderWidth: 1, borderRadius: R.lg, color: C.text, fontSize: 15, lineHeight: 24, padding: 14, minHeight, textAlignVertical: 'top', fontFamily: 'monospace' }}
           />
@@ -76,7 +77,7 @@ export function MarkdownEditor({ value, onChange, minHeight = 220, mode: modePro
         <View style={{ backgroundColor: C.surface, borderColor: C.line, borderWidth: 1, borderRadius: R.lg, padding: 18, minHeight }}>
           {value && value.trim()
             ? <Markdown style={mdStyles}>{forView}</Markdown>
-            : <Text style={{ color: C.muted }}>Nota vacía. Toca “Editar” para empezar a escribir.</Text>}
+            : <Text style={{ color: C.muted }}>{t('Nota vacía. Toca “Editar” para empezar a escribir.')}</Text>}
         </View>
       )}
     </View>

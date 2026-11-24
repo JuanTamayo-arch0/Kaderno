@@ -36,6 +36,7 @@ import { HeaderBtn, MoreMenu, OptionsButton } from '../../components/projects/Pr
 import { Equipo } from '../../components/projects/ProjectTeam';
 import { getCommentCounts } from '../../lib/commentsDb';
 import { ProjectCalendar } from '../../components/projects/ProjectCalendar';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Pantalla de un proyecto: Tablero, Lista, Calendario, Archivos y Equipo.
@@ -53,11 +54,11 @@ import { ProjectCalendar } from '../../components/projects/ProjectCalendar';
 type ProjSnap = { project: Project; members: Member[]; tasks: PTask[]; steps: Record<string, PStep[]>; subjects: Subject[] };
 
 const VIEWS = [
-  { key: 'tablero', label: 'Tablero', icon: 'grid-outline' },
-  { key: 'lista', label: 'Lista', icon: 'list-outline' },
-  { key: 'calendario', label: 'Calendario', icon: 'calendar-outline' },
-  { key: 'archivos', label: 'Archivos', icon: 'folder-open-outline' },
-  { key: 'equipo', label: 'Equipo', icon: 'people-outline' },
+  { key: 'tablero', label: t('Tablero'), icon: 'grid-outline' },
+  { key: 'lista', label: t('Lista'), icon: 'list-outline' },
+  { key: 'calendario', label: t('Calendario'), icon: 'calendar-outline' },
+  { key: 'archivos', label: t('Archivos'), icon: 'folder-open-outline' },
+  { key: 'equipo', label: t('Equipo'), icon: 'people-outline' },
 ] as const;
 type ViewKey = (typeof VIEWS)[number]['key'];
 
@@ -138,7 +139,7 @@ function ProyectoDetalle() {
       setProject(p); setMembers(ms); setTasks(ts); setSteps(st); setActivity(ac); setSubjects(sj);
       writeSnap(snapKey, { project: p, members: ms, tasks: ts, steps: st, subjects: sj } satisfies ProjSnap);
     } catch (e: any) {
-      notify('No se pudo abrir el proyecto', e.message);
+      notify(t('No se pudo abrir el proyecto'), e.message);
     } finally {
       setLoading(false);
     }
@@ -204,8 +205,8 @@ function ProyectoDetalle() {
   async function toggleHoy() {
     const next = !hiddenInHoy;
     setHiddenInHoy(next);
-    try { await setProjectHidden(projectId, next); toast(next ? 'Tus tareas de este proyecto ya no aparecen en Hoy' : 'Tus tareas de este proyecto vuelven a aparecer en Hoy'); }
-    catch (e: any) { setHiddenInHoy(!next); notify('No se pudo cambiar', e?.message ?? ''); }
+    try { await setProjectHidden(projectId, next); toast(next ? t('Tus tareas de este proyecto ya no aparecen en Hoy') : t('Tus tareas de este proyecto vuelven a aparecer en Hoy')); }
+    catch (e: any) { setHiddenInHoy(!next); notify(t('No se pudo cambiar'), e?.message ?? ''); }
   }
 
   function toggleSelect(id: string) {
@@ -224,7 +225,7 @@ function ProyectoDetalle() {
     const u = undo;
     setUndo(null);
     try { await undoProjectBatch(u.batchId); await load(); }
-    catch (e: any) { notify('No se pudo deshacer', e.message); }
+    catch (e: any) { notify(t('No se pudo deshacer'), e.message); }
   }
   async function onBulkAction(a: BulkAction) {
     const sel = tasks.filter((t) => selected.has(t.id));
@@ -235,7 +236,7 @@ function ProyectoDetalle() {
       endSelecting();
       await load();
       if (res.r.batch_id) showUndo(res.r.batch_id, res.text);
-    } catch (e: any) { notify('No se pudo borrar', e.message); }
+    } catch (e: any) { notify(t('No se pudo borrar'), e.message); }
   }
 
   function goBack() {
@@ -258,10 +259,10 @@ function ProyectoDetalle() {
       await moveTask(taskId, colKey, colTasks, idx);
       const label = cols.find((c) => c.key === colKey)?.label ?? colKey;
       if (task.status !== colKey) {
-        await logActivity(projectId, 'task_move', `movió “${task.title}” a ${label}`, { task_id: taskId });
+        await logActivity(projectId, 'task_move', t('movió “{title}” a {label}', { title: task.title, label }), { task_id: taskId });
       }
     } catch (e: any) {
-      notify('No se pudo mover', e.message);
+      notify(t('No se pudo mover'), e.message);
     }
     load();
   }
@@ -270,12 +271,11 @@ function ProyectoDetalle() {
     return (
       <View style={{ flex: 1, backgroundColor: screenBg(), alignItems: 'center', justifyContent: 'center', padding: 30, paddingLeft: isWide ? SIDEBAR_W : 30 }}>
         <Ionicons name="lock-closed-outline" size={34} color={C.muted} style={{ marginBottom: 10 }} />
-        <Text style={{ color: C.text, fontSize: 16, fontWeight: '700' }}>Este proyecto ya no está disponible</Text>
+        <Text style={{ color: C.text, fontSize: 16, fontWeight: '700' }}>{t('Este proyecto ya no está disponible')}</Text>
         <Text style={{ color: C.muted, fontSize: 13, marginTop: 6, textAlign: 'center', maxWidth: 340, lineHeight: 20 }}>
-          Puede que lo hayan borrado, o que te hayan sacado del equipo.
-        </Text>
+          {t('Puede que lo hayan borrado, o que te hayan sacado del equipo.')}</Text>
         <Pressable onPress={() => router.push('/proyectos')} style={{ marginTop: 18, backgroundColor: C.brand, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 20 }}>
-          <Text style={{ color: C.onBrand, fontWeight: '700' }}>Volver a proyectos</Text>
+          <Text style={{ color: C.onBrand, fontWeight: '700' }}>{t('Volver a proyectos')}</Text>
         </Pressable>
       </View>
     );
@@ -287,7 +287,7 @@ function ProyectoDetalle() {
       {/* ---------- Barra de arriba ---------- */}
       <View style={{ paddingTop: isWide ? 26 : Math.max(insets.top, 12) + 10, paddingHorizontal: isWide ? 32 : 16, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: C.line }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <Pressable onPress={goBack} hitSlop={10} accessibilityRole="button" accessibilityLabel="Volver"
+          <Pressable onPress={goBack} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('Volver')}
             style={{ width: 40, height: 40, marginLeft: -10, marginRight: -6, alignItems: 'center', justifyContent: 'center' }}>
             <Ionicons name="chevron-back" size={26} color={C.text} />
           </Pressable>
@@ -296,13 +296,13 @@ function ProyectoDetalle() {
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text numberOfLines={1} style={{ color: C.text, fontSize: 17, fontWeight: '800' }}>
-              {project?.name ?? (loading ? 'Cargando…' : 'Proyecto')}
+              {project?.name ?? (loading ? t('Cargando…') : t('Proyecto'))}
             </Text>
             <Text numberOfLines={1} style={{ color: C.muted, fontSize: 12, marginTop: 1 }}>
               {members.length} {members.length === 1 ? 'integrante' : 'integrantes'}
               {subject ? ` · ${subject.name}` : ''}
-              {tasks.length ? ` · ${doneCount}/${tasks.length} hechas` : ''}
-              {role === 'viewer' ? ' · solo lectura' : ''}
+              {tasks.length ? t(' · {doneCount}/{length} hechas', { doneCount, length: tasks.length }) : ''}
+              {role === 'viewer' ? t(' · solo lectura') : ''}
             </Text>
           </View>
           {latest && (
@@ -313,7 +313,7 @@ function ProyectoDetalle() {
             </Pressable>
           )}
           {isWide && editable && isTaskView && !selecting && (
-            <HeaderBtn icon="checkbox-outline" label="Seleccionar" wide onPress={() => setSelecting(true)} />
+            <HeaderBtn icon="checkbox-outline" label={t('Seleccionar')} wide onPress={() => setSelecting(true)} />
           )}
           {project ? (
             <OptionsButton wide={isWide} open={moreOpen} onPress={(r) => { setMenuAnchor(r); setMoreOpen(true); }} />
@@ -335,20 +335,20 @@ function ProyectoDetalle() {
           })}
         </ScrollView>
         {isTaskView && (labels.length > 0 || usedPrios.length > 0 || anyBlocked || filtering) && (
-          <ScrollView ref={filtersFade.ref} horizontal showsHorizontalScrollIndicator={false} style={[{ marginTop: 4, marginBottom: -4, flexGrow: 0 }, filtersFade.fade]} contentContainerStyle={{ gap: 6, alignItems: 'center', paddingVertical: 4 }} accessibilityLabel="Filtros">
+          <ScrollView ref={filtersFade.ref} horizontal showsHorizontalScrollIndicator={false} style={[{ marginTop: 4, marginBottom: -4, flexGrow: 0 }, filtersFade.fade]} contentContainerStyle={{ gap: 6, alignItems: 'center', paddingVertical: 4 }} accessibilityLabel={t('Filtros')}>
             <Ionicons name="filter-outline" size={14} color={C.muted} />
-            {myId && <FChip label="Lo mío" on={!!filter.mine} onPress={() => setFilter({ ...filter, mine: filter.mine ? null : myId })} />}
+            {myId && <FChip label={t('Lo mío')} on={!!filter.mine} onPress={() => setFilter({ ...filter, mine: filter.mine ? null : myId })} />}
             {usedPrios.map((p) => <FChip key={p.key} label={p.label} color={p.color} on={filter.priority === p.key} onPress={() => setFilter({ ...filter, priority: filter.priority === p.key ? null : p.key })} />)}
-            {anyBlocked && <FChip label="Bloqueadas" on={!!filter.blocked} onPress={() => setFilter({ ...filter, blocked: !filter.blocked })} />}
+            {anyBlocked && <FChip label={t('Bloqueadas')} on={!!filter.blocked} onPress={() => setFilter({ ...filter, blocked: !filter.blocked })} />}
             {labels.slice(0, 8).map((l) => <FChip key={l} label={'#' + l} on={filter.label === l} onPress={() => setFilter({ ...filter, label: filter.label === l ? null : l })} />)}
-            {filtering && <Pressable onPress={() => setFilter({})} hitSlop={6}><Text style={{ color: C.brand, fontSize: 12, fontWeight: '700' }}>Quitar filtros ({shown.length} de {tasks.length})</Text></Pressable>}
+            {filtering && <Pressable onPress={() => setFilter({})} hitSlop={6}><Text style={{ color: C.brand, fontSize: 12, fontWeight: '700' }}>{t('Quitar filtros ({length} de {length2})', { length: shown.length, length2: tasks.length })}</Text></Pressable>}
           </ScrollView>
         )}
       </View>
 
       {/* ---------- Cuerpo ---------- */}
       {loading ? (
-        <Text style={{ color: C.muted, padding: 24 }}>Cargando…</Text>
+        <Text style={{ color: C.muted, padding: 24 }}>{t('Cargando…')}</Text>
       ) : view === 'tablero' ? (
         <Tablero
           cols={cols} grouped={grouped} steps={steps} members={members} subject={subject} comments={comments} byId={byId}
@@ -370,13 +370,13 @@ function ProyectoDetalle() {
             const doneCol = cols.find((c) => c.done)?.key;
             const openCol = cols.find((c) => !c.done)?.key ?? cols[0]?.key;
             const target = t.done ? openCol : doneCol;
-            if (!target) return notify('Falta una columna final', 'Marca una columna como “termina aquí” para poder tachar tareas.');
+            if (!target) return notify(trn('Falta una columna final'), trn('Marca una columna como “termina aquí” para poder tachar tareas.'));
             play(t.done ? 'uncheck' : 'complete');
             setTasks((prev) => prev.map((x) => (x.id === t.id ? { ...x, status: target, done: !t.done } : x)));
             try {
               await updateProjectTask(t.id, { status: target });
-              if (!t.done) await logActivity(projectId, 'task_done', `terminó “${t.title}”`, { task_id: t.id });
-            } catch (e: any) { notify('No se pudo actualizar', e.message); }
+              if (!t.done) await logActivity(projectId, 'task_done', trn('terminó “{title}”', { title: t.title }), { task_id: t.id });
+            } catch (e: any) { notify(trn('No se pudo actualizar'), e.message); }
             load();
           }}
         />
@@ -427,10 +427,10 @@ function ProyectoDetalle() {
         onSave={async (next) => {
           try {
             await setBoardColumns(projectId, next);
-            await logActivity(projectId, 'columns', 'cambió las columnas del tablero', {});
+            await logActivity(projectId, 'columns', t('cambió las columnas del tablero'), {});
             setColsModal(false);
             load();
-          } catch (e: any) { notify('No se pudieron guardar las columnas', e.message); }
+          } catch (e: any) { notify(t('No se pudieron guardar las columnas'), e.message); }
         }}
       />
 
@@ -447,35 +447,35 @@ function ProyectoDetalle() {
         onClose={() => setMoreOpen(false)}
         groups={[
           {
-            title: 'Tareas',
+            title: t('Tareas'),
             items: [
-              ...(editable && isTaskView && !selecting && !isWide ? [{ icon: 'checkbox-outline', label: 'Seleccionar varias', hint: 'Cambiar columna, responsable o fechas a la vez', onPress: () => setSelecting(true) }] : []),
-              ...(editable ? [{ icon: 'cloud-upload-outline', label: 'Importar tareas', hint: 'Desde un CSV, un JSON o una IA', onPress: () => setImportOpen(true) }] : []),
-              { icon: 'download-outline', label: 'Exportar tareas', hint: 'Para editarlas en Excel o pasarlas a una IA', onPress: () => setExportOpen(true) },
-              { icon: 'document-text-outline', label: 'Informe semanal', hint: 'Lo hecho, lo que viene y lo atrasado, listo para mandar', onPress: () => setReportOpen(true) },
-              { icon: 'pulse-outline', label: 'Estado del proyecto', hint: 'En curso, en riesgo o atrasado, con una nota para el equipo', onPress: () => setStatusOpen(true) },
-              { icon: 'link-outline', label: 'Enlaces para el cliente', hint: 'Formulario de solicitudes y avance de solo lectura', onPress: () => setLinksOpen(true) },
-              { icon: 'flash-outline', label: 'Reglas automáticas', hint: 'Asignar o avisar cuando algo pasa', onPress: () => setRulesOpen(true) },
-              { icon: 'hourglass-outline', label: 'Presupuesto de horas', hint: 'Cuánto va el equipo y aviso al 80 % y al 100 %', onPress: () => setBudgetOpen(true) },
+              ...(editable && isTaskView && !selecting && !isWide ? [{ icon: 'checkbox-outline', label: t('Seleccionar varias'), hint: t('Cambiar columna, responsable o fechas a la vez'), onPress: () => setSelecting(true) }] : []),
+              ...(editable ? [{ icon: 'cloud-upload-outline', label: t('Importar tareas'), hint: t('Desde un CSV, un JSON o una IA'), onPress: () => setImportOpen(true) }] : []),
+              { icon: 'download-outline', label: t('Exportar tareas'), hint: t('Para editarlas en Excel o pasarlas a una IA'), onPress: () => setExportOpen(true) },
+              { icon: 'document-text-outline', label: t('Informe semanal'), hint: t('Lo hecho, lo que viene y lo atrasado, listo para mandar'), onPress: () => setReportOpen(true) },
+              { icon: 'pulse-outline', label: t('Estado del proyecto'), hint: t('En curso, en riesgo o atrasado, con una nota para el equipo'), onPress: () => setStatusOpen(true) },
+              { icon: 'link-outline', label: t('Enlaces para el cliente'), hint: t('Formulario de solicitudes y avance de solo lectura'), onPress: () => setLinksOpen(true) },
+              { icon: 'flash-outline', label: t('Reglas automáticas'), hint: t('Asignar o avisar cuando algo pasa'), onPress: () => setRulesOpen(true) },
+              { icon: 'hourglass-outline', label: t('Presupuesto de horas'), hint: t('Cuánto va el equipo y aviso al 80 % y al 100 %'), onPress: () => setBudgetOpen(true) },
             ],
           },
           {
-            title: 'Estudiar',
-            items: [{ icon: 'people-outline', label: 'Sala de estudio', hint: 'Enfóquense juntos y vean quién está estudiando', onPress: openStudyRoom }],
+            title: t('Estudiar'),
+            items: [{ icon: 'people-outline', label: t('Sala de estudio'), hint: t('Enfóquense juntos y vean quién está estudiando'), onPress: openStudyRoom }],
           },
           {
-            title: 'Tablero',
+            title: t('Tablero'),
             items: [
-              ...(editable ? [{ icon: 'sparkles-outline', label: 'Ordenar el tablero', hint: 'Quitar repetidas o vaciarlo', onPress: () => setCleanupOpen(true) }] : []),
-              ...(editable ? [{ icon: 'options-outline', label: 'Columnas del tablero', hint: 'Nombres, colores y cuál cuenta como terminada', onPress: () => { setView('tablero'); setColsModal(true); } }] : []),
+              ...(editable ? [{ icon: 'sparkles-outline', label: t('Ordenar el tablero'), hint: t('Quitar repetidas o vaciarlo'), onPress: () => setCleanupOpen(true) }] : []),
+              ...(editable ? [{ icon: 'options-outline', label: t('Columnas del tablero'), hint: t('Nombres, colores y cuál cuenta como terminada'), onPress: () => { setView('tablero'); setColsModal(true); } }] : []),
             ],
           },
           ...(myTasksHere > 0 || hiddenInHoy ? [{
-            title: 'Para mí',
+            title: t('Para mí'),
             items: [{
               icon: hiddenInHoy ? 'eye-outline' : 'eye-off-outline',
-              label: hiddenInHoy ? 'Volver a mostrar mis tareas en Hoy' : 'No mostrar mis tareas en Hoy',
-              hint: hiddenInHoy ? 'Ahora están ocultas en tu pantalla Hoy' : `Tienes ${myTasksHere} ${myTasksHere === 1 ? 'tarea asignada' : 'tareas asignadas'} aquí. Solo cambia tu vista.`,
+              label: hiddenInHoy ? t('Volver a mostrar mis tareas en Hoy') : t('No mostrar mis tareas en Hoy'),
+              hint: hiddenInHoy ? t('Ahora están ocultas en tu pantalla Hoy') : t('Tienes {myTasksHere} {v} aquí. Solo cambia tu vista.', { myTasksHere, v: myTasksHere === 1 ? t('tarea asignada') : t('tareas asignadas') }),
               onPress: toggleHoy,
             }],
           }] : []),
@@ -541,9 +541,9 @@ function ProyectoDetalle() {
             <Ionicons name="checkmark-circle" size={18} color={C.good} />
             <Text style={{ color: C.bg, fontSize: 13, fontWeight: '600', flexShrink: 1 }}>{undo.text}</Text>
             <Pressable onPress={doUndo} hitSlop={8}>
-              <Text style={{ color: C.brand, fontSize: 13, fontWeight: '800' }}>Deshacer</Text>
+              <Text style={{ color: C.brand, fontSize: 13, fontWeight: '800' }}>{t('Deshacer')}</Text>
             </Pressable>
-            <Pressable onPress={() => setUndo(null)} hitSlop={8} accessibilityLabel="Cerrar aviso">
+            <Pressable onPress={() => setUndo(null)} hitSlop={8} accessibilityLabel={t('Cerrar aviso')}>
               <Ionicons name="close" size={16} color={C.bg} />
             </Pressable>
           </View>

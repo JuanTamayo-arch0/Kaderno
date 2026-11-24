@@ -42,26 +42,29 @@ import { tipById } from '../lib/breakTips';
 import { registerServiceWorker } from '../lib/push';
 import { installMotion } from '../lib/motion';
 import { installTouch } from '../lib/touch';
+import { applyHtmlLang, syncCloudLang } from '../lib/i18nApp';
 import { celebrate } from '../lib/celebrate';
 import { PetBuddy } from '../components/pets/PetBuddy';
 import { emitPetEvent, refreshCoinsSoon } from '../lib/pets/store';
+import { t } from '../lib/i18n';
 
 // Animaciones CSS (solo web): se inyectan una vez, antes del primer render.
 installMotion();
 installTouch();
+applyHtmlLang();
 
 // v27 (ley de Parkinson): se pasó la hora de fin del bloque planeado de la tarea.
 setBlockOverHandler((s) => {
-  toast(`Se acabó el bloque de "${s.taskTitle ?? 'la tarea'}". ¿La cierras aquí? Si sigues, te aviso otra vez en 15 min.`,
-    { duration: 12000, actionLabel: 'Terminar', onAction: () => skipFocus() });
+  toast(t('Se acabó el bloque de "{v}". ¿La cierras aquí? Si sigues, te aviso otra vez en 15 min.', { v: s.taskTitle ?? t('la tarea') }),
+    { duration: 12000, actionLabel: t('Terminar'), onAction: () => skipFocus() });
 });
 
 // Al terminar un pomodoro o un descanso: sonido, aviso del navegador y mensaje.
 setFocusCompleteHandler((mode, s) => {
   if (s.sound) { duckAmbient(); beep(); }
   const pomo = (s.style ?? 'pomodoro') === 'pomodoro';
-  const title = mode === 'work' ? (pomo ? 'Pomodoro terminado' : 'Bloque terminado') : 'Fin del descanso';
-  const body = mode === 'work' ? `Buen trabajo. Descanso de ${s.brkMin ?? (s.cycle === 0 ? s.longBreakMin : s.breakMin)} min.` : (pomo ? 'Cuando quieras, empieza el siguiente pomodoro.' : 'Cuando quieras, empieza el siguiente bloque.');
+  const title = mode === 'work' ? (pomo ? t('Pomodoro terminado') : t('Bloque terminado')) : t('Fin del descanso');
+  const body = mode === 'work' ? t('Buen trabajo. Descanso de {v} min.', { v: s.brkMin ?? (s.cycle === 0 ? s.longBreakMin : s.breakMin) }) : (pomo ? t('Cuando quieras, empieza el siguiente pomodoro.') : t('Cuando quieras, empieza el siguiente bloque.'));
   toast(`${title}. ${body}`, { tone: 'good', duration: 8000 });
   if (mode === 'work') {
     emitPetEvent({ type: 'enfoque_fin', minutes: Math.max(1, s.last?.minutes ?? s.workMin) }); refreshCoinsSoon(1500);
@@ -157,6 +160,7 @@ function Shell() {
     fetchPrefs()
       .then((remote) => {
         if (cancel) return;
+        syncCloudLang(remote);
         if (!remote) {
           savePrefs({ ...PERSONALIZE, schedule: SCHEDULE }).catch(() => { });
           return;

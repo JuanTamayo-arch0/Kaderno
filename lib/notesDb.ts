@@ -8,6 +8,7 @@ import { getMode } from './mode';
 import { builtinTemplate, classNoteTitle, diffNoteCards, parseCardLines, type NoteCard } from './noteLinks';
 import { previousMeeting } from './meetingDb';
 import { carryOverMarkdown } from './meeting';
+import { t } from './i18n';
 
 const missing = (e: any) => !!e && (e.code === '42P01' || e.code === 'PGRST205' || e.code === 'PGRST202' || /does not exist|Could not find/i.test(String(e.message ?? '')));
 
@@ -20,7 +21,7 @@ export async function searchNoteTitles(q: string, exclude?: string | null): Prom
   if (exclude) query = query.neq('id', exclude);
   const { data, error } = await query;
   if (error) return [];
-  return ((data as NoteRef[]) ?? []).map((n) => ({ ...n, title: n.title || 'Nota sin título' }));
+  return ((data as NoteRef[]) ?? []).map((n) => ({ ...n, title: n.title || t('Nota sin título') }));
 }
 
 /** "Mencionada en": notas que enlazan a esta. */
@@ -29,7 +30,7 @@ export async function getBacklinks(noteId: string): Promise<NoteRef[]> {
   if (error || !data?.length) return [];
   const ids = (data as { from_note: string }[]).map((r) => r.from_note);
   const { data: notes } = await supabase.from('notes').select('id, title, subject_id').in('id', ids).is('deleted_at', null);
-  return ((notes as NoteRef[]) ?? []).map((n) => ({ ...n, title: n.title || 'Nota sin título' }));
+  return ((notes as NoteRef[]) ?? []).map((n) => ({ ...n, title: n.title || t('Nota sin título') }));
 }
 
 /** Notas parecidas por contenido (vectores del Oráculo). */
@@ -37,7 +38,7 @@ export async function getRelated(noteId: string, count = 4): Promise<(NoteRef & 
   const { data, error } = await supabase.rpc('related_notes', { p_note: noteId, p_count: count + 2 });
   if (error) return [];
   return ((data as any[]) ?? []).filter((r) => r.similarity > 0.55).slice(0, count)
-    .map((r) => ({ id: r.note_id, title: r.title || 'Nota sin título', subject_id: r.subject_id, similarity: r.similarity }));
+    .map((r) => ({ id: r.note_id, title: r.title || t('Nota sin título'), subject_id: r.subject_id, similarity: r.similarity }));
 }
 
 // ---------- Plantillas ----------
@@ -48,9 +49,9 @@ export async function getTemplates(): Promise<MyTemplate[]> {
   return (data as MyTemplate[]) ?? [];
 }
 export async function saveTemplate(name: string, content: string): Promise<void> {
-  const { error } = await supabase.from('note_templates').insert({ name: name.trim().slice(0, 60) || 'Plantilla', content: content.slice(0, 20000) });
+  const { error } = await supabase.from('note_templates').insert({ name: name.trim().slice(0, 60) || t('Plantilla'), content: content.slice(0, 20000) });
   if (error) {
-    if (missing(error)) throw new Error('Para las plantillas falta correr schema_v20.sql (fase 2) en Supabase.');
+    if (missing(error)) throw new Error(t('Para las plantillas falta correr schema_v20.sql (fase 2) en Supabase.'));
     throw error;
   }
 }

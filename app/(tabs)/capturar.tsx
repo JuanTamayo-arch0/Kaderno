@@ -21,6 +21,7 @@ import { openTask, dataChanged } from '../../lib/uiBus';
 import { PhotoEditor } from '../../components/capture/PhotoEditor';
 import { NotePickSheet } from '../../components/capture/NotePickSheet';
 import { useSpaceFilter } from '../../lib/useSpace';
+import { t } from '../../lib/i18n';
 
 // Se carga al usarlo: así expo-image-picker no se descarga al abrir la app.
 const loadPicker = () => import('expo-image-picker');
@@ -37,16 +38,16 @@ if (typeof window !== 'undefined') setTimeout(() => { Promise.resolve().then(loa
 // ============================================================
 
 const MODES: { key: CaptureMode; label: string; icon: any }[] = [
-  { key: 'notes', label: 'Apuntes', icon: 'document-text-outline' },
-  { key: 'board', label: 'Pizarra', icon: 'easel-outline' },
+  { key: 'notes', label: t('Apuntes'), icon: 'document-text-outline' },
+  { key: 'board', label: t('Pizarra'), icon: 'easel-outline' },
   { key: 'pdf', label: 'PDF', icon: 'document-attach-outline' },
-  { key: 'schedule', label: 'Cronograma o tarea', icon: 'calendar-outline' },
+  { key: 'schedule', label: t('Cronograma o tarea'), icon: 'calendar-outline' },
 ];
 const HINT: Record<CaptureMode, string> = {
-  notes: 'Se lee con títulos, listas, tablas y fórmulas. Los dibujos se recortan y quedan en su lugar.',
-  board: 'La foto del tablero se limpia y queda como imagen en la nota, con el texto debajo si quieres.',
-  pdf: 'Hasta 20 páginas. Si el PDF ya trae texto se toma directo; si es escaneado, se lee como fotos.',
-  schedule: 'Del cronograma salen las entregas (pasa por Importar cronograma); de un enunciado, una tarea.',
+  notes: t('Se lee con títulos, listas, tablas y fórmulas. Los dibujos se recortan y quedan en su lugar.'),
+  board: t('La foto del tablero se limpia y queda como imagen en la nota, con el texto debajo si quieres.'),
+  pdf: t('Hasta 20 páginas. Si el PDF ya trae texto se toma directo; si es escaneado, se lee como fotos.'),
+  schedule: t('Del cronograma salen las entregas (pasa por Importar cronograma); de un enunciado, una tarea.'),
 };
 const LAST_SUBJECT = 'kd-capture-subject';
 const SCAN_ALWAYS = 'kd-capture-scan';
@@ -145,7 +146,7 @@ export default function Capturar() {
     const pdf = list.find((f) => f.type === 'application/pdf' || /\.pdf$/i.test(f.name));
     if (pdf) { setModeState('pdf'); modeRef.current = 'pdf'; addPdf(pdf); return; }
     list.filter((f) => f.type.startsWith('image/')).slice(0, 10)
-      .forEach((f) => fileToImg(f, false).then((img) => addImage(img.base64)).catch(() => notify('No se pudo leer la imagen')));
+      .forEach((f) => fileToImg(f, false).then((img) => addImage(img.base64)).catch(() => notify(t('No se pudo leer la imagen'))));
   }, [addImage]);
 
   async function addPdf(file: Blob) {
@@ -162,7 +163,7 @@ export default function Capturar() {
           read(id, b64);
         }
       });
-    } catch (e) { notify('No se pudo abrir el PDF', String((e as Error)?.message ?? e).includes('password') ? 'El PDF tiene contraseña.' : 'Revisa que el archivo no esté dañado.'); }
+    } catch (e) { notify(t('No se pudo abrir el PDF'), String((e as Error)?.message ?? e).includes('password') ? t('El PDF tiene contraseña.') : t('Revisa que el archivo no esté dañado.')); }
     finally { setPdfProgress(null); }
   }
 
@@ -186,7 +187,7 @@ export default function Capturar() {
     if (mode === 'pdf') { if (isWeb) pdfInput.current?.click(); return; }
     const P = await loadPicker();
     const perm = fromCamera ? await P.requestCameraPermissionsAsync() : await P.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) { notify('Permiso necesario', 'Autoriza el acceso a la cámara o a las fotos para continuar.'); return; }
+    if (!perm.granted) { notify(t('Permiso necesario'), t('Autoriza el acceso a la cámara o a las fotos para continuar.')); return; }
     const res = fromCamera
       ? await P.launchCameraAsync({ base64: true, quality: 0.7 })
       : await P.launchImageLibraryAsync({ base64: true, quality: 0.7, allowsMultipleSelection: true, selectionLimit: 10 });
@@ -217,13 +218,13 @@ export default function Capturar() {
       const img = await processImage(src(p.original), { rotate: e.rotate, crop: e.crop, scan: e.scan });
       setPage(p.id, { base64: img.base64, edit: e, figures: [] });
       read(p.id, img.base64);
-    } catch { notify('No se pudo editar la foto'); }
+    } catch { notify(t('No se pudo editar la foto')); }
   }
 
   function changeMode(m: CaptureMode) {
     if (m === mode) return;
     if (pages.length) {
-      confirm('¿Cambiar de modo?', 'Se descarta lo que llevas en esta captura.', 'Cambiar').then((ok) => { if (ok) { reset(); setModeState(m); } });
+      confirm(t('¿Cambiar de modo?'), t('Se descarta lo que llevas en esta captura.'), t('Cambiar')).then((ok) => { if (ok) { reset(); setModeState(m); } });
       return;
     }
     setModeState(m);
@@ -270,7 +271,7 @@ export default function Capturar() {
   // ---------- Guardar ----------
   async function save() {
     if (!pages.length || working) return;
-    if (mode !== 'board' && !allText.trim()) { notify('No hay texto para guardar', 'Escribe el contenido a mano o lee las páginas otra vez.'); return; }
+    if (mode !== 'board' && !allText.trim()) { notify(t('No hay texto para guardar'), t('Escribe el contenido a mano o lee las páginas otra vez.')); return; }
     setBusy(true);
     try {
       let markdown = '';
@@ -291,16 +292,16 @@ export default function Capturar() {
         photos = mode === 'notes' ? pages.filter((p) => p.base64).map((p) => p.base64) : [];
       }
       let target: { kind: 'new' } | { kind: 'note'; id: string } = { kind: 'new' };
-      let label = 'una nota nueva';
-      if (dest.kind === 'class' && subjectId) { target = { kind: 'note', id: (await openClassNote(subjectId)).id }; label = 'la clase de hoy'; }
+      let label = t('una nota nueva');
+      if (dest.kind === 'class' && subjectId) { target = { kind: 'note', id: (await openClassNote(subjectId)).id }; label = t('la clase de hoy'); }
       if (dest.kind === 'note') { target = { kind: 'note', id: dest.id }; label = `"${dest.title}"`; }
       const id = await saveCapture({ dest: target, title: title || suggestTitle(markdown, new Date()), subjectId, markdown, photos, keepPhotos: mode === 'notes' });
       if (subjectId) AsyncStorage.setItem(LAST_SUBJECT, subjectId).catch(() => {});
       reset();
       dataChanged();
-      toast(target.kind === 'new' ? 'Nota guardada' : `Agregado a ${label}`, { tone: 'good', actionLabel: 'Abrir', onAction: () => router.push(`/nota/${id}`) });
+      toast(target.kind === 'new' ? t('Nota guardada') : `Agregado a ${label}`, { tone: 'good', actionLabel: t('Abrir'), onAction: () => router.push(`/nota/${id}`) });
       getNotes().then((n) => setRecent(n.slice(0, 12))).catch(() => {});
-    } catch (e) { notify('No se pudo guardar', friendlyError(e)); }
+    } catch (e) { notify(t('No se pudo guardar'), friendlyError(e)); }
     finally { setBusy(false); }
   }
   async function toImport() {
@@ -319,7 +320,7 @@ export default function Capturar() {
   const pageStrip = (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 2 }}>
       {pages.map((p, i) => (
-        <Pressable key={p.id} onPress={() => setSel(i)} accessibilityRole="tab" accessibilityState={{ selected: i === sel }} accessibilityLabel={`Página ${i + 1}`}
+        <Pressable key={p.id} onPress={() => setSel(i)} accessibilityRole="tab" accessibilityState={{ selected: i === sel }} accessibilityLabel={t('Página {v}', { v: i + 1 })}
           style={{ width: 74, borderRadius: 10, borderWidth: 2, borderColor: i === sel ? C.brand : 'transparent', padding: 2 }}>
           {p.base64
             ? <Image source={{ uri: src(p.base64) }} style={{ width: 66, height: 84, borderRadius: 8, backgroundColor: C.surface2 }} resizeMode="cover" />
@@ -331,10 +332,10 @@ export default function Capturar() {
         </Pressable>
       ))}
       {mode !== 'pdf' && (
-        <Pressable onPress={() => pick(!isWide)} accessibilityRole="button" accessibilityLabel="Agregar otra página"
+        <Pressable onPress={() => pick(!isWide)} accessibilityRole="button" accessibilityLabel={t('Agregar otra página')}
           style={{ width: 70, height: 88, marginTop: 2, borderRadius: 8, borderWidth: 1, borderStyle: 'dashed', borderColor: C.line, alignItems: 'center', justifyContent: 'center' }}>
           <Ionicons name="add" size={22} color={C.muted} />
-          <Text style={{ color: C.muted, fontSize: 11 }}>Otra</Text>
+          <Text style={{ color: C.muted, fontSize: 11 }}>{t('Otra')}</Text>
         </Pressable>
       )}
     </ScrollView>
@@ -343,16 +344,16 @@ export default function Capturar() {
   const photoPane = cur && (
     <View style={{ gap: 8 }}>
       {cur.base64 ? (
-        <Pressable onPress={() => setZoom(cur.base64)} accessibilityRole="button" accessibilityLabel="Ver la foto en grande">
+        <Pressable onPress={() => setZoom(cur.base64)} accessibilityRole="button" accessibilityLabel={t('Ver la foto en grande')}>
           <Image source={{ uri: src(cur.base64) }} style={{ width: '100%', height: isWide ? 460 : 340, borderRadius: 12, backgroundColor: C.surface2 }} resizeMode="contain" />
         </Pressable>
       ) : (
-        <View style={{ padding: 16, borderRadius: 12, backgroundColor: C.surface2 }}><Text style={{ color: C.muted, fontSize: 13 }}>Página {sel + 1} del PDF: el texto venía en el archivo, no hizo falta leer foto.</Text></View>
+        <View style={{ padding: 16, borderRadius: 12, backgroundColor: C.surface2 }}><Text style={{ color: C.muted, fontSize: 13 }}>{t('Página {v} del PDF: el texto venía en el archivo, no hizo falta leer foto.', { v: sel + 1 })}</Text></View>
       )}
       <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
-        {cur.original && isWeb && <Button label="Girar, recortar o escáner" icon="crop-outline" size="sm" kind="secondary" onPress={() => setEditing(cur)} />}
-        {cur.base64 && <Button label="Leer de nuevo" icon="refresh" size="sm" kind="ghost" busy={cur.status === 'ocr'} onPress={() => read(cur.id, cur.base64)} />}
-        <Button label="Quitar página" icon="trash-outline" size="sm" kind="ghost" onPress={() => { setPages((ps) => ps.filter((x) => x.id !== cur.id)); setSel((s) => Math.max(0, s - 1)); }} />
+        {cur.original && isWeb && <Button label={t('Girar, recortar o escáner')} icon="crop-outline" size="sm" kind="secondary" onPress={() => setEditing(cur)} />}
+        {cur.base64 && <Button label={t('Leer de nuevo')} icon="refresh" size="sm" kind="ghost" busy={cur.status === 'ocr'} onPress={() => read(cur.id, cur.base64)} />}
+        <Button label={t('Quitar página')} icon="trash-outline" size="sm" kind="ghost" onPress={() => { setPages((ps) => ps.filter((x) => x.id !== cur.id)); setSel((s) => Math.max(0, s - 1)); }} />
       </View>
     </View>
   );
@@ -364,27 +365,27 @@ export default function Capturar() {
           {(['text', 'preview'] as const).map((k) => (
             <Pressable key={k} onPress={() => setView(k)} accessibilityRole="radio" accessibilityState={{ checked: view === k }}
               style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: view === k ? C.surface : 'transparent' }}>
-              <Text style={{ color: view === k ? C.text : C.muted, fontSize: 12.5, fontWeight: '700' }}>{k === 'text' ? 'Texto' : 'Ver cómo queda'}</Text>
+              <Text style={{ color: view === k ? C.text : C.muted, fontSize: 12.5, fontWeight: '700' }}>{k === 'text' ? t('Texto') : t('Ver cómo queda')}</Text>
             </Pressable>
           ))}
         </View>
       )}
       {cur.status === 'ocr' && !cur.markdown ? (
-        <View style={{ padding: 24, alignItems: 'center', gap: 8 }}><ActivityIndicator color={C.brand} /><Text style={{ color: C.muted, fontSize: 13 }}>Leyendo la página {sel + 1}…</Text></View>
+        <View style={{ padding: 24, alignItems: 'center', gap: 8 }}><ActivityIndicator color={C.brand} /><Text style={{ color: C.muted, fontSize: 13 }}>{t('Leyendo la página {v}…', { v: sel + 1 })}</Text></View>
       ) : view === 'preview' && isWeb && mode !== 'board' && mode !== 'schedule' ? (
         <div className="kd-cap-prev" style={{ color: C.text, font: '400 15px/1.6 system-ui', padding: 12, borderRadius: 10, border: `1px solid ${C.line}`, background: C.surface, maxHeight: 460, overflow: 'auto' }}
           dangerouslySetInnerHTML={{ __html: preview }} />
       ) : (
-        <TextInput value={cur.markdown} onChangeText={(t) => setPage(cur.id, { markdown: t })} multiline accessibilityLabel={`Texto de la página ${sel + 1}`}
-          placeholder={cur.status === 'fail' ? 'No se pudo leer: escribe el texto aquí o toca "Leer de nuevo".' : 'El texto leído aparece aquí…'} placeholderTextColor={C.muted}
+        <TextInput value={cur.markdown} onChangeText={(t) => setPage(cur.id, { markdown: t })} multiline accessibilityLabel={t('Texto de la página {v}', { v: sel + 1 })}
+          placeholder={cur.status === 'fail' ? t('No se pudo leer: escribe el texto aquí o toca "Leer de nuevo".') : t('El texto leído aparece aquí…')} placeholderTextColor={C.muted}
           style={[{ minHeight: isWide ? 420 : 260, textAlignVertical: 'top', color: C.text, fontSize: 14, lineHeight: 21, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: C.line, backgroundColor: C.surface2 },
             isWeb ? ({ fontFamily: 'ui-monospace, Menlo, monospace', outlineStyle: 'none' } as any) : null]} />
       )}
-      {cur.status === 'fail' && <Text style={{ color: C.warnText, fontSize: 12.5 }}>{cur.error || 'No se pudo leer esta página.'}</Text>}
-      {doubt > 0 && <Text style={{ color: C.warnText, fontSize: 12.5 }}>{doubt === 1 ? 'Una parte quedó marcada con [?]' : `${doubt} partes quedaron marcadas con [?]`}: revísalas con la foto.</Text>}
+      {cur.status === 'fail' && <Text style={{ color: C.warnText, fontSize: 12.5 }}>{cur.error || t('No se pudo leer esta página.')}</Text>}
+      {doubt > 0 && <Text style={{ color: C.warnText, fontSize: 12.5 }}>{t('{v}: revísalas con la foto.', { v: doubt === 1 ? t('Una parte quedó marcada con [?]') : t('{doubt} partes quedaron marcadas con [?]', { doubt }) })}</Text>}
       {(cur.figures as Figure[]).length > 0 && (mode === 'notes' || mode === 'pdf') ? (
         <View style={{ gap: 6 }}>
-          <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>Dibujos encontrados</Text>
+          <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{t('Dibujos encontrados')}</Text>
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
             {(cur.figures as Figure[]).map((f) => {
               const k = `${cur.id}:${f.id}`, off = drop.has(k);
@@ -394,7 +395,7 @@ export default function Capturar() {
                   {thumbs[k] ? <Image source={{ uri: thumbs[k] }} style={{ width: '100%', height: 80, borderRadius: 6, backgroundColor: '#fff' }} resizeMode="contain" /> : <View style={{ height: 80, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator color={C.brand} /></View>}
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
                     <Ionicons name={off ? 'square-outline' : 'checkbox'} size={15} color={off ? C.muted : C.brand} />
-                    <Text style={{ color: C.text, fontSize: 11.5, flex: 1 }} numberOfLines={1}>{f.caption || 'Dibujo'}</Text>
+                    <Text style={{ color: C.text, fontSize: 11.5, flex: 1 }} numberOfLines={1}>{f.caption || t('Dibujo')}</Text>
                   </View>
                 </Pressable>
               );
@@ -417,7 +418,7 @@ export default function Capturar() {
   };
 
   return (
-    <Screen title="Capturar" subtitle="De la foto de tu cuaderno, la pizarra o un PDF a una nota fiel" maxWidth={1100} back={isWide ? undefined : '/estudiar'}>
+    <Screen title={t('Capturar')} subtitle={t('De la foto de tu cuaderno, la pizarra o un PDF a una nota fiel')} maxWidth={1100} back={isWide ? undefined : '/estudiar'}>
       {isWeb && <input ref={pdfInput as any} type="file" accept="application/pdf" style={{ display: 'none' }} aria-hidden="true" tabIndex={-1}
         onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) addPdf(f); }} />}
       {isWeb && <style dangerouslySetInnerHTML={{ __html: `.kd-cap-prev h1,.kd-cap-prev h2,.kd-cap-prev h3{margin:.6em 0 .3em}.kd-cap-prev table{border-collapse:collapse}.kd-cap-prev td,.kd-cap-prev th{border:1px solid ${C.line};padding:4px 8px}.kd-cap-prev p{margin:.4em 0}` }} />}
@@ -426,11 +427,11 @@ export default function Capturar() {
         <Card style={{ marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap', borderLeftWidth: 4, borderLeftColor: C.brand }}>
           <Ionicons name="time-outline" size={22} color={C.brand} />
           <View style={{ flex: 1, minWidth: 180 }}>
-            <Text style={{ color: C.text, fontWeight: '700', fontSize: 14 }}>Tienes una captura sin guardar</Text>
-            <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{offer.pages.length} {offer.pages.length === 1 ? 'página' : 'páginas'}{offer.title ? ` · ${offer.title}` : ''}</Text>
+            <Text style={{ color: C.text, fontWeight: '700', fontSize: 14 }}>{t('Tienes una captura sin guardar')}</Text>
+            <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{offer.pages.length} {offer.pages.length === 1 ? t('página') : t('páginas')}{offer.title ? ` · ${offer.title}` : ''}</Text>
           </View>
-          <Button label="Seguir" size="sm" onPress={() => resume(offer)} />
-          <Button label="Descartar" size="sm" kind="ghost" onPress={() => { setOffer(null); clearDraft().catch(() => {}); }} />
+          <Button label={t('Seguir')} size="sm" onPress={() => resume(offer)} />
+          <Button label={t('Descartar')} size="sm" kind="ghost" onPress={() => { setOffer(null); clearDraft().catch(() => {}); }} />
         </Card>
       )}
 
@@ -443,27 +444,27 @@ export default function Capturar() {
               <Ionicons name={dragging ? 'download-outline' : MODES.find((m) => m.key === mode)!.icon} size={28} color={C.brand} />
             </View>
             <Text style={{ color: C.text, fontSize: 16, fontWeight: '700', textAlign: 'center' }}>
-              {dragging ? 'Suelta aquí' : mode === 'pdf' ? (isWide ? 'Arrastra un PDF aquí o elígelo' : 'Elige un PDF') : isWide ? 'Arrastra fotos aquí o pégalas con Ctrl V' : mode === 'board' ? 'Fotografía el tablero' : 'Fotografía una o varias páginas'}
+              {dragging ? t('Suelta aquí') : mode === 'pdf' ? (isWide ? t('Arrastra un PDF aquí o elígelo') : t('Elige un PDF')) : isWide ? t('Arrastra fotos aquí o pégalas con Ctrl V') : mode === 'board' ? t('Fotografía el tablero') : t('Fotografía una o varias páginas')}
             </Text>
             <Text style={{ color: C.muted, fontSize: 13.5, textAlign: 'center', marginTop: 6, maxWidth: 480 }}>{HINT[mode]}</Text>
-            {pdfProgress && <Text style={{ color: C.brand, fontSize: 13, marginTop: 10 }}>Abriendo el PDF{pdfProgress.total ? `: página ${pdfProgress.done} de ${pdfProgress.total}` : '…'}</Text>}
+            {pdfProgress && <Text style={{ color: C.brand, fontSize: 13, marginTop: 10 }}>{t('Abriendo el PDF{v}', { v: pdfProgress.total ? t(': página {done} de {total}', { done: pdfProgress.done, total: pdfProgress.total }) : '…' })}</Text>}
             <View style={{ flexDirection: 'row', gap: 10, marginTop: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
-              {mode === 'pdf' ? <Button label="Elegir PDF" icon="document-attach-outline" onPress={() => pick(false)} busy={!!pdfProgress} />
+              {mode === 'pdf' ? <Button label={t('Elegir PDF')} icon="document-attach-outline" onPress={() => pick(false)} busy={!!pdfProgress} />
                 : isWide ? (
                   <>
-                    <Button label="Elegir imágenes" icon="images-outline" onPress={() => pick(false)} />
-                    <Button label="Usar cámara" icon="camera-outline" kind="secondary" onPress={() => pick(true)} />
+                    <Button label={t('Elegir imágenes')} icon="images-outline" onPress={() => pick(false)} />
+                    <Button label={t('Usar cámara')} icon="camera-outline" kind="secondary" onPress={() => pick(true)} />
                   </>
                 ) : (
                   <>
-                    <Button label="Tomar foto" icon="camera-outline" onPress={() => pick(true)} />
-                    <Button label="Galería" icon="images-outline" kind="secondary" onPress={() => pick(false)} />
+                    <Button label={t('Tomar foto')} icon="camera-outline" onPress={() => pick(true)} />
+                    <Button label={t('Galería')} icon="images-outline" kind="secondary" onPress={() => pick(false)} />
                   </>
                 )}
             </View>
             {isWeb && mode !== 'pdf' && mode !== 'schedule' && (
               <View style={{ alignSelf: 'stretch', marginTop: 14, maxWidth: 420, width: '100%', marginHorizontal: 'auto' as any }}>
-                <Toggle label="Modo escáner siempre" hint="Fondo blanco y más contraste al agregar cada foto." value={scanAlways} onChange={(v) => { setScanAlways(v); AsyncStorage.setItem(SCAN_ALWAYS, v ? '1' : '0').catch(() => {}); }} />
+                <Toggle label={t('Modo escáner siempre')} hint={t('Fondo blanco y más contraste al agregar cada foto.')} value={scanAlways} onChange={(v) => { setScanAlways(v); AsyncStorage.setItem(SCAN_ALWAYS, v ? '1' : '0').catch(() => {}); }} />
               </View>
             )}
           </Card>
@@ -473,7 +474,7 @@ export default function Capturar() {
       {pages.length > 0 && (
         <Card style={{ gap: 14 }}>
           {pageStrip}
-          {pdfProgress && <Text style={{ color: C.brand, fontSize: 13 }}>Abriendo el PDF: página {pdfProgress.done} de {pdfProgress.total}…</Text>}
+          {pdfProgress && <Text style={{ color: C.brand, fontSize: 13 }}>{t('Abriendo el PDF: página {done} de {total}…', { done: pdfProgress.done, total: pdfProgress.total })}</Text>}
           {isWide ? (
             <View style={{ flexDirection: 'row', gap: 16, alignItems: 'flex-start' }}>
               <View style={{ width: '44%' }}>{photoPane}</View>
@@ -485,7 +486,7 @@ export default function Capturar() {
                 {(['photo', 'text'] as const).map((k) => (
                   <Pressable key={k} onPress={() => setMobileTab(k)} accessibilityRole="tab" accessibilityState={{ selected: mobileTab === k }}
                     style={{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8, backgroundColor: mobileTab === k ? C.surface : 'transparent' }}>
-                    <Text style={{ color: mobileTab === k ? C.text : C.muted, fontSize: 13, fontWeight: '700' }}>{k === 'photo' ? 'Foto' : 'Texto'}</Text>
+                    <Text style={{ color: mobileTab === k ? C.text : C.muted, fontSize: 13, fontWeight: '700' }}>{k === 'photo' ? t('Foto') : t('Texto')}</Text>
                   </Pressable>
                 ))}
               </View>
@@ -497,54 +498,54 @@ export default function Capturar() {
 
           {mode === 'schedule' ? (
             <View style={{ gap: 10 }}>
-              <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>¿Qué es?</Text>
+              <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>{t('¿Qué es?')}</Text>
               <View style={{ flexDirection: isWide ? 'row' : 'column', gap: 10 }}>
-                <Button label="Un cronograma: revisar las entregas" icon="list-outline" onPress={toImport} disabled={working || !allText.trim()} style={{ flex: 1 }} />
-                <Button label="Un enunciado: crear una tarea" icon="add-circle-outline" kind="secondary" onPress={toTask} disabled={working || !allText.trim()} style={{ flex: 1 }} />
+                <Button label={t('Un cronograma: revisar las entregas')} icon="list-outline" onPress={toImport} disabled={working || !allText.trim()} style={{ flex: 1 }} />
+                <Button label={t('Un enunciado: crear una tarea')} icon="add-circle-outline" kind="secondary" onPress={toTask} disabled={working || !allText.trim()} style={{ flex: 1 }} />
               </View>
-              <Button label="Descartar" kind="ghost" onPress={reset} />
+              <Button label={t('Descartar')} kind="ghost" onPress={reset} />
             </View>
           ) : (
             <View style={{ gap: 12 }}>
               <View style={{ gap: 6 }}>
-                <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600' }}>Guardar en</Text>
+                <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600' }}>{t('Guardar en')}</Text>
                 <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }} accessibilityRole="radiogroup">
-                  {destChip({ kind: 'new' }, 'Nota nueva', 'document-outline')}
-                  {subjectId && destChip({ kind: 'class' }, `Clase de hoy${subjName ? ` · ${subjName}` : ''}`, 'today-outline')}
+                  {destChip({ kind: 'new' }, t('Nota nueva'), 'document-outline')}
+                  {subjectId && destChip({ kind: 'class' }, t('Clase de hoy{v}', { v: subjName ? ` · ${subjName}` : '' }), 'today-outline')}
                   {dest.kind === 'note' ? destChip(dest, dest.title, 'document-text-outline') : null}
-                  {destChip({ kind: 'note', id: '', title: '' } as any, dest.kind === 'note' ? 'Otra…' : 'Agregar a otra nota…', 'add')}
+                  {destChip({ kind: 'note', id: '', title: '' } as any, dest.kind === 'note' ? t('Otra…') : t('Agregar a otra nota…'), 'add')}
                 </View>
               </View>
               <View style={{ flexDirection: isWide ? 'row' : 'column', gap: 10 }}>
-                {dest.kind === 'new' && <Field label="Título" value={title} onChangeText={(t) => { setTitle(t); setTitleTouched(true); }} placeholder="Ej: Leyes de Newton" style={{ flex: 1 }} />}
+                {dest.kind === 'new' && <Field label={t('Título')} value={title} onChangeText={(t) => { setTitle(t); setTitleTouched(true); }} placeholder={t('Ej: Leyes de Newton')} style={{ flex: 1 }} />}
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600', marginBottom: 6 }}>Materia</Text>
+                  <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600', marginBottom: 6 }}>{t('Materia')}</Text>
                   <SubjectPicker subjects={subjects} value={subjectId} onChange={setSubjectId} />
                 </View>
               </View>
-              {mode === 'board' && <Toggle label="Incluir el texto leído debajo de la foto" value={boardText} onChange={setBoardText} />}
+              {mode === 'board' && <Toggle label={t('Incluir el texto leído debajo de la foto')} value={boardText} onChange={setBoardText} />}
               <View style={{ flexDirection: 'row', gap: 10 }}>
-                <Button label="Descartar" kind="secondary" onPress={() => confirm('¿Descartar esta captura?', undefined, 'Descartar').then((ok) => ok && reset())} style={{ flex: 1 }} />
-                <Button label={working ? 'Leyendo…' : dest.kind === 'new' ? 'Guardar nota' : 'Agregar a la nota'} icon="save-outline" onPress={save} busy={busy} disabled={working} style={{ flex: 2 }} />
+                <Button label={t('Descartar')} kind="secondary" onPress={() => confirm(t('¿Descartar esta captura?'), undefined, t('Descartar')).then((ok) => ok && reset())} style={{ flex: 1 }} />
+                <Button label={working ? t('Leyendo…') : dest.kind === 'new' ? t('Guardar nota') : t('Agregar a la nota')} icon="save-outline" onPress={save} busy={busy} disabled={working} style={{ flex: 2 }} />
               </View>
             </View>
           )}
         </Card>
       )}
 
-      <SectionLabel text="Notas recientes" style={{ marginTop: 22 }} />
-      {recent.length === 0 ? <EmptyState compact icon="document-text-outline" title="Todavía no tienes notas" /> : (
+      <SectionLabel text={t('Notas recientes')} style={{ marginTop: 22 }} />
+      {recent.length === 0 ? <EmptyState compact icon="document-text-outline" title={t('Todavía no tienes notas')} /> : (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
           {recent.map((n) => {
             const su = subjOf(n.subject_id);
             return (
-              <Card key={n.id} padded={false} onPress={() => router.push(`/nota/${n.id}`)} accessibilityLabel={`Abrir nota ${n.title ?? ''}`} style={{ width: isWide ? 220 : '47%', overflow: 'hidden' }}>
+              <Card key={n.id} padded={false} onPress={() => router.push(`/nota/${n.id}`)} accessibilityLabel={t('Abrir nota {v}', { v: n.title ?? '' })} style={{ width: isWide ? 220 : '47%', overflow: 'hidden' }}>
                 <View style={{ height: 70, backgroundColor: (su?.color ?? C.brand) + '22', alignItems: 'center', justifyContent: 'center' }}>
                   {su ? <SubjectIcon icon={su.icon} box={40} emoji={24} /> : <Ionicons name="document-text-outline" size={24} color={C.muted} />}
                 </View>
                 <View style={{ padding: 12 }}>
-                  <Text numberOfLines={1} style={{ color: C.text, fontSize: 13.5, fontWeight: '700' }}>{n.title || 'Nota'}</Text>
-                  <Text numberOfLines={1} style={{ color: C.muted, fontSize: 12, marginTop: 3 }}>{su?.name ?? 'Sin materia'} · {new Date(n.created_at).toLocaleDateString('es', { day: 'numeric', month: 'short' })}</Text>
+                  <Text numberOfLines={1} style={{ color: C.text, fontSize: 13.5, fontWeight: '700' }}>{n.title || t('Nota')}</Text>
+                  <Text numberOfLines={1} style={{ color: C.muted, fontSize: 12, marginTop: 3 }}>{su?.name ?? t('Sin materia')} · {new Date(n.created_at).toLocaleDateString('es', { day: 'numeric', month: 'short' })}</Text>
                 </View>
               </Card>
             );
@@ -555,9 +556,9 @@ export default function Capturar() {
       {editing && <PhotoEditor original={editing.original} edit={editing.edit} onCancel={() => setEditing(null)} onApply={(e) => applyEdit(editing, e)} />}
       <NotePickSheet visible={picking} onClose={() => setPicking(false)} onPick={(n: NoteRef) => setDest({ kind: 'note', id: n.id, title: n.title })} />
       <Modal visible={!!zoom} transparent onRequestClose={() => setZoom(null)}>
-        <Pressable onPress={() => setZoom(null)} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', alignItems: 'center' }} accessibilityLabel="Cerrar foto">
+        <Pressable onPress={() => setZoom(null)} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', alignItems: 'center' }} accessibilityLabel={t('Cerrar foto')}>
           {zoom && <Image source={{ uri: src(zoom) }} style={{ width: '94%', height: '86%' }} resizeMode="contain" />}
-          <Text style={{ color: '#ccc', marginTop: 12, fontSize: 13 }}>Toca para cerrar</Text>
+          <Text style={{ color: '#ccc', marginTop: 12, fontSize: 13 }}>{t('Toca para cerrar')}</Text>
         </Pressable>
       </Modal>
     </Screen>

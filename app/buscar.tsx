@@ -8,6 +8,7 @@ import { search, type Note, type Task, type Subject, type Flashcard, type Projec
 import { fmtDue } from '../lib/time';
 import { openTask } from '../lib/uiBus';
 import { Screen, Card, ListRow, SectionLabel, EmptyState, Dot } from '../components/ds';
+import { t, trn } from '../lib/i18n';
 
 // Búsqueda en pantalla completa (la paleta Ctrl K usa la misma búsqueda).
 function Buscar() {
@@ -31,28 +32,28 @@ function Buscar() {
   ) : null;
 
   return (
-    <Screen title="Buscar" back="/" nav="buscar" maxWidth={820}
+    <Screen title={t('Buscar')} back="/" nav="buscar" maxWidth={820}
       header={
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.surface2, borderRadius: 12, borderWidth: 1, borderColor: C.line, paddingHorizontal: 12, marginBottom: 6 }}>
           <Ionicons name="search" size={18} color={C.muted} />
-          <TextInput value={q} onChangeText={setQ} autoFocus enterKeyHint="search" inputMode="search" placeholder="Notas, tareas, materias, proyectos, flashcards…" placeholderTextColor={C.muted} accessibilityLabel="Buscar"
+          <TextInput value={q} onChangeText={setQ} autoFocus enterKeyHint="search" inputMode="search" placeholder={t('Notas, tareas, materias, proyectos, flashcards…')} placeholderTextColor={C.muted} accessibilityLabel={t('Buscar')}
             style={[{ flex: 1, minWidth: 0, color: C.text, paddingVertical: 12, fontSize: 15, minHeight: 46 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
           {busy && <ActivityIndicator size="small" color={C.brand} />}
         </View>
       }>
       {!q.trim() ? (
-        <EmptyState icon="search-outline" title="Busca en todo Kaderno" text={Platform.OS === 'web' ? 'Desde cualquier pantalla también puedes usar Ctrl K.' : undefined} compact />
+        <EmptyState icon="search-outline" title={t('Busca en todo Kaderno')} text={Platform.OS === 'web' ? t('Desde cualquier pantalla también puedes usar Ctrl K.') : undefined} compact />
       ) : res && total === 0 && !busy ? (
-        <EmptyState icon="search-outline" title={`Sin resultados para “${q.trim()}”`} text="Prueba con otra palabra o revisa la ortografía." compact />
+        <EmptyState icon="search-outline" title={t('Sin resultados para “{trim}”', { trim: q.trim() })} text={t('Prueba con otra palabra o revisa la ortografía.')} compact />
       ) : res ? (
         <>
-          {section('Materias', res.subjects.length, res.subjects.map((s) => <ListRow key={s.id} title={s.name} left={<Dot color={s.color} size={10} />} onPress={() => router.push(`/materia/${s.id}`)} />))}
-          {section('Tareas', res.tasks.length, res.tasks.map((t) => <ListRow key={t.id} title={t.title} subtitle={[t.status === 'done' ? 'Hecha' : '', fmtDue(t)].filter(Boolean).join(' · ') || undefined} left={<Ionicons name={t.status === 'done' ? 'checkmark-circle' : 'ellipse-outline'} size={18} color={C.muted} />} onPress={() => openTask(t)} />))}
-          {section('Tareas de proyectos', res.projectTasks.length, res.projectTasks.map((t) => <ListRow key={t.id} title={t.title} subtitle={fmtDue(t) || undefined} left={<Ionicons name="people-outline" size={18} color={C.muted} />} onPress={() => router.push(`/proyectos/${t.project_id}`)} />))}
-          {section('Notas', res.notes.length, res.notes.map((n) => <ListRow key={n.id} title={n.title || 'Nota'} subtitle={(n.content ?? '').replace(/[#>*_`]/g, '').slice(0, 90)} left={<Ionicons name="document-text-outline" size={18} color={C.muted} />} onPress={() => router.push(`/nota/${n.id}`)} />))}
+          {section(t('Materias'), res.subjects.length, res.subjects.map((s) => <ListRow key={s.id} title={s.name} left={<Dot color={s.color} size={10} />} onPress={() => router.push(`/materia/${s.id}`)} />))}
+          {section(t('Tareas'), res.tasks.length, res.tasks.map((t) => <ListRow key={t.id} title={t.title} subtitle={[t.status === 'done' ? trn('Hecha') : '', fmtDue(t)].filter(Boolean).join(' · ') || undefined} left={<Ionicons name={t.status === 'done' ? 'checkmark-circle' : 'ellipse-outline'} size={18} color={C.muted} />} onPress={() => openTask(t)} />))}
+          {section(t('Tareas de proyectos'), res.projectTasks.length, res.projectTasks.map((t) => <ListRow key={t.id} title={t.title} subtitle={fmtDue(t) || undefined} left={<Ionicons name="people-outline" size={18} color={C.muted} />} onPress={() => router.push(`/proyectos/${t.project_id}`)} />))}
+          {section(t('Notas'), res.notes.length, res.notes.map((n) => <ListRow key={n.id} title={n.title || t('Nota')} subtitle={(n.content ?? '').replace(/[#>*_`]/g, '').slice(0, 90)} left={<Ionicons name="document-text-outline" size={18} color={C.muted} />} onPress={() => router.push(`/nota/${n.id}`)} />))}
           {section('Flashcards', res.flashcards.length, res.flashcards.map((c) => <ListRow key={c.id} title={c.front} subtitle={c.back} left={<Ionicons name="albums-outline" size={18} color={C.muted} />} onPress={() => router.push('/repaso')} />))}
         </>
-      ) : <Text style={{ color: C.muted }}>Buscando…</Text>}
+      ) : <Text style={{ color: C.muted }}>{t('Buscando…')}</Text>}
     </Screen>
   );
 }

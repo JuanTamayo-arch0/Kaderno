@@ -4,9 +4,10 @@
 // ============================================================
 import { supabase } from './supabase';
 import type { BillingProfile, Client, Invoice, InvoiceItem } from './invoice';
+import { t } from './i18n';
 
 const missing = (e: any) => !!e && (e.code === '42P01' || e.code === 'PGRST205' || e.code === 'PGRST202' || e.code === '42883' || e.code === '42703' || /does not exist|Could not find/i.test(String(e.message ?? '')));
-export const NEEDS_V24 = 'Para cobrar falta correr schema_v24.sql en Supabase.';
+export const NEEDS_V24 = t('Para cobrar falta correr schema_v24.sql en Supabase.');
 const fail = (e: any): never => { throw new Error(missing(e) ? NEEDS_V24 : String(e?.message ?? e)); };
 const me = async () => (await supabase.auth.getUser()).data.user?.id ?? null;
 

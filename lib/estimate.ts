@@ -1,3 +1,4 @@
+import { t } from './i18n';
 // ============================================================
 //  Tu tiempo real (v20, sección F). Puro, con pruebas.
 //  Compara lo que estimas con lo que de verdad te enfocas en cada tarea.
@@ -51,18 +52,18 @@ export function estimateHint(est: number | null | undefined, r: number | null | 
   if (!est || !isMeaningful(r)) return null;
   const value = suggestEstimate(est, r);
   if (value === est) return null;
-  return { text: `Sueles tardar ${ratioText(r)} lo que calculas. ¿Pongo ${fmtMinutes(value)}?`, value };
+  return { text: t('Sueles tardar {r} lo que calculas. ¿Pongo {value}?', { r: ratioText(r), value: fmtMinutes(value) }), value };
 }
 
 /** "Te tomó 50 min (calculaste 30)" al completar (null si no hay datos). */
 export function tookText(focus: number | null | undefined, est: number | null | undefined): string | null {
   if (!est || !focus || focus < 5) return null;
-  return `Te tomó ${fmtMinutes(focus)} (calculaste ${fmtMinutes(est)})`;
+  return t('Te tomó {focus} (calculaste {est})', { focus: fmtMinutes(focus), est: fmtMinutes(est) });
 }
 
 /** "La semana pasada planeaste 6 h y estudiaste 4 h 30" (para el ritual del lunes). */
 export function planVsReal(planned: number, real: number): string | null {
   if (planned < 30) return null;
   const f = (m: number) => { const h = Math.floor(m / 60), r = Math.round(m % 60); return h ? (r ? `${h} h ${r}` : `${h} h`) : `${r} min`; };
-  return `La semana pasada planeaste ${f(planned)} y estudiaste ${f(real)}.`;
+  return t('La semana pasada planeaste {planned} y estudiaste {real}.', { planned: f(planned), real: f(real) });
 }
