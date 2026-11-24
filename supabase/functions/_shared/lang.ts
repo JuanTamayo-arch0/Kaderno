@@ -46,6 +46,20 @@ const EN: Record<string, string> = {
   'Proyecto': 'Project',
   'Entregas': 'Deadlines',
   'Clases': 'Classes',
+  'Inicia sesión para pagar.': 'Sign in to pay.',
+  'Los pagos todavía no están configurados (faltan las llaves de Wompi).': "Payments aren't set up yet (the Wompi keys are missing).",
+  'Falta el medio de pago.': 'The payment method is missing.',
+  'Acepta los términos de Wompi para guardar el medio de pago.': "Accept Wompi's terms to save the payment method.",
+  'Wompi no aceptó ese medio de pago. Revisa los datos o prueba con otro.': "Wompi didn't accept that payment method. Check the details or try another one.",
+  'No se pudo hacer el cobro. Intenta de nuevo en un momento.': "Couldn't make the charge. Try again in a moment.",
+  'No tienes un plan pagado para renovar.': "You don't have a paid plan to renew.",
+  'No encontramos ese pago.': "We couldn't find that payment.",
+  'Acción desconocida.': 'Unknown action.',
+  'No se pudo completar el pago. Intenta de nuevo.': "Couldn't complete the payment. Try again.",
+  'Falta el calendario': 'The calendar is missing',
+  'No encontré ese calendario': "I couldn't find that calendar",
+  'Falta imageBase64': 'imageBase64 is missing',
+  'ANTHROPIC_API_KEY no configurada': 'ANTHROPIC_API_KEY is not set',
 };
 
 /** Texto fijo del servidor en el idioma pedido. */

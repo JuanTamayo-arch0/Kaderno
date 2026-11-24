@@ -24,6 +24,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { acceptanceTokens, cfgFromEnv, chargeSource, checkoutUrl, createPaymentSource, getTransaction, integritySignature, isFinal, newReference, sourceLabel, type WompiCfg } from '../_shared/wompi.ts';
+import { langOf, say, type Lang } from '../_shared/lang.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -33,15 +34,17 @@ let acceptanceCache: { at: number; v: Awaited<ReturnType<typeof acceptanceTokens
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+  let lang: Lang = 'es';
   try {
+    const body = await req.json().catch(() => ({}));
+    lang = langOf(body.lang);
     const user = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!,
       { global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } } });
     const { data: who } = await user.auth.getUser();
     const me = who?.user;
-    if (!me) return json({ error: 'Inicia sesión para pagar.' }, 401);
+    if (!me) return json({ error: say(lang, 'Inicia sesión para pagar.') }, 401);
     const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
     const cfg = cfgFromEnv((k) => Deno.env.get(k));
-    const body = await req.json().catch(() => ({}));
     const action = String(body.action ?? '');
 
     if (action === 'cancel' || action === 'resume') {
@@ -49,7 +52,7 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 400);
       return json({ plan: data });
     }
-    if (!cfg) return json({ error: 'Los pagos todavía no están configurados (faltan las llaves de Wompi).', code: 'no_keys' }, 503);
+    if (!cfg) return json({ error: say(lang, 'Los pagos todavía no están configurados (faltan las llaves de Wompi).'), code: 'no_keys' }, 503);
 
     if (action === 'config') {
       if (!acceptanceCache || Date.now() - acceptanceCache.at > 10 * 60_000) acceptanceCache = { at: Date.now(), v: await acceptanceTokens(cfg) };
@@ -76,8 +79,8 @@ Deno.serve(async (req) => {
     if (action === 'subscribe') {
       const type = body.type === 'NEQUI' ? 'NEQUI' : 'CARD';
       const token = String(body.token ?? '');
-      if (!/^[\w-]{6,120}$/.test(token)) return json({ error: 'Falta el medio de pago.' }, 400);
-      if (!body.acceptance_token) return json({ error: 'Acepta los términos de Wompi para guardar el medio de pago.' }, 400);
+      if (!/^[\w-]{6,120}$/.test(token)) return json({ error: say(lang, 'Falta el medio de pago.') }, 400);
+      if (!body.acceptance_token) return json({ error: say(lang, 'Acepta los términos de Wompi para guardar el medio de pago.') }, 400);
       // Antes de guardar nada: ¿se puede comprar ese plan?
       const reference = newReference('first');
       const { data: pay, error: e1 } = await db.rpc('billing_new_payment', {
@@ -90,7 +93,7 @@ Deno.serve(async (req) => {
         src = await createPaymentSource(cfg, { type, token, email: me.email!, acceptance: String(body.acceptance_token), personal: body.accept_personal_auth ? String(body.accept_personal_auth) : null });
       } catch (e) {
         await db.rpc('billing_settle', { p_reference: reference, p_status: 'ERROR', p_error: 'No se guardó el medio de pago' });
-        return json({ error: 'Wompi no aceptó ese medio de pago. Revisa los datos o prueba con otro.', detail: String(e) }, 400);
+        return json({ error: say(lang, 'Wompi no aceptó ese medio de pago. Revisa los datos o prueba con otro.'), detail: String(e) }, 400);
       }
       const pd = src.public_data ?? {};
       const label = type === 'NEQUI' ? sourceLabel('NEQUI', { phone: pd.phone_number ?? body.phone ?? '' }) : sourceLabel('CARD', { brand: pd.brand ?? body.brand, last4: pd.last_four ?? body.last4 });
@@ -100,7 +103,7 @@ Deno.serve(async (req) => {
         tx = await chargeSource(cfg, { reference, amountInCents: Number(p.amount_in_cents), email: me.email!, sourceId: Number(src.id), kind: type });
       } catch (e) {
         await db.rpc('billing_settle', { p_reference: reference, p_status: 'ERROR', p_error: 'Wompi no recibió el cobro' });
-        return json({ error: 'No se pudo hacer el cobro. Intenta de nuevo en un momento.', detail: String(e) }, 502);
+        return json({ error: say(lang, 'No se pudo hacer el cobro. Intenta de nuevo en un momento.'), detail: String(e) }, 502);
       }
       await db.rpc('billing_attach_tx', { p_reference: reference, p_tx_id: String(tx.id), p_method: tx.payment_method_type ?? type });
       let status = tx.status;
@@ -112,12 +115,12 @@ Deno.serve(async (req) => {
       // Cambiar la tarjeta o el Nequi de la renovación, sin cobrar.
       const type = body.type === 'NEQUI' ? 'NEQUI' : 'CARD';
       const token = String(body.token ?? '');
-      if (!/^[\w-]{6,120}$/.test(token) || !body.acceptance_token) return json({ error: 'Falta el medio de pago.' }, 400);
+      if (!/^[\w-]{6,120}$/.test(token) || !body.acceptance_token) return json({ error: say(lang, 'Falta el medio de pago.') }, 400);
       const { data: sub } = await db.from('subscriptions').select('plan, current_period_end').eq('user_id', me.id).maybeSingle();
-      if (!sub || (sub as any).plan === 'free' || new Date((sub as any).current_period_end) <= new Date()) return json({ error: 'No tienes un plan pagado para renovar.' }, 400);
+      if (!sub || (sub as any).plan === 'free' || new Date((sub as any).current_period_end) <= new Date()) return json({ error: say(lang, 'No tienes un plan pagado para renovar.') }, 400);
       let src;
       try { src = await createPaymentSource(cfg, { type, token, email: me.email!, acceptance: String(body.acceptance_token), personal: body.accept_personal_auth ? String(body.accept_personal_auth) : null }); }
-      catch (e) { return json({ error: 'Wompi no aceptó ese medio de pago. Revisa los datos o prueba con otro.', detail: String(e) }, 400); }
+      catch (e) { return json({ error: say(lang, 'Wompi no aceptó ese medio de pago. Revisa los datos o prueba con otro.'), detail: String(e) }, 400); }
       const pd = src.public_data ?? {};
       const label = type === 'NEQUI' ? sourceLabel('NEQUI', { phone: pd.phone_number ?? body.phone ?? '' }) : sourceLabel('CARD', { brand: pd.brand ?? body.brand, last4: pd.last_four ?? body.last4 });
       await db.rpc('billing_set_source', { p_user: me.id, p_source_id: Number(src.id), p_kind: type, p_label: label });
@@ -140,7 +143,7 @@ Deno.serve(async (req) => {
           pay = (r2.data ?? [])[0];
         }
       }
-      if (!pay) return json({ error: 'No encontramos ese pago.' }, 404);
+      if (!pay) return json({ error: say(lang, 'No encontramos ese pago.') }, 404);
       if (pay.status === 'PENDING') {
         const txId = tx?.id ?? pay.wompi_tx_id ?? (body.id ? String(body.id) : null);
         if (txId) {
@@ -155,9 +158,9 @@ Deno.serve(async (req) => {
       return json({ payment: { reference: pay.reference, status: pay.status, kind: pay.kind, plan: pay.plan, period: pay.period, seats: pay.seats, amount_in_cents: pay.amount_in_cents, method: pay.method, error: pay.error } });
     }
 
-    return json({ error: 'Acción desconocida.' }, 400);
+    return json({ error: say(lang, 'Acción desconocida.') }, 400);
   } catch (e) {
-    return json({ error: 'No se pudo completar el pago. Intenta de nuevo.', detail: String(e) }, 500);
+    return json({ error: say(lang, 'No se pudo completar el pago. Intenta de nuevo.'), detail: String(e) }, 500);
   }
 });
 

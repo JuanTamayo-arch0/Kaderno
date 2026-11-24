@@ -177,3 +177,16 @@ test('v30 idiomas: servidor (IA, cupos, actas, calendario) y la página en ingl�
   // La app manda el idioma en cada llamada a las funciones.
   assert.match(fs.readFileSync(path.join(__dirname, '..', 'lib', 'supabase.ts'), 'utf8'), /body: \{ lang: lang\(\), \.\.\.body \}/);
 });
+
+test('v30 idiomas: todo mensaje del servidor que se traduce tiene su inglés', () => {
+  const root = path.join(__dirname, '..', 'supabase', 'functions');
+  const src = fs.readFileSync(path.join(root, '_shared', 'lang.ts'), 'utf8');
+  const keys = new Set([...src.matchAll(/^ {2}'([^']+)':/gm)].map((m) => m[1]));
+  const missing: string[] = [];
+  for (const f of fs.readdirSync(root)) {
+    const p = path.join(root, f, 'index.ts');
+    if (!fs.existsSync(p)) continue;
+    for (const m of fs.readFileSync(p, 'utf8').matchAll(/say\(lang, '([^']+)'\)/g)) if (!keys.has(m[1])) missing.push(`${f}: ${m[1]}`);
+  }
+  assert.deepEqual(missing, []);
+});
