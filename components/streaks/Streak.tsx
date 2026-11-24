@@ -12,7 +12,7 @@ import {
   todayHint, brokeMessage, repairProgress, weeksLabel, daysLabel,
 } from '../../lib/streaks';
 import { toast, friendlyError } from '../../lib/feedback';
-import { t } from '../../lib/i18n';
+import { t, daysLong, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Rachas amables (v20, sección D): meta semanal con siete puntos, racha
@@ -36,8 +36,8 @@ const DOT: Record<DotState, { bg: string; border: string; fg: string }> = {
   today: { bg: 'transparent', border: C.good, fg: C.text },
   future: { bg: 'transparent', border: C.line + '88', fg: C.muted },
 };
-const STATE_TXT: Record<DotState, string> = { done: 'estudiaste', protected: t('protegido con escudo'), missed: t('sin estudio'), today: t('hoy, aún no cuenta'), future: t('por venir') };
-const DAY_NAMES = ['lunes', 'martes', t('miércoles'), 'jueves', 'viernes', t('sábado'), 'domingo'];
+const STATE_TXT: Record<DotState, string> = { done: t('estudiaste'), protected: t('protegido con escudo'), missed: t('sin estudio'), today: t('hoy, aún no cuenta'), future: t('por venir') };
+const DAY_NAMES = [...daysLong().slice(1), daysLong()[0]];
 
 /** L M M J V S D con el estado de cada día. */
 export function WeekDots({ s, size = 26 }: { s: StreakSummary; size?: number }) {
@@ -91,7 +91,7 @@ export function StreakCard({ s, onChanged, style }: { s: StreakSummary; onChange
         <View style={{ flex: 1 }}>
           <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Racha semanal')}</Text>
           <Text style={{ color: s.weekly ? C.goodText : C.text, fontSize: 26, fontWeight: '800' }}>{weeksLabel(s.weekly)}</Text>
-          <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{t('Meta: {goal} días por semana · {v}', { goal: s.goal, v: goalMet ? t('cumplida esta semana') : `llevas ${s.weekDone}` })}</Text>
+          <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{t('Meta: {goal} días por semana · {v}', { goal: s.goal, v: goalMet ? t('cumplida esta semana') : trn('llevas {v}', { v: s.weekDone }) })}</Text>
         </View>
         <View style={{ alignItems: 'flex-end', gap: 6 }}>
           <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{s.daily} {s.daily === 1 ? t('día seguido') : t('días seguidos')}</Text>

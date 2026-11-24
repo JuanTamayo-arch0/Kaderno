@@ -4,7 +4,7 @@
 //  aquí se calcula igual para mostrarlo antes de cerrar.
 // ============================================================
 import { docFooter } from './brand';
-import { t, trn } from './i18n';
+import { t, trn, monthsLong, lang, decSep } from './i18n';
 
 export type GradeScale = { max: number; pass: number; decimals: 1 | 2 };
 export const DEFAULT_SCALE: GradeScale = { max: 5, pass: 3, decimals: 1 };
@@ -80,7 +80,7 @@ export function cumulative(terms: Pick<Term, 'status' | 'summary'>[], scale: Gra
 
 export function fmtGrade(v: number | null | undefined, scale: Pick<GradeScale, 'decimals'>): string {
   if (v == null || !Number.isFinite(v)) return '–';
-  return v.toFixed(scale.decimals).replace('.', ',');
+  return v.toFixed(scale.decimals).replace('.', decSep());
 }
 /** Lee "4,3" o "4.3". null si está vacío o no es número. */
 export function parseGrade(s: string): number | null {
@@ -96,7 +96,7 @@ export function bestSubject(subjects: TermSubject[]): TermSubject | null {
 }
 
 const esc = (s: string) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
-const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const MONTHS = monthsLong();
 const longDate = (iso: string | null) => { if (!iso) return ''; const [y, m, d] = iso.slice(0, 10).split('-').map(Number); return t('{d} de {v} de {y}', { d, v: MONTHS[m - 1], y }); };
 
 /** Historial en PDF: sobrio, Times New Roman, todo en negro. */
@@ -107,22 +107,22 @@ export function historyHtml(o: { who: string; terms: Term[]; scale: GradeScale; 
   const blocks = closed.map((t) => {
     const s = t.summary as TermSummary;
     const rows = s.subjects.map((x) => `<tr><td>${esc(x.name)}</td><td class="n">${x.credits}</td><td class="n">${f(x.grade, s.max)}</td><td>${STATUS_LABEL[x.status] ?? esc(x.status)}</td></tr>`).join('');
-    return `<h2>Semestre ${esc(t.name)}</h2>
+    return `<h2>${trn('Semestre {name}', { name: esc(t.name) })}</h2>
       <p class="meta">${[t.starts_on && t.ends_on ? trn('Del {starts_on} al {ends_on}', { starts_on: longDate(t.starts_on), ends_on: longDate(t.ends_on) }) : '', s.manual ? trn('Agregado a mano') : ''].filter(Boolean).join(' · ')}</p>
-      <table><thead><tr><th>Materia</th><th class="n">Créditos</th><th class="n">Nota final</th><th>Estado</th></tr></thead><tbody>${rows}</tbody>
-      <tfoot><tr><td>Promedio del semestre</td><td class="n">${s.credits}</td><td class="n">${f(s.avg, s.max)}</td><td></td></tr></tfoot></table>`;
+      <table><thead><tr><th>${trn('Materia')}</th><th class="n">${trn('Créditos')}</th><th class="n">${trn('Nota final')}</th><th>${trn('Estado')}</th></tr></thead><tbody>${rows}</tbody>
+      <tfoot><tr><td>${trn('Promedio del semestre')}</td><td class="n">${s.credits}</td><td class="n">${f(s.avg, s.max)}</td><td></td></tr></tfoot></table>`;
   }).join('');
-  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Historial académico</title><style>
+  return `<!doctype html><html lang="${lang()}"><head><meta charset="utf-8"><title>${t('Historial académico')}</title><style>
     body{font-family:'Times New Roman',Times,serif;color:#000;margin:40px;font-size:12pt}
     h1{font-size:18pt;margin:0 0 4px} h2{font-size:14pt;margin:26px 0 2px} .meta{margin:0 0 8px;font-size:11pt}
     table{width:100%;border-collapse:collapse;margin-top:6px} th,td{border-bottom:1px solid #000;padding:5px 6px;text-align:left}
     th{font-weight:bold} .n{text-align:right} tfoot td{font-weight:bold;border-bottom:none}
     .resumen{margin:10px 0 0} @media print{body{margin:18mm}}
   </style></head><body>
-    <h1>Historial académico</h1>
-    <p class="meta">${esc(o.who)} · Generado el ${longDate((o.today ?? new Date()).toISOString())}</p>
-    <p class="resumen">Promedio acumulado: <b>${fmtGrade(cum.avg, o.scale)}</b> (escala de 0 a ${o.scale.max}) · Créditos aprobados: <b>${cum.credits}</b> · Semestres: <b>${cum.terms}</b></p>
-    ${blocks || '<p>Aún no hay semestres cerrados.</p>'}
+    <h1>${t('Historial académico')}</h1>
+    <p class="meta">${esc(o.who)} · ${t('Generado el {v}', { v: longDate((o.today ?? new Date()).toISOString()) })}</p>
+    <p class="resumen">${t('Promedio acumulado: <b>{avg}</b> (escala de 0 a {max}) · Créditos aprobados: <b>{credits}</b> · Semestres: <b>{terms}</b>', { avg: fmtGrade(cum.avg, o.scale), max: o.scale.max, credits: cum.credits, terms: cum.terms })}</p>
+    ${blocks || `<p>${t('Aún no hay semestres cerrados.')}</p>`}
     ${docFooter()}
   </body></html>`;
 }

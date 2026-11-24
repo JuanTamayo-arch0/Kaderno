@@ -4,6 +4,7 @@
 //  son las líneas de la nota con el segundo en que se escribieron. El audio
 //  nunca se guarda.
 // ============================================================
+import { t } from './i18n';
 
 export type Segment = { t: number; text: string };
 export type Mark = { t: number; line: string };
@@ -145,11 +146,11 @@ export type ClassSummary = { ideas: string[]; formulas: string[]; tasks: { title
 
 /** El resumen como sección de la nota. */
 export function summaryMarkdown(s: ClassSummary, dateLabel: string): string {
-  const parts = [`## Resumen de la clase (${dateLabel})`, ''];
+  const parts = [t('## Resumen de la clase ({dateLabel})', { dateLabel }), ''];
   if (s.ideas.length) parts.push(...s.ideas.map((x) => `- ${x}`), '');
-  if (s.formulas.length) parts.push('**Fórmulas**', '', ...s.formulas.map((f) => `$$${f.replace(/^\$+|\$+$/g, '').trim()}$$`), '');
-  if (s.tasks.length) parts.push('**Lo que dejó el profesor**', '', ...s.tasks.map((t) => `- [ ] ${t.title}${t.when ? ` (${t.when})` : ''}`), '');
-  if (s.questions.length) parts.push('**Para repasar**', '', ...s.questions.map((q) => `- ${q}`), '');
+  if (s.formulas.length) parts.push(t('**Fórmulas**'), '', ...s.formulas.map((f) => `$$${f.replace(/^\$+|\$+$/g, '').trim()}$$`), '');
+  if (s.tasks.length) parts.push(t('**Lo que dejó el profesor**'), '', ...s.tasks.map((t) => `- [ ] ${t.title}${t.when ? ` (${t.when})` : ''}`), '');
+  if (s.questions.length) parts.push(t('**Para repasar**'), '', ...s.questions.map((q) => `- ${q}`), '');
   return parts.join('\n').trim() + '\n';
 }
 

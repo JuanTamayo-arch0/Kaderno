@@ -11,7 +11,7 @@ import { useFocusTimer } from '../../lib/focusTimer';
 import { Button, Card, focusRingStyle } from '../ds';
 import { PetPatio, patioMembers } from '../rooms/PetPatio';
 import { usePets, activePet } from '../../lib/pets/store';
-import { t } from '../../lib/i18n';
+import { t, tc } from '../../lib/i18n';
 
 // ============================================================
 //  Tarjeta "Enfocar juntos" en la pantalla de Enfoque: la sala
@@ -134,7 +134,7 @@ export function RoomsCard() {
           style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 8, borderRadius: 10, backgroundColor: hovered ? C.surface2 : 'transparent' })}>
           <Ionicons name={r.project_id ? 'briefcase-outline' : 'people-circle-outline'} size={18} color={C.muted} />
           <Text style={{ color: C.text, fontSize: 14, fontWeight: '600', flex: 1 }} numberOfLines={1}>{r.name}</Text>
-          <Text style={{ color: C.brand, fontSize: 13, fontWeight: '700' }}>{t('Entrar')}</Text>
+          <Text style={{ color: C.brand, fontSize: 13, fontWeight: '700' }}>{tc('unirse', 'Entrar')}</Text>
         </Pressable>
       ))}
       {mode === 'none' ? (

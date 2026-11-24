@@ -12,7 +12,7 @@ import {
 } from '../../lib/terms';
 import { addPastTerm, closeTerm, saveGradeScale, termActivity } from '../../lib/termsDb';
 import { fmtHours } from '../../lib/day';
-import { t, locale } from '../../lib/i18n';
+import { t, locale, trn, decSep } from '../../lib/i18n';
 
 // ============================================================
 //  Semestres (v26, fase 3): cerrar el semestre, agregar uno pasado y la
@@ -97,7 +97,7 @@ export function CloseTermSheet({ visible, term, subjects, scale, onClose, onClos
     setStep(0); setReflection(''); setNext(nextTermName(term.name)); setAct(null);
     setRows(subjects.map((s) => {
       const g = s.avg == null ? null : Math.round(s.avg * Math.pow(10, scale.decimals)) / Math.pow(10, scale.decimals);
-      return { key: s.id, subjectId: s.id, name: s.name, credits: String(s.credits ?? 0), grade: g == null ? '' : String(g).replace('.', ','), status: statusFor(g, scale), color: s.color };
+      return { key: s.id, subjectId: s.id, name: s.name, credits: String(s.credits ?? 0), grade: g == null ? '' : String(g).replace('.', decSep()), status: statusFor(g, scale), color: s.color };
     }));
     termActivity(subjects.map((s) => s.id), term.starts_on).then((a) => {
       setAct({ focusMinutes: a.focusMinutes, cards: a.cards, bestStreak: a.bestStreak });
@@ -114,7 +114,7 @@ export function CloseTermSheet({ visible, term, subjects, scale, onClose, onClos
     setBusy(true);
     try {
       const t = await closeTerm({ termId: term.id, subjects: list, scale, reflection: reflection.trim(), next: next.trim(), focusMinutes: act?.focusMinutes ?? 0, cards: act?.cards ?? 0, bestStreak: act?.bestStreak ?? 0 });
-      toast(`Semestre ${term.name} cerrado${next.trim() ? `. Empieza ${next.trim()}` : ''}`, { tone: 'good' });
+      toast(trn('Semestre {name} cerrado', { name: term.name }) + (next.trim() ? trn('. Empieza {v}', { v: next.trim() }) : ''), { tone: 'good' });
       onClosed(t);
     } catch (e) { notify(t('No se pudo cerrar'), friendlyError(e)); }
     finally { setBusy(false); }
@@ -188,7 +188,7 @@ export function PastTermSheet({ visible, scale, onClose, onAdded }: { visible: b
   async function save() {
     if (!name.trim()) { notify(t('Falta el nombre'), t('Escribe cuál semestre es, por ejemplo 2025-2.')); return; }
     setBusy(true);
-    try { const t = await addPastTerm({ name: name.trim(), subjects: list, scale, startsOn: from, endsOn: to }); toast(`Semestre ${t.name} agregado`, { tone: 'good' }); onAdded(t); }
+    try { const t = await addPastTerm({ name: name.trim(), subjects: list, scale, startsOn: from, endsOn: to }); toast(trn('Semestre {name} agregado', { name: t.name }), { tone: 'good' }); onAdded(t); }
     catch (e) { notify(t('No se pudo guardar'), friendlyError(e)); }
     finally { setBusy(false); }
   }
@@ -221,7 +221,7 @@ export function ScaleSheet({ visible, scale, onClose }: { visible: boolean; scal
   const [pass, setPass] = useState(String(scale.pass));
   const [dec, setDec] = useState<1 | 2>(scale.decimals);
   const [busy, setBusy] = useState(false);
-  useEffect(() => { if (visible) { setMax(String(scale.max).replace('.', ',')); setPass(String(scale.pass).replace('.', ',')); setDec(scale.decimals); } }, [visible]);
+  useEffect(() => { if (visible) { setMax(String(scale.max).replace('.', decSep())); setPass(String(scale.pass).replace('.', decSep())); setDec(scale.decimals); } }, [visible]);
   const m = parseGrade(max), p = parseGrade(pass);
   const err = m == null || m <= 0 || m > 1000 ? t('La nota máxima va entre 1 y 1000.') : p == null || p <= 0 || p > m ? t('La nota para aprobar va entre 0 y la máxima.') : null;
   async function save() {
@@ -251,7 +251,7 @@ export function ScaleSheet({ visible, scale, onClose }: { visible: boolean; scal
         {([1, 2] as const).map((d) => (
           <Pressable key={d} onPress={() => setDec(d)} accessibilityRole="radio" accessibilityState={{ checked: dec === d }}
             style={{ paddingVertical: 8, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: dec === d ? C.brand : C.line, backgroundColor: dec === d ? C.brand + '1f' : 'transparent' }}>
-            <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{d === 1 ? 'Uno (4,3)' : 'Dos (4,35)'}</Text>
+            <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{d === 1 ? t('Uno (4,3)') : t('Dos (4,35)')}</Text>
           </Pressable>
         ))}
       </View>

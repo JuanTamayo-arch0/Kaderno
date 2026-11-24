@@ -115,9 +115,9 @@ export function ExamReviewSheet({ exam, onClose }: { exam: Task | null; onClose:
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             <Stat label={t('Enfoque')} value={fmtHours(e.minutes)} />
             <Stat label={t('Días distintos')} value={String(e.days)} />
-            <Stat label={t('Empezaste')} value={e.firstDaysBefore == null ? '—' : e.firstDaysBefore === 0 ? 'el mismo día' : `${e.firstDaysBefore} ${e.firstDaysBefore === 1 ? t('día') : t('días')} antes`} />
+            <Stat label={t('Empezaste')} value={e.firstDaysBefore == null ? '—' : e.firstDaysBefore === 0 ? t('el mismo día') : e.firstDaysBefore === 1 ? t('un día antes') : t('{firstDaysBefore} días antes', { firstDaysBefore: e.firstDaysBefore })} />
             <Stat label={t('Últimas 48 h')} value={e.minutes ? `${Math.round(e.last48Share * 100)} %` : '—'} />
-            {e.sessionsTotal > 0 && <Stat label={t('Plan')} value={`${e.sessionsDone} de ${e.sessionsTotal}`} />}
+            {e.sessionsTotal > 0 && <Stat label={t('Plan')} value={t('{a} de {b}', { a: e.sessionsDone, b: e.sessionsTotal })} />}
             <Stat label={t('Tarjetas')} value={String(e.cardReviews)} />
             <Stat label={t('Simulacros')} value={e.quizzes ? `${e.quizzes}${e.bestQuiz != null ? ` · ${Math.round(e.bestQuiz)} %` : ''}` : '0'} />
           </View>

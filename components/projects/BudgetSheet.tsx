@@ -6,7 +6,7 @@ import { Button, Field } from '../ds';
 import { getBudget, setBudget, type Budget } from '../../lib/invoiceDb';
 import { fmtHours } from '../../lib/hours';
 import { friendlyError, notify, toast } from '../../lib/feedback';
-import { t } from '../../lib/i18n';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Presupuesto de horas del proyecto (v25, fase 1): cuánto va, y aviso al
@@ -26,7 +26,7 @@ export function BudgetSheet({ visible, projectId, projectName, editable, onClose
   const pct = b?.budget_minutes ? b.used_minutes / b.budget_minutes : 0;
   async function save(hours: number | null) {
     setBusy(true);
-    try { await setBudget(projectId, hours ? Math.round(hours * 60) : null); toast(hours ? `Presupuesto: ${hours} h` : t('Presupuesto quitado')); onClose(); }
+    try { await setBudget(projectId, hours ? Math.round(hours * 60) : null); toast(hours ? trn('Presupuesto: {hours} h', { hours }) : t('Presupuesto quitado')); onClose(); }
     catch (e) { notify(t('No se pudo guardar'), friendlyError(e)); }
     finally { setBusy(false); }
   }

@@ -6,7 +6,7 @@ import { Button } from '../ds';
 import { confirm, friendlyError, notify } from '../../lib/feedback';
 import { bulkUpdateProjectTasks, getProjectTasksForBulk } from '../../lib/projectsBulk';
 import { findRepeated, type ExistingTask, type RepeatGroup } from '../../lib/import';
-import { t } from '../../lib/i18n';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Ordenar el tablero.
@@ -86,7 +86,7 @@ export function BoardCleanup({ visible, projectId, cols, onClose, onDone }: {
                   <Text style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>{t('No encontré tarjetas repetidas. Todo en orden.')}</Text>
                 ) : (
                   <>
-                    <Text style={{ color: C.muted, fontSize: 13, marginTop: 4, lineHeight: 19 }}>{t('{length} {v} más de una vez (mismo código o mismo título). De cada una se queda la más trabajada y se {v2}.', { length: groups.length, v: groups.length === 1 ? t('tarea aparece') : t('tareas aparecen'), v2: toRemove === 1 ? t('borra 1 copia') : `borran ${toRemove} copias` })}</Text>
+                    <Text style={{ color: C.muted, fontSize: 13, marginTop: 4, lineHeight: 19 }}>{t('{length} {v} más de una vez (mismo código o mismo título). De cada una se queda la más trabajada y se {v2}.', { length: groups.length, v: groups.length === 1 ? t('tarea aparece') : t('tareas aparecen'), v2: toRemove === 1 ? t('borra 1 copia') : trn('borran {toRemove} copias', { toRemove }) })}</Text>
                     <View style={{ marginTop: 10 }}>
                       {groups.slice(0, 40).map((g) => (
                         <Pressable key={g.key} onPress={() => setOpen(open === g.key ? null : g.key)}
@@ -98,7 +98,7 @@ export function BoardCleanup({ visible, projectId, cols, onClose, onDone }: {
                           </View>
                           {open === g.key && (
                             <Text style={{ color: C.muted, fontSize: 12, marginTop: 4, lineHeight: 17 }}>
-                              {t('Se queda: ')}{describe(g.keep, cols)}.{'\n'}{t('Se borra')}{g.remove.length === 1 ? '' : 'n'}: {g.remove.map((t) => describe(t, cols)).join(' · ')}
+                              {t('Se queda: ')}{describe(g.keep, cols)}.{'\n'}{g.remove.length === 1 ? t('Se borra') : t('Se borran')}: {g.remove.map((t) => describe(t, cols)).join(' · ')}
                             </Text>
                           )}
                         </Pressable>
@@ -129,7 +129,7 @@ export function BoardCleanup({ visible, projectId, cols, onClose, onDone }: {
 function describe(t: ExistingTask, cols: { key: string; label: string }[]): string {
   const done = t.checklist.filter((c) => c.done).length;
   const parts = [cols.find((c) => c.key === t.status)?.label ?? t.status];
-  if (t.assignee_id) parts.push('con responsable');
+  if (t.assignee_id) parts.push(trn('con responsable'));
   if (t.checklist.length) parts.push(`checklist ${done}/${t.checklist.length}`);
   return parts.join(', ');
 }

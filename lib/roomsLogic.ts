@@ -49,7 +49,7 @@ export function minutesLeft(p: Pick<PresenceInfo, 'endsAt' | 'remainingMs'>, now
 export function personState(p: PresenceInfo | undefined, now: number): { state: RoomState; label: string; detail: string } {
   if (!p) return { state: 'away', label: t('Fuera'), detail: '' };
   const left = minutesLeft(p, now);
-  if (p.state === 'work') return { state: 'work', label: t('Enfocado'), detail: left ? `quedan ${left} min` : '' };
+  if (p.state === 'work') return { state: 'work', label: t('Enfocado'), detail: left ? t('quedan {left} min', { left }) : '' };
   if (p.state === 'break') return { state: 'break', label: t('Descanso'), detail: left ? t('vuelve en {left} min', { left }) : '' };
   return { state: 'online', label: t('En la sala'), detail: '' };
 }
@@ -76,9 +76,9 @@ export function stateCounts(rows: RoomRow[]): string {
   const b = rows.filter((r) => r.state === 'break').length;
   const o = rows.filter((r) => r.state === 'online').length;
   const parts: string[] = [];
-  if (w) parts.push(w === 1 ? '1 enfocado' : `${w} enfocados`);
-  if (b) parts.push(b === 1 ? '1 en descanso' : `${b} en descanso`);
-  if (o) parts.push(o === 1 ? '1 en la sala' : `${o} en la sala`);
+  if (w) parts.push(w === 1 ? t('1 enfocado') : t('{w} enfocados', { w }));
+  if (b) parts.push(b === 1 ? t('1 en descanso') : t('{b} en descanso', { b }));
+  if (o) parts.push(o === 1 ? t('1 en la sala') : t('{o} en la sala', { o }));
   return parts.length ? parts.join(', ') : t('Nadie conectado ahora');
 }
 

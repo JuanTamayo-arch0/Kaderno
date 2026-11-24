@@ -53,7 +53,7 @@ export const LINES: Record<Situation, Lines> = {
   },
   que_hacemos_trabajo: {
     pinguino: [t('Aquí estoy, sin hacer ruido.')],
-    gato: ['Trabaja tranquilo. Yo vigilo.'],
+    gato: [t('Trabaja tranquilo. Yo vigilo.')],
     perro: [t('¡Aquí! Calladito, lo prometo.')],
     loro: [t('Shh. Shh. Aquí estoy.')],
   },
@@ -83,7 +83,7 @@ export const LINES: Record<Situation, Lines> = {
   },
   enfoque_inicio: {
     pinguino: [t('Me quedo callado aquí. Tú a lo tuyo.')],
-    gato: ['Silencio. Estoy vigilando.'],
+    gato: [t('Silencio. Estoy vigilando.')],
     perro: [t('¡Shh! ¡A concentrarnos!')],
     loro: ['Shh. Shh.'],
   },
@@ -142,7 +142,7 @@ export const LINES: Record<Situation, Lines> = {
     loro: [t('¿Qué? ¿Qué hacemos?')],
   },
   sugerencia: {
-    pinguino: ['Sigue {tarea}.'],
+    pinguino: [t('Sigue {tarea}.')],
     gato: [t('{tarea}. Te está esperando.')],
     perro: [t('¡{tarea}! ¡Vamos!')],
     loro: [t('¿{tarea}? ¡{tarea}!')],
@@ -248,7 +248,7 @@ export function lineFor(sit: Situation, species: Species, vars: Record<string, s
   const list = LINES[sit][species];
   const raw = list[Math.floor(seed * list.length) % list.length];
   const n = Number(vars.n ?? 0);
-  return raw.replace(/\{(\w+)\}/g, (_, k) => k === 's' ? (n === 1 ? '' : 's') : String(vars[k] ?? ''));
+  return raw.replace(/\{(\w+)\}/g, (_, k) => k === 's' ? (n === 1 ? '' : t('s')) : String(vars[k] ?? ''));
 }
 
 /** Frase del día: la misma todo el día y no se repite en 30 días seguidos. */

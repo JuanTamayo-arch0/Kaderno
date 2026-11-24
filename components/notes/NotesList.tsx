@@ -7,7 +7,7 @@ import { filterNotes, notePreview, readingStats, sortNotes } from '../../lib/sub
 import { MONTH_SHORT } from '../../lib/time';
 import { Button, EmptyState, focusRingStyle, IconButton } from '../ds';
 import { recallLabel } from '../../lib/quiz';
-import { t } from '../../lib/i18n';
+import { t, trn, dayMonth } from '../../lib/i18n';
 
 // ============================================================
 //  Lista de notas de una materia: buscador, fijadas arriba y recientes.
@@ -22,7 +22,7 @@ function when(n: Note): string {
   if (diff === 0) return t('Hoy');
   if (diff === 1) return t('Ayer');
   if (diff < 7) return t('Hace {diff} días', { diff });
-  return `${d.getDate()} ${MONTH_SHORT[d.getMonth()]}${d.getFullYear() !== today.getFullYear() ? ' ' + d.getFullYear() : ''}`;
+  return `${dayMonth(d.getDate(), MONTH_SHORT[d.getMonth()])}${d.getFullYear() !== today.getFullYear() ? ' ' + d.getFullYear() : ''}`;
 }
 
 function Row({ n, active, onPress, roomy }: { n: Note; active: boolean; onPress: () => void; roomy: boolean }) {
@@ -43,7 +43,7 @@ function Row({ n, active, onPress, roomy }: { n: Note; active: boolean; onPress:
         {roomy && <Text style={{ color: C.muted, fontSize: 12 }}>{when(n)}</Text>}
       </View>
       {!!prev && <Text style={{ color: C.muted, fontSize: 12.5, lineHeight: 17 }} numberOfLines={roomy ? 2 : 1}>{prev}</Text>}
-      {!roomy && <Text style={{ color: C.muted, fontSize: 11.5 }}>{when(n)} · {words} {words === 1 ? 'palabra' : 'palabras'}</Text>}
+      {!roomy && <Text style={{ color: C.muted, fontSize: 11.5 }}>{when(n)} · {words} {words === 1 ? t('palabra') : t('palabras')}</Text>}
       {(() => { const r = recallLabel(n.last_recall_at, n.last_recall_score, new Date()); return r ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           <Ionicons name="bulb-outline" size={11} color={(n.last_recall_score ?? 0) >= 70 ? C.goodText : C.muted} />
@@ -85,9 +85,9 @@ export function NotesList({ notes, selectedId, onOpen, onNew, onScan, roomy, bus
         <EmptyState compact icon="document-text-outline" title={t('Aún no hay notas')} text={t('Escribe una nota o digitaliza una página de tu cuaderno.')} />
       )}
       {notes.length > 0 && list.length === 0 && <Text style={{ color: C.muted, fontSize: 13, padding: 12 }}>{t('Ninguna nota tiene “{trim}”.', { trim: q.trim() })}</Text>}
-      {pinned.length > 0 && label('FIJADAS')}
+      {pinned.length > 0 && label(trn('FIJADAS'))}
       {pinned.map((n) => <Row key={n.id} n={n} active={n.id === selectedId} onPress={() => onOpen(n)} roomy={!!roomy} />)}
-      {pinned.length > 0 && rest.length > 0 && label('RECIENTES')}
+      {pinned.length > 0 && rest.length > 0 && label(trn('RECIENTES'))}
       {rest.map((n) => <Row key={n.id} n={n} active={n.id === selectedId} onPress={() => onOpen(n)} roomy={!!roomy} />)}
     </View>
   );

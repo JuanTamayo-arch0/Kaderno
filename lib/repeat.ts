@@ -1,4 +1,5 @@
-import { t, trn } from './i18n';
+import { t, trn, monthsShort, daysLong, lang } from './i18n';
+import { enToken } from './quickAddEn';
 // ============================================================
 //  Tareas que se repiten (v21, sección 1). Puro, con pruebas.
 //  Texto en español → regla, regla → siguiente fecha, regla → texto.
@@ -26,8 +27,8 @@ const MONTHS: Record<string, number> = {
   enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5, julio: 6, agosto: 7, septiembre: 8, setiembre: 8, octubre: 9, noviembre: 10, diciembre: 11,
   ene: 0, feb: 1, abr: 3, may: 4, jun: 5, jul: 6, ago: 7, sep: 8, sept: 8, oct: 9, nov: 10, dic: 11,
 };
-const DAY_NAME = ['domingo', 'lunes', 'martes', t('miércoles'), 'jueves', 'viernes', t('sábado')];
-const MONTH_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const DAY_NAME = daysLong();
+const MONTH_SHORT = monthsShort();
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/^[(\["'¿¡]+|[)\]"',;.:?]+$/g, '');
 
@@ -107,11 +108,11 @@ export function ruleText(rule: RepeatRule | null | undefined): string {
   const n = Math.max(1, rule.interval || 1);
   let t: string;
   if (rule.freq === 'day') t = n === 1 ? trn('cada día') : trn('cada {n} días', { n });
-  else if (rule.freq === 'month') t = (n === 1 ? trn('cada mes') : trn('cada {n} meses', { n })) + (rule.monthDay ? ` el ${rule.monthDay}` : '');
+  else if (rule.freq === 'month') t = (n === 1 ? trn('cada mes') : trn('cada {n} meses', { n })) + (rule.monthDay ? trn(' el {monthDay}', { monthDay: rule.monthDay }) : '');
   else if (rule.days?.length) {
     const d = [...rule.days].sort();
     if (n === 1 && d.join() === '1,2,3,4,5') t = trn('cada día hábil');
-    else t = (n === 1 ? 'cada ' : trn('cada {n} semanas: ', { n })) + joinY(d.map((x) => DAY_NAME[x]));
+    else t = (n === 1 ? trn('cada ') : trn('cada {n} semanas: ', { n })) + joinY(d.map((x) => DAY_NAME[x]));
   } else t = n === 1 ? trn('cada semana') : trn('cada {n} semanas', { n });
   if (rule.until) { const u = toDate(rule.until); t += trn(' hasta el {getUTCDate} {v}', { getUTCDate: u.getUTCDate(), v: MONTH_SHORT[u.getUTCMonth()] }); }
   if (rule.fromDone) t += trn(' (desde que la terminas)');
@@ -136,6 +137,11 @@ function parseDate(toks: string[], i: number, today: string): { iso: string; len
     const iso = fix(y, Number(m[2]) - 1, Number(m[1]), !!m[3]);
     return iso ? { iso, len: 1 } : null;
   }
+  // dic 5 (inglés)
+  if (w in MONTHS && /^\d{1,2}$/.test(toks[i + 1] ?? '')) {
+    const iso = fix(year, MONTHS[w], Number(toks[i + 1]), false);
+    return iso ? { iso, len: 2 } : null;
+  }
   if (/^\d{1,2}$/.test(w)) {
     const mi = toks[i + 1] === 'de' ? i + 2 : i + 1;
     if ((toks[mi] ?? '') in MONTHS) {
@@ -152,7 +158,7 @@ function parseDate(toks: string[], i: number, today: string): { iso: string; len
  */
 export function parseRepeat(input: string, today: string): { rule: RepeatRule; rest: string } | null {
   const raw = input.trim().split(/\s+/).filter(Boolean);
-  const toks = raw.map(norm);
+  const toks = lang() === 'en' ? raw.map((x) => enToken(norm(x))) : raw.map(norm);
   const used = new Set<number>();
   let rule: RepeatRule | null = null;
   let i = 0;
@@ -176,13 +182,15 @@ export function parseRepeat(input: string, today: string): { rule: RepeatRule; r
       if (/^\d{1,2}$/.test(toks[j] ?? '')) { n = Number(toks[j]); j++; }
       else if (toks[j] === 'otro' || toks[j] === 'otra') { n = 2; j++; }
       const u = toks[j] ?? '';
-      if (/^dias?$/.test(u)) {
+      if (/^(habil|habiles)$/.test(u)) { rule = { freq: 'week', interval: 1, days: [1, 2, 3, 4, 5] }; j++; }
+      else if (/^dias?$/.test(u)) {
         if (/^(habil|habiles)$/.test(toks[j + 1] ?? '')) { rule = { freq: 'week', interval: 1, days: [1, 2, 3, 4, 5] }; j += 2; }
         else { rule = { freq: 'day', interval: n }; j++; }
       } else if (/^semanas?$/.test(u)) { rule = { freq: 'week', interval: n }; j++; }
       else if (/^mes(es)?$/.test(u)) {
         rule = { freq: 'month', interval: n }; j++;
-        if (toks[j] === 'el' && /^\d{1,2}$/.test(toks[j + 1] ?? '')) { rule.monthDay = Math.min(31, Number(toks[j + 1])); j += 2; }
+        if (toks[j] === 'el' && toks[j + 1] === 'el' && /^\d{1,2}$/.test(toks[j + 2] ?? '')) { rule.monthDay = Math.min(31, Number(toks[j + 2])); j += 3; }
+        else if (toks[j] === 'el' && /^\d{1,2}$/.test(toks[j + 1] ?? '')) { rule.monthDay = Math.min(31, Number(toks[j + 1])); j += 2; }
       } else {
         const dl = dayList(j);
         if (dl) { rule = { freq: 'week', interval: n, days: dl.days }; j = dl.end; }
@@ -197,6 +205,7 @@ export function parseRepeat(input: string, today: string): { rule: RepeatRule; r
     } else if (w === 'diario' || w === 'diariamente') { rule = { freq: 'day', interval: 1 }; used.add(i); }
     else if (w === 'semanal' || w === 'semanalmente') { rule = { freq: 'week', interval: 1 }; used.add(i); }
     else if (w === 'mensual' || w === 'mensualmente') { rule = { freq: 'month', interval: 1 }; used.add(i); }
+    else if (w === 'habiles' && toks[i - 1] !== 'dias') { rule = { freq: 'week', interval: 1, days: [1, 2, 3, 4, 5] }; used.add(i); if (toks[i - 1] === 'el') used.add(i - 1); }
     else if (w === 'entre' && toks[i + 1] === 'semana') { rule = { freq: 'week', interval: 1, days: [1, 2, 3, 4, 5] }; used.add(i); used.add(i + 1); }
   }
   if (!rule) return null;

@@ -230,10 +230,10 @@ export function ReviewSession({ queue, learning, mode, retention, typeAnswer, su
         <Text style={{ color: C.muted, fontSize: 12.5, fontVariant: ['tabular-nums'] }}>{t('{total} de {total2}', { total: Math.min(total, stats.done + 1), total2: total })}</Text>
       </View>
       <View style={{ flexDirection: 'row', gap: 14, marginBottom: 12, flexWrap: 'wrap' }}>
-        <Count n={nNew} label="nuevas" color={C.brand} />
+        <Count n={nNew} label={t('nuevas')} color={C.brand} />
         <Count n={nLearn} label="aprendiendo" color={C.warnText} />
-        <Count n={nRev} label="repaso" color={C.goodText} />
-        {leftMin !== null && <Text style={{ color: C.muted, fontSize: 12.5, marginLeft: 'auto' }}>{leftMin > 0 ? `Quedan ${leftMin} min` : t('Terminando las que van')}</Text>}
+        <Count n={nRev} label={t('repaso')} color={C.goodText} />
+        {leftMin !== null && <Text style={{ color: C.muted, fontSize: 12.5, marginLeft: 'auto' }}>{leftMin > 0 ? t('Quedan {v} min', { v: leftMin }) : t('Terminando las que van')}</Text>}
       </View>
 
       {/* Tarjeta */}

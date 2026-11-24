@@ -3,8 +3,11 @@
 //  "Tu plan" según lo que devuelve my_plan() de schema_v23.
 // ============================================================
 export * from '../supabase/functions/_shared/plans';
-import { LIMITS, LIMIT_TEXT, PRICES, type LimitKey, type Period, type PlanId } from '../supabase/functions/_shared/plans';
-import { t } from './i18n';
+import { cop as copBase } from '../supabase/functions/_shared/plans';
+/** Pesos con el separador de miles del idioma: "$9.900" o "$9,900". */
+export const cop = (n: number): string => copBase(n, lang() === 'en' ? ',' : '.');
+import { LIMITS, limitText, PRICES, type LimitKey, type Period, type PlanId } from '../supabase/functions/_shared/plans';
+import { t, monthsShort, dayMonth, lang } from './i18n';
 
 export type MyPlan = {
   plan: PlanId; own_plan?: PlanId; status?: 'none' | 'trial' | 'active' | 'past_due' | 'canceled';
@@ -13,8 +16,8 @@ export type MyPlan = {
   next_charge_at?: string | null; retries?: number; via_team?: { owner: string; until: string } | null;
 };
 
-const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-export const shortDate = (iso: string | Date) => { const d = new Date(iso); return `${d.getDate()} ${MONTHS[d.getMonth()]}${d.getFullYear() !== new Date().getFullYear() ? ` ${d.getFullYear()}` : ''}`; };
+const MONTHS = monthsShort();
+export const shortDate = (iso: string | Date) => { const d = new Date(iso); return `${dayMonth(d.getDate(), MONTHS[d.getMonth()])}${d.getFullYear() !== new Date().getFullYear() ? ` ${d.getFullYear()}` : ''}`; };
 const daysUntil = (iso: string, now: Date) => Math.max(0, Math.ceil((new Date(iso).getTime() - now.getTime()) / 86_400_000));
 
 export type PlanView = { name: string; badge: 'free' | 'trial' | 'pro' | 'team' | 'warn'; line: string; daysLeft: number | null; canPay: boolean; isPaid: boolean };
@@ -44,14 +47,14 @@ export function planView(mp: MyPlan | null | undefined, now = new Date()): PlanV
     return { name, badge: 'warn', daysLeft: left, canPay: true, isPaid: true, line: t('No pudimos cobrar la renovación{v}.{next}{keep}', { v: mp.source_label ? ` a ${mp.source_label}` : '', next, keep }) };
   }
   if (mp?.auto_renew && end) {
-    return { name, badge: plan === 'team' ? 'team' : 'pro', daysLeft: left, canPay: false, isPaid: true, line: t('Se renueva el {end}{v}.', { end: shortDate(end), v: mp.source_label ? ` con ${mp.source_label}` : '' }) };
+    return { name, badge: plan === 'team' ? 'team' : 'pro', daysLeft: left, canPay: false, isPaid: true, line: t('Se renueva el {end}{v}.', { end: shortDate(end), v: mp.source_label ? t(' con {v}', { v: mp.source_label }) : '' }) };
   }
   return { name, badge: plan === 'team' ? 'team' : 'pro', daysLeft: left, canPay: true, isPaid: true, line: end ? t('Pagado hasta el {end}. No se renueva solo: te avisamos antes.', { end: shortDate(end) }) : t('Activo.') };
 }
 
 /** Filas de la comparación de planes. */
 export type CompareRow = { label: string; free: string | boolean; pro: string | boolean; team: string | boolean };
-const lim = (k: LimitKey, unit?: string) => ({ label: cap(LIMIT_TEXT[k]) + t(' al día'), free: String(LIMITS.free[k]) + (unit ?? ''), pro: String(LIMITS.pro[k]) + (unit ?? ''), team: String(LIMITS.pro[k]) + (unit ?? '') });
+const lim = (k: LimitKey, unit?: string) => ({ label: cap(limitText(k, lang())) + t(' al día'), free: String(LIMITS.free[k]) + (unit ?? ''), pro: String(LIMITS.pro[k]) + (unit ?? ''), team: String(LIMITS.pro[k]) + (unit ?? '') });
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
 export const COMPARE: CompareRow[] = [
   { label: t('Materias, tareas, notas, horario, enfoque, repaso, proyectos y mascota'), free: true, pro: true, team: true },
@@ -64,7 +67,7 @@ export const COMPARE: CompareRow[] = [
 
 /** "Pro mensual · $9.900" */
 export function planLabel(plan: 'pro' | 'team', period: Period, seats = 1): string {
-  return `${plan === 'pro' ? 'Pro' : t('Equipo ({seats} personas)', { seats })} ${period === 'month' ? 'mensual' : 'anual'}`;
+  return `${plan === 'pro' ? 'Pro' : t('Equipo ({seats} personas)', { seats })} ${period === 'month' ? t('mensual') : t('anual')}`;
 }
 /** Precio por mes de un plan anual (para comparar). */
 export const perMonth = (plan: 'pro' | 'team', period: Period) => (period === 'month' ? PRICES[plan].month : Math.round(PRICES[plan].year / 12 / 100) * 100);
@@ -73,7 +76,7 @@ export const perMonth = (plan: 'pro' | 'team', period: Period) => (period === 'm
 export function usageRows(plan: PlanId, used: Record<string, number>): { key: LimitKey; label: string; used: number; limit: number }[] {
   const tier = plan === 'free' ? 'free' : 'pro';
   const keys: LimitKey[] = ['summary', 'flashcards', 'quiz', 'recall', 'grade', 'ocr', 'class_summary', 'meeting', 'steps'];
-  return keys.map((k) => ({ key: k, label: cap(LIMIT_TEXT[k]), used: used[k] ?? 0, limit: LIMITS[tier][k] }))
+  return keys.map((k) => ({ key: k, label: cap(limitText(k, lang())), used: used[k] ?? 0, limit: LIMITS[tier][k] }))
     .filter((r) => r.used > 0 || ['summary', 'flashcards', 'quiz', 'ocr'].includes(r.key));
 }
 

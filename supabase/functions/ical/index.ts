@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
   const classes = classesFromSchedule((slots.data ?? []) as any[], blocks, names);
   const tz = prefs.data?.settings?.notif?.tz as string | undefined;
 
-  const body = buildIcs({ name: 'Kaderno', tasks: list, classes, now: new Date(), tz, appUrl: Deno.env.get('KADERNO_APP_URL') ?? undefined });
+  const body = buildIcs({ name: 'Kaderno', lang: prefs.data?.settings?.lang === 'en' ? 'en' : 'es', tasks: list, classes, now: new Date(), tz, appUrl: Deno.env.get('KADERNO_APP_URL') ?? undefined });
   return new Response(req.method === 'HEAD' ? null : body, {
     headers: {
       ...CORS,

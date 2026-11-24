@@ -30,7 +30,7 @@ import katex from 'katex';
 import { C, noteFontStack, noteFontFamily, loadWebFont, fontFamilyOf, PERSONALIZE } from '../../lib/theme';
 import { signedUrl } from '../../lib/db';
 import { KD_IMG, type HeadingItem, type NoteEditorHandle, type NoteEditorProps } from './editorTypes';
-import { t } from '../../lib/i18n';
+import { t, trn } from '../../lib/i18n';
 
 // ---------- Estilos ----------
 function loadKatexCss() {
@@ -48,7 +48,84 @@ function injectCss() {
   if (typeof document === 'undefined') return;
   const body = noteFontStack();
   const ui = fontFamilyOf(PERSONALIZE.fontId);
-  const css = t('\n  .kd-ed { position: relative; --kd-ui-font: {v}system-ui, sans-serif; }\n  .kd-ed .ProseMirror { outline: none; color: {text}; font-family: {body}; font-size: 17.5px; line-height: 1.7; word-wrap: break-word; caret-color: {brand}; padding-bottom: 40px; }\n  .kd-ed .ProseMirror > * + * { margin-top: 0.75em; }\n  .kd-ed .ProseMirror p { margin: 0; }\n  .kd-ed .ProseMirror h1, .kd-ed .ProseMirror h2, .kd-ed .ProseMirror h3, .kd-ed .ProseMirror h4, .kd-ed .ProseMirror h5, .kd-ed .ProseMirror h6 {\n    font-family: var(--kd-ui-font); line-height: 1.3; margin: 1.3em 0 0.2em; color: {text2}; scroll-margin-top: 70px; }\n  .kd-ed .ProseMirror h1 { font-size: 27px; font-weight: 800; letter-spacing: -0.01em; }\n  .kd-ed .ProseMirror h2 { font-size: 22px; font-weight: 800; }\n  .kd-ed .ProseMirror h3, .kd-ed .ProseMirror h4, .kd-ed .ProseMirror h5, .kd-ed .ProseMirror h6 { font-size: 18px; font-weight: 800; color: {brand2}; }\n  .kd-ed .ProseMirror > :first-child { margin-top: 0; }\n  .kd-ed .ProseMirror strong { font-weight: 700; color: {text3}; }\n  .kd-ed .ProseMirror a { color: {brand3}; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }\n  .kd-ed .ProseMirror a[href^="kd-file:"] { text-decoration-style: dotted; color: {muted}; }\n  .kd-ed .ProseMirror a[href^="kd-note:"] { text-decoration-style: dotted; background: {brand4}; border-radius: 4px; padding: 0 2px; }\n  .kd-ed .ProseMirror .kd-card-line { border-left: 3px solid {brand22}; padding-left: 10px; }\n  .kd-ed .ProseMirror .kd-card-line::after { content: \'tarjeta\'; font: 700 10px var(--kd-ui-font); color: {brand23}; background: {brand24}; border-radius: 99px; padding: 1px 6px; margin-left: 8px; vertical-align: middle; }\n  .kd-ed .ProseMirror[contenteditable="false"] .kd-card-sep { font-size: 0; }\n  .kd-ed .ProseMirror[contenteditable="false"] .kd-card-sep::after { content: \'→\'; font-size: 17px; color: {brand25}; margin: 0 8px; }\n  .kd-ed .ProseMirror mark { background: {warn}; color: inherit; border-radius: 3px; padding: 0 2px; }\n  .kd-ed .ProseMirror code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.86em; background: {surface2}; border: 1px solid {line}; border-radius: 6px; padding: 1px 5px; }\n  .kd-ed .ProseMirror pre { background: {surface22}; border: 1px solid {line2}; border-radius: 12px; padding: 14px 16px; overflow-x: auto; }\n  .kd-ed .ProseMirror pre code { background: none; border: 0; padding: 0; font-size: 14px; line-height: 1.55; }\n  .kd-ed .ProseMirror ul, .kd-ed .ProseMirror ol { padding-left: 1.4em; margin: 0.5em 0; }\n  .kd-ed .ProseMirror li > p { margin: 0; }\n  .kd-ed .ProseMirror li + li { margin-top: 0.2em; }\n  .kd-ed .ProseMirror li::marker { color: {muted2}; }\n  .kd-ed .ProseMirror ul[data-type="taskList"] { list-style: none; padding-left: 0.2em; }\n  .kd-ed .ProseMirror ul[data-type="taskList"] li { display: flex; gap: 10px; align-items: flex-start; }\n  .kd-ed .ProseMirror ul[data-type="taskList"] li > label { margin-top: 0.32em; flex: none; user-select: none; }\n  .kd-ed .ProseMirror ul[data-type="taskList"] li > label input { width: 17px; height: 17px; accent-color: {brand5}; cursor: pointer; }\n  .kd-ed .ProseMirror ul[data-type="taskList"] li > div { flex: 1; min-width: 0; }\n  .kd-ed .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div { color: {muted3}; text-decoration: line-through; }\n  .kd-ed .ProseMirror blockquote { margin: 0.9em 0; padding: 12px 16px; border-radius: 12px; background: {warn2}; border: 1px solid {warn3}; font-size: 16px; }\n  .kd-ed .ProseMirror blockquote p { margin: 0; }\n  .kd-ed .ProseMirror hr { border: 0; border-top: 1px solid {line3}; margin: 1.6em 0; }\n  .kd-ed .ProseMirror img { display: block; max-width: 100%; height: auto; border-radius: 12px; border: 1px solid {line4}; margin: 0.8em 0; background: {surface23}; min-height: 60px; }\n  .kd-ed .ProseMirror img.ProseMirror-selectednode { outline: 2px solid {brand6}; outline-offset: 2px; }\n  .kd-ed .tableWrapper { overflow-x: auto; margin: 0.9em 0; }\n  .kd-ed .ProseMirror table { border-collapse: collapse; width: 100%; font-size: 15.5px; line-height: 1.5; }\n  .kd-ed .ProseMirror th, .kd-ed .ProseMirror td { border: 1px solid {line5}; padding: 8px 10px; vertical-align: top; min-width: 60px; position: relative; }\n  .kd-ed .ProseMirror th { background: {surface24}; font-weight: 700; text-align: left; }\n  .kd-ed .ProseMirror .selectedCell::after { content: \'\'; position: absolute; inset: 0; background: {brand7}; pointer-events: none; }\n  .kd-ed .ProseMirror .column-resize-handle { position: absolute; right: -2px; top: 0; bottom: 0; width: 4px; background: {brand8}; pointer-events: none; }\n  .kd-ed .ProseMirror [data-type="block-math"] { display: block; margin: 1em 0; padding: 16px; border-radius: 12px; background: {surface}; border: 1px solid {line6}; text-align: center; overflow-x: auto; cursor: pointer; font-size: 1.15em; }\n  .kd-ed .ProseMirror [data-type="inline-math"] { cursor: pointer; padding: 0 2px; border-radius: 4px; }\n  .kd-ed .ProseMirror [data-type="inline-math"]:hover, .kd-ed .ProseMirror [data-type="block-math"]:hover { background: {brand9}; }\n  .kd-ed .ProseMirror .katex-error, .kd-ed .ProseMirror .tiptap-mathematics-render--error { color: {badText}; font-family: ui-monospace, monospace; font-size: 14px; }\n  .kd-ed .ProseMirror p.is-editor-empty:first-child::before { content: attr(data-placeholder); color: {muted4}; float: left; height: 0; pointer-events: none; }\n  .kd-ed .ProseMirror ::selection { background: {brand10}; }\n  .kd-ed.kd-reading .ProseMirror { cursor: text; }\n  .kd-tb { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; align-items: center; gap: 2px; padding: 5px; margin-bottom: 18px; border-radius: 12px; background: {surface3}; border: 1px solid {line7}; box-shadow: 0 6px 18px rgba(0,0,0,0.18); }\n  .kd-tb::-webkit-scrollbar { display: none; }\n  .kd-tb-table { display: flex; flex-wrap: wrap; gap: 2px; margin: -10px 0 14px; padding: 4px; border-radius: 10px; background: {surface4}; border: 1px solid {line8}; }\n  @media (max-width: 600px) { .kd-ed .ProseMirror { font-size: 16.5px; line-height: 1.65; } .kd-ed .ProseMirror h1 { font-size: 24px; } .kd-ed .ProseMirror h2 { font-size: 20px; } }\n  .kd-btn { flex: none; appearance: none; border: 0; background: transparent; color: {text4}; height: 34px; min-width: 34px; padding: 0 8px; border-radius: 8px; font: 600 13.5px/1 system-ui, sans-serif; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; }\n  .kd-btn:hover { background: {surface25}; }\n  .kd-btn:focus-visible { outline: 2px solid {focus}; outline-offset: 1px; }\n  .kd-btn[aria-pressed="true"] { background: {brand11}; color: {brand12}; }\n  .kd-btn[disabled] { opacity: 0.4; cursor: default; }\n  .kd-sep { width: 1px; height: 20px; background: {line9}; margin: 0 4px; }\n  .kd-pop { background: {surface5}; border: 1px solid {line10}; border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,0.35); color: {text5}; font-family: system-ui, sans-serif; }\n  .kd-bubble { display: flex; align-items: center; gap: 2px; padding: 4px; }\n  .kd-menu { width: 290px; max-height: 340px; overflow-y: auto; padding: 6px; }\n  .kd-menu-h { font-size: 11px; letter-spacing: 0.08em; color: {muted5}; padding: 6px 10px 4px; font-weight: 700; }\n  .kd-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 10px; border: 0; border-radius: 9px; background: transparent; color: {text6}; text-align: left; cursor: pointer; font: inherit; }\n  .kd-item[aria-selected="true"], .kd-item:hover { background: {surface26}; }\n  .kd-item-ic { width: 30px; height: 30px; border-radius: 8px; background: {surface27}; border: 1px solid {line11}; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; color: {text7}; flex: none; }\n  .kd-item-t { font-size: 14px; font-weight: 600; }\n  .kd-item-d { font-size: 12px; color: {muted6}; }\n  .kd-math { position: fixed; z-index: 1000; width: min(440px, calc(100vw - 32px)); padding: 14px; display: flex; flex-direction: column; gap: 10px; }\n  .kd-math textarea { width: 100%; box-sizing: border-box; min-height: 70px; resize: vertical; background: {surface28}; color: {text8}; border: 1px solid {line12}; border-radius: 10px; padding: 10px; font: 14px/1.5 ui-monospace, monospace; outline: none; }\n  .kd-math textarea:focus { border-color: {brand13}; }\n  .kd-math-prev { min-height: 44px; padding: 10px; border-radius: 10px; background: {bg}; border: 1px dashed {line13}; text-align: center; overflow-x: auto; }\n  .kd-chip { appearance: none; border: 1px solid {line14}; background: {surface29}; color: {text9}; border-radius: 999px; padding: 4px 9px; font: 12.5px ui-monospace, monospace; cursor: pointer; }\n  .kd-primary { background: {brand14}; color: {onBrand}; }\n  .kd-primary:hover { background: {brand15}; filter: brightness(1.08); }\n  ', { v: ui ? `'${ui}', ` : '', text: C.text, body, brand: C.brand, text2: C.text, brand2: C.brand2, text3: C.text, brand3: C.brand, muted: C.muted, brand4: hexA(C.brand, 0.08), brand22: hexA(C.brand2, 0.7), brand23: C.brand2, brand24: hexA(C.brand2, 0.12), brand25: C.brand2, warn: hexA(C.warn, 0.32), surface2: C.surface2, line: C.line, surface22: C.surface2, line2: C.line, muted2: C.muted, brand5: C.brand, muted3: C.muted, warn2: hexA(C.warn, 0.1), warn3: hexA(C.warn, 0.35), line3: C.line, line4: C.line, surface23: C.surface2, brand6: C.brand, line5: C.line, surface24: C.surface2, brand7: hexA(C.brand, 0.18), brand8: C.brand, surface: C.surface, line6: C.line, brand9: hexA(C.brand, 0.1), badText: C.badText, muted4: C.muted, brand10: hexA(C.brand, 0.35), surface3: C.surface, line7: C.line, surface4: C.surface, line8: C.line, text4: C.text, surface25: C.surface2, focus: C.focus, brand11: hexA(C.brand, 0.2), brand12: C.brand, line9: C.line, surface5: C.surface, line10: C.line, text5: C.text, muted5: C.muted, text6: C.text, surface26: C.surface2, surface27: C.surface2, line11: C.line, text7: C.text, muted6: C.muted, surface28: C.surface2, text8: C.text, line12: C.line, brand13: C.brand, bg: C.bg, line13: C.line, line14: C.line, surface29: C.surface2, text9: C.text, brand14: C.brand, onBrand: C.onBrand, brand15: C.brand });
+  const css = `/* i18n-ok: CSS */
+  .kd-ed { position: relative; --kd-ui-font: ${ui ? `'${ui}', ` : ''}system-ui, sans-serif; }
+  .kd-ed .ProseMirror { outline: none; color: ${C.text}; font-family: ${body}; font-size: 17.5px; line-height: 1.7; word-wrap: break-word; caret-color: ${C.brand}; padding-bottom: 40px; }
+  .kd-ed .ProseMirror > * + * { margin-top: 0.75em; }
+  .kd-ed .ProseMirror p { margin: 0; }
+  .kd-ed .ProseMirror h1, .kd-ed .ProseMirror h2, .kd-ed .ProseMirror h3, .kd-ed .ProseMirror h4, .kd-ed .ProseMirror h5, .kd-ed .ProseMirror h6 {
+    font-family: var(--kd-ui-font); line-height: 1.3; margin: 1.3em 0 0.2em; color: ${C.text}; scroll-margin-top: 70px; }
+  .kd-ed .ProseMirror h1 { font-size: 27px; font-weight: 800; letter-spacing: -0.01em; }
+  .kd-ed .ProseMirror h2 { font-size: 22px; font-weight: 800; }
+  .kd-ed .ProseMirror h3, .kd-ed .ProseMirror h4, .kd-ed .ProseMirror h5, .kd-ed .ProseMirror h6 { font-size: 18px; font-weight: 800; color: ${C.brand2}; }
+  .kd-ed .ProseMirror > :first-child { margin-top: 0; }
+  .kd-ed .ProseMirror strong { font-weight: 700; color: ${C.text}; }
+  .kd-ed .ProseMirror a { color: ${C.brand}; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .kd-ed .ProseMirror a[href^="kd-file:"] { text-decoration-style: dotted; color: ${C.muted}; }
+  .kd-ed .ProseMirror a[href^="kd-note:"] { text-decoration-style: dotted; background: ${hexA(C.brand, 0.08)}; border-radius: 4px; padding: 0 2px; }
+  .kd-ed .ProseMirror .kd-card-line { border-left: 3px solid ${hexA(C.brand2, 0.7)}; padding-left: 10px; }
+  .kd-ed .ProseMirror .kd-card-line::after { content: ${JSON.stringify(t('tarjeta'))}; font: 700 10px var(--kd-ui-font); color: ${C.brand2}; background: ${hexA(C.brand2, 0.12)}; border-radius: 99px; padding: 1px 6px; margin-left: 8px; vertical-align: middle; }
+  .kd-ed .ProseMirror[contenteditable="false"] .kd-card-sep { font-size: 0; }
+  .kd-ed .ProseMirror[contenteditable="false"] .kd-card-sep::after { content: '→'; font-size: 17px; color: ${C.brand2}; margin: 0 8px; }
+  .kd-ed .ProseMirror mark { background: ${hexA(C.warn, 0.32)}; color: inherit; border-radius: 3px; padding: 0 2px; }
+  .kd-ed .ProseMirror code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.86em; background: ${C.surface2}; border: 1px solid ${C.line}; border-radius: 6px; padding: 1px 5px; }
+  .kd-ed .ProseMirror pre { background: ${C.surface2}; border: 1px solid ${C.line}; border-radius: 12px; padding: 14px 16px; overflow-x: auto; }
+  .kd-ed .ProseMirror pre code { background: none; border: 0; padding: 0; font-size: 14px; line-height: 1.55; }
+  .kd-ed .ProseMirror ul, .kd-ed .ProseMirror ol { padding-left: 1.4em; margin: 0.5em 0; }
+  .kd-ed .ProseMirror li > p { margin: 0; }
+  .kd-ed .ProseMirror li + li { margin-top: 0.2em; }
+  .kd-ed .ProseMirror li::marker { color: ${C.muted}; }
+  .kd-ed .ProseMirror ul[data-type="taskList"] { list-style: none; padding-left: 0.2em; }
+  .kd-ed .ProseMirror ul[data-type="taskList"] li { display: flex; gap: 10px; align-items: flex-start; }
+  .kd-ed .ProseMirror ul[data-type="taskList"] li > label { margin-top: 0.32em; flex: none; user-select: none; }
+  .kd-ed .ProseMirror ul[data-type="taskList"] li > label input { width: 17px; height: 17px; accent-color: ${C.brand}; cursor: pointer; }
+  .kd-ed .ProseMirror ul[data-type="taskList"] li > div { flex: 1; min-width: 0; }
+  .kd-ed .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div { color: ${C.muted}; text-decoration: line-through; }
+  .kd-ed .ProseMirror blockquote { margin: 0.9em 0; padding: 12px 16px; border-radius: 12px; background: ${hexA(C.warn, 0.1)}; border: 1px solid ${hexA(C.warn, 0.35)}; font-size: 16px; }
+  .kd-ed .ProseMirror blockquote p { margin: 0; }
+  .kd-ed .ProseMirror hr { border: 0; border-top: 1px solid ${C.line}; margin: 1.6em 0; }
+  .kd-ed .ProseMirror img { display: block; max-width: 100%; height: auto; border-radius: 12px; border: 1px solid ${C.line}; margin: 0.8em 0; background: ${C.surface2}; min-height: 60px; }
+  .kd-ed .ProseMirror img.ProseMirror-selectednode { outline: 2px solid ${C.brand}; outline-offset: 2px; }
+  .kd-ed .tableWrapper { overflow-x: auto; margin: 0.9em 0; }
+  .kd-ed .ProseMirror table { border-collapse: collapse; width: 100%; font-size: 15.5px; line-height: 1.5; }
+  .kd-ed .ProseMirror th, .kd-ed .ProseMirror td { border: 1px solid ${C.line}; padding: 8px 10px; vertical-align: top; min-width: 60px; position: relative; }
+  .kd-ed .ProseMirror th { background: ${C.surface2}; font-weight: 700; text-align: left; }
+  .kd-ed .ProseMirror .selectedCell::after { content: ''; position: absolute; inset: 0; background: ${hexA(C.brand, 0.18)}; pointer-events: none; }
+  .kd-ed .ProseMirror .column-resize-handle { position: absolute; right: -2px; top: 0; bottom: 0; width: 4px; background: ${C.brand}; pointer-events: none; }
+  .kd-ed .ProseMirror [data-type="block-math"] { display: block; margin: 1em 0; padding: 16px; border-radius: 12px; background: ${C.surface}; border: 1px solid ${C.line}; text-align: center; overflow-x: auto; cursor: pointer; font-size: 1.15em; }
+  .kd-ed .ProseMirror [data-type="inline-math"] { cursor: pointer; padding: 0 2px; border-radius: 4px; }
+  .kd-ed .ProseMirror [data-type="inline-math"]:hover, .kd-ed .ProseMirror [data-type="block-math"]:hover { background: ${hexA(C.brand, 0.1)}; }
+  .kd-ed .ProseMirror .katex-error, .kd-ed .ProseMirror .tiptap-mathematics-render--error { color: ${C.badText}; font-family: ui-monospace, monospace; font-size: 14px; }
+  .kd-ed .ProseMirror p.is-editor-empty:first-child::before { content: attr(data-placeholder); color: ${C.muted}; float: left; height: 0; pointer-events: none; }
+  .kd-ed .ProseMirror ::selection { background: ${hexA(C.brand, 0.35)}; }
+  .kd-ed.kd-reading .ProseMirror { cursor: text; }
+  .kd-tb { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; align-items: center; gap: 2px; padding: 5px; margin-bottom: 18px; border-radius: 12px; background: ${C.surface}; border: 1px solid ${C.line}; box-shadow: 0 6px 18px rgba(0,0,0,0.18); }
+  .kd-tb::-webkit-scrollbar { display: none; }
+  .kd-tb-table { display: flex; flex-wrap: wrap; gap: 2px; margin: -10px 0 14px; padding: 4px; border-radius: 10px; background: ${C.surface}; border: 1px solid ${C.line}; }
+  @media (max-width: 600px) { .kd-ed .ProseMirror { font-size: 16.5px; line-height: 1.65; } .kd-ed .ProseMirror h1 { font-size: 24px; } .kd-ed .ProseMirror h2 { font-size: 20px; } }
+  .kd-btn { flex: none; appearance: none; border: 0; background: transparent; color: ${C.text}; height: 34px; min-width: 34px; padding: 0 8px; border-radius: 8px; font: 600 13.5px/1 system-ui, sans-serif; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; }
+  .kd-btn:hover { background: ${C.surface2}; }
+  .kd-btn:focus-visible { outline: 2px solid ${C.focus}; outline-offset: 1px; }
+  .kd-btn[aria-pressed="true"] { background: ${hexA(C.brand, 0.2)}; color: ${C.brand}; }
+  .kd-btn[disabled] { opacity: 0.4; cursor: default; }
+  .kd-sep { width: 1px; height: 20px; background: ${C.line}; margin: 0 4px; }
+  .kd-pop { background: ${C.surface}; border: 1px solid ${C.line}; border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,0.35); color: ${C.text}; font-family: system-ui, sans-serif; }
+  .kd-bubble { display: flex; align-items: center; gap: 2px; padding: 4px; }
+  .kd-menu { width: 290px; max-height: 340px; overflow-y: auto; padding: 6px; }
+  .kd-menu-h { font-size: 11px; letter-spacing: 0.08em; color: ${C.muted}; padding: 6px 10px 4px; font-weight: 700; }
+  .kd-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 10px; border: 0; border-radius: 9px; background: transparent; color: ${C.text}; text-align: left; cursor: pointer; font: inherit; }
+  .kd-item[aria-selected="true"], .kd-item:hover { background: ${C.surface2}; }
+  .kd-item-ic { width: 30px; height: 30px; border-radius: 8px; background: ${C.surface2}; border: 1px solid ${C.line}; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; color: ${C.text}; flex: none; }
+  .kd-item-t { font-size: 14px; font-weight: 600; }
+  .kd-item-d { font-size: 12px; color: ${C.muted}; }
+  .kd-math { position: fixed; z-index: 1000; width: min(440px, calc(100vw - 32px)); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .kd-math textarea { width: 100%; box-sizing: border-box; min-height: 70px; resize: vertical; background: ${C.surface2}; color: ${C.text}; border: 1px solid ${C.line}; border-radius: 10px; padding: 10px; font: 14px/1.5 ui-monospace, monospace; outline: none; }
+  .kd-math textarea:focus { border-color: ${C.brand}; }
+  .kd-math-prev { min-height: 44px; padding: 10px; border-radius: 10px; background: ${C.bg}; border: 1px dashed ${C.line}; text-align: center; overflow-x: auto; }
+  .kd-chip { appearance: none; border: 1px solid ${C.line}; background: ${C.surface2}; color: ${C.text}; border-radius: 999px; padding: 4px 9px; font: 12.5px ui-monospace, monospace; cursor: pointer; }
+  .kd-primary { background: ${C.brand}; color: ${C.onBrand}; }
+  .kd-primary:hover { background: ${C.brand}; filter: brightness(1.08); }
+  `;
   let el = document.getElementById('kd-prose-css');
   if (!el) { el = document.createElement('style'); el.id = 'kd-prose-css'; document.head.appendChild(el); }
   el.textContent = css;
@@ -107,19 +184,19 @@ type SlashState = { items: SlashItem[]; index: number; rect: DOMRect | null; com
 function makeSlashItems(api: { pickImage: () => void; openMath: (mode: 'block' | 'inline') => void }): SlashItem[] {
   const del = (e: Editor, r: Range) => e.chain().focus().deleteRange(r);
   return [
-    { key: 'h1', icon: 'H1', title: t('Título'), hint: t('Título grande de sección'), words: 'titulo h1 encabezado', run: (e, r) => del(e, r).setNode('heading', { level: 1 }).run() },
-    { key: 'h2', icon: 'H2', title: t('Subtítulo'), hint: t('Parte de una sección'), words: 'subtitulo h2', run: (e, r) => del(e, r).setNode('heading', { level: 2 }).run() },
-    { key: 'h3', icon: 'H3', title: t('Apartado'), hint: t('Título pequeño'), words: 'apartado h3 seccion', run: (e, r) => del(e, r).setNode('heading', { level: 3 }).run() },
+    { key: 'h1', icon: 'H1', title: t('Título'), hint: t('Título grande de sección'), words: t('titulo h1 encabezado'), run: (e, r) => del(e, r).setNode('heading', { level: 1 }).run() },
+    { key: 'h2', icon: 'H2', title: t('Subtítulo'), hint: t('Parte de una sección'), words: t('subtitulo h2'), run: (e, r) => del(e, r).setNode('heading', { level: 2 }).run() },
+    { key: 'h3', icon: 'H3', title: t('Apartado'), hint: t('Título pequeño'), words: t('apartado h3 seccion'), run: (e, r) => del(e, r).setNode('heading', { level: 3 }).run() },
     { key: 'ul', icon: '•', title: t('Lista'), hint: t('Lista con viñetas'), words: t('lista viñetas bullets'), run: (e, r) => del(e, r).toggleBulletList().run() },
-    { key: 'ol', icon: '1.', title: t('Lista numerada'), hint: t('Pasos en orden'), words: 'numerada pasos ordenada', run: (e, r) => del(e, r).toggleOrderedList().run() },
+    { key: 'ol', icon: '1.', title: t('Lista numerada'), hint: t('Pasos en orden'), words: t('numerada pasos ordenada'), run: (e, r) => del(e, r).toggleOrderedList().run() },
     { key: 'task', icon: '☐', title: t('Lista de tareas'), hint: t('Casillas para marcar'), words: t('tareas checklist casillas pendientes'), run: (e, r) => del(e, r).toggleTaskList().run() },
     { key: 'quote', icon: '!', title: t('Aviso o cita'), hint: t('Caja destacada para lo importante'), words: t('aviso cita importante nota destacado'), run: (e, r) => del(e, r).toggleBlockquote().run() },
-    { key: 'math', icon: 'fx', title: t('Fórmula'), hint: t('Ecuación centrada (LaTeX)'), words: 'formula ecuacion latex matematica', run: (e, r) => { del(e, r).run(); api.openMath('block'); } },
-    { key: 'imath', icon: 'x²', title: t('Fórmula en la línea'), hint: t('Dentro del párrafo'), words: 'formula linea inline latex', run: (e, r) => { del(e, r).run(); api.openMath('inline'); } },
-    { key: 'table', icon: '▦', title: t('Tabla'), hint: t('Filas y columnas'), words: 'tabla filas columnas', run: (e, r) => del(e, r).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
+    { key: 'math', icon: 'fx', title: t('Fórmula'), hint: t('Ecuación centrada (LaTeX)'), words: t('formula ecuacion latex matematica'), run: (e, r) => { del(e, r).run(); api.openMath('block'); } },
+    { key: 'imath', icon: 'x²', title: t('Fórmula en la línea'), hint: t('Dentro del párrafo'), words: t('formula linea inline latex'), run: (e, r) => { del(e, r).run(); api.openMath('inline'); } },
+    { key: 'table', icon: '▦', title: t('Tabla'), hint: t('Filas y columnas'), words: t('tabla filas columnas'), run: (e, r) => del(e, r).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
     { key: 'img', icon: '▣', title: t('Imagen o diagrama'), hint: t('Desde tu equipo; también puedes pegarla'), words: t('imagen foto diagrama dibujo'), run: (e, r) => { del(e, r).run(); api.pickImage(); } },
-    { key: 'code', icon: '</>', title: t('Código'), hint: t('Bloque de código'), words: 'codigo programacion code', run: (e, r) => del(e, r).toggleCodeBlock().run() },
-    { key: 'hr', icon: '―', title: t('Línea divisoria'), hint: t('Separa partes de la nota'), words: 'linea divisoria separador', run: (e, r) => del(e, r).setHorizontalRule().run() },
+    { key: 'code', icon: '</>', title: t('Código'), hint: t('Bloque de código'), words: t('codigo programacion code'), run: (e, r) => del(e, r).toggleCodeBlock().run() },
+    { key: 'hr', icon: '―', title: t('Línea divisoria'), hint: t('Separa partes de la nota'), words: t('linea divisoria separador'), run: (e, r) => del(e, r).setHorizontalRule().run() },
   ];
 }
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -269,7 +346,7 @@ function MathPanel({ edit, onSave, onCancel, onRemove }: { edit: NonNullable<Mat
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
         {MATH_SNIPPETS.map((m) => <button key={m.t} type="button" className="kd-chip" onClick={() => insert(m.s)} title={m.s}>{m.t}</button>)}
       </div>
-      <div className="kd-math-prev" aria-live="polite" dangerouslySetInnerHTML={{ __html: html || `<span style="color:${C.muted};font-size:13px">Vista previa</span>` }} />
+      <div className="kd-math-prev" aria-live="polite" dangerouslySetInnerHTML={{ __html: html || `<span style="color:${C.muted};font-size:13px">${trn('Vista previa')}</span>` }} />
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
         {onRemove && <button type="button" className="kd-btn" style={{ color: C.badText, marginRight: 'auto' }} onClick={onRemove}>{t('Quitar')}</button>}
         <button type="button" className="kd-btn" onClick={onCancel}>{t('Cancelar')}</button>

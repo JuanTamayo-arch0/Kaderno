@@ -84,7 +84,7 @@ const CHEEK = '#ff8fa3';
 export const SPECIES: Record<Species, SpeciesDef> = {
   pinguino: {
     name: t('Pingüino'),
-    coin: { id: 'pescados', one: 'pescado', many: 'pescados' },
+    coin: { id: 'pescados', one: t('pescado'), many: t('pescados') },
     palette: { o: PET_INK, b: '#2f3f60', h: '#4b6190', d: '#222e47', w: '#f6f2ea', s: '#d8d1c3', y: '#f39c34', Y: '#c4761f' },
     ink: PET_INK,
     half: [
@@ -139,7 +139,7 @@ export const SPECIES: Record<Species, SpeciesDef> = {
   },
   gato: {
     name: t('Gato'),
-    coin: { id: 'ovillos', one: 'ovillo', many: 'ovillos' },
+    coin: { id: 'ovillos', one: t('ovillo'), many: t('ovillos') },
     palette: { o: PET_INK, b: '#f2a65a', h: '#f9c991', d: '#d9823c', w: '#fbe5cc', e: '#f4a9a0', n: '#e86f86' },
     ink: PET_INK,
     half: [
@@ -208,7 +208,7 @@ export const SPECIES: Record<Species, SpeciesDef> = {
   },
   perro: {
     name: t('Perro'),
-    coin: { id: 'huesos', one: 'hueso', many: 'huesos' },
+    coin: { id: 'huesos', one: t('hueso'), many: t('huesos') },
     palette: { o: PET_INK, b: '#dba468', h: '#ecc293', d: '#b97a45', w: '#f7e6ca', e: '#9b6337', E: '#7d4c28', n: '#2e2018', t: '#f2788d' },
     ink: PET_INK,
     half: [
@@ -274,7 +274,7 @@ export const SPECIES: Record<Species, SpeciesDef> = {
   },
   loro: {
     name: t('Loro'),
-    coin: { id: 'semillas', one: 'semilla', many: 'semillas' },
+    coin: { id: 'semillas', one: t('semilla'), many: t('semillas') },
     palette: { o: PET_INK, b: '#3fbf7f', h: '#79dca6', d: '#2c9563', y: '#f6d45a', Y: '#e0b53a', w: WHITE, k: '#f2b33d', K: '#c4861a', r: '#e8483b', R: '#f39c34', u: '#3a7bd5', g: '#8a8f99' },
     ink: PET_INK,
     half: [

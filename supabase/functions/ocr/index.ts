@@ -17,6 +17,7 @@
 // ============================================================
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
+import { langOf, say } from '../_shared/lang.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { ocrPrompt, parseOcr, type OcrMode } from '../_shared/ocrMarkdown.ts';
 import { limitOf, limitMessage } from '../_shared/plans.ts';
@@ -34,25 +35,27 @@ Deno.serve(async (req) => {
     // Solo con sesión: si no, cualquiera con la llave pública gastaría tus créditos.
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!,
       { global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } } });
-    const { data: who } = await supabase.auth.getUser();
-    if (!who?.user) return json({ error: 'Inicia sesión para leer fotos.' }, 401);
-
     const body = await req.json();
+    // v30: los mensajes en el idioma de la app (el texto de la foto no se traduce).
+    const lang = langOf(body.lang);
+    const { data: who } = await supabase.auth.getUser();
+    if (!who?.user) return json({ error: say(lang, 'Inicia sesión para leer fotos.') }, 401);
+
     const { imageBase64, mediaType = 'image/jpeg' } = body;
     const mode: OcrMode | null = ['notes', 'board', 'plain'].includes(body.mode) ? body.mode : null;
-    if (!imageBase64 || typeof imageBase64 !== 'string') return json({ error: 'Falta imageBase64' }, 400);
-    if (imageBase64.length > MAX_B64) return json({ error: 'La imagen es muy grande.' }, 413);
-    if (!/^image\/(jpeg|png|webp|gif)$/.test(mediaType)) return json({ error: 'Formato de imagen no soportado.' }, 400);
+    if (!imageBase64 || typeof imageBase64 !== 'string') return json({ error: say(lang, 'Falta imageBase64') }, 400);
+    if (imageBase64.length > MAX_B64) return json({ error: say(lang, 'La imagen es muy grande.') }, 413);
+    if (!/^image\/(jpeg|png|webp|gif)$/.test(mediaType)) return json({ error: say(lang, 'Formato de imagen no soportado.') }, 400);
 
     const { data: mp, error: planErr } = await supabase.rpc('my_plan');
     const plan = planErr ? 'pro' : String((mp as any)?.plan ?? 'free');
     const { data: left, error: takeErr } = await supabase.rpc('ai_take', { p_task: 'ocr', p_limit: limitOf(plan, 'ocr') });
     if (!takeErr && typeof left === 'number' && left < 0) {
-      return json({ error: limitMessage(plan, 'ocr'), code: 'limit', plan }, 429);
+      return json({ error: limitMessage(plan, 'ocr', lang), code: 'limit', plan }, 429);
     }
 
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
-    if (!apiKey) return json({ error: 'ANTHROPIC_API_KEY no configurada' }, 500);
+    if (!apiKey) return json({ error: say(lang, 'ANTHROPIC_API_KEY no configurada') }, 500);
 
     const prompt = mode ? ocrPrompt(mode)
       : 'Transcribe fielmente el texto manuscrito de esta imagen de apuntes escolares. ' +
@@ -76,7 +79,7 @@ Deno.serve(async (req) => {
       }),
     });
 
-    if (!res.ok) return json({ error: 'Fallo del modelo de visión', detail: (await res.text()).slice(0, 500) }, 502);
+    if (!res.ok) return json({ error: say(lang, 'Fallo del modelo de visión'), detail: (await res.text()).slice(0, 500) }, 502);
 
     const data = await res.json();
     const text = (data.content ?? []).map((b: any) => b.text ?? '').join('').trim();

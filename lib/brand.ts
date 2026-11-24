@@ -250,7 +250,7 @@ export function migrateBrand<T extends Persisted>(s: T): T & { accentId?: string
  * Las cuentas de cobro y los informes para clientes no lo llevan.
  */
 export function docFooter(): string {
-  return `<p class="kd-marca" style="margin-top:28px;font-size:9pt;display:flex;align-items:center;gap:6px">${logoSvg({ size: 14, tone: 'una-tinta' })}<span>Hecho con Kaderno</span></p>`;
+  return `<p class="kd-marca" style="margin-top:28px;font-size:9pt;display:flex;align-items:center;gap:6px">${logoSvg({ size: 14, tone: 'una-tinta' })}<span>${t('Hecho con Kaderno')}</span></p>`;
 }
 
 // ---------- Radios por espacio (fase 4) ----------

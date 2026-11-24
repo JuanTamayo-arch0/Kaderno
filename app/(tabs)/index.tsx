@@ -281,7 +281,7 @@ export default function Hoy() {
     else if (c.offer === 'despues') toast(trn('Sin afán: ¿la pasas a la próxima semana? {title}', { title: t.title }), { actionLabel: trn('Mover'), onAction: () => move(t, isoDate(addDays(today, 7 - ((today.getDay() + 6) % 7))), trn('el lunes')) });
   }
   async function move(t: Task, iso: string | null, label: string) {
-    try { await moveTaskDate(t, iso); toast(`Movida a ${label}`); load(); }
+    try { await moveTaskDate(t, iso); toast(trn('Movida a {label}', { label })); load(); }
     catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
   }
   async function hideProj(p: MyProjectTask, wholeProject: boolean) {
@@ -315,7 +315,7 @@ export default function Hoy() {
       ...(t.status !== 'done' ? [{ label: trn('Iniciar cronómetro'), icon: 'play-circle-outline' as const, onPress: () => { startStopwatch({ title: t.title, subjectId: t.subject_id, assignmentId: t.id }); toast(trn('Cronómetro: ') + t.title); } }] : []),
       ...(['examen', 'quiz'].includes(String(t.type)) && t.status !== 'done' ? [{ label: trn('Plan de repaso'), icon: 'calendar-number-outline' as const, onPress: () => openTask(t) }] : []),
       ...(t.repeat_rule && t.status !== 'done' ? [{ label: trn('Saltar esta vez'), icon: 'play-skip-forward-outline' as const, onPress: async () => {
-        try { await skipRepeat(t.id); toast(`Saltada. Sigue ${ruleText(t.repeat_rule)}.`, { actionLabel: trn('Ver'), onAction: load }); load(); refreshNavCounts(true); }
+        try { await skipRepeat(t.id); toast(trn('Saltada. Sigue {v}.', { v: ruleText(t.repeat_rule) }), { actionLabel: trn('Ver'), onAction: load }); load(); refreshNavCounts(true); }
         catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
       } }] : []),
       { label: trn('Mover a hoy'), icon: 'today-outline', onPress: () => move(t, isoDate(today), 'hoy') },
@@ -431,10 +431,10 @@ export default function Hoy() {
 
   const summary: React.ReactNode[] = [];
   summary.push(<Text key="t" style={{ color: C.text, fontWeight: '700' }}>{todayCount === 0 ? t('Nada para hoy') : todayCount === 1 ? t('1 para hoy') : t('{todayCount} para hoy', { todayCount })}</Text>);
-  if (overdueCount) summary.push(<Text key="o" style={{ color: C.badText, fontWeight: '600' }}>{overdueCount === 1 ? t('1 vencida') : `${overdueCount} vencidas`}</Text>);
+  if (overdueCount) summary.push(<Text key="o" style={{ color: C.badText, fontWeight: '600' }}>{overdueCount === 1 ? t('1 vencida') : trn('{n} vencidas', { n: overdueCount })}</Text>);
   if (nextExam) {
     const dd = dayDiff(dueDay(nextExam)!, now);
-    summary.push(<Text key="e">{`${nextExam.title.length > 32 ? nextExam.title.slice(0, 30) + '…' : nextExam.title} ${dd === 0 ? 'hoy' : dd === 1 ? t('mañana') : t('en {dd} días', { dd })}`}</Text>);
+    summary.push(<Text key="e">{`${nextExam.title.length > 32 ? nextExam.title.slice(0, 30) + '…' : nextExam.title} ${dd === 0 ? t('hoy') : dd === 1 ? t('mañana') : t('en {dd} días', { dd })}`}</Text>);
   }
 
   const me = (() => {
@@ -483,7 +483,7 @@ export default function Hoy() {
       <View style={{ width: 4, alignSelf: 'stretch', borderRadius: 2, backgroundColor: (classNow ?? classNext)!.color }} />
       <View style={{ flex: 1, minWidth: 150 }}>
         <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-          {classNow ? t('Ahora · hasta {minToLabel}', { minToLabel: minToLabel(classNow.end!) }) : `Siguiente ${mv.klass} · ${minToLabel(classNext!.start)}`}
+          {classNow ? t('Ahora · hasta {minToLabel}', { minToLabel: minToLabel(classNow.end!) }) : trn('Siguiente {klass} · {time}', { klass: mv.klass, time: minToLabel(classNext!.start) })}
         </Text>
         <Text style={{ color: C.text, fontSize: 16, fontWeight: '700', marginTop: 2 }}>{(classNow ?? classNext)!.title}</Text>
         {classNow && classNext && <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{t('Después: {title}, {start}', { title: classNext.title, start: minToLabel(classNext.start) })}</Text>}
@@ -507,7 +507,7 @@ export default function Hoy() {
         const on = day === iso;
         return (
           <Pressable key={iso} onPress={() => setDay(on ? null : iso)} accessibilityRole="button" accessibilityState={{ selected: on }}
-            accessibilityLabel={`${i === 0 ? t('Hoy') : DAY_SHORT[d.getDay()]} ${d.getDate()}, ${n} ${n === 1 ? 'entrega' : 'entregas'}`}
+            accessibilityLabel={`${i === 0 ? t('Hoy') : DAY_SHORT[d.getDay()]} ${d.getDate()}, ${n} ${n === 1 ? t('entrega') : t('entregas')}`}
             style={{ flex: 1, minWidth: isWide ? 64 : 44, alignItems: 'center', paddingVertical: 7, borderRadius: 12, backgroundColor: on ? C.brand : i === 0 ? C.surface : 'transparent', borderWidth: 1, borderColor: on ? C.brand : i === 0 ? C.line : 'transparent' }}>
             <Text style={{ color: on ? C.onBrand : C.muted, fontSize: 11.5, fontWeight: '600' }}>{i === 0 ? t('Hoy') : capitalize(DAY_SHORT[d.getDay()])}</Text>
             <Text style={{ color: on ? C.onBrand : C.text, fontSize: 16, fontWeight: '800', marginTop: 1 }}>{d.getDate()}</Text>
@@ -558,7 +558,7 @@ export default function Hoy() {
       </View>
       <View style={{ flex: 1 }}>
         <Text style={{ color: C.text, fontWeight: '700' }}>{t('Repaso pendiente')}</Text>
-        <Text style={{ color: C.muted, fontSize: 12.5 }}>{repaso} {repaso === 1 ? 'tarjeta' : 'tarjetas'}, {estimateLabel(repaso, repasoSecs)}</Text>
+        <Text style={{ color: C.muted, fontSize: 12.5 }}>{repaso} {repaso === 1 ? t('tarjeta') : t('tarjetas')}, {estimateLabel(repaso, repasoSecs)}</Text>
       </View>
       <Ionicons name="chevron-forward" size={18} color={C.muted} />
     </Card>
@@ -842,7 +842,7 @@ function AgendaRow({ it, now, isToday, onPress }: { it: AgendaItem; now: Date; i
         <Text style={{ width: 66, color: C.muted, fontSize: 12.5, fontVariant: ['tabular-nums'] }}>{minToLabel(it.start)}</Text>
         <View style={{ flex: 1, borderLeftWidth: 3, borderLeftColor: it.color, borderStyle: 'dashed', paddingLeft: 9 }}>
           <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '600' }} numberOfLines={1}>{t('Plan: {title}', { title: it.title })}</Text>
-          <Text style={{ color: live ? C.brand : C.muted, fontSize: 12, fontWeight: live ? '700' : '400' }}>{t('{v}{v2}toca para empezar', { v: live ? t('Ahora · ') : '', v2: it.place ? placePhrase(it.place).replace(/^en /, 'En ') + ' · ' : '' })}</Text>
+          <Text style={{ color: live ? C.brand : C.muted, fontSize: 12, fontWeight: live ? '700' : '400' }}>{t('{v}{v2}toca para empezar', { v: live ? t('Ahora · ') : '', v2: it.place ? capitalize(placePhrase(it.place)) + ' · ' : '' })}</Text>
         </View>
         <Ionicons name="play-circle-outline" size={18} color={C.brand} style={{ alignSelf: 'center' }} />
       </Pressable>
@@ -855,7 +855,7 @@ function AgendaRow({ it, now, isToday, onPress }: { it: AgendaItem; now: Date; i
         <Text style={{ color: C.text, fontSize: 13.5, fontWeight: it.kind === 'class' ? '700' : '500' }} numberOfLines={1}>
           {it.kind === 'due' ? t('Entrega: ') : ''}{it.title}
         </Text>
-        {it.kind === 'event' && <Text style={{ color: live ? C.brand : C.muted, fontSize: 12, fontWeight: live ? '700' : '400' }}>{live ? t('Ahora · ') : ''}{it.end != null && it.end < 24 * 60 ? `hasta ${minToLabel(it.end)}` : t('hasta mañana')}</Text>}
+        {it.kind === 'event' && <Text style={{ color: live ? C.brand : C.muted, fontSize: 12, fontWeight: live ? '700' : '400' }}>{live ? t('Ahora · ') : ''}{it.end != null && it.end < 24 * 60 ? trn('hasta {v}', { v: minToLabel(it.end) }) : t('hasta mañana')}</Text>}
         {it.kind === 'class' && <Text style={{ color: live ? C.brand : C.muted, fontSize: 12, fontWeight: live ? '700' : '400' }}>{t('{v}hasta {minToLabel}', { v: live ? t('Ahora · ') : '', minToLabel: minToLabel(it.end!) })}</Text>}
         {it.project && <Text style={{ color: C.muted, fontSize: 12 }}>{it.project}</Text>}
       </View>

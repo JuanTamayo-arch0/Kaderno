@@ -49,7 +49,7 @@ export function ShareNoteSheet({ visible, mode, noteId, title, getContent, onClo
       const bytes = new TextEncoder().encode(md);
       const name = `${(title || t('Nota')).replace(/[\\/:*?"<>|]/g, ' ').trim().slice(0, 80) || t('Nota')}.md`;
       await uploadNewFile(p.id, { name, bytes, mime: 'text/markdown', size: bytes.length }, { description: t('Copiada desde una nota de Kaderno') });
-      toast(`Copiada a ${p.name}`, { tone: 'good' }); onClose();
+      toast(trn('Copiada a {name}', { name: p.name }), { tone: 'good' }); onClose();
     } catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
     finally { setBusy(null); }
   }

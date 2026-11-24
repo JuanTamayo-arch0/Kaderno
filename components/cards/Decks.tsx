@@ -12,7 +12,7 @@ import { Button, Card, ChipRow, Dot, EmptyState, FilterChip } from '../ds';
 import { SubjectPicker } from '../SubjectPicker';
 import { CardText } from './CardText';
 import { CardEditor, Sheet } from './CardForms';
-import { t } from '../../lib/i18n';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Mazos: tus tarjetas por materia y por nota, con buscador,
@@ -96,7 +96,7 @@ export function Decks({ cards, subjects, noteTitles, retention, onChanged }: {
 
       {selecting && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: 12, backgroundColor: '#1a2036', borderWidth: 1, borderColor: '#34437a', flexWrap: 'wrap' }}>
-          <Text style={{ color: C.text, fontWeight: '700', fontSize: 13.5, flex: 1 }}>{ids.length ? `${ids.length} seleccionadas` : t('Toca las tarjetas para elegirlas')}</Text>
+          <Text style={{ color: C.text, fontWeight: '700', fontSize: 13.5, flex: 1 }}>{ids.length ? trn('{n} seleccionadas', { n: ids.length }) : t('Toca las tarjetas para elegirlas')}</Text>
           <Button label={t('Mover')} kind="secondary" size="sm" disabled={!ids.length} onPress={() => { setMoveTo(null); setMoving(true); }} />
           {hasFsrsDb() && <Button label={allSuspended ? t('Reactivar') : t('Suspender')} kind="secondary" size="sm" disabled={!ids.length} onPress={bulkSuspend} />}
           <Button label={t('Borrar')} kind="danger" size="sm" disabled={!ids.length} onPress={bulkDelete} />

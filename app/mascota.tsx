@@ -17,7 +17,7 @@ import { confirm, friendlyError, notify, toast } from '../lib/feedback';
 import { PetChooser, PERSONALITY } from '../components/pets/PetChooser';
 import { PetSettings } from '../components/pets/PetSettings';
 import { CoinIcon, PetImage, PetSprite } from '../components/pets/PetArt';
-import { t, locale } from '../lib/i18n';
+import { t, locale, monthsShort, trn, dayMonth } from '../lib/i18n';
 
 // ============================================================
 //  Mascota: verla en grande, su nivel y monedas, la tienda de ropa,
@@ -158,7 +158,7 @@ function Shop({ pet, owned }: { pet: Pet; owned: Set<string> }) {
     const dim = st === 'bloqueada' || st === 'fuera';
     return (
       <Pressable key={id} onPress={() => press(id, st)} disabled={busy === id} dataSet={{ press: '1' }}
-        accessibilityRole="button" accessibilityLabel={`${ITEMS[id].name}, ${SLOT_LABEL[r.slot].toLowerCase()}. ${st === 'puesta' ? t('Puesta, toca para quitarla') : st === 'tuya' ? t('Tuya, toca para ponerla') : st === 'bloqueada' ? t('Nivel {level}', { level: r.level }) : st === 'fuera' ? `Llega ${extra ?? t('en su temporada')}` : coinLabel(r.price, coin)}`}
+        accessibilityRole="button" accessibilityLabel={`${ITEMS[id].name}, ${SLOT_LABEL[r.slot].toLowerCase()}. ${st === 'puesta' ? t('Puesta, toca para quitarla') : st === 'tuya' ? t('Tuya, toca para ponerla') : st === 'bloqueada' ? t('Nivel {level}', { level: r.level }) : st === 'fuera' ? t('Llega {v}', { v: extra ?? t('en su temporada') }) : coinLabel(r.price, coin)}`}
         style={({ focused }: any) => [{
           flexBasis: isWide ? '14%' : '30%', flexGrow: 1, maxWidth: isWide ? '16%' : '33%', alignItems: 'center', gap: 2, paddingTop: 8, paddingBottom: 10, paddingHorizontal: 4,
           borderRadius: 16, borderWidth: st === 'puesta' ? 2 : 1, borderColor: st === 'puesta' ? C.good : C.line, backgroundColor: C.surface, opacity: dim ? 0.55 : 1,
@@ -215,8 +215,8 @@ function Shop({ pet, owned }: { pet: Pet; owned: Set<string> }) {
   );
 }
 
-const MONTHS_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-const dayLabel = (d: Date) => `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`;
+const MONTHS_SHORT = monthsShort();
+const dayLabel = (d: Date) => dayMonth(d.getDate(), MONTHS_SHORT[d.getMonth()]);
 
 const HOME_GROUPS: { slot: 'papel' | 'piso' | 'vista' | 'mueble'; label: string }[] = [
   { slot: 'papel', label: t('Pared') }, { slot: 'piso', label: t('Piso') }, { slot: 'vista', label: t('Ventana') }, { slot: 'mueble', label: t('Muebles') },
@@ -338,7 +338,7 @@ function Pets({ pets, active }: { pets: Pet[]; active: Pet }) {
                 <Text style={{ color: C.muted, fontSize: 13 }}>{t('{trait} · gana {many}', { trait: PERSONALITY[sp].trait, many: SPECIES[sp].coin.many })}</Text>
               </View>
               {adopting !== sp && (
-                <Button label={can ? t('Adoptar') : `Faltan ${(price - active.coins).toLocaleString(locale())}`} size="sm" kind={can ? 'primary' : 'secondary'} disabled={!can}
+                <Button label={can ? t('Adoptar') : trn('Faltan {v}', { v: (price - active.coins).toLocaleString(locale()) })} size="sm" kind={can ? 'primary' : 'secondary'} disabled={!can}
                   onPress={() => { setAdopting(sp); setName(DEFAULT_NAMES[sp]); }} />
               )}
             </View>
@@ -358,7 +358,7 @@ function Pets({ pets, active }: { pets: Pet[]; active: Pet }) {
   );
 }
 
-const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const MONTHS = monthsShort();
 
 function Achievements({ rows, species }: { rows: AchievementRow[] | null; species: Species }) {
   const { isWide } = useResponsive();
@@ -375,7 +375,7 @@ function Achievements({ rows, species }: { rows: AchievementRow[] | null; specie
           const d = got ? new Date(r.unlocked_at!) : null;
           return (
             <Card key={r.id} style={{ flexBasis: isWide ? '48%' : '100%', flexGrow: 1, flexDirection: 'row', alignItems: 'center', gap: 12, borderColor: got ? C.brand : C.line }}
-              accessibilityLabel={`${a.title}. ${a.desc} ${got ? t('Conseguido') : `${r.progress} de ${r.goal}`}`}>
+              accessibilityLabel={`${a.title}. ${a.desc} ${got ? t('Conseguido') : t('{a} de {b}', { a: r.progress, b: r.goal })}`}>
               <View style={{ width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: got ? C.brand : C.surface2 }}>
                 <Ionicons name={(got ? a.icon : `${a.icon}-outline`) as any} size={24} color={got ? C.onBrand : C.muted} />
               </View>

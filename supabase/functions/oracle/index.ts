@@ -15,6 +15,7 @@
 // ============================================================
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
+import { langOf, answerIn, say } from '../_shared/lang.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { minutesPlain, type MeetingMinutes } from '../_shared/meeting.ts';
 
@@ -57,11 +58,13 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY')!,
       { global: { headers: { Authorization: auth } } },
     );
+    const body = await req.json();
+    // v30: el Oráculo responde en el idioma de la app.
+    const lang = langOf(body.lang);
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData.user?.id;
-    if (!userId) return json({ error: 'No autenticado' }, 401);
+    if (!userId) return json({ error: say(lang, 'No autenticado') }, 401);
 
-    const body = await req.json();
     const action = body.action ?? 'ask';
 
     // ---------- INDEX (una nota) ----------
@@ -94,7 +97,7 @@ Deno.serve(async (req) => {
 
     // ---------- ASK ----------
     const { question, mode = 'all', subjectId = null, noteId = null, ability = null, history = [], pet = null } = body;
-    if (!question) return json({ error: 'Falta question' }, 400);
+    if (!question) return json({ error: say(lang, 'Falta question') }, 400);
 
     let contextNotes: { title: string; content: string; note_id: string }[] = [];
     let usedSemantic = false;
@@ -110,7 +113,7 @@ Deno.serve(async (req) => {
       const byId = new Map(((ns ?? []) as any[]).map((n) => [n.id, n]));
       contextNotes = mins
         .filter((t) => !subjectId || byId.get(t.note_id)?.subject_id === subjectId)
-        .map((t) => ({ note_id: t.note_id, title: byId.get(t.note_id)?.title ?? 'Reunión', content: minutesPlain(t.summary, dayEs(t.started_at)) }));
+        .map((t) => ({ note_id: t.note_id, title: byId.get(t.note_id)?.title ?? say(lang, 'Reunión'), content: minutesPlain(t.summary, dayEs(t.started_at), false, lang) }));
     } else if (mode === 'note' && noteId) {
       const { data } = await supabase.from('notes').select('id, title, content').eq('id', noteId).single();
       if (data) contextNotes = [{ note_id: data.id, title: data.title ?? 'Nota', content: data.content ?? '' }];
@@ -146,13 +149,13 @@ Deno.serve(async (req) => {
         for (const t of (trs ?? []) as any[]) {
           if (!isMeeting(t.summary)) continue;
           const n = contextNotes.find((x) => x.note_id === t.note_id);
-          if (n && !n.content.includes('### Decisiones') && n.content.length < 40000) n.content += '\n\n' + minutesPlain(t.summary, dayEs(t.started_at));
+          if (n && !n.content.includes('### Decisiones') && n.content.length < 40000) n.content += '\n\n' + minutesPlain(t.summary, dayEs(t.started_at), false, lang);
         }
       } catch (_) { /* sin actas */ }
     }
 
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
-    if (!apiKey) return json({ error: 'ANTHROPIC_API_KEY no configurada' }, 500);
+    if (!apiKey) return json({ error: say(lang, 'ANTHROPIC_API_KEY no configurada') }, 500);
 
     const contextBlock = contextNotes.length
       ? contextNotes.map((n, i) => `[Nota ${i + 1}: "${n.title}"]\n${n.content}`).join('\n\n---\n\n')
@@ -177,7 +180,7 @@ Deno.serve(async (req) => {
       'Si las notas no contienen la respuesta, puedes usar tu conocimiento general PERO avisa claramente que eso no salió de sus apuntes. ' +
       'Cuando uses una nota, menciónala por su título. Sé conciso pero completo.\n\n' +
       (mode === 'meetings' ? 'Las notas de abajo son actas de reuniones de trabajo: cuando respondas, di de qué reunión y fecha sale cada cosa y quién quedó a cargo. ' : '') +
-      '=== NOTAS DEL ESTUDIANTE ===\n' + contextBlock;
+      (lang === 'en' ? answerIn(lang).trim() + '\n\n' : '') + '=== NOTAS DEL ESTUDIANTE ===\n' + contextBlock;
 
     const messages = [
       ...(Array.isArray(history) ? history.slice(-8).map((m: any) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: String(m.content) })) : []),
@@ -189,7 +192,7 @@ Deno.serve(async (req) => {
       headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({ model: Deno.env.get('OCR_MODEL') ?? 'claude-sonnet-5', max_tokens: 1500, system, messages }),
     });
-    if (!res.ok) return json({ error: 'Fallo del modelo', detail: await res.text() }, 502);
+    if (!res.ok) return json({ error: say(lang, 'Fallo del modelo'), detail: await res.text() }, 502);
     const data = await res.json();
     const answer = (data.content ?? []).map((b: any) => b.text ?? '').join('').trim();
 

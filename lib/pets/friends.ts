@@ -104,7 +104,7 @@ export class FriendsController {
     const box = document.createElement('div');
     Object.assign(box.style, { position: 'absolute', left: '0', top: '0', width: `${FRIEND_SIZE}px`, height: `${FRIEND_SIZE}px`, willChange: 'transform', touchAction: 'manipulation', userSelect: 'none' });
     box.setAttribute('role', 'button');
-    box.setAttribute('aria-label', `Saludar a la mascota de ${spec.name}`);
+    box.setAttribute('aria-label', t('Saludar a la mascota de {name}', { name: spec.name }));
     box.tabIndex = -1;
     const sprite = document.createElement('div');
     Object.assign(sprite.style, { width: '100%', height: '100%', backgroundRepeat: 'no-repeat', imageRendering: 'pixelated', backgroundSize: `${FRAMES.length * FRIEND_SIZE}px ${FRIEND_SIZE}px`, transformOrigin: '50% 100%' });

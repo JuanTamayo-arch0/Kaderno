@@ -54,7 +54,7 @@ export function Lista({ tasks, cols, steps, members, editable, isWide, selecting
         {(['fecha', 'responsable', 'columna'] as const).map((o) => (
           <Pressable key={o} onPress={() => setOrden(o)}
             style={{ paddingVertical: 7, paddingHorizontal: 13, borderRadius: R.pill, borderWidth: 1, backgroundColor: orden === o ? C.surface2 : 'transparent', borderColor: orden === o ? C.brand : C.line }}>
-            <Text style={{ color: orden === o ? C.brand : C.muted, fontSize: 12.5, fontWeight: orden === o ? '700' : '500' }}>{t('Por {o}', { o })}</Text>
+            <Text style={{ color: orden === o ? C.brand : C.muted, fontSize: 12.5, fontWeight: orden === o ? '700' : '500' }}>{o === 'fecha' ? t('Por fecha') : o === 'responsable' ? t('Por responsable') : t('Por columna')}</Text>
           </Pressable>
         ))}
         <View style={{ flex: 1 }} />
@@ -104,7 +104,7 @@ export function Lista({ tasks, cols, steps, members, editable, isWide, selecting
                 <Text style={{ color: C.muted, fontSize: 11.5 }}>· {who ? nameOf(who.profile) : trn('sin asignar')}</Text>
                 {due && <Text style={{ color: due.color, fontSize: 11.5, fontWeight: '700' }}>· {due.label}</Text>}
                 {st.length > 0 && <Text style={{ color: C.muted, fontSize: 11.5 }}>· {st.filter((s) => s.done).length}/{st.length}</Text>}
-                {!!comments?.[t.id] && <Text style={{ color: C.muted, fontSize: 11.5 }} accessibilityLabel={`${comments[t.id]} comentarios`}>· 💬 {comments[t.id]}</Text>}
+                {!!comments?.[t.id] && <Text style={{ color: C.muted, fontSize: 11.5 }} accessibilityLabel={trn('{n} comentarios', { n: comments[t.id] })}>· 💬 {comments[t.id]}</Text>}
               </View>
             </View>
 

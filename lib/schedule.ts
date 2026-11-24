@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { savePrefs } from './db';
-import { t } from './i18n';
+import { t, trn } from './i18n';
 
 // ============================================================
 //  Configuración del horario (bloques de hora personalizables)
@@ -155,7 +155,7 @@ export function currentDays(): string[] { return DAY_NAMES.slice(0, SCHEDULE.day
 // bloques y quedó una clase colgando, no se rompe: devuelve un texto neutro.
 export function slotLabel(slot: number, fmt24 = SCHEDULE.fmt24): string {
   const b = SCHEDULE.blocks[slot];
-  return b ? blockLabel(b, fmt24) : `Bloque ${slot + 1}`;
+  return b ? blockLabel(b, fmt24) : trn('Bloque {n}', { n: slot + 1 });
 }
 
 // Lectura SÍNCRONA en web para que el horario se pinte bien en el primer render.

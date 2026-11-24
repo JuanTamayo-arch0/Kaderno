@@ -19,13 +19,13 @@ export type Vocab = {
 };
 
 const STUDY: Vocab = {
-  subjects: t('Materias'), subject: t('Materia'), subjectLower: 'materia', subjectsLower: 'materias', newSubject: t('Nueva materia'), noSubjects: t('Aún no tienes materias'),
+  subjects: t('Materias'), subject: t('Materia'), subjectLower: t('materia'), subjectsLower: t('materias'), newSubject: t('Nueva materia'), noSubjects: t('Aún no tienes materias'),
   noSubjectsText: t('Crea las materias del semestre para organizar tareas, notas y calificaciones.'), subjectsCount: (n) => t('{n} este semestre', { n }),
-  schedule: t('Horario'), studySection: t('Estudiar'), studyTab: t('Estudiar'), subjectsTab: t('Materias'), subjectIcon: 'book', exam: t('Parcial'), exams: t('Parciales'), klass: 'clase', record: t('Grabar clase'), transcriptOf: t('Transcripción de la clase'), semester: t('Semestre'), teacher: t('Profesor'),
+  schedule: t('Horario'), studySection: t('Estudiar'), studyTab: t('Estudiar'), subjectsTab: t('Materias'), subjectIcon: 'book', exam: t('Parcial'), exams: t('Parciales'), klass: t('clase'), record: t('Grabar clase'), transcriptOf: t('Transcripción de la clase'), semester: t('Semestre'), teacher: t('Profesor'),
 };
 const WORK: Vocab = {
   subjects: t('Áreas'), subject: t('Área'), subjectLower: t('área'), subjectsLower: t('áreas'), newSubject: t('Nueva área o cliente'), noSubjects: t('Aún no tienes áreas'),
-  noSubjectsText: t('Crea tus áreas o clientes para organizar tareas, notas y horas.'), subjectsCount: (n) => `${n} ${n === 1 ? 'activa' : 'activas'}`,
+  noSubjectsText: t('Crea tus áreas o clientes para organizar tareas, notas y horas.'), subjectsCount: (n) => (n === 1 ? t('1 activa') : t('{n} activas', { n })),
   schedule: t('Agenda'), studySection: t('Herramientas'), studyTab: t('Enfoque'), subjectsTab: t('Áreas'), subjectIcon: 'briefcase', exam: t('Entrega'), exams: t('Entregas'), klass: t('reunión'), record: t('Grabar reunión'), transcriptOf: t('Transcripción de la reunión'), semester: t('Trimestre'), teacher: t('Responsable'),
 };
 const BOTH: Vocab = {

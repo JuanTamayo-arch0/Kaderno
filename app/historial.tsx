@@ -18,7 +18,7 @@ import { confirm, friendlyError, notify, toast } from '../lib/feedback';
 import { Field } from '../components/ds';
 import { Sheet } from '../components/cards/CardForms';
 import { DateField } from '../components/DateTime';
-import { t, trn, locale } from '../lib/i18n';
+import { t, trn, locale, monthsShort, decSep } from '../lib/i18n';
 
 // ============================================================
 //  Historial académico (v26, fase 3): los semestres, el promedio acumulado,
@@ -82,14 +82,14 @@ function Historial() {
     const s = t.summary;
     const isOpen = t.status === 'open';
     return (
-      <Pressable key={t.id} onPress={() => setSel(t.id)} accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={`Semestre ${t.name}`}
+      <Pressable key={t.id} onPress={() => setSel(t.id)} accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={trn('Semestre {name}', { name: t.name })}
         style={({ hovered }: any) => ({ padding: 14, borderRadius: 14, borderWidth: on ? 2 : 1, borderColor: on ? C.brand : C.line, backgroundColor: hovered ? C.surface2 : C.surface, gap: 4 })}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Text dataSet={{ head: '1' }} style={{ color: C.text, fontSize: 16, fontWeight: '800', flex: 1 }}>{t.name}</Text>
           <Text style={{ fontSize: 11.5, fontWeight: '700', paddingVertical: 3, paddingHorizontal: 9, borderRadius: 99, overflow: 'hidden', color: isOpen ? C.onBrand : C.muted, backgroundColor: isOpen ? C.brand : C.surface2 }}>{isOpen ? trn('En curso') : trn('Cerrado')}</Text>
         </View>
         <Text style={{ color: C.muted, fontSize: 12.5 }}>
-          {isOpen ? `${openSubjects.length} ${openSubjects.length === 1 ? 'materia' : 'materias'}` : trn('{v} materias · {fmtGrade} · {v2} créditos', { v: s?.subjects.length ?? 0, fmtGrade: fmtGrade(s?.avg ?? null, scale), v2: s?.credits ?? 0 })}
+          {isOpen ? `${openSubjects.length} ${openSubjects.length === 1 ? trn('materia') : trn('materias')}` : trn('{v} materias · {fmtGrade} · {v2} créditos', { v: s?.subjects.length ?? 0, fmtGrade: fmtGrade(s?.avg ?? null, scale), v2: s?.credits ?? 0 })}
         </Text>
       </Pressable>
     );
@@ -98,7 +98,7 @@ function Historial() {
   const chart = closed.length > 1 ? (
     <Card style={{ gap: 10 }}>
       <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{t('Promedio por semestre')}</Text>
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 10, height: 120 }} accessibilityLabel={`Promedios: ${[...closed].reverse().map((t) => `${t.name} ${fmtGrade(t.summary?.avg ?? null, scale)}`).join(', ')}`}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 10, height: 120 }} accessibilityLabel={trn('Promedios: {v}', { v: [...closed].reverse().map((t) => `${t.name} ${fmtGrade(t.summary?.avg ?? null, scale)}`).join(', ') })}>
         {[...closed].reverse().slice(-8).map((t) => {
           const v = t.summary?.avg != null ? (t.summary.avg / (t.summary.max || scale.max)) : 0;
           return (
@@ -152,15 +152,15 @@ function Historial() {
 
   return (
     <Screen title={t('Historial académico')} subtitle={t('Tus semestres, sus notas y el promedio acumulado')} back="/materias" maxWidth={1180}
-      right={<Button label={isWide ? 'Descargar (PDF)' : 'PDF'} icon="download-outline" size="sm" kind="secondary" disabled={!closed.length} onPress={pdf} />}>
+      right={<Button label={isWide ? trn('Descargar (PDF)') : 'PDF'} icon="download-outline" size="sm" kind="secondary" disabled={!closed.length} onPress={pdf} />}>
       {!ready && <Card style={{ marginBottom: 12 }}><Text style={{ color: C.warnText, fontSize: 13 }}>{NEEDS_V25_3}</Text></Card>}
       <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap', marginBottom: 18 }}>
-        {stat(t('Promedio acumulado'), cum.avg, (n) => fmtGrade(Number.isFinite(n) ? n : null, scale), cum.terms ? `${cum.terms} ${cum.terms === 1 ? 'semestre cerrado' : 'semestres cerrados'}` : t('Aún sin semestres cerrados'))}
+        {stat(t('Promedio acumulado'), cum.avg, (n) => fmtGrade(Number.isFinite(n) ? n : null, scale), cum.terms ? `${cum.terms} ${cum.terms === 1 ? t('semestre cerrado') : t('semestres cerrados')}` : t('Aún sin semestres cerrados'))}
         {stat(t('Créditos aprobados'), cum.credits, (n) => String(Math.round(n)))}
         <Card onPress={() => setScaleOpen(true)} accessibilityLabel={t('Cambiar la escala de notas')} style={{ flexGrow: 1, flexBasis: isWide ? 0 : 150, padding: 14 }}>
           <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600' }}>{t('Escala de notas')}</Text>
-          <Text style={{ color: C.text, fontSize: 18, fontWeight: '800', marginTop: 4 }}>{t('0 a {replace}', { replace: String(scale.max).replace('.', ',') })}</Text>
-          <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>{t('Aprueba con {replace} · Cambiar', { replace: String(scale.pass).replace('.', ',') })}</Text>
+          <Text style={{ color: C.text, fontSize: 18, fontWeight: '800', marginTop: 4 }}>{t('0 a {replace}', { replace: String(scale.max).replace('.', decSep()) })}</Text>
+          <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>{t('Aprueba con {replace} · Cambiar', { replace: String(scale.pass).replace('.', decSep()) })}</Text>
         </Card>
       </View>
       {terms === null ? <Skeleton height={220} /> : !terms.length ? (
@@ -182,7 +182,7 @@ function Historial() {
   );
 }
 
-const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const MONTHS = monthsShort();
 const shortDay = (iso: string) => { const [y, m, d] = iso.slice(0, 10).split('-').map(Number); return `${d} ${MONTHS[m - 1]} ${y}`; };
 
 function ClosedDetail({ t, scale, onEdit, onDelete }: { t: Term; scale: ReturnType<typeof useGradeScale>; onEdit: () => void; onDelete: () => void }) {
@@ -201,7 +201,7 @@ function ClosedDetail({ t, scale, onEdit, onDelete }: { t: Term; scale: ReturnTy
     <View style={{ gap: 14 }}>
       <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
         <Text dataSet={{ head: '1' }} style={{ color: C.text, fontSize: 22, fontWeight: '800' }}>{trn('Semestre {name}', { name: t.name })}</Text>
-        <Text style={{ color: C.muted, fontSize: 13, flex: 1 }}>{[range, s.manual ? 'agregado a mano' : '', !sameScale ? trn('escala de 0 a {max}', { max: s.max }) : ''].filter(Boolean).join(' · ')}</Text>
+        <Text style={{ color: C.muted, fontSize: 13, flex: 1 }}>{[range, s.manual ? trn('agregado a mano') : '', !sameScale ? trn('escala de 0 a {max}', { max: s.max }) : ''].filter(Boolean).join(' · ')}</Text>
         <Button label={trn('Editar')} kind="ghost" size="sm" onPress={onEdit} />
         <Button label={trn('Borrar')} kind="ghost" size="sm" onPress={onDelete} />
       </View>

@@ -6,7 +6,7 @@ import { Sheet } from '../cards/CardForms';
 import { saveGoal, closeGoal, type Goal } from '../../lib/ritualsDb';
 import { OBSTACLES, PLAN_HINTS, planTemplate, fullPlan, planThen, wishExample, goalError, gradeInWish, type GoalDraft } from '../../lib/rituals';
 import { toast, notify, friendlyError } from '../../lib/feedback';
-import { t } from '../../lib/i18n';
+import { t, decSep } from '../../lib/i18n';
 
 // ============================================================
 //  Meta WOOP (v20, sección K): deseo, mejor resultado, obstáculo y
@@ -20,13 +20,13 @@ export function WoopFields({ step, d, onChange, subject, scale }: { step: number
   const then = planThen(d.plan, d.obstacle);
   if (step === 0) return (
     <View style={{ gap: 10 }}>
-      <Text style={{ color: C.text, fontSize: 14, lineHeight: 20 }}>{t('¿Qué quieres lograr{v}? Que sea retador pero posible.', { v: subject ? ` en ${subject}` : t(' este semestre') })}</Text>
-      <TextInput value={d.wish} onChangeText={(v) => onChange({ ...d, wish: v, target_grade: d.target_grade ?? gradeInWish(v, scale) })} placeholder={`Ej: ${wishExample(subject, scale)}`} placeholderTextColor={C.muted}
+      <Text style={{ color: C.text, fontSize: 14, lineHeight: 20 }}>{t('¿Qué quieres lograr{v}? Que sea retador pero posible.', { v: subject ? t(' en {subject}', { subject }) : t(' este semestre') })}</Text>
+      <TextInput value={d.wish} onChangeText={(v) => onChange({ ...d, wish: v, target_grade: d.target_grade ?? gradeInWish(v, scale) })} placeholder={t('Ej: {v}', { v: wishExample(subject, scale) })} placeholderTextColor={C.muted}
         accessibilityLabel={t('Tu meta')} maxLength={200} style={input} />
       {!!subject && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <Text style={{ color: C.muted, fontSize: 13 }}>{t('Nota que quieres sacar')}</Text>
-          <TextInput value={d.target_grade != null ? String(d.target_grade).replace('.', ',') : ''} keyboardType="decimal-pad" accessibilityLabel={t('Nota que quieres sacar')}
+          <TextInput value={d.target_grade != null ? String(d.target_grade).replace('.', decSep()) : ''} keyboardType="decimal-pad" accessibilityLabel={t('Nota que quieres sacar')}
             onChangeText={(v) => { const n = parseFloat(v.replace(',', '.')); onChange({ ...d, target_grade: v.trim() === '' || !Number.isFinite(n) ? null : n }); }}
             placeholder={scale >= 20 ? '80' : '4,0'} placeholderTextColor={C.muted} style={[input, { width: 80, textAlign: 'center', padding: 8 }]} />
           <Text style={{ color: C.muted, fontSize: 13 }}>{t('de {scale}', { scale })}</Text>

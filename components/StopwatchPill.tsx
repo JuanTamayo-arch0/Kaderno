@@ -11,7 +11,7 @@ import { Sheet } from './cards/CardForms';
 import { Button, Field } from './ds';
 import { friendlyError, notify, toast } from '../lib/feedback';
 import { dataChanged } from '../lib/uiBus';
-import { t, locale } from '../lib/i18n';
+import { t, locale, trn } from '../lib/i18n';
 
 // ============================================================
 //  Cronómetro corriendo (v25, fase 2): visible en cualquier pantalla, con
@@ -43,7 +43,7 @@ export function StopwatchPill({ inline = false }: { inline?: boolean }) {
     try {
       const r = await stopStopwatch(minutes);
       setFix(false);
-      if (r.saved) { toast(`${fmtHours(r.minutes)} anotadas${sw!.title ? `: ${sw!.title}` : ''}`, { tone: 'good', actionLabel: t('Ver horas'), onAction: () => router.push('/horas' as any) }); dataChanged(); }
+      if (r.saved) { toast(trn('{v} anotadas', { v: fmtHours(r.minutes) }) + (sw!.title ? `: ${sw!.title}` : ''), { tone: 'good', actionLabel: t('Ver horas'), onAction: () => router.push('/horas' as any) }); dataChanged(); }
       else toast(t('Menos de un minuto: no se anotó nada'));
     } catch (e) { notify(t('No se pudo guardar el tiempo'), t('{e} El cronómetro sigue corriendo para que no lo pierdas.', { e: friendlyError(e) })); }
     finally { setBusy(false); }

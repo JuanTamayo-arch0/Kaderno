@@ -9,7 +9,7 @@ import { friendlyError, notify } from '../../lib/feedback';
 import { useResponsive } from '../../lib/responsive';
 import { Button } from '../ds';
 import { CoinIcon, PetImage, PetSprite } from './PetArt';
-import { t } from '../../lib/i18n';
+import { t, trn } from '../../lib/i18n';
 
 export const PERSONALITY: Record<Species, { trait: string; sample: string }> = {
   pinguino: { trait: t('Ordenado y constante'), sample: t('Paso a paso. Hoy van 2 de 4.') },
@@ -67,7 +67,7 @@ export function PetChooser({ onDone }: { onDone?: (p: Pet) => void }) {
             onSubmitEditing={adopt} placeholder={DEFAULT_NAMES[sp]} placeholderTextColor={C.muted}
             style={[{ flex: 1, color: C.text, fontSize: 15, fontWeight: '700', paddingVertical: 12, minHeight: 46 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
         </View>
-        <Button label={`Adoptar a ${name.trim() || DEFAULT_NAMES[sp]}`} icon="paw" onPress={adopt} busy={busy} size="lg" />
+        <Button label={trn('Adoptar a {name}', { name: name.trim() || DEFAULT_NAMES[sp] })} icon="paw" onPress={adopt} busy={busy} size="lg" />
       </View>
       <Text style={{ color: C.muted, fontSize: 13, lineHeight: 19 }}>
         {t('La primera es gratis. Las demás las adoptas después con lo que ganes estudiando. Puedes cambiarle el nombre o apagarla cuando quieras.')}</Text>

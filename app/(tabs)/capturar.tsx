@@ -21,7 +21,7 @@ import { openTask, dataChanged } from '../../lib/uiBus';
 import { PhotoEditor } from '../../components/capture/PhotoEditor';
 import { NotePickSheet } from '../../components/capture/NotePickSheet';
 import { useSpaceFilter } from '../../lib/useSpace';
-import { t } from '../../lib/i18n';
+import { t, trn, dateLocale } from '../../lib/i18n';
 
 // Se carga al usarlo: así expo-image-picker no se descarga al abrir la app.
 const loadPicker = () => import('expo-image-picker');
@@ -264,7 +264,7 @@ export default function Capturar() {
   useEffect(() => {
     if (view !== 'preview' || !cur) return;
     let live = true;
-    noteToHtml(cur.markdown.replace(/!\[([^\]\n]*)\]\(figura:\d+\)/g, '*[dibujo: $1]*')).then((h) => live && setPreview(h)).catch(() => {});
+    noteToHtml(cur.markdown.replace(/!\[([^\]\n]*)\]\(figura:\d+\)/g, trn('*[dibujo: $1]*'))).then((h) => live && setPreview(h)).catch(() => {});
     return () => { live = false; };
   }, [view, cur?.markdown]);
 
@@ -299,7 +299,7 @@ export default function Capturar() {
       if (subjectId) AsyncStorage.setItem(LAST_SUBJECT, subjectId).catch(() => {});
       reset();
       dataChanged();
-      toast(target.kind === 'new' ? t('Nota guardada') : `Agregado a ${label}`, { tone: 'good', actionLabel: t('Abrir'), onAction: () => router.push(`/nota/${id}`) });
+      toast(target.kind === 'new' ? t('Nota guardada') : trn('Agregado a {label}', { label }), { tone: 'good', actionLabel: t('Abrir'), onAction: () => router.push(`/nota/${id}`) });
       getNotes().then((n) => setRecent(n.slice(0, 12))).catch(() => {});
     } catch (e) { notify(t('No se pudo guardar'), friendlyError(e)); }
     finally { setBusy(false); }
@@ -390,7 +390,7 @@ export default function Capturar() {
             {(cur.figures as Figure[]).map((f) => {
               const k = `${cur.id}:${f.id}`, off = drop.has(k);
               return (
-                <Pressable key={k} onPress={() => setDrop((d) => { const n = new Set(d); off ? n.delete(k) : n.add(k); return n; })} accessibilityRole="checkbox" accessibilityState={{ checked: !off }} accessibilityLabel={`Incluir dibujo: ${f.caption || f.id}`}
+                <Pressable key={k} onPress={() => setDrop((d) => { const n = new Set(d); off ? n.delete(k) : n.add(k); return n; })} accessibilityRole="checkbox" accessibilityState={{ checked: !off }} accessibilityLabel={trn('Incluir dibujo: {v}', { v: f.caption || f.id })}
                   style={{ width: 120, borderRadius: 10, borderWidth: 1, borderColor: off ? C.line : C.brand, padding: 4, opacity: off ? 0.5 : 1 }}>
                   {thumbs[k] ? <Image source={{ uri: thumbs[k] }} style={{ width: '100%', height: 80, borderRadius: 6, backgroundColor: '#fff' }} resizeMode="contain" /> : <View style={{ height: 80, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator color={C.brand} /></View>}
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
@@ -545,7 +545,7 @@ export default function Capturar() {
                 </View>
                 <View style={{ padding: 12 }}>
                   <Text numberOfLines={1} style={{ color: C.text, fontSize: 13.5, fontWeight: '700' }}>{n.title || t('Nota')}</Text>
-                  <Text numberOfLines={1} style={{ color: C.muted, fontSize: 12, marginTop: 3 }}>{su?.name ?? t('Sin materia')} · {new Date(n.created_at).toLocaleDateString('es', { day: 'numeric', month: 'short' })}</Text>
+                  <Text numberOfLines={1} style={{ color: C.muted, fontSize: 12, marginTop: 3 }}>{su?.name ?? t('Sin materia')} · {new Date(n.created_at).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' })}</Text>
                 </View>
               </Card>
             );

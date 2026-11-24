@@ -9,7 +9,7 @@ import { SubjectIcon, isPhotoIcon } from './SubjectIcon';
 import { shrinkToSquare } from '../lib/imageResize';
 import { useMode, type Space } from '../lib/mode';
 import { spaceOf } from '../lib/spaces';
-import { t } from '../lib/i18n';
+import { t, trn } from '../lib/i18n';
 
 // Se carga al usarlo: así expo-image-picker no se descarga al abrir la app.
 const loadPicker = () => import('expo-image-picker');
@@ -55,7 +55,7 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
       const res = await (await loadPicker()).launchImageLibraryAsync({ allowsEditing: true, aspect: [1, 1], quality: 0.5, base64: true });
       if (res.canceled || !res.assets?.length) return;
       const a = res.assets[0];
-      const uri = a.uri?.startsWith('data:') ? a.uri : (a.base64 ? `data:${a.mimeType ?? 'image/jpeg'};base64,${a.base64}` : a.uri);
+      const uri = a.uri?.startsWith('data:') ? a.uri : (a.base64 ? `data:${a.mimeType ?? 'image/jpeg'};base64,${a.base64}` /* i18n-ok */ : a.uri);
       if (uri) setIcon(await shrinkToSquare(uri).catch(() => uri));
     } catch (e) { notify(t('No se pudo cargar la imagen'), friendlyError(e)); }
   }
@@ -76,7 +76,7 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
           else { toast(t('{trim} pasó a {v}', { trim: name.trim(), v: spaceSel === 'trabajo' ? t('Trabajo') : t('Estudio') }), { tone: 'good' }); onSaved(); return; }
         }
       } else await addSubject(name.trim(), color, icon, cr, extra);
-      toast(editSubject ? `${mv.subject} guardada` : `${mv.subject} creada: ${name.trim()}`, { tone: 'good' });
+      toast(editSubject ? trn('{v} guardada', { v: mv.subject }) : trn('{v} creada: {name}', { v: mv.subject, name: name.trim() }), { tone: 'good' });
       onSaved();
     } catch (e) { notify(t('No se pudo guardar'), friendlyError(e)); }
     finally { setBusy(false); }
@@ -88,7 +88,7 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
     try {
       await archiveSubject(editSubject.id);
       const id = editSubject.id;
-      toast(`${editSubject.name} archivada`, { actionLabel: t('Deshacer'), onAction: () => { restoreSubject(id).then(onSaved).catch(() => {}); } });
+      toast(trn('{name} archivada', { name: editSubject.name }), { actionLabel: t('Deshacer'), onAction: () => { restoreSubject(id).then(onSaved).catch(() => {}); } });
       onArchived?.();
     } catch (e) { notify(t('No se pudo archivar'), friendlyError(e)); }
   }
@@ -118,7 +118,7 @@ export function SubjectModal({ visible, editSubject, onClose, onSaved, onArchive
             )}
             {!work && <Field label={t('Créditos')} value={credits} onChangeText={(v) => setCredits(v.replace(/\D/g, '').slice(0, 2))} keyboardType="number-pad" placeholder={t('Ej: 3')} hint={t('Se usan para el promedio del semestre.')} />}
             <Field label={work ? t('Responsable o contacto') : t('Profesor')} value={teacher} onChangeText={setTeacher} placeholder={t('Ej: Ana Pérez')} autoFocus={focusField === 'teacher'} maxLength={120} />
-            <Field label={work ? t('Lugar') : t('Salón')} value={room} onChangeText={setRoom} placeholder={work ? 'Ej: Oficina 3 o remoto' : 'Ej: Bloque 11, 201'} autoFocus={focusField === 'room'} maxLength={80} />
+            <Field label={work ? t('Lugar') : t('Salón')} value={room} onChangeText={setRoom} placeholder={work ? trn('Ej: Oficina 3 o remoto') : trn('Ej: Bloque 11, 201')} autoFocus={focusField === 'room'} maxLength={80} />
             <Field label={work ? t('Enlace') : t('Enlace del aula virtual')} value={link} onChangeText={(v) => { setLink(v); setLinkErr(null); }} placeholder="https://…" autoCapitalize="none" autoCorrect={false} keyboardType="url"
               error={linkErr} autoFocus={focusField === 'link'} hint={work ? t('La carpeta compartida, el tablero o el sitio del cliente.') : t('Moodle, Teams, Classroom o la página del curso.')} />
             <Text style={lbl()}>{t('Color')}</Text>

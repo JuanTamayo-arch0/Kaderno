@@ -19,7 +19,7 @@ import { toast, notify, friendlyError, confirm } from '../lib/feedback';
 import { streakChanged, dataChanged } from '../lib/uiBus';
 import { refreshNavCounts } from '../lib/navCounts';
 import { getGoal } from '../lib/ritualsDb';
-import { t } from '../lib/i18n';
+import { t, decSep } from '../lib/i18n';
 
 // ============================================================
 //  Simulacro (v20, sección H): preguntas de tus notas, mezcla de opción
@@ -210,7 +210,7 @@ function Simulacro() {
             <View style={{ width: `${((idx + 1) / qs.length) * 100}%`, height: '100%', backgroundColor: C.brand }} />
           </View>
           <Text style={{ color: C.muted, fontSize: 13, fontVariant: ['tabular-nums'] }}>{t('{v} de {length}', { v: idx + 1, length: qs.length })}</Text>
-          {timed && <Text style={{ color: left < 60 ? C.badText : C.text, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] }} accessibilityLabel={`Quedan ${fmtClock(left)}`}>{fmtClock(left)}</Text>}
+          {timed && <Text style={{ color: left < 60 ? C.badText : C.text, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] }} accessibilityLabel={t('Quedan {v}', { v: fmtClock(left) })}>{fmtClock(left)}</Text>}
         </View>
         <Card style={{ gap: 16, padding: isWide ? 24 : 16 }}>
           <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>
@@ -269,7 +269,7 @@ function Simulacro() {
               <Pressable key={i} disabled={!r.id} onPress={() => r.id && router.push(`/nota/${r.id}`)} accessibilityRole="link" style={{ gap: 4 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
                   <Text style={{ color: C.text, fontSize: 13, flex: 1 }} numberOfLines={1}>{r.title}</Text>
-                  <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('{replace} de {total}', { replace: String(r.points).replace('.', ','), total: r.total })}</Text>
+                  <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('{replace} de {total}', { replace: String(r.points).replace('.', decSep()), total: r.total })}</Text>
                 </View>
                 <View style={{ height: 6, borderRadius: 3, backgroundColor: C.surface2, overflow: 'hidden' }}>
                   <View style={{ width: `${(r.points / r.total) * 100}%`, height: '100%', backgroundColor: r.points / r.total >= 0.6 ? C.good : C.warn }} />

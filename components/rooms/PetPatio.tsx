@@ -7,7 +7,7 @@ import { ROOM_H, ROOM_W, roomSvg, type Home } from '../../lib/pets/home';
 import { PatioSim, frameFor, moodFor, hopHeight, ballPos, type PatioMember } from '../../lib/pets/patio';
 import { prefersReducedMotion } from '../../lib/motion';
 import { PetImage } from '../pets/PetArt';
-import { t } from '../../lib/i18n';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  El patio de la sala: un cuarto de estudio en pixel art donde están
@@ -161,7 +161,7 @@ export function PetPatio({ members, height, compact, onTapPet, celebrate, greeti
       <View style={{ height, borderRadius: 14, overflow: 'hidden', backgroundColor: '#2b2433', flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 8, paddingBottom: 6 }}
         accessibilityRole="image" accessibilityLabel={t('Mascotas de la sala: {join}', { join: members.map((m) => m.name).join(', ') })}>
         {members.map((m) => (
-          <Pressable key={m.uid} onPress={() => onTapPet?.(m.uid)} accessibilityRole="button" accessibilityLabel={m.me ? t('Tu mascota') : `Saludar a ${m.name}`} style={{ alignItems: 'center' }}>
+          <Pressable key={m.uid} onPress={() => onTapPet?.(m.uid)} accessibilityRole="button" accessibilityLabel={m.me ? t('Tu mascota') : trn('Saludar a {name}', { name: m.name })} style={{ alignItems: 'center' }}>
             <PetImage species={m.species} outfit={m.outfit} mood={moodFor(m.state)} frame={m.state === 'away' ? 'sueno1' : 'quieto'} size={petSize} />
             {!compact && <Text style={{ color: '#e8eaf0', fontSize: 11, fontWeight: '700' }} numberOfLines={1}>{m.name.split(' ')[0]}</Text>}
           </Pressable>

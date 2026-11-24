@@ -54,6 +54,7 @@ export function isHumanText(s: string): boolean {
   if (/^(https?:|mailto:|tel:|data:|\/|\.\/|\.\.\/|#|@)/.test(x)) return false;
   if (/^</.test(x) || /<\/?[a-z][^>]*>/i.test(x) && /[="]/.test(x)) return false; // HTML o SVG: se traduce a mano
   if (/^[a-z0-9_.:\/\-]+$/.test(x) && !ACCENT.test(x)) return false; // llave o ruta
+  if (/^[a-z]{2}(-[A-Z]{2})?$/.test(x)) return false;                 // código de idioma (es-CO)
   if (/^[a-zA-Z]+[A-Z][a-zA-Z]*$/.test(x)) return false;           // camelCase
   if (/^[A-Z0-9_]+$/.test(x) && x.length > 1 && !SPANISH_WORDS.has(x.toLowerCase())) return false; // CONSTANTE, PDF, CSV
   if (/^\s*[\[{(].*[\]})]\s*$/.test(x) && /["':]/.test(x)) return false; // JSON o similar
@@ -169,7 +170,13 @@ export function inTVars(node: ts.Node): boolean {
 export function markedOk(sf: ts.SourceFile, node: ts.Node): boolean {
   const { line } = sf.getLineAndCharacterOfPosition(node.getStart(sf));
   const lines = sf.text.split('\n');
-  return /i18n-ok/.test(lines[line] ?? '') || /i18n-ok/.test(lines[line - 1] ?? '');
+  if (/i18n-ok/.test(lines[line] ?? '') || /i18n-ok/.test(lines[line - 1] ?? '')) return true;
+  // Bloque: desde una línea con "i18n-ok-desde" hasta una con "i18n-ok-hasta".
+  for (let i = line; i >= 0; i--) {
+    if (/i18n-ok-hasta/.test(lines[i] ?? '') && i < line) return false;
+    if (/i18n-ok-desde/.test(lines[i] ?? '')) return true;
+  }
+  return false;
 }
 
 /** ¿El archivo entero queda en español a propósito? (marca en las primeras líneas). */
@@ -218,4 +225,19 @@ export function looksLabel(s: string): boolean {
 export function isJsxHuman(s: string): boolean {
   const x = s.trim();
   return /[A-Za-zÁÉÍÓÚáéíóúÑñ]/.test(x) && !KEEP.has(x) && !/^(https?:|\/)/.test(x);
+}
+
+/** ¿Es una rama de un plural? `n === 1 ? 'tarea' : 'tareas'` (las dos ramas son texto). */
+export function pluralBranch(node: ts.Node): boolean {
+  const p = node.parent;
+  if (!p || !ts.isConditionalExpression(p) || p.condition === node) return false;
+  const lit = (e: ts.Expression) => ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e);
+  if (!lit(p.whenTrue) || !lit(p.whenFalse)) return false;
+  let c: ts.Expression = p.condition;
+  while (ts.isParenthesizedExpression(c)) c = c.expression;
+  if (!ts.isBinaryExpression(c)) return false;
+  const num = (e: ts.Expression) => ts.isNumericLiteral(e) && (e.text === '1' || e.text === '0');
+  if (!lit(p.whenTrue) || !/[a-záéíóúñ]/i.test((p.whenTrue as ts.StringLiteral).text) || /^#/.test((p.whenTrue as ts.StringLiteral).text)) return false;
+  return (num(c.right) || num(c.left)) && [ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsEqualsToken,
+    ts.SyntaxKind.GreaterThanToken, ts.SyntaxKind.LessThanToken, ts.SyntaxKind.EqualsEqualsToken].includes(c.operatorToken.kind);
 }

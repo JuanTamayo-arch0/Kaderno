@@ -12,7 +12,7 @@ import { C, currentTheme, inkOn, RAD } from '../lib/theme';
 import { BRAND } from '../lib/brand';
 import { KadernoWordmark } from '../components/brand/KadernoLogo';
 import { KadernoWrites } from '../components/brand/KadernoWrites';
-import { t } from '../lib/i18n';
+import { t, trn } from '../lib/i18n';
 import { LangPicker } from '../components/LangPicker';
 import { showLangPicker } from '../lib/i18nApp';
 
@@ -184,7 +184,7 @@ export default function Login() {
       {[
         { t: t('Cálculo II · Taller 3'), d: t('Mañana'), done: false },
         { t: t('Química · Informe de lab'), d: t('Viernes'), done: false },
-        { t: 'Historia · Lectura cap. 4', d: t('Hecho'), done: true },
+        { t: trn('Historia · Lectura cap. 4'), d: t('Hecho'), done: true },
       ].map((r) => (
         <View key={r.t} style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
           <View style={{ width: 16, height: 16, borderRadius: 8, borderWidth: 1.5, borderColor: r.done ? BRAND.margin : 'rgba(255,255,255,0.6)',
@@ -270,7 +270,7 @@ export default function Login() {
 
           <Field label={t('Correo')} icon="mail-outline">
             <Input value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address"
-              autoComplete="email" placeholder="tucorreo@ejemplo.com" enterKeyHint="next" />
+              autoComplete="email" placeholder={trn('tucorreo@ejemplo.com')} enterKeyHint="next" />
           </Field>
 
           <Field label={t('Contraseña')} icon="lock-closed-outline">
@@ -284,7 +284,7 @@ export default function Login() {
           {mode === 'up' && (
             <>
               {/* Medidor de seguridad: solo aparece al registrarse */}
-              <View style={{ flexDirection: 'row', gap: 5, marginTop: 10 }} accessibilityLabel={password ? `Seguridad: ${pwInfo.label}` : undefined}>
+              <View style={{ flexDirection: 'row', gap: 5, marginTop: 10 }} accessibilityLabel={password ? trn('Seguridad: {label}', { label: pwInfo.label }) : undefined}>
                 {[0, 1, 2, 3].map((i) => (
                   <View key={i} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: i < pwInfo.score ? pwInfo.color : C.line, ...(web ? { transitionProperty: 'background-color', transitionDuration: '250ms' } as any : null) }} />
                 ))}

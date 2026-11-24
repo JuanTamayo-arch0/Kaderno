@@ -1,4 +1,3 @@
-// i18n-ok-archivo: se traduce a mano (v30, fase 6): tiene palabras que el lector reconoce o texto legal.
 // ============================================================
 //  Importar entregas del sílabo.
 //  Acepta tres formas de texto:
@@ -10,6 +9,7 @@
 //  Cada línea se entiende con las mismas reglas de "Agregar con texto".
 // ============================================================
 import { parseQuickAdd, matchSubject, norm, type QuickSubject, type QuickType } from './quickAdd';
+import { t, lang } from './i18n';
 
 export type SylRow = {
   title: string;
@@ -23,12 +23,13 @@ export type SylRow = {
 };
 
 const HEAD: Record<string, string[]> = {
-  title: ['titulo', 'tarea', 'actividad', 'entrega', 'evaluacion', 'nombre', 'tema'],
-  date: ['fecha', 'dia', 'vence', 'fecha de entrega', 'fecha entrega'],
-  time: ['hora'],
-  type: ['tipo', 'categoria'],
-  subject: ['materia', 'asignatura', 'curso'],
-  description: ['descripcion', 'detalle', 'detalles', 'notas', 'observaciones', 'peso'],
+  // Encabezados en español y en inglés (v30).
+  title: ['titulo', 'tarea', 'actividad', 'entrega', 'evaluacion', 'nombre', 'tema', 'title', 'task', 'activity', 'assignment', 'name', 'topic'], // i18n-ok
+  date: ['fecha', 'dia', 'vence', 'fecha de entrega', 'fecha entrega', 'date', 'due', 'due date', 'day', 'deadline'], // i18n-ok
+  time: ['hora', 'time'], // i18n-ok
+  type: ['tipo', 'categoria', 'type', 'category'], // i18n-ok
+  subject: ['materia', 'asignatura', 'curso', 'subject', 'course', 'class'], // i18n-ok
+  description: ['descripcion', 'detalle', 'detalles', 'notas', 'observaciones', 'peso', 'description', 'details', 'notes', 'weight'], // i18n-ok
 };
 
 function detectDelimiter(lines: string[]): string | null {
@@ -76,13 +77,14 @@ function typeOf(cell: string, types: QuickType[]): string | null {
 
 function finish(row: Omit<SylRow, 'include' | 'warning'>, now: Date): SylRow {
   let warning: string | null = null;
-  if (!row.dueDate) warning = 'Sin fecha';
+  let past = false;
+  if (!row.dueDate) warning = t('Sin fecha');
   else {
     const [y, m, d] = row.dueDate.split('-').map(Number);
     const due = new Date(y, m - 1, d, 23, 59);
-    if (due.getTime() < now.getTime()) warning = 'La fecha ya pasó';
+    if (due.getTime() < now.getTime()) { warning = t('La fecha ya pasó'); past = true; }
   }
-  return { ...row, include: warning !== 'La fecha ya pasó', warning };
+  return { ...row, include: !past, warning };
 }
 
 export function parseSyllabus(text: string, subjects: QuickSubject[], types: QuickType[], defaultSubjectId: string | null, now = new Date()): SylRow[] {
@@ -119,7 +121,7 @@ export function parseSyllabus(text: string, subjects: QuickSubject[], types: Qui
         desc = rest.slice(1).join(' · ');
       }
       const when = parseQuickAdd(`x ${date} ${time}`.trim(), [], [], now);
-      const tparse = parseQuickAdd(title || 'Entrega', subjects, types, now);
+      const tparse = parseQuickAdd(title || t('Entrega'), subjects, types, now);
       rows.push(finish({
         title: (title || tparse.title).trim(),
         subjectId: subj ?? tparse.subjectId ?? defaultSubjectId,
@@ -133,7 +135,7 @@ export function parseSyllabus(text: string, subjects: QuickSubject[], types: Qui
   }
 
   for (const line of lines) {
-    const p = parseQuickAdd(line.replace(/^\s*[-*•]\s*/, '').replace(/^semana\s+\d+\s*[:.-]?\s*/i, ''), subjects, types, now);
+    const p = parseQuickAdd(line.replace(/^\s*[-*•]\s*/, '').replace(/^(semana|week)\s+\d+\s*[:.-]?\s*/i, ''), subjects, types, now);
     rows.push(finish({ title: p.title, subjectId: p.subjectId ?? defaultSubjectId, typeKey: p.typeKey, dueDate: p.dueDate, dueTime: p.dueTime, description: null }, now));
   }
   return rows;
@@ -141,6 +143,23 @@ export function parseSyllabus(text: string, subjects: QuickSubject[], types: Qui
 
 /** Prompt para que una IA convierta el sílabo al formato con barras. */
 export function syllabusPrompt(subjectName: string | null, year: number): string {
+  // i18n-ok-desde: los dos prompts, cada uno en su idioma.
+  if (lang() === 'en') return [
+    `I'm going to paste the schedule or syllabus for ${subjectName ? `the course ${subjectName}` : 'a course'} for the ${year} term.`,
+    'Extract ALL assignments, exams, quizzes, workshops, presentations and projects with a date.',
+    'Return them one per line, with no header or extra text, in this exact format:',
+    '',
+    'MM/DD/YYYY HH:MM | Type | Title | Description',
+    '',
+    'Rules:',
+    '- Type must be one of: Task, Exam, Quiz, Project.',
+    '- If there is no time, leave just the date (MM/DD/YYYY).',
+    "- If you don't know the exact date, use the first day of that week.",
+    '- In Description put the weight or topics, if they appear. Otherwise leave it empty.',
+    '',
+    'Here is the syllabus:',
+    '',
+  ].join('\n');
   return [
     `Te voy a pegar el cronograma o sílabo de ${subjectName ? `la materia ${subjectName}` : 'una materia'} del semestre ${year}.`,
     'Extrae TODAS las entregas, exámenes, quices, talleres, exposiciones y proyectos con fecha.',
@@ -157,4 +176,5 @@ export function syllabusPrompt(subjectName: string | null, year: number): string
     'Este es el sílabo:',
     '',
   ].join('\n');
+  // i18n-ok-hasta
 }

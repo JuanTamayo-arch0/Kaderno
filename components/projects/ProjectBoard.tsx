@@ -9,7 +9,7 @@ import { DragCard, DragGhost, useBoardDrag } from './BoardDrag';
 import { Subject } from '../../lib/db';
 import { BoardColumn, Member, PStep, PTask, colorOf, initialsOf, nameOf } from '../../lib/projects';
 import { COARSE_POINTER, NO_STEPS, SelectBox, dueInfo, isWeb } from './projectUi';
-import { t } from '../../lib/i18n';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Vista Tablero del proyecto: columnas, tarjetas, arrastrar y "Mover a" en el celular.
@@ -194,7 +194,7 @@ export function TaskCardView({ task, steps, members, subject, color, dim, mine, 
         </View>}
 
         {comments > 0 && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }} accessibilityLabel={`${comments} comentarios`}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }} accessibilityLabel={trn('{n} comentarios', { n: comments })}>
             <Ionicons name="chatbubble-outline" size={11} color={C.muted} />
             <Text style={{ color: C.muted, fontSize: 11.5, fontWeight: '700' }}>{comments}</Text>
           </View>
@@ -256,7 +256,7 @@ export function WorkBadges({ task, byId }: { task: PTask; byId: Record<string, P
   if (!p && !blockers.length && !labels.length && !task.repeat_rule) return null;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-      {p && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }} accessibilityLabel={`Prioridad ${p.label}`}><Ionicons name="flag" size={11} color={p.color} /><Text style={{ color: p.color, fontSize: 11.5, fontWeight: '800' }}>{p.label}</Text></View>}
+      {p && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }} accessibilityLabel={trn('Prioridad {label}', { label: p.label })}><Ionicons name="flag" size={11} color={p.color} /><Text style={{ color: p.color, fontSize: 11.5, fontWeight: '800' }}>{p.label}</Text></View>}
       {!task.done && blockers.length > 0 && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }} accessibilityLabel={t('Bloqueada por {join}', { join: blockers.map((b) => b.title).join(', ') })}>
           <Ionicons name="lock-closed" size={11} color={C.warnText} /><Text style={{ color: C.warnText, fontSize: 11.5, fontWeight: '700' }} numberOfLines={1}>{t('Espera: {title}{v}', { title: blockers[0].title, v: blockers.length > 1 ? t(' y {v} más', { v: blockers.length - 1 }) : '' })}</Text>

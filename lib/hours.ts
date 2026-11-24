@@ -1,4 +1,4 @@
-import { t, trn } from './i18n';
+import { t, trn, monthsLong, lang, dayMonth, decSep, csvSep } from './i18n';
 // ============================================================
 import { locale } from './i18n';
 //  Registro de horas (v24, fase 5). Puro, con pruebas: periodos, sumas por
@@ -13,8 +13,8 @@ export type Named = { name: string; color?: string };
 export type GroupBy = 'subject' | 'project' | 'day';
 export type Rates = Record<string, number>;
 
-const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-const DAYS = ['dom', 'lun', 'mar', t('mié'), 'jue', 'vie', t('sáb')];
+const MONTHS = monthsLong();
+const DAYS = lang() === 'en' ? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] : ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb']; // i18n-ok
 const pad = (n: number) => String(n).padStart(2, '0');
 export const isoDay = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -44,7 +44,7 @@ export function fmtHours(min: number): string {
   return r ? `${h} h ${r} min` : `${h} h`;
 }
 /** "3,33" (para hojas de cálculo en español). */
-export const decHours = (min: number) => (Math.round((min / 60) * 100) / 100).toFixed(2).replace('.', ',');
+export const decHours = (min: number) => (Math.round((min / 60) * 100) / 100).toFixed(2).replace('.', decSep());
 /** Valor en pesos con la tarifa por hora. */
 export const amountOf = (min: number, rate: number | null | undefined) => (rate && rate > 0 ? Math.round((min / 60) * rate) : 0);
 
@@ -59,7 +59,7 @@ export function groupHours(list: HourSession[], by: GroupBy, names: Record<strin
     if (!r) {
       const n = key ? names[key] : null;
       const d = by === 'day' ? new Date(key + 'T12:00:00') : null;
-      r = { key, name: d ? `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()].slice(0, 3)}` : n?.name ?? (by === 'project' ? t('Sin proyecto') : t('Sin área')), color: n?.color, minutes: 0, sessions: 0, amount: 0 };
+      r = { key, name: d ? `${DAYS[d.getDay()]} ${dayMonth(d.getDate(), MONTHS[d.getMonth()].slice(0, 3))}` : n?.name ?? (by === 'project' ? t('Sin proyecto') : t('Sin área')), color: n?.color, minutes: 0, sessions: 0, amount: 0 };
       map.set(key, r);
     }
     r.minutes += s.minutes; r.sessions++;
@@ -94,13 +94,13 @@ export function hoursCsv(list: HourSession[], names: Record<string, Named>, rate
     const d = new Date(s.created_at), rate = rateFor(s, rates);
     return [isoDay(d), `${pad(d.getHours())}:${pad(d.getMinutes())}`, s.minutes, decHours(s.minutes),
       s.subject_id ? names[s.subject_id]?.name ?? '' : '', s.project_id ? names[s.project_id]?.name ?? '' : '', s.note ?? '',
-      s.source === 'manual' ? 'A mano' : s.source === 'timer' ? t('Cronómetro') : t('Enfoque'), rate || '', rate ? amountOf(s.minutes, rate) : ''];
+      s.source === 'manual' ? trn('A mano') : s.source === 'timer' ? t('Cronómetro') : t('Enfoque'), rate || '', rate ? amountOf(s.minutes, rate) : ''];
   });
-  return '﻿' + [head, ...rows].map((r) => r.map(csvCell).join(';')).join('\r\n') + '\r\n';
+  return '﻿' + [head, ...rows].map((r) => r.map(csvCell).join(csvSep())).join('\r\n') + '\r\n';
 }
 
 const esc = (s: string) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const pesos = (n: number) => '$' + String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+const pesos = (n: number) => '$' + String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, lang() === 'en' ? ',' : '.');
 
 /** Informe de horas para imprimir o guardar en PDF: sobrio, en Times New Roman y en negro. */
 export function hoursReportHtml(o: { who: string; period: string; list: HourSession[]; names: Record<string, Named>; rates?: Rates; by?: GroupBy }): string {
@@ -109,7 +109,7 @@ export function hoursReportHtml(o: { who: string; period: string; list: HourSess
   const money = t.amount > 0;
   const groups = groupHours(o.list, o.by ?? 'project', o.names, rates);
   const detail = [...o.list].sort((a, b) => a.created_at.localeCompare(b.created_at));
-  return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"/><title>Informe de horas</title>
+  return `<!DOCTYPE html><html lang="${lang()}"><head><meta charset="utf-8"/><title>${trn('Informe de horas')}</title>
 <style>
   body { font-family: "Times New Roman", Times, serif; color: #000; margin: 32px; font-size: 12pt; line-height: 1.4; }
   h1 { font-size: 18pt; margin: 0 0 4px; } h2 { font-size: 13pt; margin: 22px 0 6px; }
@@ -117,16 +117,16 @@ export function hoursReportHtml(o: { who: string; period: string; list: HourSess
   th, td { border: 1px solid #000; padding: 4px 6px; text-align: left; vertical-align: top; font-size: 11pt; }
   th { font-weight: bold; } td.n, th.n { text-align: right; }
 </style></head><body>
-<h1>Informe de horas</h1>
+<h1>${trn('Informe de horas')}</h1>
 <p>${esc(o.who)}</p>
-<p>Periodo: ${esc(o.period)}</p>
-<p>Total: ${esc(fmtHours(t.minutes))} (${decHours(t.minutes)} horas) en ${t.days} ${t.days === 1 ? trn('día') : trn('días')}${money ? `. Valor: ${pesos(t.amount)}` : ''}.</p>
-<h2>Resumen</h2>
-<table><thead><tr><th>${o.by === 'subject' ? trn('Área o materia') : o.by === 'day' ? trn('Día') : trn('Proyecto')}</th><th class="n">Horas</th>${money ? '<th class="n">Valor</th>' : ''}</tr></thead><tbody>
+<p>${trn('Periodo: {v}', { v: esc(o.period) })}</p>
+<p>${trn('Total: {a} ({b} horas) en {n} {v}', { a: esc(fmtHours(t.minutes)), b: decHours(t.minutes), n: t.days, v: t.days === 1 ? trn('día') : trn('días') })}${money ? trn('. Valor: {v}', { v: pesos(t.amount) }) : ''}.</p>
+<h2>${trn('Resumen')}</h2>
+<table><thead><tr><th>${o.by === 'subject' ? trn('Área o materia') : o.by === 'day' ? trn('Día') : trn('Proyecto')}</th><th class="n">${trn('Horas')}</th>${money ? `<th class="n">${trn('Valor')}</th>` : ''}</tr></thead><tbody>
 ${groups.map((g) => `<tr><td>${esc(g.name)}</td><td class="n">${decHours(g.minutes)}</td>${money ? `<td class="n">${g.amount ? pesos(g.amount) : ''}</td>` : ''}</tr>`).join('\n')}
 </tbody></table>
-<h2>Detalle</h2>
-<table><thead><tr><th>Fecha</th><th>Área o materia</th><th>Proyecto</th><th>Nota</th><th class="n">Horas</th>${money ? '<th class="n">Valor</th>' : ''}</tr></thead><tbody>
+<h2>${trn('Detalle')}</h2>
+<table><thead><tr><th>${trn('Fecha')}</th><th>${trn('Área o materia')}</th><th>${trn('Proyecto')}</th><th>${trn('Nota')}</th><th class="n">${trn('Horas')}</th>${money ? `<th class="n">${trn('Valor')}</th>` : ''}</tr></thead><tbody>
 ${detail.map((s) => {
     const d = new Date(s.created_at); const rate = rateFor(s, rates);
     return `<tr><td>${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}</td><td>${esc(s.subject_id ? o.names[s.subject_id]?.name ?? '' : '')}</td>`
@@ -134,7 +134,7 @@ ${detail.map((s) => {
       + `<td class="n">${decHours(s.minutes)}</td>${money ? `<td class="n">${rate ? pesos(amountOf(s.minutes, rate)) : ''}</td>` : ''}</tr>`;
   }).join('\n')}
 </tbody></table>
-<p style="margin-top:18px">Generado con Kaderno el ${new Date().toLocaleDateString(locale())}.</p>
+<p style="margin-top:18px">${trn('Generado con Kaderno el {v}.', { v: new Date().toLocaleDateString(locale()) })}</p>
 </body></html>`;
 }
 

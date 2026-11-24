@@ -26,8 +26,8 @@ function speechCtor(): any {
 export function browserSpeechSupported(): boolean { return !!speechCtor(); }
 
 export const LANGS = [
-  { code: t('es-CO'), label: t('Español') },
-  { code: t('en-US'), label: t('Inglés') },
+  { code: 'es-CO', label: t('Español') },
+  { code: 'en-US', label: t('Inglés') },
 ] as const;
 
 /** Reconocimiento del navegador que se vuelve a encender solo tras un silencio o un corte. */

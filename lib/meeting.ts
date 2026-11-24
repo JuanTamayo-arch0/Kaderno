@@ -5,7 +5,7 @@
 export type { MeetingMinutes, MeetingTask, MinutesStyle } from '../supabase/functions/_shared/meeting';
 export { minutesPlain, cleanMinutesStyle, DEFAULT_MINUTES_STYLE } from '../supabase/functions/_shared/meeting';
 import type { MeetingMinutes, MeetingTask } from '../supabase/functions/_shared/meeting';
-import { trn } from './i18n';
+import { trn, monthsShort, dayMonth } from './i18n';
 
 export const isMeeting = (s: unknown): s is MeetingMinutes => !!s && (s as any).kind === 'meeting';
 
@@ -30,30 +30,30 @@ export function matchOwner(owner: string | null | undefined, people: { user_id: 
   return first.length === 1 ? first[0].id : null;
 }
 
-const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const MONTHS = monthsShort();
 const shortIso = (iso: string) => { const [y, m, d] = iso.split('-').map(Number); return `${d} ${MONTHS[m - 1]}${y !== new Date().getFullYear() ? ` ${y}` : ''}`; };
 const cell = (s: string) => s.replace(/\|/g, '/').replace(/\n/g, ' ');
 
 /** El acta en Markdown (para la nota o para el archivo del proyecto). */
 export function minutesMarkdown(m: MeetingMinutes, dateLabel: string, heading = true): string {
   const out: string[] = [];
-  if (heading) out.push(`## Acta${m.title ? `: ${m.title}` : ''} · ${dateLabel}`, '');
-  if (m.attendees.length) out.push(`**Asistentes:** ${m.attendees.join(', ')}`, '');
-  if (m.summary.length) out.push('### Resumen', '', ...m.summary.map((x) => `- ${x}`), '');
-  if (m.decisions.length) out.push('### Decisiones', '', ...m.decisions.map((x) => `- ${x}`), '');
+  if (heading) out.push(m.title ? trn('## Acta: {title} · {dateLabel}', { title: m.title, dateLabel }) : trn('## Acta · {dateLabel}', { dateLabel }), '');
+  if (m.attendees.length) out.push(trn('**Asistentes:** {v}', { v: m.attendees.join(', ') }), '');
+  if (m.summary.length) out.push(trn('### Resumen'), '', ...m.summary.map((x) => `- ${x}`), '');
+  if (m.decisions.length) out.push(trn('### Decisiones'), '', ...m.decisions.map((x) => `- ${x}`), '');
   if (m.tasks.length) {
-    out.push('### Tareas', '', '| Tarea | Responsable | Fecha |', '| --- | --- | --- |');
+    out.push(trn('### Tareas'), '', trn('| Tarea | Responsable | Fecha |'), '| --- | --- | --- |');
     for (const t of m.tasks) out.push(`| ${cell(t.title)} | ${cell(t.owner ?? trn('Sin asignar'))} | ${t.due ? shortIso(t.due) : cell(t.when ?? '')} |`);
     out.push('');
   }
-  if (m.open.length) out.push('### Pendientes para la próxima', '', ...m.open.map((x) => `- [ ] ${x}`), '');
+  if (m.open.length) out.push(trn('### Pendientes para la próxima'), '', ...m.open.map((x) => `- [ ] ${x}`), '');
   return out.join('\n').trim() + '\n';
 }
 
 /** "Acta 23 nov - Revisión del lanzamiento.md" */
 export function minutesFileName(m: MeetingMinutes, d: Date): string {
   const t = (m.title || trn('Reunión')).replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
-  return `Acta ${d.getDate()} ${MONTHS[d.getMonth()]} - ${t}.md`;
+  return trn('Acta {date} - {title}.md', { date: dayMonth(d.getDate(), MONTHS[d.getMonth()]), title: t });
 }
 
 /** Texto para el "Agregar" rápido (tarea personal). */
@@ -103,7 +103,7 @@ export function carryOverMarkdown(prev: { minutes: MeetingMinutes | null; noteMd
   }
   if (prev.noteMd) openItemsFromNote(prev.noteMd).forEach(add);
   if (!items.length) return '';
-  return [`## Viene de la reunión del ${dateLabel}`, '', ...items.map((x) => `- [ ] ${x}`), '', ''].join('\n');
+  return [trn('## Viene de la reunión del {dateLabel}', { dateLabel }), '', ...items.map((x) => `- [ ] ${x}`), '', ''].join('\n');
 }
 
 /** Correo con el acta: mailto con asunto y cuerpo, sin pasar el largo que aguantan los clientes. */

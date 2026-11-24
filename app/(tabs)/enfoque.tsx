@@ -23,7 +23,7 @@ import { weeksLabel } from '../../lib/streaks';
 import { useMode } from '../../lib/mode';
 import { getProjects, type Project } from '../../lib/projects';
 import { useSpaceFilter } from '../../lib/useSpace';
-import { t } from '../../lib/i18n';
+import { t, trn, dateLocale } from '../../lib/i18n';
 
 // ============================================================
 //  Enfoque (Pomodoro).
@@ -121,7 +121,7 @@ export default function Enfoque() {
           <View key={i} style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: i < s.cycle ? C.brand : C.surface2, borderWidth: 1, borderColor: i < s.cycle ? C.brand : C.line }} />
         ))}
       </View>}
-      <View style={{ width: ring, height: ring, alignItems: 'center', justifyContent: 'center' }} accessibilityRole="timer" accessibilityLabel={`${s.mode === 'work' ? t('Enfoque') : t('Descanso')}, ${f.countsUp ? 'llevas' : 'quedan'} ${f.label}`}>
+      <View style={{ width: ring, height: ring, alignItems: 'center', justifyContent: 'center' }} accessibilityRole="timer" accessibilityLabel={`${s.mode === 'work' ? t('Enfoque') : t('Descanso')}, ${f.countsUp ? trn('llevas {v}', { v: f.label }) : trn('quedan {v}', { v: f.label })}`}>
         <ProgressRing size={ring} stroke={ring < 200 ? 12 : 14} inset={ring < 200 ? 6 : 7} frac={f.frac} color={modeColor} color2={s.mode === 'work' ? C.brand2 : C.good} track={C.surface2} />
         <Text style={{ color: C.text, fontSize: Math.round(ring * 0.2), fontWeight: '800', fontVariant: ['tabular-nums'] }}>{f.label}</Text>
         <Text style={{ color: s.mode === 'work' ? C.muted : C.goodText, marginTop: 2, fontSize: 14, fontWeight: '600' }}>{s.mode === 'work' ? (f.countsUp ? t('En flujo') : t('Enfoque')) : style === 'pomodoro' && s.cycle === 0 ? t('Descanso largo') : t('Descanso')}</Text>
@@ -210,7 +210,7 @@ export default function Enfoque() {
             <Text style={{ flex: 1, color: C.text, fontSize: 13.5 }} numberOfLines={1}>
               {sess.assignment_id ? (tasks.find((t) => t.id === sess.assignment_id)?.title ?? subjName(sess.subject_id)) : subjName(sess.subject_id)}
             </Text>
-            <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('{minutes} min · {toLocaleDateString}', { minutes: sess.minutes, toLocaleDateString: new Date(sess.created_at).toLocaleDateString('es', { day: 'numeric', month: 'short' }) })}</Text>
+            <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('{minutes} min · {toLocaleDateString}', { minutes: sess.minutes, toLocaleDateString: new Date(sess.created_at).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' }) })}</Text>
           </View>
         ))}
       </Card>

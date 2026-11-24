@@ -71,7 +71,7 @@ export function previewShift(
   const lb = latestBefore !== null ? new Date(latestBefore).toISOString() : null;
   const la = latestAfter !== null ? new Date(latestAfter).toISOString() : null;
   const n = items.length;
-  let summary = `${n} ${n === 1 ? 'tarea' : 'tareas'}`;
+  let summary = `${n} ${n === 1 ? t('tarea') : t('tareas')}`;
   if (lb && la) summary += t('. La última entrega pasa del {lb} al {la}', { lb: formatHuman(lb, false), la: formatHuman(la, false) });
   return {
     items,

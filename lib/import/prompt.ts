@@ -1,6 +1,6 @@
 import { formatDMY, formatForJson } from './dates';
 import type { BoardColumnRef, Member } from './types';
-import { t } from '../i18n';
+import { t, lang } from '../i18n';
 
 export interface PromptContext {
   projectName: string;
@@ -39,11 +39,13 @@ export function buildAiPrompt(ctx: PromptContext): string {
     t('Ayúdame a dividir este proyecto universitario en tareas para importarlas en Kaderno.'),
     '',
     t('Proyecto: {project}', { project }),
-    members.length ? `Integrantes: ${members.join(', ')}` : t('Integrantes: deja "responsable" vacío.'),
+    members.length ? t('Integrantes: {v}', { v: members.join(', ') }) : t('Integrantes: deja "responsable" vacío.'),
     t('Hoy es {now}. {deadlineLine}', { now: formatDMY(ctx.now), deadlineLine }),
     '',
     t('Responde SOLO con un JSON válido, sin texto antes ni después, con esta forma:'),
-    `{"tareas": [{"titulo": "", "descripcion": "", "estado": "${firstCol}", "responsable": "correo de un integrante o vacío", "inicio": "AAAA-MM-DDTHH:MM", "entrega": "AAAA-MM-DDTHH:MM", "checklist": [{"texto": "", "hecho": false}]}]}`,
+    lang() === 'en'
+      ? `{"tasks": [{"title": "", "description": "", "status": "${firstCol}", "assignee": "a member's email or empty", "start": "YYYY-MM-DDTHH:MM", "due": "YYYY-MM-DDTHH:MM", "checklist": [{"text": "", "done": false}]}]}` // i18n-ok
+      : `{"tareas": [{"titulo": "", "descripcion": "", "estado": "${firstCol}", "responsable": "correo de un integrante o vacío", "inicio": "AAAA-MM-DDTHH:MM", "entrega": "AAAA-MM-DDTHH:MM", "checklist": [{"texto": "", "hecho": false}]}]}`, // i18n-ok
     '',
     t('Reglas:'),
     t('- Tareas concretas de 1 a 5 días de trabajo, con un título corto que empiece con un verbo.'),

@@ -10,7 +10,7 @@ import { addRule, addUpdate, deleteRule, deleteUpdate, draftUpdate, getRules, ge
 import { weeklyReport, weeklyReportMarkdown } from '../../lib/projectReport';
 import { hace } from './projectUi';
 import { confirm, friendlyError, notify, toast } from '../../lib/feedback';
-import { t } from '../../lib/i18n';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Proyectos de trabajo (v25, fase 3): el estado semanal del proyecto y
@@ -66,7 +66,7 @@ export function StatusSheet({ visible, project, tasks, members, editable, myId, 
               </Pressable>
             ))}
           </View>
-          <Text style={{ color: C.muted, fontSize: 12 }}>{t('Esta semana: {length} hechas, {length2} para los próximos 7 días{v}.', { length: report.done.length, length2: report.next.length, v: report.late.length ? `, ${report.late.length} atrasadas` : '' })}</Text>
+          <Text style={{ color: C.muted, fontSize: 12 }}>{t('Esta semana: {length} hechas, {length2} para los próximos 7 días{v}.', { length: report.done.length, length2: report.next.length, v: report.late.length ? trn(', {n} atrasadas', { n: report.late.length }) : '' })}</Text>
           <TextInput value={body} onChangeText={setBody} multiline maxLength={2000} placeholder={t('Ej: Vamos bien con la maqueta; las pruebas se corren al viernes porque falta el acceso al servidor.')} placeholderTextColor={C.muted}
             accessibilityLabel={t('Estado del proyecto')} style={[{ minHeight: 90, backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 11, color: C.text, padding: 10, fontSize: 14, textAlignVertical: 'top' }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
@@ -153,8 +153,8 @@ export function RulesSheet({ visible, project, cols, members, editable, onClose 
           {draft.trigger === 'moved' && <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>{cols.map((c) => pick(c.label, draft.column_key === c.key, () => setDraft({ ...draft, column_key: c.key })))}</View>}
           <Text style={{ color: C.muted, fontSize: 12 }}>{t('Entonces…')}</Text>
           <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
-            {draft.trigger !== 'overdue' && pick('asignar a', draft.action === 'assign', () => setDraft({ ...draft, action: 'assign' }))}
-            {pick('avisar a', draft.action === 'notify', () => setDraft({ ...draft, action: 'notify' }))}
+            {draft.trigger !== 'overdue' && pick(trn('asignar a'), draft.action === 'assign', () => setDraft({ ...draft, action: 'assign' }))}
+            {pick(trn('avisar a'), draft.action === 'notify', () => setDraft({ ...draft, action: 'notify' }))}
             {pick(t('avisar a quien la tiene'), draft.action === 'notify_assignee', () => setDraft({ ...draft, action: 'notify_assignee' }))}
           </View>
           {(draft.action === 'assign' || draft.action === 'notify') && (

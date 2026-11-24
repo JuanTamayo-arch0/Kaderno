@@ -1,4 +1,4 @@
-import { t } from './i18n';
+import { t, decSep } from './i18n';
 // ============================================================
 //  Tu tiempo real (v20, sección F). Puro, con pruebas.
 //  Compara lo que estimas con lo que de verdad te enfocas en cada tarea.
@@ -37,7 +37,7 @@ export function suggestEstimate(est: number, r: number): number {
 /** "1,6 veces" con coma decimal. */
 export function ratioText(r: number): string {
   const v = Math.round(r * 10) / 10;
-  return `${String(v).replace('.', ',')} veces`;
+  return t('{v} veces', { v: String(v).replace('.', decSep()) });
 }
 
 export function fmtMinutes(m: number): string {

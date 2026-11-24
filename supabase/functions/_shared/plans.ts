@@ -27,6 +27,12 @@ export const LIMIT_TEXT: Record<LimitKey, string> = {
   summary: 'resúmenes', flashcards: 'creaciones de tarjetas', quiz: 'simulacros', recall: 'pruebas de notas', grade: 'correcciones',
   class_summary: 'resúmenes de clase', meeting: 'actas de reunión', steps: 'divisiones en pasos', ocr: 'páginas leídas',
 };
+/** v30: lo mismo en inglés. */
+export const LIMIT_TEXT_EN: Record<LimitKey, string> = {
+  summary: 'summaries', flashcards: 'card creations', quiz: 'mock exams', recall: 'note tests', grade: 'gradings',
+  class_summary: 'class summaries', meeting: 'meeting minutes', steps: 'step breakdowns', ocr: 'pages read',
+};
+export const limitText = (key: LimitKey, lang: 'es' | 'en' = 'es') => (lang === 'en' ? LIMIT_TEXT_EN : LIMIT_TEXT)[key];
 /** Calendarios externos conectados. */
 export const CALENDARS: Record<'free' | 'pro', number> = { free: 2, pro: 10 };
 
@@ -34,9 +40,13 @@ export const limitTier = (plan: PlanId | string | null | undefined): 'free' | 'p
 export const limitOf = (plan: PlanId | string | null | undefined, key: LimitKey): number => LIMITS[limitTier(plan)][key];
 
 /** Mensaje cuando se acaba el cupo del día. Con Gratis invita a Pro (la app muestra el botón "Ver planes"). */
-export function limitMessage(plan: PlanId | string | null | undefined, key: LimitKey): string {
+export function limitMessage(plan: PlanId | string | null | undefined, key: LimitKey, lang: 'es' | 'en' = 'es'): string {
   const tier = limitTier(plan);
-  const n = LIMITS[tier][key], txt = LIMIT_TEXT[key];
+  const n = LIMITS[tier][key], txt = limitText(key, lang);
+  if (lang === 'en') {
+    if (tier === 'free') return `You reached today's limit (${n} ${txt}). It resets tomorrow, or with Kaderno Pro you get ${LIMITS.pro[key]} a day.`;
+    return `You reached today's limit (${n} ${txt}). It resets tomorrow.`;
+  }
   if (tier === 'free') return `Llegaste al límite de hoy (${n} ${txt}). Mañana se renueva, o con Kaderno Pro tienes ${LIMITS.pro[key]} al día.`;
   return `Llegaste al límite de hoy (${n} ${txt}). Mañana se renueva.`;
 }
@@ -53,8 +63,8 @@ export function yearlySaving(plan: 'pro' | 'team'): { pesos: number; pct: number
   return { pesos: m - y, pct: Math.round(((m - y) / m) * 100) };
 }
 
-/** "$9.900" */
-export function cop(n: number): string {
-  const s = String(Math.round(Math.abs(n))).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+/** "$9.900" (en inglés la app pasa sep = ',': "$9,900"). */
+export function cop(n: number, sep: '.' | ',' = '.'): string {
+  const s = String(Math.round(Math.abs(n))).replace(/\B(?=(\d{3})+(?!\d))/g, sep);
   return (n < 0 ? '-$' : '$') + s;
 }

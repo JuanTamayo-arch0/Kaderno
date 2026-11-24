@@ -12,7 +12,7 @@ import {
   ambientSupported, getAmbientPrefs, getAmbientStatus, subscribeAmbient, updateAmbient, hydrateAmbient, unlockAmbient,
 } from '../../lib/ambient';
 import { Button, ChipRow, focusRingStyle } from '../ds';
-import { t } from '../../lib/i18n';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Controles del sonido de fondo: fila de chips en la tarjeta del reloj
@@ -53,7 +53,7 @@ export function SoundRow({ running, onMix }: { running: boolean; onMix: () => vo
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600', flex: 1 }}>{t('Sonido de fondo')}</Text>
         {status.playing && !status.needsTap && (
-          <Text style={{ color: C.muted, fontSize: 12 }} accessibilityLiveRegion="polite">{status.preview ? `Probando: ${status.label}` : `Suena: ${status.label}`}</Text>
+          <Text style={{ color: C.muted, fontSize: 12 }} accessibilityLiveRegion="polite">{status.preview ? `Probando: ${status.label}` : trn('Suena: {label}', { label: status.label })}</Text>
         )}
       </View>
       {status.needsTap && (

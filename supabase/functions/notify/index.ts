@@ -39,6 +39,9 @@ Deno.serve(async (req) => {
   const users = [...new Set(queue.map((q) => q.user_id))];
   const { data: subsData } = await db.from('push_subscriptions').select('id, user_id, endpoint, p256dh, auth').in('user_id', users);
   const subs = (subsData ?? []) as Sub[];
+  // v30: el botón del aviso en el idioma de cada persona (el texto ya llega traducido, ver schema_v27).
+  const { data: prefsData } = await db.from('user_prefs').select('user_id, settings').in('user_id', users);
+  const english = new Set((prefsData ?? []).filter((p: any) => p.settings?.lang === 'en').map((p: any) => p.user_id as string));
 
   let sent = 0, failed = 0;
   const dead: string[] = [];
@@ -47,7 +50,7 @@ Deno.serve(async (req) => {
     webpush.setVapidDetails(subject, pub, priv);
     for (const item of queue) {
       // Los avisos de plan traen el botón "Empezar enfoque" (abre Enfoque con la tarea elegida).
-      const actions = item.kind === 'plan' ? [{ action: 'focus', title: 'Empezar enfoque' }] : undefined;
+      const actions = item.kind === 'plan' ? [{ action: 'focus', title: english.has(item.user_id) ? 'Start focus' : 'Empezar enfoque' }] : undefined;
       const payload = JSON.stringify({ title: item.title, body: item.body ?? '', url: item.url ?? '/', tag: `${item.kind}-${item.id}`, actions });
       for (const s of subs.filter((x) => x.user_id === item.user_id)) {
         try {

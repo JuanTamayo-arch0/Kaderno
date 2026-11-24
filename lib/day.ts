@@ -135,7 +135,7 @@ export type Countdown = { id: string; title: string; days: number; label: string
 export function examCountdown(tasks: (T & { title: string })[], todayISO: string, horizon = 30): Countdown[] {
   const day = (iso: string) => { const [y, m, d] = iso.split('-').map(Number); return Date.UTC(y, m - 1, d); };
   return tasks.filter((t) => t.status !== 'done' && ['examen', 'quiz'].includes(String(t.type)) && t.due_date && t.due_date >= todayISO)
-    .map((t) => { const days = Math.round((day(t.due_date!) - day(todayISO)) / 86_400_000); return { id: t.id, title: t.title, days, label: days === 0 ? 'hoy' : days === 1 ? trn('mañana') : trn('{days} días', { days }), tone: (days <= 2 ? 'bad' : days <= 7 ? 'warn' : 'muted') as Countdown['tone'] }; })
+    .map((t) => { const days = Math.round((day(t.due_date!) - day(todayISO)) / 86_400_000); return { id: t.id, title: t.title, days, label: days === 0 ? trn('hoy') : days === 1 ? trn('mañana') : trn('{days} días', { days }), tone: (days <= 2 ? 'bad' : days <= 7 ? 'warn' : 'muted') as Countdown['tone'] }; })
     .filter((c) => c.days <= horizon)
     .sort((a, b) => a.days - b.days);
 }

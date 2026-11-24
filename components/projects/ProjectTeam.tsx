@@ -6,7 +6,7 @@ import { confirm, notify } from '../../lib/confirm';
 import { ProgressBar } from '../ProgressBar';
 import { Activity, Load, Member, PTask, Profile, Project, ProjectRole, colorOf, deleteProject, initialsOf, leaveProject, nameOf, regenJoinCode, removeMember, setMemberRole, workload } from '../../lib/projects';
 import { Pill, hace, isWeb, secTitle } from './projectUi';
-import { t } from '../../lib/i18n';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Vista Equipo del proyecto: integrantes, papeles, código para unirse y carga de trabajo.
@@ -231,8 +231,8 @@ export function WorkloadPanel({ loads, unassigned, balanced, myId }: {
                   <Text style={{ color: C.text, fontSize: 13, fontWeight: '600', flex: 1 }}>
                     {nameOf(l.profile)}{l.user_id === myId ? t(' (tú)') : ''}
                   </Text>
-                  {l.late > 0 && <Pill text={`${l.late} atrasada${l.late === 1 ? '' : 's'}`} color={C.bad} />}
-                  {l.late === 0 && l.soon > 0 && <Pill text={`${l.soon} pronto`} color={C.warn} />}
+                  {l.late > 0 && <Pill text={(l.late === 1 ? trn('1 atrasada') : trn('{n} atrasadas', { n: l.late }))} color={C.bad} />}
+                  {l.late === 0 && l.soon > 0 && <Pill text={trn('{n} pronto', { n: l.soon })} color={C.warn} />}
                   <Text style={{ color: C.muted, fontSize: 11.5, fontWeight: '700' }}>{t('{pending} pend.', { pending: l.pending })}</Text>
                 </View>
                 <ProgressBar done={l.done} total={l.total} height={6} compact />

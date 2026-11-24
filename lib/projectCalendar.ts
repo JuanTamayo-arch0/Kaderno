@@ -1,3 +1,4 @@
+import { monthsLong, dayMonth } from './i18n';
 // ============================================================
 //  Calendario del proyecto (v23, fase 3). Puro, con pruebas:
 //  el mes, la línea de tiempo con inicio y entrega de cada tarea, los cruces
@@ -137,6 +138,6 @@ export function roadToFinal(tasks: CalTask[], today: Date, finalId?: string | nu
   return { final, daysLeft, total: tasks.length, done: tasks.length - pending.length, late, thisWeek, undated: tasks.filter((t) => !dueDayOf(t)).length, pace };
 }
 
-const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const MONTHS = monthsLong();
 export const monthLabel = (y: number, m: number) => `${MONTHS[m][0].toUpperCase()}${MONTHS[m].slice(1)} ${y}`;
-export const shortDay = (d: Date) => `${d.getDate()} ${MONTHS[d.getMonth()].slice(0, 3)}`;
+export const shortDay = (d: Date) => dayMonth(d.getDate(), MONTHS[d.getMonth()].slice(0, 3));

@@ -10,7 +10,7 @@ import { getGoals, saveGoal, saveRitualPrefs, type Goal } from '../../lib/ritual
 import { fullPlan, planThen, goalError, type GoalDraft } from '../../lib/rituals';
 import { toast, notify, friendlyError } from '../../lib/feedback';
 import { streakChanged } from '../../lib/uiBus';
-import { t } from '../../lib/i18n';
+import { t, trn, decSep } from '../../lib/i18n';
 
 // ============================================================
 //  Ritual del semestre (v20, sección J.2): la nota que quieres en cada
@@ -40,7 +40,7 @@ export function SemesterRitual({ visible, onClose }: { visible: boolean; onClose
       live.forEach((x) => { sc[x.id] = g.find((y) => y.subject_id === x.id)?.max_score ?? 5; });
       setScales(sc);
       const t: Record<string, string> = {};
-      gl.forEach((x) => { if (x.subject_id && x.target_grade != null) t[x.subject_id] = String(x.target_grade).replace('.', ','); });
+      gl.forEach((x) => { if (x.subject_id && x.target_grade != null) t[x.subject_id] = String(x.target_grade).replace('.', decSep()); });
       setTargets(t);
       const sem = gl.find((x) => !x.subject_id);
       setWoop(sem ? { wish: sem.wish, outcome: sem.outcome, obstacle: sem.obstacle, plan: sem.plan } : { wish: '' });
@@ -57,7 +57,7 @@ export function SemesterRitual({ visible, onClose }: { visible: boolean; onClose
         if (!Number.isFinite(n) || n <= 0 || n > (scales[s.id] ?? 5)) continue;
         const g = goals.find((x) => x.subject_id === s.id);
         if (g) await saveGoal({ wish: g.wish, outcome: g.outcome, obstacle: g.obstacle, plan: g.plan, target_grade: n }, s.id, g.id);
-        else await saveGoal({ wish: t('Sacar {replace} en {name}', { replace: String(n).replace('.', ','), name: s.name }), target_grade: n }, s.id);
+        else await saveGoal({ wish: t('Sacar {replace} en {name}', { replace: String(n).replace('.', decSep()), name: s.name }), target_grade: n }, s.id);
       }
       if (woop.wish.trim()) {
         const then = planThen(woop.plan, woop.obstacle);
@@ -110,7 +110,7 @@ export function SemesterRitual({ visible, onClose }: { visible: boolean; onClose
   else body = (
     <>
       <View style={{ flexDirection: 'row', gap: 6 }}>
-        {[0, 1, 2, 3].map((i) => <Pressable key={i} onPress={() => setWStep(i)} accessibilityLabel={`Parte ${i + 1}`} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: i <= wStep ? C.brand2 : C.surface2 }} />)}
+        {[0, 1, 2, 3].map((i) => <Pressable key={i} onPress={() => setWStep(i)} accessibilityLabel={trn('Parte {n}', { n: i + 1 })} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: i <= wStep ? C.brand2 : C.surface2 }} />)}
       </View>
       <WoopFields step={wStep} d={woop} onChange={setWoop} subject={null} scale={5} />
       <Text style={{ color: C.muted, fontSize: 12 }}>{t('Opcional. Puedes dejarla vacía y ponerla después.')}</Text>

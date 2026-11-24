@@ -111,7 +111,7 @@ export function DayPlanner({ tasks, slots, subjects, onChanged, onToggle, onFocu
     const minOf = (id: string) => taskMinutes(byId.get(id)?.estimate_min, ratio);
     const placed = placeBatch(b.ids, minOf, busyOfDay(), from, (work ? 19 : 22) * 60);
     if (!placed) { toast(t('No hay un hueco de {minutes} seguido para la tanda.', { minutes: fmtHours(b.minutes) })); return; }
-    setPlan({ day: dayISO, placed, left: [], title: `Tanda: ${b.label}` });
+    setPlan({ day: dayISO, placed, left: [], title: trn('Tanda: {label}', { label: b.label }) });
   }
   const batches = dayISO >= todayISO ? findBatches(parts.loose, (t) => taskMinutes(t.estimate_min, ratio),
     { type: (k) => (taskTypeExists(k) ? taskTypeMeta(k).label : k).toLowerCase(), subject: (id) => subjects.find((x) => x.id === id)?.name ?? null }) : [];
@@ -253,13 +253,13 @@ function LooseRow({ t, ratio, active, onPlace, onToggle, mark }: { t: Task; rati
   const ref = useDraggableTask(t.id);
   return (
     <View ref={ref} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: active ? C.brand : C.line, backgroundColor: C.surface }}>
-      <Pressable onPress={onToggle} accessibilityRole="checkbox" accessibilityState={{ checked: false }} accessibilityLabel={`Completar "${t.title}"`} hitSlop={6}>
+      <Pressable onPress={onToggle} accessibilityRole="checkbox" accessibilityState={{ checked: false }} accessibilityLabel={trn('Completar "{title}"', { title: t.title })} hitSlop={6}>
         <Ionicons name="ellipse-outline" size={20} color={C.muted} />
       </Pressable>
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '600' }} numberOfLines={2}>{t.title}</Text>
         <Text style={{ color: mark === 'rana' ? C.brand : C.muted, fontSize: 11.5, fontWeight: mark === 'rana' ? '700' : '400' }}>
-          {mark === 'rana' ? 'Primero · ' : typeof mark === 'number' ? trn('{mark}.º de la lista · ', { mark }) : ''}{fmtHours(taskMinutes(t.estimate_min, ratio))}
+          {mark === 'rana' ? trn('Primero · ') : typeof mark === 'number' ? trn('{mark}.º de la lista · ', { mark }) : ''}{fmtHours(taskMinutes(t.estimate_min, ratio))}
         </Text>
       </View>
       <Pressable onPress={onPlace} accessibilityRole="button" accessibilityLabel={trn('Poner hora a "{title}"', { title: t.title })}

@@ -14,6 +14,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { parseIcs, safeCalendarUrl } from '../_shared/icsParse.ts';
+import { langOf, say, type Lang } from '../_shared/lang.ts';
 
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret' };
 const MAX_BYTES = 3_000_000;
@@ -90,10 +91,11 @@ Deno.serve(async (req) => {
     const auth = req.headers.get('Authorization') ?? '';
     const user = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: auth } } });
     const body = await req.json().catch(() => ({}));
+    const lang: Lang = langOf(body?.lang);
     const id = String(body?.calendar_id ?? '');
-    if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: 'Falta el calendario' }, 400);
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: say(lang, 'Falta el calendario') }, 400);
     const { data: mine } = await user.from('external_calendars').select('id, user_id, url').eq('id', id).maybeSingle();
-    if (!mine) return json({ error: 'No encontré ese calendario' }, 404);
+    if (!mine) return json({ error: say(lang, 'No encontré ese calendario') }, 404);
     const r = await sync(db, mine as Cal);
     return r.error ? json({ error: r.error }, 502) : json(r);
   } catch (e) {

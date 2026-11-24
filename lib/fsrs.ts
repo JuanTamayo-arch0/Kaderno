@@ -7,7 +7,7 @@
 //  Reemplaza a lib/srs.ts (SM-2), que queda para la base sin schema_v19.
 // ============================================================
 import { fsrs, createEmptyCard, Rating, State, type Card, type Grade } from 'ts-fsrs';
-import { t } from './i18n';
+import { t, decSep } from './i18n';
 
 export type FsrsState = 0 | 1 | 2 | 3;
 export type CardRating = 1 | 2 | 3 | 4;
@@ -129,9 +129,9 @@ export function spanLabel(ms: number): string {
   const d = Math.round(ms / 86_400_000);
   if (d < 31) return d === 1 ? t('1 día') : t('{d} días', { d });
   const m = Math.round(d / 30.4);
-  if (m < 12) return m === 1 ? t('1 mes') : `${m} meses`;
+  if (m < 12) return m === 1 ? t('1 mes') : t('{m} meses', { m });
   const y = Math.round((d / 365) * 10) / 10;
-  return y === 1 ? t('1 año') : t('{replace} años', { replace: String(y).replace('.', ',') });
+  return y === 1 ? t('1 año') : t('{replace} años', { replace: String(y).replace('.', decSep()) });
 }
 
 /** "Ahora", "En 10 min", "Mañana", "En 6 días", "Nueva". */

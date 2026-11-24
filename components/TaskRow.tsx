@@ -12,7 +12,7 @@ import { Badge, Dot } from './ds';
 import { SubtaskList } from './SubtaskList';
 import { ActionMenu, type MenuAction } from './ActionMenu';
 import { play } from '../lib/sound';
-import { t } from '../lib/i18n';
+import { t, trn } from '../lib/i18n';
 
 // ============================================================
 //  Fila de tarea compacta (Hoy, Materia, Papelera...).
@@ -86,7 +86,7 @@ export function TaskRow({
     <Animated.View {...(swipe ? pan.panHandlers : {})} dataSet={{ petPerch: '1' }} style={{ backgroundColor: C.surface, borderColor: C.line, borderWidth: 1, borderRadius: RAD.row, opacity: done ? 0.75 : 1, transform: [{ translateX: dx }] }}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
         <Pressable onPress={() => { if (!tapOk()) return; play(done ? 'uncheck' : 'complete'); if (!done) tapHaptic(); onToggle(task); }} accessibilityRole="checkbox" accessibilityState={{ checked: done }}
-          accessibilityLabel={done ? t('Marcar "{title}" como pendiente', { title: task.title }) : `Completar "${task.title}"`}
+          accessibilityLabel={done ? t('Marcar "{title}" como pendiente', { title: task.title }) : trn('Completar "{title}"', { title: task.title })}
           style={{ width: 48, minHeight: compact ? 46 : 54, alignItems: 'center', justifyContent: 'center' }}>
           <View key={done ? 'hecha' : 'pendiente'} dataSet={done ? { anim: 'pop' } : undefined} style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: done ? C.good : (tm.key !== 'tarea' ? tm.color : C.muted), backgroundColor: done ? C.good : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
             {done && <Ionicons name="checkmark" size={14} color={inkOn(C.good)} />}
@@ -121,7 +121,7 @@ export function TaskRow({
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <Ionicons name="time-outline" size={13} color={C.muted} />
                 <Text style={{ color: C.muted, fontSize: 12 }}>
-                  {focusMin ? `${fmtMin(focusMin)}${task.estimate_min ? ' de ' + fmtMin(task.estimate_min) : ''}` : fmtMin(task.estimate_min!)}
+                  {focusMin ? `${fmtMin(focusMin)}${task.estimate_min ? t(' de {v}', { v: fmtMin(task.estimate_min) }) : ''}` : fmtMin(task.estimate_min!)}
                 </Text>
               </View>
             ) : null}

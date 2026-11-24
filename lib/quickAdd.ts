@@ -8,7 +8,8 @@
 // ============================================================
 import { addDays, isoDate, startOfDay } from './time';
 import { parseRepeat, firstDate, nextDate, type RepeatRule } from './repeat';
-import { t } from './i18n';
+import { t, lang } from './i18n';
+import { enToken } from './quickAddEn';
 
 export type QuickSubject = { id: string; name: string };
 export type QuickType = { key: string; label: string };
@@ -48,7 +49,11 @@ export function parseQuickAdd(input: string, subjects: QuickSubject[], types: Qu
   // Primero la repetición: lo que queda se lee como siempre.
   const rp = parseRepeat(input, isoDate(startOfDay(now)));
   if (rp) input = rp.rest || input;
-  const toks: Tok[] = input.trim().split(/\s+/).filter(Boolean).map((raw) => ({ raw, n: norm(raw).replace(/^[(\["'¿¡]+|[)\]"',;.:!?]+$/g, ''), used: false }));
+  const en = lang() === 'en';
+  const toks: Tok[] = input.trim().split(/\s+/).filter(Boolean).map((raw) => {
+    const n = norm(raw).replace(/^[(\["'¿¡]+|[)\]"',;.:!?]+$/g, '');
+    return { raw, n: en ? enToken(n) : n, used: false };
+  });
   let dueDate: Date | null = null;
   let hour: number | null = null, minute = 0, ampm: 'am' | 'pm' | null = null;
   let typeKey: string | null = null;
@@ -64,6 +69,10 @@ export function parseQuickAdd(input: string, subjects: QuickSubject[], types: Qu
 
     // ---- Fechas relativas ----
     if (w === 'hoy') { dueDate = today; use(i); continue; }
+    // "day after tomorrow" (dia after manana)
+    if (w === 'manana' && at(i - 1) === 'after' && at(i - 2) === 'dia') { dueDate = addDays(today, 2); use(i - 2, i - 1, i); continue; }
+    // "next week", "la próxima semana"
+    if (w === 'semana' && /^proxim[oa]$/.test(at(i - 1))) { dueDate = addDays(today, 7); use(i - 1, i); if (/^(la|el)$/.test(at(i - 2))) use(i - 2); continue; }
     if (w === 'manana' && at(i - 1) !== 'la' && at(i - 1) !== 'de') {
       if (at(i - 1) === 'pasado') { dueDate = addDays(today, 2); use(i - 1, i); } else { dueDate = addDays(today, 1); use(i); }
       continue;
@@ -72,7 +81,7 @@ export function parseQuickAdd(input: string, subjects: QuickSubject[], types: Qu
       const n = parseInt(at(i + 1), 10);
       dueDate = addDays(today, at(i + 2).startsWith('semana') ? n * 7 : n); use(i, i + 1, i + 2); continue;
     }
-    if (w === 'en' && /^(una|1)$/.test(at(i + 1)) && /^semana$/.test(at(i + 2))) { dueDate = addDays(today, 7); use(i, i + 1, i + 2); continue; }
+    if (w === 'en' && /^(una|1|a)$/.test(at(i + 1)) && /^semana$/.test(at(i + 2))) { dueDate = addDays(today, 7); use(i, i + 1, i + 2); continue; }
     if (w in DAYS && !(w === 'mar' && /^\d/.test(at(i - 1)))) {
       const target = DAYS[w];
       let diff = (target - today.getDay() + 7) % 7;
@@ -101,6 +110,14 @@ export function parseQuickAdd(input: string, subjects: QuickSubject[], types: Qu
         if (!m[3] && cand < today) cand = new Date(y + 1, mo, d);
         dueDate = cand; use(i); if (at(i - 1) === 'el') use(i - 1); continue;
       }
+    }
+    // oct 20 (como se escribe en inglés)
+    if (w in MONTHS && /^\d{1,2}$/.test(at(i + 1)) && Number(at(i + 1)) >= 1 && Number(at(i + 1)) <= 31) {
+      const d = parseInt(at(i + 1), 10), mo = MONTHS[w];
+      let cand = new Date(today.getFullYear(), mo, d);
+      if (cand < today) cand = new Date(today.getFullYear() + 1, mo, d);
+      dueDate = cand; use(i, i + 1); if (at(i - 1) === 'el') use(i - 1);
+      continue;
     }
     // 20 oct, 20 de octubre
     if (/^\d{1,2}$/.test(w)) {
@@ -196,7 +213,7 @@ export function parseQuickAdd(input: string, subjects: QuickSubject[], types: Qu
   if (!title) {
     const tl = types.find((t) => t.key === typeKey)?.label ?? t('Tarea');
     const sn = subjects.find((s) => s.id === subjectId)?.name;
-    title = sn ? `${tl} de ${sn}` : tl;
+    title = sn ? t('{tl} de {sn}', { tl, sn }) : tl;
   }
   title = title[0].toUpperCase() + title.slice(1);
 

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { LazyMarkdown as Markdown } from './LazyMarkdown';
 import { C, R } from '../lib/theme';
-import { t } from '../lib/i18n';
+import { t, trn } from '../lib/i18n';
 
 // Editor de notas en Markdown con barra de formato y vista de lectura renderizada (estilo Notion).
 export function MarkdownEditor({ value, onChange, minHeight = 220, mode: modeProp }: {
@@ -36,7 +36,7 @@ export function MarkdownEditor({ value, onChange, minHeight = 220, mode: modePro
     { label: 'i', run: () => wrap('*') },
     { label: t('• Lista'), run: () => linePrefix('- ') },
     { label: t('☐ Tarea'), run: () => linePrefix('- [ ] ') },
-    { label: '❝ Cita', run: () => linePrefix('> ') },
+    { label: trn('❝ Cita'), run: () => linePrefix('> ') },
     { label: '</>', run: () => wrap('`') },
     { label: t('― Línea'), run: () => insert('\n---\n') },
   ];

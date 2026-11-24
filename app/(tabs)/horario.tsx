@@ -14,7 +14,7 @@ import {
 import { SubjectIcon } from '../../components/SubjectIcon';
 import { useMode } from '../../lib/mode';
 import { Screen, Card, Dot, EmptyState, Segmented } from '../../components/ds';
-import { t } from '../../lib/i18n';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Horario.
@@ -127,7 +127,7 @@ export default function Horario() {
   const picker = (
     <>
       <Text style={{ color: C.text, fontSize: 18, fontWeight: '700', marginBottom: 12 }}>
-        {edit ? `${DAY_NAMES[edit.day]} · ${blocks[edit.slot] ? blockLabelLong(blocks[edit.slot], fmt24) : `Bloque ${edit.slot + 1}`}` : ''}
+        {edit ? `${DAY_NAMES[edit.day]} · ${blocks[edit.slot] ? blockLabelLong(blocks[edit.slot], fmt24) : trn('Bloque {n}', { n: edit.slot + 1 })}` : ''}
       </Text>
       {subjects.length === 0 && <Text style={{ color: C.muted }}>{t('Crea materias primero.')}</Text>}
       {subjects.map((s) => (
@@ -184,7 +184,7 @@ export default function Horario() {
             const live = di === todayIdx && si === nowBlock;
             return (
               <Pressable key={di} onPress={() => setEdit({ day: di, slot: si })}
-                accessibilityRole="button" accessibilityLabel={`${DAY_NAMES[di]} ${blockLabelLong(b, fmt24)}: ${sub ? sub.name : 'libre'}`}
+                accessibilityRole="button" accessibilityLabel={`${DAY_NAMES[di]} ${blockLabelLong(b, fmt24)}: ${sub ? sub.name : trn('libre')}`}
                 style={({ hovered }: any) => ({
                   flex: 1, minHeight: isWide ? 52 : 50, borderRadius: 9, alignItems: 'center', justifyContent: 'center', padding: 4,
                   borderWidth: live ? 2 : 1, borderStyle: sub ? 'solid' : 'dashed',

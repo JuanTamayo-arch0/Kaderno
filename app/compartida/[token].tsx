@@ -7,7 +7,7 @@ import { KadernoLockup, KadernoMark } from '../../components/brand/KadernoLogo';
 import { fetchSharedNote, type SharedNote } from '../../lib/calendarsDb';
 import { noteToHtml } from '../../lib/noteHtml';
 import { useAuth } from '../../lib/auth';
-import { t } from '../../lib/i18n';
+import { t, dateLocale } from '../../lib/i18n';
 
 // ============================================================
 //  Nota compartida (v21, sección 10): pública, de solo lectura, sin sesión.
@@ -60,7 +60,7 @@ export default function NotaCompartida() {
     if (Platform.OS === 'web' && typeof document !== 'undefined') document.title = note ? `${note.title} · Kaderno` : t('Nota compartida · Kaderno');
   }, [note]);
 
-  const updated = note?.updated_at ? new Date(note.updated_at).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' }) : null;
+  const updated = note?.updated_at ? new Date(note.updated_at).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long', year: 'numeric' }) : null;
   return (
     <ScrollView style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ alignItems: 'center', padding: 16, paddingBottom: 48 }}>
       <View style={{ width: '100%', maxWidth: 760 }}>

@@ -7,7 +7,7 @@
 // ============================================================
 import { dueMoment, type DueLike } from './time';
 import { localISO, fmtHours } from './day';
-import { t } from './i18n';
+import { t, decSep } from './i18n';
 
 export const WINDOW_DAYS = 21;
 export const ASK_DAYS = 21;
@@ -78,7 +78,7 @@ export type Verdict = { reached: boolean; pct: number; targetPct: number; headli
 
 const pctOf = (score: number, max: number) => (max > 0 ? Math.max(0, Math.min(100, (score / max) * 100)) : 0);
 const median = (xs: number[]) => { if (!xs.length) return null; const s = [...xs].sort((a, b) => a - b); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
-const fmtGrade = (n: number) => (Math.round(n * 10) / 10).toFixed(1).replace('.', ',');
+const fmtGrade = (n: number) => (Math.round(n * 10) / 10).toFixed(1).replace('.', decSep());
 
 /** Lo que dicen los datos: si alcanzó, y por qué sí o por qué no. */
 export function verdict(score: number, maxScore: number, target: number | null, e: Effort, history: PastResult[] = []): Verdict {
@@ -107,18 +107,18 @@ export function verdict(score: number, maxScore: number, target: number | null, 
   else if (e.sessionsTotal > 0) ok('plan', t('Hiciste las {sessionsTotal} sesiones del plan.', { sessionsTotal: e.sessionsTotal }));
   if (e.quizzes === 0) { if (!reached) bad('nosim', t('No hiciste simulacro.')); }
   else if (e.bestQuiz != null && e.bestQuiz < 60 && !reached) bad('simlow', t('En el simulacro sacaste {bestQuiz} %: era una alerta.', { bestQuiz: Math.round(e.bestQuiz) }));
-  else ok('sim', `Hiciste ${e.quizzes === 1 ? t('un simulacro') : `${e.quizzes} simulacros`}${e.bestQuiz != null ? ` (mejor: ${Math.round(e.bestQuiz)} %)` : ''}.`);
+  else ok('sim', t('Hiciste {v}{best}.', { v: e.quizzes === 1 ? t('un simulacro') : t('{n} simulacros', { n: e.quizzes }), best: e.bestQuiz != null ? t(' (mejor: {v} %)', { v: Math.round(e.bestQuiz) }) : '' }));
   if (e.cardReviews >= 20) ok('cards', t('Repasaste {cardReviews} tarjetas de la materia.', { cardReviews: e.cardReviews }));
-  if (e.recalls > 0) ok('recall', t('Te pusiste a prueba con {v}.', { v: e.recalls === 1 ? t('una nota') : `${e.recalls} notas` }));
+  if (e.recalls > 0) ok('recall', t('Te pusiste a prueba con {v}.', { v: e.recalls === 1 ? t('una nota') : t('{n} notas', { n: e.recalls }) }));
 
   const badN = r.filter((x) => x.tone === 'bad').length;
-  const targetText = target != null && target > 0 ? t('la nota que querías ({target})', { target: fmtGrade(target) }) : `aprobar (${fmtGrade(maxScore * 0.6)})`;
+  const targetText = target != null && target > 0 ? t('la nota que querías ({target})', { target: fmtGrade(target) }) : t('aprobar ({v})', { v: fmtGrade(maxScore * 0.6) });
   let headline: string, detail: string;
   if (reached) {
     headline = t('El esfuerzo alcanzó');
     detail = e.minutes < 60 && e.minutes > 0
       ? t('Llegaste a {targetText} con poco tiempo de estudio registrado. Si el próximo es más difícil, quizás no alcance igual.', { targetText })
-      : badN ? t('Llegaste a {targetText}. Aun así, ojo con esto para el próximo:', { targetText }) : `Llegaste a ${targetText}.`;
+      : badN ? t('Llegaste a {targetText}. Aun así, ojo con esto para el próximo:', { targetText }) : t('Llegaste a {targetText}.', { targetText });
   } else if (badN === 0 && e.minutes > 0) {
     headline = t('Le pusiste esfuerzo, pero no alcanzó');
     detail = t('Te faltó para {targetText}. En los datos no se ve un problema de tiempo o de reparto: la diferencia parece estar en otra parte. ¿Qué pasó?', { targetText });

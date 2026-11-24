@@ -24,6 +24,20 @@
          Se puede editar en el servidor sin recompilar la app. -->
     <script src="/kaderno-config.js"></script>
     <script>
+      // v30: en inglés (elegido en Ajustes o el del dispositivo), el idioma de la
+      // página, la descripción y el manifiesto van en inglés desde el principio.
+      (function () {
+        try {
+          var saved = null; try { saved = localStorage.getItem('kd-lang'); } catch (_) {}
+          var nav = (navigator.languages && navigator.languages[0]) || navigator.language || '';
+          var en = saved ? saved === 'en' : /^en\b/i.test(nav);
+          if (!en) return;
+          document.documentElement.lang = 'en';
+          var d = 'Tasks, notes, schedule and studying in one place.';
+          document.querySelectorAll('meta[name="description"], meta[property="og:description"]').forEach(function (m) { m.setAttribute('content', d); });
+          var l = document.querySelector('link[rel="manifest"]'); if (l) l.setAttribute('href', '/manifest-en.webmanifest');
+        } catch (e) {}
+      })();
       // Abre la conexión con Supabase mientras se descarga la app: la primera
       // consulta ahorra el saludo TLS (cientos de ms en el celular).
       (function () {

@@ -27,11 +27,11 @@ export const LANGS: { id: Lang; name: string; native: string }[] = [
 export const LANG_KEY = 'kd-lang';
 
 /**
- * Mientras se traduce por fases el inglés queda escondido: sin elegirlo a
- * mano (localStorage) la app sale en español. La fase 7 lo prende y desde
- * ahí manda el idioma del dispositivo.
+ * El inglés está listo (v30, fase 7): sin elección guardada manda el idioma
+ * del dispositivo. En false, la app sale en español salvo que alguien elija
+ * inglés a mano (así se probó mientras se traducía por fases).
  */
-export const I18N_READY = false;
+export const I18N_READY = true;
 
 /** El idioma del dispositivo: inglés si lo pide primero; si no, español. */
 export function deviceLang(languages: readonly string[] | undefined): Lang {
@@ -52,7 +52,8 @@ function initialLang(): Lang {
   } catch { /* noop */ }
   if (!I18N_READY) return 'es';
   try {
-    if (typeof navigator !== 'undefined') return deviceLang(navigator.languages?.length ? navigator.languages : [navigator.language]);
+    // Solo en el navegador (Node también tiene navigator y las pruebas corren en español).
+    if (typeof window !== 'undefined' && typeof navigator !== 'undefined') return deviceLang(navigator.languages?.length ? navigator.languages : [navigator.language]);
   } catch { /* noop */ }
   return 'es';
 }
@@ -110,3 +111,32 @@ export function monthNames(style: 'long' | 'short' = 'long'): string[] {
 }
 
 function cap(s: string): string { return s ? s[0].toUpperCase() + s.slice(1) : s; }
+
+const ES_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const ES_LONG = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const EN_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const EN_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const ES_DAYS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+const ES_DAYS_LONG = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const EN_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const EN_DAYS_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+/** Días cortos (0 = domingo, como getDay): "mié" en español, "Wed" en inglés. */
+export function daysShort(): string[] { return [...(current === 'en' ? EN_DAYS : ES_DAYS)]; }
+/** Días completos (0 = domingo): "miércoles" en español, "Wednesday" en inglés. */
+export function daysLong(): string[] { return [...(current === 'en' ? EN_DAYS_LONG : ES_DAYS_LONG)]; }
+/** Locale para fechas cortas: "es" da "29 nov" (es-CO daría "29 de nov"); en inglés, en-US. */
+export function dateLocale(): string { return current === 'en' ? 'en-US' : 'es'; }
+/** Separador decimal del idioma: "," en español (4,5), "." en inglés (4.5). */
+export function decSep(): string { return current === 'en' ? '.' : ','; }
+/** Separador de columnas del CSV: ";" para Excel en español, "," en inglés. */
+export function csvSep(): string { return current === 'en' ? ',' : ';'; }
+/** Inicial de cada día (0 = domingo): D L M M J V S en español, S M T W T F S en inglés. */
+export function dayLetters(): string[] { return current === 'en' ? ['S', 'M', 'T', 'W', 'T', 'F', 'S'] : ['D', 'L', 'M', 'M', 'J', 'V', 'S']; }
+/** Lo mismo empezando en lunes. */
+export function dayLettersMon(): string[] { const d = dayLetters(); return [...d.slice(1), d[0]]; }
+/** Día y mes en el orden del idioma: "23 nov" en español, "Nov 23" en inglés. */
+export function dayMonth(day: number | string, month: string): string { return current === 'en' ? `${month} ${day}` : `${day} ${month}`; }
+/** Meses cortos como los escribe la app: "nov" en español, "Nov" en inglés. */
+export function monthsShort(): string[] { return [...(current === 'en' ? EN_SHORT : ES_SHORT)]; }
+/** Meses completos: "noviembre" en español, "November" en inglés. */
+export function monthsLong(): string[] { return [...(current === 'en' ? EN_LONG : ES_LONG)]; }

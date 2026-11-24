@@ -4,10 +4,10 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../lib/theme';
 import { taskTypeMeta } from '../lib/taskTypes';
 import { Subject, Task } from '../lib/db';
-import { t, trn } from '../lib/i18n';
+import { t, trn, monthsLong, dayLettersMon, dateLocale } from '../lib/i18n';
 
-const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-const WD = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+const MONTHS = monthsLong();
+const WD = dayLettersMon();
 const pad = (n: number) => String(n).padStart(2, '0');
 const iso = (y: number, m: number, d: number) => `${y}-${pad(m + 1)}-${pad(d)}`;
 
@@ -102,7 +102,7 @@ export function MiniCalendar({ tasks, subjects, defaultOpen = false, embedded = 
             <Pressable
               key={dIso}
               onPress={() => setSelected(isSel ? null : dIso)}
-              accessibilityLabel={`${d} — ${list.length} ${list.length === 1 ? 'tarea' : 'tareas'}${pend ? t(', {pend} pendiente{v}', { pend, v: pend === 1 ? '' : t('s') }) : ''}`}
+              accessibilityLabel={`${d} — ${list.length} ${list.length === 1 ? t('tarea') : t('tareas')}${pend ? t(', {pend} pendiente{v}', { pend, v: pend === 1 ? '' : t('s') }) : ''}`}
               style={{ width: `${100 / 7}%`, height: CELL_H, alignItems: 'center', justifyContent: 'center' }}
             >
               <View style={{ width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: isSel ? C.brand : isToday ? C.surface2 : 'transparent' }}>
@@ -134,7 +134,7 @@ export function MiniCalendar({ tasks, subjects, defaultOpen = false, embedded = 
 
       {selected && (
         <View style={{ marginTop: 8, borderTopWidth: 1, borderTopColor: C.line, paddingTop: 8 }}>
-          <Text style={{ color: C.muted, fontSize: 12, marginBottom: 6 }}>{new Date(selected + 'T00:00:00').toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
+          <Text style={{ color: C.muted, fontSize: 12, marginBottom: 6 }}>{new Date(selected + 'T00:00:00').toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
           {selTasks.length === 0 ? <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Sin tareas.')}</Text> : selTasks.map((t) => {
             const sub = subjects.find((s) => s.id === t.subject_id);
             return (

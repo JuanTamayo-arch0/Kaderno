@@ -1,4 +1,4 @@
-import { t } from './i18n';
+import { t, monthsShort, dayMonth } from './i18n';
 // ============================================================
 //  Informe semanal del proyecto (v24, fase 5). Puro, con pruebas: lo hecho
 //  en los últimos 7 días, lo que viene en los próximos 7, lo atrasado y la
@@ -8,7 +8,7 @@ import { t } from './i18n';
 export type ReportTask = { id: string; title: string; done: boolean; done_at: string | null; due_date: string | null; due_at?: string | null; assignee_id: string | null };
 export type ReportPerson = { user_id: string; name: string };
 
-const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const MONTHS = monthsShort();
 const DAY = 86_400_000;
 const start = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 const dueOf = (t: ReportTask): Date | null => {
@@ -16,7 +16,7 @@ const dueOf = (t: ReportTask): Date | null => {
   if (t.due_date) { const [y, m, d] = t.due_date.slice(0, 10).split('-').map(Number); return new Date(y, m - 1, d); }
   return null;
 };
-const short = (d: Date) => `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+const short = (d: Date) => dayMonth(d.getDate(), MONTHS[d.getMonth()]);
 
 export type WeeklyReport = {
   from: Date; to: Date; done: ReportTask[]; next: ReportTask[]; late: ReportTask[];
@@ -48,15 +48,15 @@ export function weeklyReportMarkdown(projectName: string, r: WeeklyReport, peopl
   };
   const pct = r.total ? Math.round((r.doneTotal / r.total) * 100) : 0;
   const out = [
-    `# Informe semanal: ${projectName}`, '',
+    t('# Informe semanal: {projectName}', { projectName }), '',
     t('Del {from} al {to}. Avance total: {doneTotal} de {total} tareas ({pct} %).', { from: short(r.from), to: short(r.to), doneTotal: r.doneTotal, total: r.total, pct }), '',
-    `## Lo hecho esta semana (${r.done.length})`, '', ...(r.done.length ? r.done.map((t) => line(t)) : [t('- Nada terminado esta semana.')]), '',
-    `## Lo que viene en los próximos 7 días (${r.next.length})`, '', ...(r.next.length ? r.next.map((t) => line(t, true)) : [t('- Nada con fecha en los próximos 7 días.')]), '',
+    t('## Lo hecho esta semana ({n})', { n: r.done.length }), '', ...(r.done.length ? r.done.map((t) => line(t)) : [t('- Nada terminado esta semana.')]), '',
+    t('## Lo que viene en los próximos 7 días ({n})', { n: r.next.length }), '', ...(r.next.length ? r.next.map((t) => line(t, true)) : [t('- Nada con fecha en los próximos 7 días.')]), '',
   ];
-  if (r.late.length) out.push(`## Atrasado (${r.late.length})`, '', ...r.late.map((t) => line(t, true)), '');
+  if (r.late.length) out.push(t('## Atrasado ({n})', { n: r.late.length }), '', ...r.late.map((t) => line(t, true)), '');
   if (r.load.length || r.unassigned) {
-    out.push('## Carga del equipo', '', ...r.load.map((l) => `- ${l.name}: ${l.pending} ${l.pending === 1 ? 'pendiente' : 'pendientes'}${l.late ? `, ${l.late} ${l.late === 1 ? 'atrasada' : 'atrasadas'}` : ''}`));
-    if (r.unassigned) out.push(`- Sin responsable: ${r.unassigned}`);
+    out.push(t('## Carga del equipo'), '', ...r.load.map((l) => `- ${l.name}: ${l.pending} ${l.pending === 1 ? t('pendiente') : t('pendientes')}${l.late ? `, ${l.late} ${l.late === 1 ? t('atrasada') : t('atrasadas')}` : ''}`));
+    if (r.unassigned) out.push(t('- Sin responsable: {n}', { n: r.unassigned }));
     out.push('');
   }
   return out.join('\n').trim() + '\n';

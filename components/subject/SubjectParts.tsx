@@ -12,7 +12,7 @@ import { focusRingStyle, IconButton, type IconName } from '../ds';
 import { SubjectIcon } from '../SubjectIcon';
 import { useMode } from '../../lib/mode';
 import { vtRef } from '../../lib/motion';
-import { t, trn } from '../../lib/i18n';
+import { t, trn, dayMonth } from '../../lib/i18n';
 
 // ============================================================
 //  Piezas de la página de la materia: barra de arriba, ficha (grande o
@@ -26,7 +26,7 @@ export function classWhen(n: NextClass, now = new Date()): string {
   if (n.now) return t('Ahora, hasta {fmtHour}', { fmtHour: fmtHour(hhmm(n.end)) });
   return `${dayWord(n.start, now)}, ${fmtHour(hhmm(n.start))}`;
 }
-export function shortDate(d: Date): string { return `${d.getDate()} ${MONTH_SHORT[d.getMonth()]}`; }
+export function shortDate(d: Date): string { return dayMonth(d.getDate(), MONTH_SHORT[d.getMonth()]); }
 
 export function SubjectAvatar({ subject, size, vt }: { subject: Subject; size: number; vt?: boolean }) {
   return (
@@ -116,7 +116,7 @@ export function SubjectHero({ subject, days, isWide, onEdit, onSchedule }: {
         : <MetaChip icon="time-outline" text={work ? t('Agregar a la agenda') : t('Agregar al horario')} onPress={onSchedule} dashed />}
       {subject.credits && !work ? <MetaChip text={`${subject.credits} ${subject.credits === 1 ? t('crédito') : t('créditos')}`} /> : null}
       {link ? <MetaChip icon="link-outline" text={work ? t('Enlace') : t('Aula virtual')} onPress={() => Linking.openURL(link).catch(() => {})} label={work ? t('Abrir el enlace') : t('Abrir el aula virtual')} /> : null}
-      {missing ? <MetaChip icon="add" text={work ? 'Responsable, lugar y enlace' : t('Profesor, salón y aula virtual')} onPress={() => onEdit('teacher')} dashed />
+      {missing ? <MetaChip icon="add" text={work ? trn('Responsable, lugar y enlace') : t('Profesor, salón y aula virtual')} onPress={() => onEdit('teacher')} dashed />
         : !subject.teacher ? <MetaChip icon="add" text={who} onPress={() => onEdit('teacher')} dashed />
         : null}
     </View>
@@ -242,7 +242,7 @@ export function SubjectStats({ d, accent, isWide, onGrades, onNext, onTasks, onS
   const w = isWide ? undefined : tileWidth(winW);
   const { work } = useMode();
   const allTiles = [
-    <Tile key="avg" label={t('Promedio')} onPress={onGrades} a11y="Ver calificaciones" style={isWide ? { flex: 1 } : { width: w }}>
+    <Tile key="avg" label={t('Promedio')} onPress={onGrades} a11y={trn('Ver calificaciones')} style={isWide ? { flex: 1 } : { width: w }}>
       <Text style={{ color: C.text, ...big }}>{d.avg == null ? '–' : fmt(d.avg)}<Text style={{ color: C.muted, fontSize: 14, fontWeight: '600' }}> / {d.scale}</Text></Text>
       <View style={{ height: 6, borderRadius: 6, backgroundColor: C.surface2 }}>
         <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${Math.min(100, ((d.avg ?? 0) / d.scale) * 100)}%`, borderRadius: 6, backgroundColor: accent }} />
@@ -250,7 +250,7 @@ export function SubjectStats({ d, accent, isWide, onGrades, onNext, onTasks, onS
       </View>
       <Text style={sub} numberOfLines={2}>{d.neededText}</Text>
     </Tile>,
-    <Tile key="next" label={t('Próxima evaluación')} onPress={d.next ? onNext : undefined} a11y={d.next ? `Abrir ${d.next.title}` : 'Sin evaluaciones'} style={isWide ? { flex: 1 } : { width: w }}>
+    <Tile key="next" label={t('Próxima evaluación')} onPress={d.next ? onNext : undefined} a11y={d.next ? t('Abrir {title}', { title: d.next.title }) : t('Sin evaluaciones')} style={isWide ? { flex: 1 } : { width: w }}>
       {d.next ? (
         <>
           <Text style={{ color: C.text, fontSize: 19, fontWeight: '800' }} numberOfLines={1}>{d.next.title}</Text>
@@ -261,20 +261,20 @@ export function SubjectStats({ d, accent, isWide, onGrades, onNext, onTasks, onS
         </>
       ) : <Text style={[sub, { marginTop: 4 }]}>{t('Nada programado. Agrega parciales con su fecha o impórtalos del cronograma.')}</Text>}
     </Tile>,
-    <Tile key="pend" label={t('Pendientes')} onPress={onTasks} a11y="Ver tareas" style={isWide ? { flex: 1 } : { width: w }}>
+    <Tile key="pend" label={t('Pendientes')} onPress={onTasks} a11y={trn('Ver tareas')} style={isWide ? { flex: 1 } : { width: w }}>
       <Text style={{ color: C.text, ...big }}>{d.pending}</Text>
       <Text style={[sub, d.overdue ? { color: C.badText, fontWeight: '700' } : null]}>
-        {d.overdue ? `${d.overdue} ${d.overdue === 1 ? 'vencida' : 'vencidas'}` : t('Ninguna vencida')}{d.done ? ` · ${d.done} ${d.done === 1 ? 'hecha' : 'hechas'}` : ''}
+        {d.overdue ? `${d.overdue} ${d.overdue === 1 ? t('vencida') : t('vencidas')}` : t('Ninguna vencida')}{d.done ? ` · ${d.done} ${d.done === 1 ? t('hecha') : t('hechas')}` : ''}
       </Text>
     </Tile>,
-    <Tile key="study" label={t('Estudio')} onPress={onStudy} a11y={d.dueCards ? 'Repasar tarjetas' : 'Enfocar en esta materia'} style={isWide ? { flex: 1 } : { width: w }}>
+    <Tile key="study" label={t('Estudio')} onPress={onStudy} a11y={d.dueCards ? t('Repasar tarjetas') : t('Enfocar en esta materia')} style={isWide ? { flex: 1 } : { width: w }}>
       <Text style={{ color: C.text, ...big }}>{d.weekMin == null ? '–' : minutesLabel(d.weekMin)}</Text>
       <Text style={sub} numberOfLines={2}>{t('de enfoque esta semana{v}', { v: d.dueCards ? t(' · {dueCards} {v} para hoy', { dueCards: d.dueCards, v: d.dueCards === 1 ? t('tarjeta') : t('tarjetas') }) : '' })}</Text>
     </Tile>,
   ];
   // v26: en Trabajo no hay promedio ni evaluaciones: pendientes y horas.
   const tiles = work ? allTiles.filter((t) => t.key === 'pend' || t.key === 'study').map((t) => t.key === 'study' ? (
-    <Tile key="study" label={trn('Horas')} onPress={onStudy} a11y="Enfocar en esta área" style={isWide ? { flex: 1 } : { width: w }}>
+    <Tile key="study" label={trn('Horas')} onPress={onStudy} a11y={trn('Enfocar en esta área')} style={isWide ? { flex: 1 } : { width: w }}>
       <Text style={{ color: C.text, ...big }}>{d.weekMin == null ? '–' : minutesLabel(d.weekMin)}</Text>
       <Text style={sub} numberOfLines={2}>{trn('registradas esta semana')}</Text>
     </Tile>

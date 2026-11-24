@@ -62,5 +62,5 @@ export function nextLabel(card: SrsCard, grade: 0 | 1 | 2 | 3): string {
   if (grade === 0) return t('mañana');
   if (d < 30) return d === 1 ? t('1 día') : t('{d} días', { d });
   const m = Math.round(d / 30);
-  return m === 1 ? t('1 mes') : `${m} meses`;
+  return m === 1 ? t('1 mes') : t('{m} meses', { m });
 }
