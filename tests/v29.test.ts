@@ -12,7 +12,9 @@ test('v29 táctil: área mínima de 44 px solo con dedo, sin cambiar el dibujo',
   assert.match(TOUCH_CSS, /touch-action: manipulation/);
   assert.match(TOUCH_CSS, /-webkit-tap-highlight-color: transparent/);
   assert.match(TOUCH_CSS, /overscroll-behavior: contain/);
-  assert.match(TOUCH_CSS, /100dvh/);
+  // Arreglo: 100dvh no respeta el zoom de "Tamaño de interfaz" (con Pequeño dejaba una
+  // franja negra abajo y con Grande cortaba el final). La raíz usa 100 % como antes.
+  assert.doesNotMatch(TOUCH_CSS, /dvh/);
   assert.match(TOUCH_CSS, /:not\(:has\(/, 'solo se oscurece lo más interno que se toca');
 });
 

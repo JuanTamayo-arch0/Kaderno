@@ -1980,3 +1980,7 @@ No hay.
 ### 3. Pruebas
 
 `npm test`. En un celular: abrir una tarea y arrastrar la rayita hacia abajo (se cierra); arrastrar en medio del formulario (se desplaza, no se cierra); deslizar una tarea a la derecha en Android (vibra y queda hecha).
+
+## Versión 29 (arreglo): franja negra abajo en el computador
+
+No hay migración. Con "Tamaño de interfaz" en Pequeño aparecía una franja negra abajo, y con Grande o Muy grande se cortaba el final de la pantalla. Lo causaba el alto `100dvh` de la parte 1, que no respeta ese zoom. La raíz vuelve a medir el 100 % del alto. Para revisarlo, cambia el tamaño en Personalizar: la app debe llenar la ventana exacta en los cuatro tamaños.
