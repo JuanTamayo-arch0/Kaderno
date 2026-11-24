@@ -23,7 +23,6 @@ const half = `min(0px, calc((100% - ${MIN_TAP}px) / 2))`;
 
 export const TOUCH_CSS = `
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-#root { height: 100%; height: 100dvh; }
 ${TAP_SELECTOR} { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 [aria-modal=true] *, [role=dialog] * { overscroll-behavior: contain; }
 @media (pointer: coarse) {

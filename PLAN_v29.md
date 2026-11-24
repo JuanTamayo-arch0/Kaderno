@@ -21,7 +21,7 @@ Pedido: revisar a fondo la versión para celular, porque puede ser donde más se
 2. **Campos de 16 px o más.** Con menos, Safari en iPhone acerca la pantalla al escribir y no vuelve sola.
 3. **No bloquear el zoom con dos dedos** (accesibilidad). En el iPhone `maximum-scale=1` solo quita el zoom automático, porque iOS ignora ese límite para el zoom con dedos; en Android sí lo bloquea, así que va solo en iPhone.
 4. **Áreas seguras:** `viewport-fit=cover` y `env(safe-area-inset-*)` en barras de arriba y abajo. Kaderno ya lo hace en la barra inferior y en las hojas.
-5. **Alto de pantalla con `dvh`** en lugar de `vh`, que en el celular cuenta la barra del navegador.
+5. **Alto de pantalla con `dvh`** en lugar de `vh`, que en el celular cuenta la barra del navegador. Kaderno ya ocupa el 100 % del alto, y el `dvh` se quitó después (ver G7).
 6. **Teclado:**
    - `interactive-widget=resizes-content` para que en Android el contenido se acomode encima del teclado.
    - Mientras se escribe se esconde la barra de pestañas, como en las apps nativas.
@@ -78,7 +78,7 @@ Pedido: revisar a fondo la versión para celular, porque puede ser donde más se
 - Sin zoom al escribir en iPhone, y campos de 16 px en celular.
 - Toque sin demora, sin recuadro gris y con estado presionado.
 - Barra de pestañas escondida mientras el teclado está abierto. `interactive-widget=resizes-content`.
-- `dvh` en el contenedor principal y `overscroll-behavior: contain` en hojas y diálogos.
+- `overscroll-behavior: contain` en hojas y diálogos.
 - Manifiesto con `id`, categorías y capturas para la instalación.
 
 ### Fase 2: pantallas
@@ -107,3 +107,7 @@ Arreglar los hallazgos 5 a 16.
 6. (Fase 3) **Arreglo de paso:** la hoja de tarjetas de v26 no se cerraba arrastrando en la web.
    - En el sistema de gestos de react-native-web, cuando el dedo se mueve solo un ancestro de quien recibió el toque puede quedarse con el gesto, y los oyentes estaban dentro de la hoja.
    - Ahora van en el contenedor de afuera (`lib/sheetDrag.ts`) y solo cuentan si el gesto empieza en la franja de arriba. Arrastrar dentro del contenido sigue desplazando.
+7. (Arreglo después de mezclar) Se quitó `height: 100dvh` de `#root`.
+   - `dvh` no respeta el zoom de "Tamaño de interfaz".
+   - Con Pequeño (0,9) quedaba una franja negra abajo en el computador; con Grande o Muy grande se cortaba el final de la pantalla, como la tarjeta de la cuenta.
+   - La raíz vuelve a medir el 100 % del alto, que en el celular ya sigue al teclado con `interactive-widget`.
