@@ -18,6 +18,7 @@
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { langOf, say } from '../_shared/lang.ts';
+import { complete, providerOf } from '../_shared/llm.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { ocrPrompt, parseOcr, type OcrMode } from '../_shared/ocrMarkdown.ts';
 import { limitOf, limitMessage } from '../_shared/plans.ts';
@@ -54,35 +55,23 @@ Deno.serve(async (req) => {
       return json({ error: limitMessage(plan, 'ocr', lang), code: 'limit', plan }, 429);
     }
 
-    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
-    if (!apiKey) return json({ error: say(lang, 'ANTHROPIC_API_KEY no configurada') }, 500);
+    const env = (k: string) => Deno.env.get(k);
+    const keyName = providerOf(env) === 'gemini' ? 'GEMINI_API_KEY' : 'ANTHROPIC_API_KEY';
+    if (!env(keyName)) return json({ error: say(lang, `${keyName} no configurada`) }, 500);
 
     const prompt = mode ? ocrPrompt(mode)
       : 'Transcribe fielmente el texto manuscrito de esta imagen de apuntes escolares. ' +
         'Devuelve SOLO el texto, conservando saltos de línea y viñetas. ' +
         'No inventes contenido ilegible; marca lo dudoso con [?]. No agregues comentarios.';
 
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({
-        // Modelo de visión. Se puede fijar con la variable OCR_MODEL.
-        model: Deno.env.get('OCR_MODEL') ?? 'claude-sonnet-5',
-        max_tokens: mode === 'plain' || !mode ? 2000 : 4000,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'image', source: { type: 'base64', media_type: mediaType, data: imageBase64 } },
-            { type: 'text', text: prompt },
-          ],
-        }],
-      }),
+    // Modelo de visión: OCR_MODEL (Claude) o GEMINI_MODEL (Gemini).
+    const res = await complete(env, {
+      kind: 'vision',
+      maxTokens: mode === 'plain' || !mode ? 2000 : 4000,
+      messages: [{ role: 'user', content: [{ type: 'image', mediaType, data: imageBase64 }, { type: 'text', text: prompt }] }],
     });
-
-    if (!res.ok) return json({ error: say(lang, 'Fallo del modelo de visión'), detail: (await res.text()).slice(0, 500) }, 502);
-
-    const data = await res.json();
-    const text = (data.content ?? []).map((b: any) => b.text ?? '').join('').trim();
+    if (!res.ok) return json({ error: say(lang, 'Fallo del modelo de visión'), detail: res.detail.slice(0, 500) }, 502);
+    const text = res.text;
     if (!mode) return json({ text });
     const r = parseOcr(text, mode);
     return json({ text: r.markdown, markdown: r.markdown, figures: r.figures, title: r.title });

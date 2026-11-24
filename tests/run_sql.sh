@@ -99,3 +99,7 @@ $PSQL -d k16 -f tests/sql/26b_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARO
 $PSQL -d k16 -f tests/sql/26c_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line|WARNING" | grep -v "^ *$"
 for f in supabase/schema_v27.sql supabase/schema_v27.sql; do echo "== k16 $f"; $PSQL -d k16 -f $f 2>&1 | grep -v "NOTICE" | grep -v "^$" | head -20; done
 $PSQL -d k16 -f tests/sql/27_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line|WARNING" | grep -v "^ *$"
+# ---------- schema_v28 (vectores del Oráculo con su modelo; sin pgvector, con float8[]) ----------
+sed -e 's/vector(1536)/float8[]/g; s/(vector, uuid, int, text)/(float8[], uuid, int, text)/g' supabase/schema_v28.sql > /tmp/kd_schema_v28.sql
+$PSQL -d k16 -f tests/sql/28_antes.sql 2>&1 | grep -v NOTICE | grep -v "^$" | head
+$PSQL -d k16 -f tests/sql/28_pruebas.sql 2>&1 | grep -E "ok [0-9]+|ERROR|PASARON|exception|línea|line" | grep -v "^ *$"

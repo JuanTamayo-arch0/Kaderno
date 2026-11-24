@@ -2055,3 +2055,51 @@ Si una función se despliega antes que la app nueva, sigue respondiendo en espa�
 
 - `npm test` (incluye `tests/v30.test.ts`: lector en inglés, cuenta de cobro bilingüe, sílabo, servidor, manifiesto) y `bash tests/run_sql.sh` (incluye `tests/sql/27_pruebas.sql`: avisos en inglés).
 - Recorrido en inglés de las 31 pantallas a 320, 390 y 1440 px, en Estudio y Trabajo, buscando texto en español y desbordes; y un segundo recorrido tocando cada botón para revisar hojas y menús.
+
+## Versión 31: elegir el proveedor de IA (Claude o Gemini)
+
+### 1. Pasarse a Gemini
+
+1. En Google AI Studio (aistudio.google.com), crea una llave de API en un proyecto **con facturación activa**. Sin facturación, la llave queda en el plan gratis, con límites bajos y con datos que Google puede usar.
+2. Guarda los secretos en Supabase:
+
+```
+npx supabase secrets set GEMINI_API_KEY=... AI_PROVIDER=gemini
+```
+
+3. Para que el Oráculo busque por significado con Gemini (opcional): `npx supabase secrets set EMBED_PROVIDER=gemini`. Si no hay `OPENAI_API_KEY`, con `AI_PROVIDER=gemini` ya se usa Gemini para los vectores.
+4. Correr `supabase/schema_v28.sql` en el SQL Editor (una vez, después de `schema_v27.sql`).
+5. Volver a desplegar:
+
+```
+npx supabase functions deploy ai
+npx supabase functions deploy oracle
+npx supabase functions deploy ocr
+```
+
+Para volver a Claude: `npx supabase secrets set AI_PROVIDER=claude` (no hace falta desplegar otra vez).
+
+### 2. Secretos
+
+| Secreto | Para qué | Por defecto |
+| --- | --- | --- |
+| `AI_PROVIDER` | `claude` o `gemini` | `claude` |
+| `ANTHROPIC_API_KEY` | llave de Claude | |
+| `GEMINI_API_KEY` | llave de Gemini | |
+| `AI_MODEL` / `OCR_MODEL` | modelo de Claude | `claude-sonnet-5` |
+| `GEMINI_MODEL` | modelo principal de Gemini (también lee fotos) | `gemini-3.8-flash` |
+| `GEMINI_MODEL_LIGHT` | tareas cortas (pasos de una tarea) | `gemini-3.5-flash-lite` |
+| `AI_FALLBACK` | `1`: si el elegido falla y está la otra llave, responde el otro | apagado |
+| `EMBED_PROVIDER` | vectores del Oráculo: `openai` o `gemini` | `openai` si hay `OPENAI_API_KEY` |
+
+### 3. Lo que cambia para el usuario
+
+Nada visible: mismas pantallas, mismos cupos, mismo idioma de las respuestas.
+- Si se cambian los vectores del Oráculo de proveedor, los viejos no se mezclan con los nuevos.
+- Hasta que cada persona toque "Preparar mis notas", el Oráculo responde con sus notas recientes, como cuando no había vectores.
+
+### 4. Pruebas
+
+- `npm test` (incluye `tests/v31.test.ts`, con respuestas simuladas de Claude y Gemini: formato de cada uno, pensamiento, fotos, respaldo, vectores).
+- `bash tests/run_sql.sh` (incluye `tests/sql/28_pruebas.sql`: la búsqueda solo compara vectores del mismo modelo).
+- `npm run check:fn` revisa los tipos de todas las funciones con Deno, sin red.
