@@ -409,9 +409,9 @@ function MinutesBlock({ m, dateLabel, busy, onRedo, onInsert, onPublish, onStyle
       </View>
       <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Enviar:')}</Text>
-        <Button label="WhatsApp" size="sm" kind="secondary" icon="logo-whatsapp" onPress={() => openWhatsApp(minutesPlain(m, dateLabel, true))} accessibilityLabel={t('Enviar el acta por WhatsApp')} />
-        <Button label={t('Correo')} size="sm" kind="secondary" icon="mail-outline" onPress={() => Linking.openURL(mailtoUrl(subject, minutesPlain(m, dateLabel))).catch(() => toast(t('No se pudo abrir el correo')))} accessibilityLabel={t('Enviar el acta por correo')} />
-        <Button label={t('Copiar')} size="sm" kind="ghost" icon="copy-outline" onPress={async () => toast((await copyText(minutesPlain(m, dateLabel))) ? t('Acta copiada') : t('No se pudo copiar'))} accessibilityLabel={t('Copiar el acta')} />
+        <Button label="WhatsApp" size="sm" kind="secondary" icon="logo-whatsapp" onPress={() => openWhatsApp(minutesPlain(m, dateLabel, true, appLang()))} accessibilityLabel={t('Enviar el acta por WhatsApp')} />
+        <Button label={t('Correo')} size="sm" kind="secondary" icon="mail-outline" onPress={() => Linking.openURL(mailtoUrl(subject, minutesPlain(m, dateLabel, false, appLang()))).catch(() => toast(t('No se pudo abrir el correo')))} accessibilityLabel={t('Enviar el acta por correo')} />
+        <Button label={t('Copiar')} size="sm" kind="ghost" icon="copy-outline" onPress={async () => toast((await copyText(minutesPlain(m, dateLabel, false, appLang()))) ? t('Acta copiada') : t('No se pudo copiar'))} accessibilityLabel={t('Copiar el acta')} />
       </View>
     </View>
   );

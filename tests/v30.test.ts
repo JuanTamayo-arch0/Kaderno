@@ -148,3 +148,32 @@ test('v30 idiomas: cuenta de cobro bilingüe, sílabo y exportación en inglés'
     assert.match(syllabusPrompt('Physics', 2026), /MM\/DD\/YYYY/);
   } finally { _setLangForTests('es'); }
 });
+
+test('v30 idiomas: servidor (IA, cupos, actas, calendario) y la página en inglés', async () => {
+  const { langOf, answerIn, say } = await import('../supabase/functions/_shared/lang');
+  assert.equal(langOf('en'), 'en'); assert.equal(langOf(undefined), 'es'); assert.equal(langOf('fr'), 'es');
+  assert.equal(answerIn('es'), '');
+  assert.match(answerIn('en'), /in natural English/);
+  assert.equal(say('en', 'Inicia sesión para usar la IA.'), 'Sign in to use the AI.');
+  assert.equal(say('es', 'Inicia sesión para usar la IA.'), 'Inicia sesión para usar la IA.');
+  const { limitMessage } = await import('../supabase/functions/_shared/plans');
+  assert.match(limitMessage('free', 'quiz', 'en'), /^You reached today's limit \(2 mock exams\)\. .*Kaderno Pro you get 8 a day\.$/);
+  assert.match(limitMessage('free', 'quiz'), /^Llegaste al límite de hoy/);
+  const { minutesPlain } = await import('../supabase/functions/_shared/meeting');
+  const m: any = { kind: 'meeting', title: 'Kickoff', summary: ['Plan'], attendees: ['Ana'], decisions: [], tasks: [{ title: 'Send deck', owner: null, due: '2026-12-04', when: null }], open: [] };
+  assert.equal(minutesPlain(m, 'Nov 23', false, 'en'), 'Minutes: Kickoff (Nov 23)\n\nAttendees: Ana\n\nSummary\n- Plan\n\nTasks\n- Send deck (no owner, Dec 4)');
+  assert.match(minutesPlain(m, '23 nov'), /^Acta: Kickoff \(23 nov\)/);
+  const { buildIcs } = await import('../supabase/functions/_shared/ics');
+  const ics = buildIcs({ name: 'Kaderno', lang: 'en', tasks: [{ id: '1', title: 'Report', due_date: '2026-12-01', kind: 'project', project: null }], classes: [], now: new Date('2026-11-23T12:00:00Z') });
+  assert.match(ics, /SUMMARY:\[Project\] Report/); assert.match(ics, /CATEGORIES:Deadlines/);
+  // La página: idioma, descripción y manifiesto en inglés desde el principio.
+  const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+  assert.match(html, /manifest-en\.webmanifest/); assert.match(html, /localStorage\.getItem\('kd-lang'\)/);
+  const man = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'public', 'manifest-en.webmanifest'), 'utf8'));
+  const es = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'public', 'manifest.webmanifest'), 'utf8'));
+  assert.equal(man.lang, 'en'); assert.equal(man.shortcuts.length, es.shortcuts.length);
+  assert.deepEqual(man.icons, es.icons, 'el manifiesto en inglés solo cambia los textos');
+  assert.deepEqual(man.share_target, es.share_target);
+  // La app manda el idioma en cada llamada a las funciones.
+  assert.match(fs.readFileSync(path.join(__dirname, '..', 'lib', 'supabase.ts'), 'utf8'), /body: \{ lang: lang\(\), \.\.\.body \}/);
+});

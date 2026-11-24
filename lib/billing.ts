@@ -3,8 +3,8 @@
 //  "Tu plan" según lo que devuelve my_plan() de schema_v23.
 // ============================================================
 export * from '../supabase/functions/_shared/plans';
-import { LIMITS, LIMIT_TEXT, PRICES, type LimitKey, type Period, type PlanId } from '../supabase/functions/_shared/plans';
-import { t, monthsShort, dayMonth } from './i18n';
+import { LIMITS, limitText, PRICES, type LimitKey, type Period, type PlanId } from '../supabase/functions/_shared/plans';
+import { t, monthsShort, dayMonth, lang } from './i18n';
 
 export type MyPlan = {
   plan: PlanId; own_plan?: PlanId; status?: 'none' | 'trial' | 'active' | 'past_due' | 'canceled';
@@ -51,7 +51,7 @@ export function planView(mp: MyPlan | null | undefined, now = new Date()): PlanV
 
 /** Filas de la comparación de planes. */
 export type CompareRow = { label: string; free: string | boolean; pro: string | boolean; team: string | boolean };
-const lim = (k: LimitKey, unit?: string) => ({ label: cap(LIMIT_TEXT[k]) + t(' al día'), free: String(LIMITS.free[k]) + (unit ?? ''), pro: String(LIMITS.pro[k]) + (unit ?? ''), team: String(LIMITS.pro[k]) + (unit ?? '') });
+const lim = (k: LimitKey, unit?: string) => ({ label: cap(limitText(k, lang())) + t(' al día'), free: String(LIMITS.free[k]) + (unit ?? ''), pro: String(LIMITS.pro[k]) + (unit ?? ''), team: String(LIMITS.pro[k]) + (unit ?? '') });
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
 export const COMPARE: CompareRow[] = [
   { label: t('Materias, tareas, notas, horario, enfoque, repaso, proyectos y mascota'), free: true, pro: true, team: true },
@@ -73,7 +73,7 @@ export const perMonth = (plan: 'pro' | 'team', period: Period) => (period === 'm
 export function usageRows(plan: PlanId, used: Record<string, number>): { key: LimitKey; label: string; used: number; limit: number }[] {
   const tier = plan === 'free' ? 'free' : 'pro';
   const keys: LimitKey[] = ['summary', 'flashcards', 'quiz', 'recall', 'grade', 'ocr', 'class_summary', 'meeting', 'steps'];
-  return keys.map((k) => ({ key: k, label: cap(LIMIT_TEXT[k]), used: used[k] ?? 0, limit: LIMITS[tier][k] }))
+  return keys.map((k) => ({ key: k, label: cap(limitText(k, lang())), used: used[k] ?? 0, limit: LIMITS[tier][k] }))
     .filter((r) => r.used > 0 || ['summary', 'flashcards', 'quiz', 'ocr'].includes(r.key));
 }
 

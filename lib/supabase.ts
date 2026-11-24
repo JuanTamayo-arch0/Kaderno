@@ -1,6 +1,7 @@
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
+import { lang } from './i18n';
 
 // La configuración puede venir de dos sitios:
 //  1) window.KADERNO_CONFIG  → archivo kaderno-config.js servido junto al build
@@ -41,6 +42,15 @@ export const supabase = createClient(
     },
   }
 );
+
+// v30: toda llamada a las funciones lleva el idioma de la app, así la IA
+// responde y los mensajes de error llegan en ese idioma (ver _shared/lang.ts).
+const invoke = supabase.functions.invoke.bind(supabase.functions);
+(supabase.functions as any).invoke = (name: string, opts: any = {}) => {
+  const body = opts.body;
+  const plain = body && typeof body === 'object' && !(body instanceof FormData) && !(body instanceof Blob) && !(body instanceof ArrayBuffer);
+  return invoke(name, plain ? { ...opts, body: { lang: lang(), ...body } } : opts);
+};
 
 /**
  * Id de quien tiene la sesión abierta, SIN ir a la red: la sesión ya está

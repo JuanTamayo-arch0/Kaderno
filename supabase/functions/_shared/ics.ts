@@ -5,7 +5,7 @@
 
 export type IcsTask = { id: string; title: string; description?: string | null; due_date?: string | null; due_at?: string | null; subject?: string | null; kind?: 'task' | 'project'; project?: string | null; done?: boolean };
 export type IcsClass = { id: string; subject: string; day: number; start: string; end: string }; // day 0 = lunes, HH:MM
-export type IcsInput = { name: string; tasks: IcsTask[]; classes: IcsClass[]; now: Date; weeks?: number; appUrl?: string; tz?: string };
+export type IcsInput = { lang?: 'es' | 'en'; name: string; tasks: IcsTask[]; classes: IcsClass[]; now: Date; weeks?: number; appUrl?: string; tz?: string };
 
 /** Bloques del horario por defecto (los mismos de lib/schedule.ts) para quien nunca los cambió. */
 export const DEFAULT_ICS_BLOCKS: { start: string; end: string }[] = [
@@ -44,6 +44,7 @@ function nextDay(iso: string): string {
 }
 
 export function buildIcs(inp: IcsInput): string {
+  const en = inp.lang === 'en';
   const L: string[] = [
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Kaderno//Calendario//ES', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
     `X-WR-CALNAME:${escapeText(inp.name)}`, 'X-PUBLISHED-TTL:PT1H', 'REFRESH-INTERVAL;VALUE=DURATION:PT1H',
@@ -54,7 +55,7 @@ export function buildIcs(inp: IcsInput): string {
 
   for (const t of inp.tasks) {
     if (t.done || (!t.due_at && !t.due_date)) continue;
-    const summary = (t.kind === 'project' ? `[${t.project ?? 'Proyecto'}] ` : t.subject ? `[${t.subject}] ` : '') + t.title;
+    const summary = (t.kind === 'project' ? `[${t.project ?? (en ? 'Project' : 'Proyecto')}] ` : t.subject ? `[${t.subject}] ` : '') + t.title;
     L.push('BEGIN:VEVENT', `UID:${t.kind === 'project' ? 'p' : 't'}-${t.id}@kaderno`, `DTSTAMP:${stamp}`, `SUMMARY:${escapeText(summary)}`);
     if (t.due_at) {
       const end = new Date(t.due_at);
@@ -65,7 +66,7 @@ export function buildIcs(inp: IcsInput): string {
     }
     if (t.description) L.push(`DESCRIPTION:${escapeText(t.description)}`);
     if (inp.appUrl) L.push(`URL:${inp.appUrl}`);
-    L.push('CATEGORIES:Entregas', 'END:VEVENT');
+    L.push(en ? 'CATEGORIES:Deadlines' : 'CATEGORIES:Entregas', 'END:VEVENT');
   }
 
   // Clases: se repiten cada semana desde la semana actual (hora local, sin zona).
@@ -78,7 +79,7 @@ export function buildIcs(inp: IcsInput): string {
     const ymd = `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}`;
     const hm = (s: string) => s.replace(':', '') + '00';
     L.push('BEGIN:VEVENT', `UID:c-${c.id}@kaderno`, `DTSTAMP:${stamp}`, `SUMMARY:${escapeText(c.subject)}`,
-      `DTSTART:${ymd}T${hm(c.start)}`, `DTEND:${ymd}T${hm(c.end)}`, `RRULE:FREQ=WEEKLY;COUNT=${weeks}`, 'CATEGORIES:Clases', 'END:VEVENT');
+      `DTSTART:${ymd}T${hm(c.start)}`, `DTEND:${ymd}T${hm(c.end)}`, `RRULE:FREQ=WEEKLY;COUNT=${weeks}`, en ? 'CATEGORIES:Classes' : 'CATEGORIES:Clases', 'END:VEVENT');
   }
   L.push('END:VCALENDAR');
   return L.map(fold).join('\r\n') + '\r\n';

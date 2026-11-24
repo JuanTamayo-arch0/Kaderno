@@ -2,6 +2,13 @@
 //  Acta de una reunión transcrita (v24, fase 4). TypeScript puro: lo usan la
 //  función "ai" y las pruebas de la app.
 // ============================================================
+// v30: sin importar lang.ts, porque la app también usa este archivo (y Deno pide la extensión).
+type Lang = 'es' | 'en';
+const LABEL_EN: Record<string, string> = {
+  Acta: 'Minutes', Asistentes: 'Attendees', Resumen: 'Summary', Decisiones: 'Decisions', Tareas: 'Tasks',
+  'Pendientes para la próxima': 'Open items for next time', 'sin responsable': 'no owner',
+};
+const say = (lang: Lang, es: string) => (lang === 'en' ? LABEL_EN[es] ?? es : es);
 
 export type MeetingTask = { title: string; owner: string | null; due: string | null; when: string | null };
 export type MeetingMinutes = {
@@ -94,22 +101,23 @@ export function parseMeeting(text: string): MeetingMinutes | null {
 }
 
 const MONTHS_ES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-const dayLabel = (iso: string) => { const [, m, d] = iso.split('-').map(Number); return `${d} ${MONTHS_ES[m - 1]}`; };
+const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const dayLabel = (iso: string, lang: Lang = 'es') => { const [, m, d] = iso.split('-').map(Number); return lang === 'en' ? `${MONTHS_EN[m - 1]} ${d}` : `${d} ${MONTHS_ES[m - 1]}`; };
 
 /**
  * El acta en texto simple, para mandarla por WhatsApp o correo y para que el
  * Oráculo la lea. Con bold, los títulos van entre asteriscos (WhatsApp).
  */
-export function minutesPlain(m: MeetingMinutes, dateLabel: string, bold = false): string {
+export function minutesPlain(m: MeetingMinutes, dateLabel: string, bold = false, lang: Lang = 'es'): string {
   const h = (t: string) => (bold ? `*${t}*` : t);
-  const out: string[] = [h(`Acta${m.title ? `: ${m.title}` : ''} (${dateLabel})`)];
-  const block = (t: string, xs: string[]) => { if (xs.length) out.push('', h(t), ...xs.map((x) => `- ${x}`)); };
-  if (m.attendees.length) out.push('', `Asistentes: ${m.attendees.join(', ')}`);
+  const out: string[] = [h(`${say(lang, 'Acta')}${m.title ? `: ${m.title}` : ''} (${dateLabel})`)];
+  const block = (t: string, xs: string[]) => { if (xs.length) out.push('', h(say(lang, t)), ...xs.map((x) => `- ${x}`)); };
+  if (m.attendees.length) out.push('', `${say(lang, 'Asistentes')}: ${m.attendees.join(', ')}`);
   block('Resumen', m.summary);
   block('Decisiones', m.decisions);
   block('Tareas', m.tasks.map((t) => {
-    const who = t.owner ?? 'sin responsable';
-    const when = t.due ? dayLabel(t.due) : t.when ?? '';
+    const who = t.owner ?? say(lang, 'sin responsable');
+    const when = t.due ? dayLabel(t.due, lang) : t.when ?? '';
     return `${t.title} (${who}${when ? `, ${when}` : ''})`;
   }));
   block('Pendientes para la próxima', m.open);

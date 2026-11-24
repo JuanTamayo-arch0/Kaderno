@@ -1,0 +1,123 @@
+{
+  "id": "/",
+  "name": "Kaderno",
+  "short_name": "Kaderno",
+  "description": "Tasks, notes, schedule and studying in one place.",
+  "lang": "en",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#12131F",
+  "theme_color": "#12131F",
+  "categories": [
+    "education",
+    "productivity"
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/hoy-celular.png",
+      "sizes": "780x1688",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Today: what’s due, by subject and by day"
+    },
+    {
+      "src": "/screenshots/mi-dia-celular.png",
+      "sizes": "780x1688",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "My day: the frog and the hours of the day"
+    },
+    {
+      "src": "/screenshots/hoy-computador.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Kaderno on the computer"
+    }
+  ],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Add task",
+      "url": "/?agregar=1",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Focus",
+      "url": "/enfoque",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Review",
+      "url": "/repaso",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Capture notes",
+      "url": "/capturar",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "share_target": {
+    "action": "/compartir",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "foto",
+          "accept": [
+            "image/*"
+          ]
+        }
+      ]
+    }
+  }
+}

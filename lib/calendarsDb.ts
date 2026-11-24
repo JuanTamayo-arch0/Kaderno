@@ -5,7 +5,7 @@
 // ============================================================
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase';
 import type { ExtEvent } from '../components/day/Timeline';
-import { t } from './i18n';
+import { t, lang } from './i18n';
 
 const missing = (e: any) => !!e && (e.code === '42P01' || e.code === 'PGRST205' || e.code === '42703' || /does not exist|Could not find/i.test(String(e.message ?? '')));
 export const NEEDS_V20_3 = t('Para esto falta correr schema_v20.sql (fase 3) en Supabase.');
@@ -108,7 +108,7 @@ export async function disableShare(noteId: string): Promise<void> {
 export type SharedNote = { title: string; content: string; updated_at: string | null };
 /** La nota pública de un enlace (sin sesión). */
 export async function fetchSharedNote(token: string): Promise<SharedNote> {
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/shared-note?t=${encodeURIComponent(token)}`, {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/shared-note?t=${encodeURIComponent(token)}&lang=${lang()}`, {
     headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
   });
   const j = await res.json().catch(() => ({}));
