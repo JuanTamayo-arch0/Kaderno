@@ -264,7 +264,7 @@ export function SubjectStats({ d, accent, isWide, onGrades, onNext, onTasks, onS
     <Tile key="pend" label={t('Pendientes')} onPress={onTasks} a11y="Ver tareas" style={isWide ? { flex: 1 } : { width: w }}>
       <Text style={{ color: C.text, ...big }}>{d.pending}</Text>
       <Text style={[sub, d.overdue ? { color: C.badText, fontWeight: '700' } : null]}>
-        {d.overdue ? `${d.overdue} ${d.overdue === 1 ? 'vencida' : 'vencidas'}` : t('Ninguna vencida')}{d.done ? ` · ${d.done} ${d.done === 1 ? 'hecha' : 'hechas'}` : ''}
+        {d.overdue ? `${d.overdue} ${d.overdue === 1 ? t('vencida') : t('vencidas')}` : t('Ninguna vencida')}{d.done ? ` · ${d.done} ${d.done === 1 ? t('hecha') : t('hechas')}` : ''}
       </Text>
     </Tile>,
     <Tile key="study" label={t('Estudio')} onPress={onStudy} a11y={d.dueCards ? 'Repasar tarjetas' : 'Enfocar en esta materia'} style={isWide ? { flex: 1 } : { width: w }}>

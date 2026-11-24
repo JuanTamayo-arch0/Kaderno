@@ -90,11 +90,11 @@ export function DayClose({ visible, tasks, onClose, onDone }: { visible: boolean
     body = (
       <>
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          <Stat n={String(doneToday.length)} label={doneToday.length === 1 ? 'tarea' : 'tareas'} />
+          <Stat n={String(doneToday.length)} label={doneToday.length === 1 ? t('tarea') : t('tareas')} />
           {work && logged != null
             ? <Stat n={fmtHours(logged)} label="registradas" />
             : <Stat n={fmtHours(stats?.focus ?? 0)} label={t('de enfoque')} />}
-          {!work && <Stat n={String(stats?.cards ?? 0)} label="tarjetas" />}
+          {!work && <Stat n={String(stats?.cards ?? 0)} label={t('tarjetas')} />}
         </View>
         <Text style={{ color: C.text, fontSize: 14 }}>{nothing && !logged ? (work ? t('Hoy no hubo nada registrado, y está bien. Mañana es otro día.') : t('Hoy no hubo estudio, y está bien. Mañana es otro día.')) : doneToday.length >= 3 || (stats?.focus ?? 0) >= 60 || (logged ?? 0) >= 240 ? t('Buen día. Lo que hiciste cuenta.') : t('Algo hiciste hoy, y eso suma.')}</Text>
         {work && logged != null && hoursNudge(logged, doneToday.length) && (

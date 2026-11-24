@@ -1,4 +1,4 @@
-import { t } from './i18n';
+import { t, monthsShort } from './i18n';
 // ============================================================
 //  Notas conectadas (v21, secciones 6 a 8). Puro, con pruebas.
 //  Enlaces [[entre notas]], tarjetas escritas con "::" y plantillas.
@@ -99,7 +99,7 @@ export function builtinTemplate(key: string | null | undefined): Template | null
   return TEMPLATES.find((t) => t.key === key) ?? null;
 }
 
-const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const MONTHS = monthsShort();
 /** "Clase del 23 oct" (o "Reunión del 23 oct" en modo Trabajo). */
 export function classNoteTitle(d: Date, work = false): string { return `${work ? t('Reunión') : t('Clase')} del ${d.getDate()} ${MONTHS[d.getMonth()]}`; }
 

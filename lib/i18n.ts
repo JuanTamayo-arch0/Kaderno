@@ -110,3 +110,12 @@ export function monthNames(style: 'long' | 'short' = 'long'): string[] {
 }
 
 function cap(s: string): string { return s ? s[0].toUpperCase() + s.slice(1) : s; }
+
+const ES_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const ES_LONG = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const EN_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const EN_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+/** Meses cortos como los escribe la app: "nov" en español, "Nov" en inglés. */
+export function monthsShort(): string[] { return [...(current === 'en' ? EN_SHORT : ES_SHORT)]; }
+/** Meses completos: "noviembre" en español, "November" en inglés. */
+export function monthsLong(): string[] { return [...(current === 'en' ? EN_LONG : ES_LONG)]; }

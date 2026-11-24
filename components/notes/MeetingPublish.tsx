@@ -10,7 +10,7 @@ import { addProjectTask, canEdit, colorOf, columnsOf, getMembers, getProjects, i
 import { uploadNewFile } from '../../lib/projectFiles';
 import { matchOwner, minutesFileName, minutesMarkdown, type MeetingMinutes } from '../../lib/meeting';
 import { toast, friendlyError } from '../../lib/feedback';
-import { t } from '../../lib/i18n';
+import { t, monthsShort } from '../../lib/i18n';
 
 // ============================================================
 //  Publicar el acta en un proyecto (v24, fase 4): las tareas quedan
@@ -19,7 +19,7 @@ import { t } from '../../lib/i18n';
 // ============================================================
 
 type Row = { include: boolean; title: string; assignee: string | null; due: string | null; owner: string | null };
-const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const MONTHS = monthsShort();
 const dayLabel = (iso: string) => { const [, m, d] = iso.split('-').map(Number); return `${d} ${MONTHS[m - 1]}`; };
 
 export function MeetingPublish({ visible, minutes, date, onClose }: { visible: boolean; minutes: MeetingMinutes; date: Date; onClose: () => void }) {

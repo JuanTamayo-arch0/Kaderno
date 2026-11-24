@@ -11,6 +11,7 @@
 //  Quien lo usa llama step(dt) en cada cuadro y pinta x, y, dir y frame().
 // ============================================================
 import { ANIMS, type Frame } from './art';
+import { t } from '../i18n';
 
 export type Rect = { left: number; right: number; top: number };
 export type World = {
@@ -251,7 +252,7 @@ export class PetMotion {
     const s = nowMs / 1000;
     switch (this.mode) {
       case 'walk': return ANIMS.camina.frames[Math.floor(s * ANIMS.camina.fps) % ANIMS.camina.frames.length];
-      case 'air': return this.vy < 0 ? 'salto' : 'cae';
+      case 'air': return this.vy < 0 ? 'salto' : 'cae'; // i18n-ok: nombres de cuadros
       case 'held': return 'agarrado';
       case 'sleep': return ANIMS.duerme.frames[Math.floor(s * ANIMS.duerme.fps) % ANIMS.duerme.frames.length];
       default: {

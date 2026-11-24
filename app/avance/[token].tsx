@@ -6,14 +6,14 @@ import { C } from '../../lib/theme';
 import { KadernoMark } from '../../components/brand/KadernoLogo';
 import { publicView, type PublicView } from '../../lib/clientLinks';
 import { HEALTH } from '../../lib/projectWork';
-import { t } from '../../lib/i18n';
+import { t, monthsShort } from '../../lib/i18n';
 
 // ============================================================
 //  Avance del proyecto para el cliente (v25, fase 4): público y de solo
 //  lectura. Sin nombres, comentarios, horas ni tareas marcadas #interno.
 // ============================================================
 
-const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const MONTHS = monthsShort();
 const day = (iso: string) => { const [, m, d] = String(iso).slice(0, 10).split('-').map(Number); return `${d} ${MONTHS[m - 1]}`; };
 
 export default function Avance() {

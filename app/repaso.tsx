@@ -178,7 +178,7 @@ function Home({ data, queue, result, onStart, onDismiss, onCreate, wide }: {
           <View style={{ flexDirection: wide ? 'row' : 'column', alignItems: wide ? 'center' : 'flex-start', gap: 10 }}>
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={{ color: C.text, fontSize: 15, fontWeight: '800' }}>
-                {exam[1].title} {t(' de ')}{data.subjects.find((s) => s.id === exam[0])?.name ?? t('una materia')} {exam[1].days === 0 ? 'hoy' : exam[1].days === 1 ? t('mañana') : t('en {days} días', { days: exam[1].days })}
+                {exam[1].title} {t(' de ')}{data.subjects.find((s) => s.id === exam[0])?.name ?? t('una materia')} {exam[1].days === 0 ? t('hoy') : exam[1].days === 1 ? t('mañana') : t('en {days} días', { days: exam[1].days })}
               </Text>
               <Text style={{ color: '#e2d2a8', fontSize: 13 }}>{t('Repaso intensivo: todas las tarjetas de la materia, aunque no les toque. Solo las que falles cambian su programación.')}</Text>
             </View>

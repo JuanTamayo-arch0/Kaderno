@@ -248,7 +248,7 @@ export function lineFor(sit: Situation, species: Species, vars: Record<string, s
   const list = LINES[sit][species];
   const raw = list[Math.floor(seed * list.length) % list.length];
   const n = Number(vars.n ?? 0);
-  return raw.replace(/\{(\w+)\}/g, (_, k) => k === 's' ? (n === 1 ? '' : 's') : String(vars[k] ?? ''));
+  return raw.replace(/\{(\w+)\}/g, (_, k) => k === 's' ? (n === 1 ? '' : t('s')) : String(vars[k] ?? ''));
 }
 
 /** Frase del día: la misma todo el día y no se repite en 30 días seguidos. */

@@ -195,7 +195,7 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
   };
 
   const total = isUpdate && diff ? diff.updates.length + diff.creates.length + diff.deletes.length : importable.length;
-  const accion = isUpdate ? t('Aplicar cambios') : `Importar ${importable.length} ${importable.length === 1 ? 'tarea' : 'tareas'}`;
+  const accion = isUpdate ? t('Aplicar cambios') : `Importar ${importable.length} ${importable.length === 1 ? t('tarea') : t('tareas')}`;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -234,7 +234,7 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
                   {isUpdate && diff ? (
                     <Chip icon="git-compare-outline" color={C.brand} text={diffSummary(diff)} />
                   ) : (
-                    <Chip icon="checkmark-circle" color={C.good} text={`${summary.ok} ${summary.ok === 1 ? 'lista' : 'listas'}`} />
+                    <Chip icon="checkmark-circle" color={C.good} text={`${summary.ok} ${summary.ok === 1 ? t('lista') : t('listas')}`} />
                   )}
                   {summary.withWarnings > 0 && <Chip icon="alert-circle" color={C.warn} text={t('{withWarnings} con avisos', { withWarnings: summary.withWarnings })} />}
                   {summary.withErrors > 0 && <Chip icon="close-circle" color={C.bad} text={t('{withErrors} con errores (no se importan)', { withErrors: summary.withErrors })} />}
@@ -445,7 +445,7 @@ function Inicio({ project, members, subjectName, ctxColumns, paste, setPaste, bu
             <Text style={{ color: C.muted, fontSize: 12.5, lineHeight: 18 }}>
               {t('Copia el prompt, pégalo en tu IA junto con el enunciado del proyecto y pega aquí arriba el JSON que te devuelva.')}</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 3 }}>
-              <MiniChip text={`${editores} ${editores === 1 ? 'integrante' : 'integrantes'}`} />
+              <MiniChip text={`${editores} ${editores === 1 ? t('integrante') : t('integrantes')}`} />
               {subjectName ? <MiniChip text={subjectName} /> : null}
               <MiniChip text={`${ctxColumns.length} columnas`} />
               {deadline ? <MiniChip text={t('Entrega {deadline}', { deadline: formatHuman(deadline) })} /> : null}

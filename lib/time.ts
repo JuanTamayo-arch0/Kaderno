@@ -1,4 +1,4 @@
-import { t } from './i18n';
+import { t, monthsShort, monthsLong } from './i18n';
 // ============================================================
 //  Fechas y horas de las tareas personales.
 //  Una tarea puede tener solo fecha (due_date) o fecha con hora (due_at,
@@ -10,8 +10,8 @@ export type DueLike = { due_date?: string | null; due_at?: string | null };
 
 export const DAY_SHORT = ['dom', 'lun', 'mar', t('mié'), 'jue', 'vie', t('sáb')];
 export const DAY_LONG = ['domingo', 'lunes', 'martes', t('miércoles'), 'jueves', 'viernes', t('sábado')];
-export const MONTH_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-export const MONTH_LONG = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+export const MONTH_SHORT = monthsShort();
+export const MONTH_LONG = monthsLong();
 
 export function isoDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

@@ -25,7 +25,7 @@ const STUDY: Vocab = {
 };
 const WORK: Vocab = {
   subjects: t('Áreas'), subject: t('Área'), subjectLower: t('área'), subjectsLower: t('áreas'), newSubject: t('Nueva área o cliente'), noSubjects: t('Aún no tienes áreas'),
-  noSubjectsText: t('Crea tus áreas o clientes para organizar tareas, notas y horas.'), subjectsCount: (n) => `${n} ${n === 1 ? 'activa' : 'activas'}`,
+  noSubjectsText: t('Crea tus áreas o clientes para organizar tareas, notas y horas.'), subjectsCount: (n) => `${n} ${n === 1 ? t('activa') : t('activas')}`,
   schedule: t('Agenda'), studySection: t('Herramientas'), studyTab: t('Enfoque'), subjectsTab: t('Áreas'), subjectIcon: 'briefcase', exam: t('Entrega'), exams: t('Entregas'), klass: t('reunión'), record: t('Grabar reunión'), transcriptOf: t('Transcripción de la reunión'), semester: t('Trimestre'), teacher: t('Responsable'),
 };
 const BOTH: Vocab = {

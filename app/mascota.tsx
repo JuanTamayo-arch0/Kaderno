@@ -17,7 +17,7 @@ import { confirm, friendlyError, notify, toast } from '../lib/feedback';
 import { PetChooser, PERSONALITY } from '../components/pets/PetChooser';
 import { PetSettings } from '../components/pets/PetSettings';
 import { CoinIcon, PetImage, PetSprite } from '../components/pets/PetArt';
-import { t, locale } from '../lib/i18n';
+import { t, locale, monthsShort } from '../lib/i18n';
 
 // ============================================================
 //  Mascota: verla en grande, su nivel y monedas, la tienda de ropa,
@@ -215,7 +215,7 @@ function Shop({ pet, owned }: { pet: Pet; owned: Set<string> }) {
   );
 }
 
-const MONTHS_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const MONTHS_SHORT = monthsShort();
 const dayLabel = (d: Date) => `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`;
 
 const HOME_GROUPS: { slot: 'papel' | 'piso' | 'vista' | 'mueble'; label: string }[] = [
@@ -358,7 +358,7 @@ function Pets({ pets, active }: { pets: Pet[]; active: Pet }) {
   );
 }
 
-const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const MONTHS = monthsShort();
 
 function Achievements({ rows, species }: { rows: AchievementRow[] | null; species: Species }) {
   const { isWide } = useResponsive();

@@ -18,7 +18,7 @@ import { confirm, friendlyError, notify, toast } from '../lib/feedback';
 import { Field } from '../components/ds';
 import { Sheet } from '../components/cards/CardForms';
 import { DateField } from '../components/DateTime';
-import { t, trn, locale } from '../lib/i18n';
+import { t, trn, locale, monthsShort } from '../lib/i18n';
 
 // ============================================================
 //  Historial académico (v26, fase 3): los semestres, el promedio acumulado,
@@ -89,7 +89,7 @@ function Historial() {
           <Text style={{ fontSize: 11.5, fontWeight: '700', paddingVertical: 3, paddingHorizontal: 9, borderRadius: 99, overflow: 'hidden', color: isOpen ? C.onBrand : C.muted, backgroundColor: isOpen ? C.brand : C.surface2 }}>{isOpen ? trn('En curso') : trn('Cerrado')}</Text>
         </View>
         <Text style={{ color: C.muted, fontSize: 12.5 }}>
-          {isOpen ? `${openSubjects.length} ${openSubjects.length === 1 ? 'materia' : 'materias'}` : trn('{v} materias · {fmtGrade} · {v2} créditos', { v: s?.subjects.length ?? 0, fmtGrade: fmtGrade(s?.avg ?? null, scale), v2: s?.credits ?? 0 })}
+          {isOpen ? `${openSubjects.length} ${openSubjects.length === 1 ? trn('materia') : trn('materias')}` : trn('{v} materias · {fmtGrade} · {v2} créditos', { v: s?.subjects.length ?? 0, fmtGrade: fmtGrade(s?.avg ?? null, scale), v2: s?.credits ?? 0 })}
         </Text>
       </Pressable>
     );
@@ -155,7 +155,7 @@ function Historial() {
       right={<Button label={isWide ? 'Descargar (PDF)' : 'PDF'} icon="download-outline" size="sm" kind="secondary" disabled={!closed.length} onPress={pdf} />}>
       {!ready && <Card style={{ marginBottom: 12 }}><Text style={{ color: C.warnText, fontSize: 13 }}>{NEEDS_V25_3}</Text></Card>}
       <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap', marginBottom: 18 }}>
-        {stat(t('Promedio acumulado'), cum.avg, (n) => fmtGrade(Number.isFinite(n) ? n : null, scale), cum.terms ? `${cum.terms} ${cum.terms === 1 ? 'semestre cerrado' : 'semestres cerrados'}` : t('Aún sin semestres cerrados'))}
+        {stat(t('Promedio acumulado'), cum.avg, (n) => fmtGrade(Number.isFinite(n) ? n : null, scale), cum.terms ? `${cum.terms} ${cum.terms === 1 ? t('semestre cerrado') : t('semestres cerrados')}` : t('Aún sin semestres cerrados'))}
         {stat(t('Créditos aprobados'), cum.credits, (n) => String(Math.round(n)))}
         <Card onPress={() => setScaleOpen(true)} accessibilityLabel={t('Cambiar la escala de notas')} style={{ flexGrow: 1, flexBasis: isWide ? 0 : 150, padding: 14 }}>
           <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600' }}>{t('Escala de notas')}</Text>
@@ -182,7 +182,7 @@ function Historial() {
   );
 }
 
-const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const MONTHS = monthsShort();
 const shortDay = (iso: string) => { const [y, m, d] = iso.slice(0, 10).split('-').map(Number); return `${d} ${MONTHS[m - 1]} ${y}`; };
 
 function ClosedDetail({ t, scale, onEdit, onDelete }: { t: Term; scale: ReturnType<typeof useGradeScale>; onEdit: () => void; onDelete: () => void }) {

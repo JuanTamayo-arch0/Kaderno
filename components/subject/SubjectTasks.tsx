@@ -109,7 +109,7 @@ export function SubjectTaskList({ pending, done, steps, onToggle, onRemove, onSt
           <Pressable onPress={() => setShowDone((v) => !v)} accessibilityRole="button" accessibilityState={{ expanded: showDone }}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 14, marginTop: 4 }}>
             <Ionicons name={showDone ? 'chevron-down' : 'chevron-forward'} size={16} color={C.muted} />
-            <Text style={{ color: C.muted, fontWeight: '700' }}>{done.length} {done.length === 1 ? 'completada' : 'completadas'}</Text>
+            <Text style={{ color: C.muted, fontWeight: '700' }}>{done.length} {done.length === 1 ? t('completada') : t('completadas')}</Text>
           </Pressable>
           {showDone && done.map((t) => <TaskRow key={t.id} task={t} showSubject={false} onToggle={onToggle} onOpen={(x) => openTask(x)} compact />)}
         </>

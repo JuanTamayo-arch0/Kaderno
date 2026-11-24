@@ -6,7 +6,7 @@ import { Button, Card, Field } from './ds';
 import { getCalendars, addCalendar, removeCalendar, syncCalendar, CAL_COLORS, looksLikeCalendarUrl, type ExtCalendar } from '../lib/calendarsDb';
 import { confirm, friendlyError, toast } from '../lib/feedback';
 import { dataChanged } from '../lib/uiBus';
-import { t } from '../lib/i18n';
+import { t, locale } from '../lib/i18n';
 
 // ============================================================
 //  Ajustes, "Tus otros calendarios" (v21, sección 9): conectar Google
@@ -20,7 +20,7 @@ function ago(iso: string | null): string {
   if (m < 1) return t('leído hace un momento');
   if (m < 60) return t('leído hace {m} min', { m });
   const h = Math.round(m / 60);
-  return h < 24 ? t('leído hace {h} h', { h }) : t('leído el {toLocaleDateString}', { toLocaleDateString: new Date(iso).toLocaleDateString('es') });
+  return h < 24 ? t('leído hace {h} h', { h }) : t('leído el {toLocaleDateString}', { toLocaleDateString: new Date(iso).toLocaleDateString(locale()) });
 }
 
 export function ExternalCalendars() {

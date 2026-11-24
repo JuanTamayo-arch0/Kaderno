@@ -436,10 +436,10 @@ function InboxPanel({ visible }: { visible: boolean }) {
 
 function timeAgo(iso: string): string {
   const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
-  if (m < 1) return 'ahora';
+  if (m < 1) return t('ahora');
   if (m < 60) return t('hace {m} min', { m });
   const h = Math.round(m / 60);
   if (h < 24) return t('hace {h} h', { h });
   const d = Math.round(h / 24);
-  return d === 1 ? 'ayer' : t('hace {d} días', { d });
+  return d === 1 ? t('ayer') : t('hace {d} días', { d });
 }

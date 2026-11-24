@@ -134,5 +134,5 @@ export function repairProgress(s: StreakSummary): { frac: number; text: string }
   return { frac, text: frac >= 1 ? t('Listo: racha reparada.') : t('Te faltan {leftF} min de enfoque o {leftC} tarjetas.', { leftF, leftC }) };
 }
 
-export function weeksLabel(n: number): string { return `${n} ${n === 1 ? 'semana' : 'semanas'}`; }
+export function weeksLabel(n: number): string { return `${n} ${n === 1 ? t('semana') : t('semanas')}`; }
 export function daysLabel(n: number): string { return `${n} ${n === 1 ? t('día') : t('días')}`; }

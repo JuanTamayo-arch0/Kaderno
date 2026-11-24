@@ -231,7 +231,7 @@ export function WorkloadPanel({ loads, unassigned, balanced, myId }: {
                   <Text style={{ color: C.text, fontSize: 13, fontWeight: '600', flex: 1 }}>
                     {nameOf(l.profile)}{l.user_id === myId ? t(' (tú)') : ''}
                   </Text>
-                  {l.late > 0 && <Pill text={`${l.late} atrasada${l.late === 1 ? '' : 's'}`} color={C.bad} />}
+                  {l.late > 0 && <Pill text={`${l.late} atrasada${l.late === 1 ? '' : t('s')}`} color={C.bad} />}
                   {l.late === 0 && l.soon > 0 && <Pill text={`${l.soon} pronto`} color={C.warn} />}
                   <Text style={{ color: C.muted, fontSize: 11.5, fontWeight: '700' }}>{t('{pending} pend.', { pending: l.pending })}</Text>
                 </View>

@@ -1,4 +1,4 @@
-import { t, trn } from './i18n';
+import { t, trn, monthsLong } from './i18n';
 // ============================================================
 import { locale } from './i18n';
 //  Registro de horas (v24, fase 5). Puro, con pruebas: periodos, sumas por
@@ -13,7 +13,7 @@ export type Named = { name: string; color?: string };
 export type GroupBy = 'subject' | 'project' | 'day';
 export type Rates = Record<string, number>;
 
-const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const MONTHS = monthsLong();
 const DAYS = ['dom', 'lun', 'mar', t('mié'), 'jue', 'vie', t('sáb')];
 const pad = (n: number) => String(n).padStart(2, '0');
 export const isoDay = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;

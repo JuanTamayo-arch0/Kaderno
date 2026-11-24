@@ -1,4 +1,4 @@
-import { t, trn } from './i18n';
+import { t, trn, monthsShort } from './i18n';
 // ============================================================
 //  Tareas que se repiten (v21, sección 1). Puro, con pruebas.
 //  Texto en español → regla, regla → siguiente fecha, regla → texto.
@@ -27,7 +27,7 @@ const MONTHS: Record<string, number> = {
   ene: 0, feb: 1, abr: 3, may: 4, jun: 5, jul: 6, ago: 7, sep: 8, sept: 8, oct: 9, nov: 10, dic: 11,
 };
 const DAY_NAME = ['domingo', 'lunes', 'martes', t('miércoles'), 'jueves', 'viernes', t('sábado')];
-const MONTH_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const MONTH_SHORT = monthsShort();
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/^[(\["'¿¡]+|[)\]"',;.:?]+$/g, '');
 

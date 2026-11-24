@@ -299,7 +299,7 @@ function ProyectoDetalle() {
               {project?.name ?? (loading ? t('Cargando…') : t('Proyecto'))}
             </Text>
             <Text numberOfLines={1} style={{ color: C.muted, fontSize: 12, marginTop: 1 }}>
-              {members.length} {members.length === 1 ? 'integrante' : 'integrantes'}
+              {members.length} {members.length === 1 ? t('integrante') : t('integrantes')}
               {subject ? ` · ${subject.name}` : ''}
               {tasks.length ? t(' · {doneCount}/{length} hechas', { doneCount, length: tasks.length }) : ''}
               {role === 'viewer' ? t(' · solo lectura') : ''}

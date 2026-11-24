@@ -219,3 +219,18 @@ export function isJsxHuman(s: string): boolean {
   const x = s.trim();
   return /[A-Za-zÁÉÍÓÚáéíóúÑñ]/.test(x) && !KEEP.has(x) && !/^(https?:|\/)/.test(x);
 }
+
+/** ¿Es una rama de un plural? `n === 1 ? 'tarea' : 'tareas'` (las dos ramas son texto). */
+export function pluralBranch(node: ts.Node): boolean {
+  const p = node.parent;
+  if (!p || !ts.isConditionalExpression(p) || p.condition === node) return false;
+  const lit = (e: ts.Expression) => ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e);
+  if (!lit(p.whenTrue) || !lit(p.whenFalse)) return false;
+  let c: ts.Expression = p.condition;
+  while (ts.isParenthesizedExpression(c)) c = c.expression;
+  if (!ts.isBinaryExpression(c)) return false;
+  const num = (e: ts.Expression) => ts.isNumericLiteral(e) && (e.text === '1' || e.text === '0');
+  if (!lit(p.whenTrue) || !/[a-záéíóúñ]/i.test((p.whenTrue as ts.StringLiteral).text) || /^#/.test((p.whenTrue as ts.StringLiteral).text)) return false;
+  return (num(c.right) || num(c.left)) && [ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsEqualsToken,
+    ts.SyntaxKind.GreaterThanToken, ts.SyntaxKind.LessThanToken, ts.SyntaxKind.EqualsEqualsToken].includes(c.operatorToken.kind);
+}

@@ -434,7 +434,7 @@ export default function Hoy() {
   if (overdueCount) summary.push(<Text key="o" style={{ color: C.badText, fontWeight: '600' }}>{overdueCount === 1 ? t('1 vencida') : `${overdueCount} vencidas`}</Text>);
   if (nextExam) {
     const dd = dayDiff(dueDay(nextExam)!, now);
-    summary.push(<Text key="e">{`${nextExam.title.length > 32 ? nextExam.title.slice(0, 30) + '…' : nextExam.title} ${dd === 0 ? 'hoy' : dd === 1 ? t('mañana') : t('en {dd} días', { dd })}`}</Text>);
+    summary.push(<Text key="e">{`${nextExam.title.length > 32 ? nextExam.title.slice(0, 30) + '…' : nextExam.title} ${dd === 0 ? t('hoy') : dd === 1 ? t('mañana') : t('en {dd} días', { dd })}`}</Text>);
   }
 
   const me = (() => {
@@ -507,7 +507,7 @@ export default function Hoy() {
         const on = day === iso;
         return (
           <Pressable key={iso} onPress={() => setDay(on ? null : iso)} accessibilityRole="button" accessibilityState={{ selected: on }}
-            accessibilityLabel={`${i === 0 ? t('Hoy') : DAY_SHORT[d.getDay()]} ${d.getDate()}, ${n} ${n === 1 ? 'entrega' : 'entregas'}`}
+            accessibilityLabel={`${i === 0 ? t('Hoy') : DAY_SHORT[d.getDay()]} ${d.getDate()}, ${n} ${n === 1 ? t('entrega') : t('entregas')}`}
             style={{ flex: 1, minWidth: isWide ? 64 : 44, alignItems: 'center', paddingVertical: 7, borderRadius: 12, backgroundColor: on ? C.brand : i === 0 ? C.surface : 'transparent', borderWidth: 1, borderColor: on ? C.brand : i === 0 ? C.line : 'transparent' }}>
             <Text style={{ color: on ? C.onBrand : C.muted, fontSize: 11.5, fontWeight: '600' }}>{i === 0 ? t('Hoy') : capitalize(DAY_SHORT[d.getDay()])}</Text>
             <Text style={{ color: on ? C.onBrand : C.text, fontSize: 16, fontWeight: '800', marginTop: 1 }}>{d.getDate()}</Text>
@@ -558,7 +558,7 @@ export default function Hoy() {
       </View>
       <View style={{ flex: 1 }}>
         <Text style={{ color: C.text, fontWeight: '700' }}>{t('Repaso pendiente')}</Text>
-        <Text style={{ color: C.muted, fontSize: 12.5 }}>{repaso} {repaso === 1 ? 'tarjeta' : 'tarjetas'}, {estimateLabel(repaso, repasoSecs)}</Text>
+        <Text style={{ color: C.muted, fontSize: 12.5 }}>{repaso} {repaso === 1 ? t('tarjeta') : t('tarjetas')}, {estimateLabel(repaso, repasoSecs)}</Text>
       </View>
       <Ionicons name="chevron-forward" size={18} color={C.muted} />
     </Card>

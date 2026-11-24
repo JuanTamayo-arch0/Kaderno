@@ -96,7 +96,7 @@ function ProjectCard({ row, subjects, wide, onPress }: { row: Overview; subjects
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text numberOfLines={1} style={{ color: C.text, fontSize: 15, fontWeight: '700' }}>{p.name}</Text>
           <Text numberOfLines={1} style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>
-            {row.members.length} {row.members.length === 1 ? 'integrante' : 'integrantes'}{subj ? ` · ${subj.name}` : ''}
+            {row.members.length} {row.members.length === 1 ? t('integrante') : t('integrantes')}{subj ? ` · ${subj.name}` : ''}
           </Text>
         </View>
       </View>

@@ -144,7 +144,7 @@ function Tipos() {
                 <Text style={{ color: C.text, fontSize: 15, fontWeight: '700' }}>{t.label}</Text>
                 <Text style={{ color: C.muted, fontSize: 11.5, marginTop: 2 }}>
                   {t.builtin ? trn('Original') : trn('Propio')}
-                  {counts[t.key] !== undefined ? ` · ${counts[t.key]} ${counts[t.key] === 1 ? 'tarea' : 'tareas'}` : ''}
+                  {counts[t.key] !== undefined ? ` · ${counts[t.key]} ${counts[t.key] === 1 ? trn('tarea') : trn('tareas')}` : ''}
                 </Text>
               </Pressable>
 

@@ -43,7 +43,7 @@ function Row({ n, active, onPress, roomy }: { n: Note; active: boolean; onPress:
         {roomy && <Text style={{ color: C.muted, fontSize: 12 }}>{when(n)}</Text>}
       </View>
       {!!prev && <Text style={{ color: C.muted, fontSize: 12.5, lineHeight: 17 }} numberOfLines={roomy ? 2 : 1}>{prev}</Text>}
-      {!roomy && <Text style={{ color: C.muted, fontSize: 11.5 }}>{when(n)} · {words} {words === 1 ? 'palabra' : 'palabras'}</Text>}
+      {!roomy && <Text style={{ color: C.muted, fontSize: 11.5 }}>{when(n)} · {words} {words === 1 ? t('palabra') : t('palabras')}</Text>}
       {(() => { const r = recallLabel(n.last_recall_at, n.last_recall_score, new Date()); return r ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           <Ionicons name="bulb-outline" size={11} color={(n.last_recall_score ?? 0) >= 70 ? C.goodText : C.muted} />

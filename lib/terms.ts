@@ -4,7 +4,7 @@
 //  aquí se calcula igual para mostrarlo antes de cerrar.
 // ============================================================
 import { docFooter } from './brand';
-import { t, trn } from './i18n';
+import { t, trn, monthsLong } from './i18n';
 
 export type GradeScale = { max: number; pass: number; decimals: 1 | 2 };
 export const DEFAULT_SCALE: GradeScale = { max: 5, pass: 3, decimals: 1 };
@@ -96,7 +96,7 @@ export function bestSubject(subjects: TermSubject[]): TermSubject | null {
 }
 
 const esc = (s: string) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
-const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const MONTHS = monthsLong();
 const longDate = (iso: string | null) => { if (!iso) return ''; const [y, m, d] = iso.slice(0, 10).split('-').map(Number); return t('{d} de {v} de {y}', { d, v: MONTHS[m - 1], y }); };
 
 /** Historial en PDF: sobrio, Times New Roman, todo en negro. */

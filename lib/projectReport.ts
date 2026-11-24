@@ -1,4 +1,4 @@
-import { t } from './i18n';
+import { t, monthsShort } from './i18n';
 // ============================================================
 //  Informe semanal del proyecto (v24, fase 5). Puro, con pruebas: lo hecho
 //  en los últimos 7 días, lo que viene en los próximos 7, lo atrasado y la
@@ -8,7 +8,7 @@ import { t } from './i18n';
 export type ReportTask = { id: string; title: string; done: boolean; done_at: string | null; due_date: string | null; due_at?: string | null; assignee_id: string | null };
 export type ReportPerson = { user_id: string; name: string };
 
-const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const MONTHS = monthsShort();
 const DAY = 86_400_000;
 const start = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 const dueOf = (t: ReportTask): Date | null => {
@@ -55,7 +55,7 @@ export function weeklyReportMarkdown(projectName: string, r: WeeklyReport, peopl
   ];
   if (r.late.length) out.push(`## Atrasado (${r.late.length})`, '', ...r.late.map((t) => line(t, true)), '');
   if (r.load.length || r.unassigned) {
-    out.push('## Carga del equipo', '', ...r.load.map((l) => `- ${l.name}: ${l.pending} ${l.pending === 1 ? 'pendiente' : 'pendientes'}${l.late ? `, ${l.late} ${l.late === 1 ? 'atrasada' : 'atrasadas'}` : ''}`));
+    out.push('## Carga del equipo', '', ...r.load.map((l) => `- ${l.name}: ${l.pending} ${l.pending === 1 ? t('pendiente') : t('pendientes')}${l.late ? `, ${l.late} ${l.late === 1 ? t('atrasada') : t('atrasadas')}` : ''}`));
     if (r.unassigned) out.push(`- Sin responsable: ${r.unassigned}`);
     out.push('');
   }

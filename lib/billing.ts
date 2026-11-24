@@ -4,7 +4,7 @@
 // ============================================================
 export * from '../supabase/functions/_shared/plans';
 import { LIMITS, LIMIT_TEXT, PRICES, type LimitKey, type Period, type PlanId } from '../supabase/functions/_shared/plans';
-import { t } from './i18n';
+import { t, monthsShort } from './i18n';
 
 export type MyPlan = {
   plan: PlanId; own_plan?: PlanId; status?: 'none' | 'trial' | 'active' | 'past_due' | 'canceled';
@@ -13,7 +13,7 @@ export type MyPlan = {
   next_charge_at?: string | null; retries?: number; via_team?: { owner: string; until: string } | null;
 };
 
-const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const MONTHS = monthsShort();
 export const shortDate = (iso: string | Date) => { const d = new Date(iso); return `${d.getDate()} ${MONTHS[d.getMonth()]}${d.getFullYear() !== new Date().getFullYear() ? ` ${d.getFullYear()}` : ''}`; };
 const daysUntil = (iso: string, now: Date) => Math.max(0, Math.ceil((new Date(iso).getTime() - now.getTime()) / 86_400_000));
 

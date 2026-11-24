@@ -143,9 +143,9 @@ export function computeFileDiff(tasks: NormalizedTask[], existing: ExistingTask[
 
 export function diffSummary(d: FileDiff): string {
   const parts: string[] = [];
-  if (d.updates.length) parts.push(`${d.updates.length} ${d.updates.length === 1 ? 'cambia' : 'cambian'}`);
-  if (d.creates.length) parts.push(`${d.creates.length} ${d.creates.length === 1 ? 'nueva' : 'nuevas'}`);
-  if (d.deletes.length) parts.push(`${d.deletes.length} se ${d.deletes.length === 1 ? 'borra' : 'borran'}`);
+  if (d.updates.length) parts.push(`${d.updates.length} ${d.updates.length === 1 ? t('cambia') : t('cambian')}`);
+  if (d.creates.length) parts.push(`${d.creates.length} ${d.creates.length === 1 ? t('nueva') : t('nuevas')}`);
+  if (d.deletes.length) parts.push(`${d.deletes.length} se ${d.deletes.length === 1 ? t('borra') : t('borran')}`);
   if (!parts.length) return t('No hay cambios');
   return parts.join(', ');
 }

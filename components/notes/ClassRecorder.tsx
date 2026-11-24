@@ -19,7 +19,7 @@ import { copyText } from '../../lib/fileIO';
 import { MeetingPublish } from './MeetingPublish';
 import { openAdd } from '../../lib/uiBus';
 import { getMode, useMode } from '../../lib/mode';
-import { t, trn, lang as appLang } from '../../lib/i18n';
+import { t, trn, lang as appLang, locale } from '../../lib/i18n';
 
 // ============================================================
 //  Grabar la clase (v22, fase 1): el texto de la clase se escribe solo
@@ -170,7 +170,7 @@ export function RecorderBar({ rec }: { rec: Recorder }) {
 export function RecordButton({ rec, onStarted }: { rec: Recorder; onStarted: () => void }) {
   const [open, setOpen] = useState(false);
   const { space: mode } = useMode();
-  const what = mode === 'trabajo' ? t('reunión') : 'clase';
+  const what = mode === 'trabajo' ? t('reunión') : t('clase');
   if (rec.active || Platform.OS !== 'web') return null;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -243,7 +243,7 @@ function TranscriptCard({ t, open, onToggle, focusT, subjectName, getMd, onInser
   const hits = useMemo(() => new Set(searchSegments(segs, q)), [segs, q]);
   const items = useMemo(() => timeline(segs, mine ? t.marks ?? [] : []), [segs, t.marks, mine]);
   const d = new Date(t.started_at);
-  const dateLabel = d.toLocaleDateString('es', { day: 'numeric', month: 'short' });
+  const dateLabel = d.toLocaleDateString(locale(), { day: 'numeric', month: 'short' });
 
   // "¿Qué se decía?": ir al minuto de ese párrafo.
   useEffect(() => {
@@ -393,7 +393,7 @@ function MinutesBlock({ m, dateLabel, busy, onRedo, onInsert, onPublish, onStyle
             <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: C.text, fontSize: 13.5 }}>{k.title}</Text>
-                <Text style={{ color: C.muted, fontSize: 12 }}>{k.owner ?? t('Sin responsable')}{k.when ? ` · ${k.when}` : k.due ? ` · ${new Date(k.due + 'T12:00:00').toLocaleDateString('es', { day: 'numeric', month: 'short' })}` : ''}</Text>
+                <Text style={{ color: C.muted, fontSize: 12 }}>{k.owner ?? t('Sin responsable')}{k.when ? ` · ${k.when}` : k.due ? ` · ${new Date(k.due + 'T12:00:00').toLocaleDateString(locale(), { day: 'numeric', month: 'short' })}` : ''}</Text>
               </View>
               <Button label={t('Para mí')} size="sm" kind="ghost" onPress={() => openAdd(meetingTaskQuick(k))} accessibilityLabel={t('Crear "{title}" en mis tareas', { title: k.title })} />
             </View>

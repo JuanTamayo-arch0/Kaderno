@@ -98,7 +98,7 @@ export function BoardCleanup({ visible, projectId, cols, onClose, onDone }: {
                           </View>
                           {open === g.key && (
                             <Text style={{ color: C.muted, fontSize: 12, marginTop: 4, lineHeight: 17 }}>
-                              {t('Se queda: ')}{describe(g.keep, cols)}.{'\n'}{t('Se borra')}{g.remove.length === 1 ? '' : 'n'}: {g.remove.map((t) => describe(t, cols)).join(' · ')}
+                              {t('Se queda: ')}{describe(g.keep, cols)}.{'\n'}{t('Se borra')}{g.remove.length === 1 ? '' : t('n')}: {g.remove.map((t) => describe(t, cols)).join(' · ')}
                             </Text>
                           )}
                         </Pressable>

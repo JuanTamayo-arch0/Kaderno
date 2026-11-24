@@ -327,7 +327,7 @@ function TeamSheet({ project, range, week, isTeam, onClose }: { project: Project
         <View key={r.user_id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 }}>
           <Ionicons name="person-circle-outline" size={20} color={C.muted} />
           <Text style={{ color: C.text, fontSize: 14, flex: 1 }} numberOfLines={1}>{r.name}</Text>
-          <Text style={{ color: C.muted, fontSize: 12.5 }}>{r.sessions} {r.sessions === 1 ? 'registro' : 'registros'}</Text>
+          <Text style={{ color: C.muted, fontSize: 12.5 }}>{r.sessions} {r.sessions === 1 ? t('registro') : t('registros')}</Text>
           <Text style={{ color: C.text, fontSize: 14, fontWeight: '800', fontVariant: ['tabular-nums'], minWidth: 78, textAlign: 'right' }}>{fmtHours(r.minutes)}</Text>
         </View>
       ))}

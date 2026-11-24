@@ -41,7 +41,7 @@ export function BulkBar({ count, total, isWide, onSelectAll, onClear, onAction }
     <View style={{ position: 'absolute', left: isWide ? SIDEBAR_W + 24 : 10, right: isWide ? 24 : 10, bottom: isWide ? 20 : 14, alignItems: 'center' }} pointerEvents="box-none">
       <View style={{ backgroundColor: C.surface, borderWidth: 1, borderColor: C.brand + '88', borderRadius: 16, paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, maxWidth: 900, width: '100%', shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 8 }}>
         <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700' }}>
-          {count} {count === 1 ? 'seleccionada' : 'seleccionadas'}
+          {count} {count === 1 ? t('seleccionada') : t('seleccionadas')}
         </Text>
         <Pressable onPress={count === total ? onClear : onSelectAll} hitSlop={6}>
           <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '600' }}>{count === total ? t('Quitar todas') : t('Todas ({total})', { total })}</Text>
@@ -67,11 +67,11 @@ export function BulkBar({ count, total, isWide, onSelectAll, onClear, onAction }
 
 export async function confirmBulkDelete(projectId: string, tasks: PTask[]): Promise<{ r: BatchResult; text: string } | null> {
   const n = tasks.length;
-  const nTxt = `${n} ${n === 1 ? 'tarea' : 'tareas'}`;
+  const nTxt = `${n} ${n === 1 ? t('tarea') : t('tareas')}`;
   const ok = await confirm(t('¿Borrar {nTxt}?', { nTxt }), t('Se borran para todo el equipo. Podrás deshacerlo justo después.'), t('Borrar'));
   if (!ok) return null;
   const r = await bulkUpdateProjectTasks(projectId, tasks.map((t) => t.id), { delete: true });
-  return { r, text: `${nTxt} ${n === 1 ? 'borrada' : 'borradas'}` };
+  return { r, text: `${nTxt} ${n === 1 ? t('borrada') : t('borradas')}` };
 }
 
 // ---------- Ventanas de cada acción ----------
@@ -92,7 +92,7 @@ export function BulkDialog({ action, projectId, tasks, cols, members, onClose, o
   const [busy, setBusy] = useState(false);
   const ids = tasks.map((t) => t.id);
   const n = tasks.length;
-  const nTxt = `${n} ${n === 1 ? 'tarea' : 'tareas'}`;
+  const nTxt = `${n} ${n === 1 ? t('tarea') : t('tareas')}`;
 
   async function run(patch: Parameters<typeof bulkUpdateProjectTasks>[2], text: string) {
     setBusy(true);
@@ -235,7 +235,7 @@ function ShiftForm({ tasks, busy, onClose, onApply }: {
           onChangeText={(t) => { const v = parseInt(t.replace(/[^\d-]/g, ''), 10); setDays(isNaN(v) ? 0 : Math.max(-365, Math.min(365, v))); }}
           style={{ width: 80, textAlign: 'center', backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 11, color: C.text, padding: 10, fontSize: 18, fontWeight: '700' }} />
         <Pressable onPress={() => step(1)} style={stepBtn} accessibilityLabel={t('Un día más')}><Ionicons name="add" size={18} color={C.text} /></Pressable>
-        <Text style={{ color: C.muted, fontSize: 13 }}>{Math.abs(days) === 1 ? t('día') : t('días')} {days >= 0 ? t('después') : 'antes'}</Text>
+        <Text style={{ color: C.muted, fontSize: 13 }}>{Math.abs(days) === 1 ? t('día') : t('días')} {days >= 0 ? t('después') : t('antes')}</Text>
       </View>
       <View style={{ flexDirection: 'row', gap: 6, justifyContent: 'center', marginTop: 10, flexWrap: 'wrap' }}>
         {[-7, -1, 1, 3, 7, 14].map((d) => (

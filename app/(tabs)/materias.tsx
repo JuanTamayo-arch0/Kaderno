@@ -105,7 +105,7 @@ export default function Materias() {
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={{ color: C.text, fontSize: 16, fontWeight: '700' }} numberOfLines={1}>{s.name}</Text>
                     <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }} numberOfLines={1}>
-                      {who || `${s.credits && !work ? t('{credits} créditos · ', { credits: s.credits }) : ''}${notesN} ${notesN === 1 ? 'nota' : 'notas'}`}
+                      {who || `${s.credits && !work ? t('{credits} créditos · ', { credits: s.credits }) : ''}${notesN} ${notesN === 1 ? t('nota') : t('notas')}`}
                     </Text>
                   </View>
                   {!work && (
@@ -116,8 +116,8 @@ export default function Materias() {
                   )}
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: C.line, flexWrap: 'wrap' }}>
-                  <Text style={{ color: st.length ? C.text : C.muted, fontSize: 13, fontWeight: '600' }}>{st.length ? `${st.length} ${st.length === 1 ? 'pendiente' : 'pendientes'}` : t('Nada pendiente')}</Text>
-                  {overdue > 0 && <Text style={{ color: C.badText, fontSize: 13, fontWeight: '700' }}>{overdue} {overdue === 1 ? 'vencida' : 'vencidas'}</Text>}
+                  <Text style={{ color: st.length ? C.text : C.muted, fontSize: 13, fontWeight: '600' }}>{st.length ? `${st.length} ${st.length === 1 ? t('pendiente') : t('pendientes')}` : t('Nada pendiente')}</Text>
+                  {overdue > 0 && <Text style={{ color: C.badText, fontSize: 13, fontWeight: '700' }}>{overdue} {overdue === 1 ? t('vencida') : t('vencidas')}</Text>}
                   {next && <Text style={{ color: C.muted, fontSize: 13, flex: 1, textAlign: 'right' }} numberOfLines={1}>{t('Próxima: {next}', { next: fmtDue(next) })}</Text>}
                 </View>
                 {soon && nc && (
@@ -157,7 +157,7 @@ function Summary({ subjects, tasks, grades, slots, isWide, work, scaleMax, decim
     work
       ? { k: 'avg', label: t('Áreas y clientes'), big: String(subjects.length), sub: t('{length} con pendientes', { length: subjects.filter((s) => tasks.some((t) => t.subject_id === s.id && t.status !== 'done')).length }) }
       : { k: 'avg', label: t('Promedio del semestre'), big: fmtGrade(sem.avg, { decimals }), sub: sem.avg == null ? t('Agrega notas en cada materia') : t('Ponderado por créditos ({credits})', { credits: sem.credits }) },
-    { k: 'pend', label: t('Pendientes'), big: String(pending.length), sub: overdue ? `${overdue} ${overdue === 1 ? 'vencida' : 'vencidas'}` : t('Ninguna vencida'), tone: overdue ? C.badText : undefined },
+    { k: 'pend', label: t('Pendientes'), big: String(pending.length), sub: overdue ? `${overdue} ${overdue === 1 ? t('vencida') : t('vencidas')}` : t('Ninguna vencida'), tone: overdue ? C.badText : undefined },
     { k: 'next', label: t('Próxima entrega'), big: next ? next.title : t('Nada pronto'), sub: next ? `${nextSub?.name ?? ''} · ${fmtDue(next)}` : t('Todo al día'), onPress: next?.subject_id ? () => onOpen(next.subject_id!) : undefined },
     { k: 'class', label: work ? t('Próxima reunión') : t('Próxima clase'), big: nc ? nc.s.name : work ? t('Sin agenda') : t('Sin horario'), sub: nc ? (nc.n!.now ? t('Ahora') : `${dayWord(nc.n!.start)}, ${fmtHour(hhmm(nc.n!.start))}`) + (nc.s.room ? ` · ${nc.s.room}` : '') : work ? t('Arma tu agenda para verla') : t('Arma tu horario para verla'), onPress: nc ? () => onOpen(nc.s.id) : undefined },
   ];

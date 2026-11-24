@@ -132,7 +132,7 @@ export function PayModal({ intent, onClose, onPaid }: { intent: PayIntent | null
   ) : (
     <View style={{ padding: 12, borderRadius: 12, backgroundColor: C.surface2, gap: 4 }}>
       <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
-        <Text style={{ color: C.text, fontSize: 15, fontWeight: '800', flex: 1 }}>{isSeats ? `${seats} ${seats === 1 ? 'puesto extra' : 'puestos extra'}` : planLabel(intent.plan, period, seats)}</Text>
+        <Text style={{ color: C.text, fontSize: 15, fontWeight: '800', flex: 1 }}>{isSeats ? `${seats} ${seats === 1 ? t('puesto extra') : t('puestos extra')}` : planLabel(intent.plan, period, seats)}</Text>
         <Text style={{ color: C.text, fontSize: 18, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{cop(amount)}</Text>
       </View>
       <Text style={{ color: C.muted, fontSize: 12.5 }}>{isSeats ? t('Lo que falta del periodo actual. Desde la renovación se cobran con el resto.') : intent.plan === 'team' ? t('{cop} por persona', { cop: cop(priceOf('team', period, 1) / 2) }) : period === 'year' ? t('Un año completo') : t('Un mes')}</Text>

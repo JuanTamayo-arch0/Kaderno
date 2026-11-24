@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 import { Note, signedUrl } from './db';
 import { noteToHtml } from './noteHtml';
 import { docFooter } from './brand';
+import { locale } from './i18n';
 
 // Genera un PDF con las notas de una materia y abre el menú de compartir/guardar.
 export async function exportSubjectPdf(subjectName: string, icon: string, notes: Note[]): Promise<void> {
@@ -16,7 +17,7 @@ export async function exportSubjectPdf(subjectName: string, icon: string, notes:
     ? notes.map((n, i) => `
         <section>
           <h2>${esc(n.title || 'Nota')}</h2>
-          <p class="date">${new Date(n.created_at).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+          <p class="date">${new Date(n.created_at).toLocaleDateString(locale(), { day: 'numeric', month: 'long', year: 'numeric' })}</p>
           ${n.summary ? `<div class="summary"><strong>Resumen:</strong> ${esc(n.summary)}</div>` : ''}
           <div class="note">${rendered[i]}</div>
         </section>`).join('')
@@ -46,7 +47,7 @@ export async function exportSubjectPdf(subjectName: string, icon: string, notes:
     </style></head>
     <body>
       <h1>${esc(subjectName)}</h1>
-      <p class="subtitle">Apuntes · ${new Date().toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+      <p class="subtitle">Apuntes · ${new Date().toLocaleDateString(locale(), { day: 'numeric', month: 'long', year: 'numeric' })}</p>
       ${body}
       ${docFooter()}
     </body></html>`;

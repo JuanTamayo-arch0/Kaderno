@@ -251,7 +251,7 @@ export function ScaleSheet({ visible, scale, onClose }: { visible: boolean; scal
         {([1, 2] as const).map((d) => (
           <Pressable key={d} onPress={() => setDec(d)} accessibilityRole="radio" accessibilityState={{ checked: dec === d }}
             style={{ paddingVertical: 8, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: dec === d ? C.brand : C.line, backgroundColor: dec === d ? C.brand + '1f' : 'transparent' }}>
-            <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{d === 1 ? 'Uno (4,3)' : 'Dos (4,35)'}</Text>
+            <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{d === 1 ? t('Uno (4,3)') : t('Dos (4,35)')}</Text>
           </Pressable>
         ))}
       </View>

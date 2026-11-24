@@ -5,7 +5,7 @@
 export type { MeetingMinutes, MeetingTask, MinutesStyle } from '../supabase/functions/_shared/meeting';
 export { minutesPlain, cleanMinutesStyle, DEFAULT_MINUTES_STYLE } from '../supabase/functions/_shared/meeting';
 import type { MeetingMinutes, MeetingTask } from '../supabase/functions/_shared/meeting';
-import { trn } from './i18n';
+import { trn, monthsShort } from './i18n';
 
 export const isMeeting = (s: unknown): s is MeetingMinutes => !!s && (s as any).kind === 'meeting';
 
@@ -30,7 +30,7 @@ export function matchOwner(owner: string | null | undefined, people: { user_id: 
   return first.length === 1 ? first[0].id : null;
 }
 
-const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const MONTHS = monthsShort();
 const shortIso = (iso: string) => { const [y, m, d] = iso.split('-').map(Number); return `${d} ${MONTHS[m - 1]}${y !== new Date().getFullYear() ? ` ${y}` : ''}`; };
 const cell = (s: string) => s.replace(/\|/g, '/').replace(/\n/g, ' ');
 

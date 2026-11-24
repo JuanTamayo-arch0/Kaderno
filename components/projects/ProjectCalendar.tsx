@@ -169,7 +169,7 @@ function MonthView({ ym, setYm, today, tasks, isWide, editable, colOf, memberOf,
             const iso = isoDay(d), list = by[iso] ?? [], other = d.getMonth() !== ym.m, isToday = iso === todayIso;
             const late = list.some((t) => !t.done && d < today);
             return (
-              <Pressable key={iso} accessibilityRole="button" accessibilityLabel={`${d.getDate()} ${list.length ? `, ${list.length} ${list.length === 1 ? 'entrega' : 'entregas'}` : ''}`}
+              <Pressable key={iso} accessibilityRole="button" accessibilityLabel={`${d.getDate()} ${list.length ? `, ${list.length} ${list.length === 1 ? t('entrega') : t('entregas')}` : ''}`}
                 onPress={() => (isWide ? (editable ? onAddOn(d) : null) : setPickDay(pickDay === iso ? null : iso))}
                 style={({ hovered }: any) => ({
                   flex: 1, minHeight: isWide ? 104 : 54, borderTopWidth: 1, borderLeftWidth: 1, borderColor: C.line, padding: isWide ? 5 : 3,
