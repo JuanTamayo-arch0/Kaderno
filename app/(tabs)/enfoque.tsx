@@ -23,7 +23,7 @@ import { weeksLabel } from '../../lib/streaks';
 import { useMode } from '../../lib/mode';
 import { getProjects, type Project } from '../../lib/projects';
 import { useSpaceFilter } from '../../lib/useSpace';
-import { t, locale, trn } from '../../lib/i18n';
+import { t, trn, dateLocale } from '../../lib/i18n';
 
 // ============================================================
 //  Enfoque (Pomodoro).
@@ -210,7 +210,7 @@ export default function Enfoque() {
             <Text style={{ flex: 1, color: C.text, fontSize: 13.5 }} numberOfLines={1}>
               {sess.assignment_id ? (tasks.find((t) => t.id === sess.assignment_id)?.title ?? subjName(sess.subject_id)) : subjName(sess.subject_id)}
             </Text>
-            <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('{minutes} min · {toLocaleDateString}', { minutes: sess.minutes, toLocaleDateString: new Date(sess.created_at).toLocaleDateString(locale(), { day: 'numeric', month: 'short' }) })}</Text>
+            <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('{minutes} min · {toLocaleDateString}', { minutes: sess.minutes, toLocaleDateString: new Date(sess.created_at).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' }) })}</Text>
           </View>
         ))}
       </Card>

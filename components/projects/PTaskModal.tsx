@@ -15,7 +15,7 @@ import { play } from '../../lib/sound';
 import { BoardColumn, Member, PStep, PTask, addProjectStep, addProjectTask, colorOf, deleteProjectStep, deleteProjectTask, initialsOf, logActivity, nameOf, toggleProjectStep, updateProjectTask } from '../../lib/projects';
 import { btnPrimary, hace, input, isWeb, lbl, pad } from './projectUi';
 import { TaskComments } from './TaskComments';
-import { t, trn, locale } from '../../lib/i18n';
+import { t, trn, dateLocale } from '../../lib/i18n';
 
 // ============================================================
 //  Ventana de una tarea de proyecto: datos, responsable, fecha y microtareas.
@@ -214,7 +214,7 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
             ) : (
               <>
                 <Pressable onPress={() => editable && setShowPicker(true)} style={input}>
-                  <Text style={{ color: date ? C.text : C.muted }}>{date ? date.toLocaleDateString(locale()) : t('Sin fecha')}</Text>
+                  <Text style={{ color: date ? C.text : C.muted }}>{date ? date.toLocaleDateString(dateLocale()) : t('Sin fecha')}</Text>
                 </Pressable>
                 {showPicker && (
                   <DateTimePicker value={date ?? new Date()} mode="date"
@@ -242,7 +242,7 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
             ) : (
               <>
                 <Pressable onPress={() => editable && setShowStart(true)} style={input}>
-                  <Text style={{ color: start ? C.text : C.muted }}>{start ? start.toLocaleDateString(locale()) : t('Sin inicio')}</Text>
+                  <Text style={{ color: start ? C.text : C.muted }}>{start ? start.toLocaleDateString(dateLocale()) : t('Sin inicio')}</Text>
                 </Pressable>
                 {showStart && (
                   <DateTimePicker value={start ?? date ?? new Date()} mode="date" maximumDate={date ?? undefined}

@@ -4,7 +4,7 @@ import { derive, type BasePalette, type Palette } from './color';
 import { THEMES, type Theme } from './palettes';
 import { BRAND_FONT, BRAND_FONT_FACES, BRAND_VERSION, DEFAULT_ACCENT, DEFAULT_WORK_ACCENT, WORK_FONT, WORK_HEAD_FONT, isKadernoTheme, migrateBrand, spacePalette, SPACE_RADII } from './brand';
 import { getSpace } from './mode';
-import { t, trn, locale } from './i18n';
+import { t, trn, dateLocale } from './i18n';
 export * from './color';
 export { THEMES, type Theme } from './palettes';
 
@@ -265,7 +265,7 @@ export function fmtDate(iso: string): string {
   if (diff === -1) return trn('Ayer');
   if (diff < 0) return trn('Hace {v} días', { v: -diff });
   if (diff < 7) return trn('En {diff} días', { diff });
-  return d.toLocaleDateString(locale(), { day: 'numeric', month: 'short' });
+  return d.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' });
 }
 
 export function dueTone(iso: string, done: boolean): string {

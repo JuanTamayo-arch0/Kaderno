@@ -21,7 +21,7 @@ import { openTask, dataChanged } from '../../lib/uiBus';
 import { PhotoEditor } from '../../components/capture/PhotoEditor';
 import { NotePickSheet } from '../../components/capture/NotePickSheet';
 import { useSpaceFilter } from '../../lib/useSpace';
-import { t, locale, trn } from '../../lib/i18n';
+import { t, trn, dateLocale } from '../../lib/i18n';
 
 // Se carga al usarlo: así expo-image-picker no se descarga al abrir la app.
 const loadPicker = () => import('expo-image-picker');
@@ -545,7 +545,7 @@ export default function Capturar() {
                 </View>
                 <View style={{ padding: 12 }}>
                   <Text numberOfLines={1} style={{ color: C.text, fontSize: 13.5, fontWeight: '700' }}>{n.title || t('Nota')}</Text>
-                  <Text numberOfLines={1} style={{ color: C.muted, fontSize: 12, marginTop: 3 }}>{su?.name ?? t('Sin materia')} · {new Date(n.created_at).toLocaleDateString(locale(), { day: 'numeric', month: 'short' })}</Text>
+                  <Text numberOfLines={1} style={{ color: C.muted, fontSize: 12, marginTop: 3 }}>{su?.name ?? t('Sin materia')} · {new Date(n.created_at).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' })}</Text>
                 </View>
               </Card>
             );

@@ -2,7 +2,7 @@ import { Platform, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C, R } from '../../lib/theme';
 import { PStep, PTask } from '../../lib/projects';
-import { t, trn, locale } from '../../lib/i18n';
+import { t, trn, dateLocale } from '../../lib/i18n';
 
 // ============================================================
 //  Piezas pequeñas compartidas por la pantalla de proyecto: puntero, fechas, casillas, etiquetas y estilos.
@@ -40,8 +40,8 @@ export function dueInfo(t: Pick<PTask, 'due_date' | 'due_at'>, done: boolean): {
   const days = Math.round((d.getTime() - today.getTime()) / 86400000);
   let label = days === 0 ? trn('Hoy') : days === 1 ? trn('Mañana') : days === -1 ? trn('Ayer')
     : days < 0 ? trn('Hace {v}d', { v: -days })
-    : d.toLocaleDateString(locale(), { day: 'numeric', month: 'short' });
-  if (hasTime && at) label += ` ${at.toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' })}`;
+    : d.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' });
+  if (hasTime && at) label += ` ${at.toLocaleTimeString(dateLocale(), { hour: 'numeric', minute: '2-digit' })}`;
   const late = at ? at.getTime() < Date.now() : days < 0;
   const color = done ? C.muted : late ? C.bad : days <= 2 ? C.warn : C.muted;
   return { label, color };
@@ -74,7 +74,7 @@ export function hace(iso: string): string {
   if (h < 24) return t('hace {h} h', { h });
   const d = Math.round(h / 24);
   if (d < 30) return t('hace {d} d', { d });
-  return new Date(iso).toLocaleDateString(locale(), { day: 'numeric', month: 'short' });
+  return new Date(iso).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' });
 }
 
 

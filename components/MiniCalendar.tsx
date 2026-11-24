@@ -4,7 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { C } from '../lib/theme';
 import { taskTypeMeta } from '../lib/taskTypes';
 import { Subject, Task } from '../lib/db';
-import { t, trn, locale, monthsLong, dayLettersMon } from '../lib/i18n';
+import { t, trn, monthsLong, dayLettersMon, dateLocale } from '../lib/i18n';
 
 const MONTHS = monthsLong();
 const WD = dayLettersMon();
@@ -134,7 +134,7 @@ export function MiniCalendar({ tasks, subjects, defaultOpen = false, embedded = 
 
       {selected && (
         <View style={{ marginTop: 8, borderTopWidth: 1, borderTopColor: C.line, paddingTop: 8 }}>
-          <Text style={{ color: C.muted, fontSize: 12, marginBottom: 6 }}>{new Date(selected + 'T00:00:00').toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
+          <Text style={{ color: C.muted, fontSize: 12, marginBottom: 6 }}>{new Date(selected + 'T00:00:00').toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
           {selTasks.length === 0 ? <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Sin tareas.')}</Text> : selTasks.map((t) => {
             const sub = subjects.find((s) => s.id === t.subject_id);
             return (
