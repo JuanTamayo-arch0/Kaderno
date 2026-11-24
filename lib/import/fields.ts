@@ -1,3 +1,4 @@
+// i18n-ok-archivo: se traduce a mano (v30, fase 6): tiene palabras que el lector reconoce o texto legal.
 import type { ColumnMapping, Field } from './types';
 
 /** Quita tildes, pasa a minúsculas y colapsa espacios, guiones y guiones bajos. */

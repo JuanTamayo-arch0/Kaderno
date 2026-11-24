@@ -1,3 +1,4 @@
+// i18n-ok-archivo: se traduce a mano (v30, fase 6): tiene palabras que el lector reconoce o texto legal.
 // ============================================================
 //  Cuentas de cobro (v25, fase 1). Puro, con pruebas: número, valor en
 //  letras, líneas a partir de las horas, total igual al del servidor y el
