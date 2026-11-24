@@ -1984,3 +1984,12 @@ No hay.
 ## Versión 29 (arreglo): franja negra abajo en el computador
 
 No hay migración. Con "Tamaño de interfaz" en Pequeño aparecía una franja negra abajo, y con Grande o Muy grande se cortaba el final de la pantalla. Lo causaba el alto `100dvh` de la parte 1, que no respeta ese zoom. La raíz vuelve a medir el 100 % del alto. Para revisarlo, cambia el tamaño en Personalizar: la app debe llenar la ventana exacta en los cuatro tamaños.
+
+## Herramienta: cuenta demo al máximo
+
+`supabase/tools/demo_cuenta_maxima.sql` deja una cuenta ya creada lista para demos:
+- plan Equipo por 10 años, sin cobro;
+- las 4 mascotas a nivel 20 con 99.999 monedas;
+- toda la ropa y la casa compradas y puestas.
+
+Crea la cuenta en la app, cambia el correo en la primera línea del script y córrelo en el SQL Editor de Supabase. Se puede correr varias veces. Es solo para cuentas de demostración: no va en la app ni en las migraciones.
