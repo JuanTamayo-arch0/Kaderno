@@ -29,7 +29,7 @@ function walk(p: string, out: string[]) {
   else if (/\.tsx?$/.test(p) && !/\.d\.ts$/.test(p)) out.push(p);
 }
 
-const placeholders = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(',');
+const placeholders = (s: string) => new Set([...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]));
 const edges = (s: string) => [/^\s/.test(s), /\s$/.test(s)].join(',');
 
 export function check(dirs = ['app', 'components', 'lib']): Report {
@@ -80,7 +80,9 @@ export function check(dirs = ['app', 'components', 'lib']): Report {
     const base = k.includes('|') && !(k in EN) ? k.slice(k.indexOf('|') + 1) : k;
     const en = EN[k] ?? EN[base];
     if (en == null) { rep.missing.push(f); continue; }
-    if (placeholders(en) !== placeholders(base) || edges(en) !== edges(base)) rep.broken.push({ ...f, text: `${k}  ->  ${en}` });
+    // El inglés puede no usar una variable ("pendiente{v}" -> "to do"), pero no inventar otras.
+    const extra = [...placeholders(en)].filter((x) => !placeholders(base).has(x));
+    if (extra.length || edges(en) !== edges(base)) rep.broken.push({ ...f, text: `${k}  ->  ${en}` });
   }
   return rep;
 }

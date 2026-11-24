@@ -65,7 +65,7 @@ function MateriaDetalle() {
   const goBack = useGoBack('/materias');
   const { isWide, width } = useResponsive();
   const { session } = useAuth();
-  const [snap] = useState(() => snapshotFor<{ s: Subject; t: Task[]; n: Note[]; g: Grade[] }>(session && id ? t('materia:{id}:{id2}', { id: session.user.id, id2: id }) : null));
+  const [snap] = useState(() => snapshotFor<{ s: Subject; t: Task[]; n: Note[]; g: Grade[] }>(session && id ? `materia:${session.user.id}:${id}` : null)); // i18n-ok
   const [subject, setSubject] = useState<Subject | null | undefined>(snap.initial?.s ?? undefined);
   const [allSubjects, setAllSubjects] = useState<Subject[]>([]);
   const [tasks, setTasks] = useState<Task[]>(snap.initial?.t ?? []);

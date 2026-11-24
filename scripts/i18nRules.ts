@@ -54,6 +54,7 @@ export function isHumanText(s: string): boolean {
   if (/^(https?:|mailto:|tel:|data:|\/|\.\/|\.\.\/|#|@)/.test(x)) return false;
   if (/^</.test(x) || /<\/?[a-z][^>]*>/i.test(x) && /[="]/.test(x)) return false; // HTML o SVG: se traduce a mano
   if (/^[a-z0-9_.:\/\-]+$/.test(x) && !ACCENT.test(x)) return false; // llave o ruta
+  if (/^[a-z]{2}(-[A-Z]{2})?$/.test(x)) return false;                 // código de idioma (es-CO)
   if (/^[a-zA-Z]+[A-Z][a-zA-Z]*$/.test(x)) return false;           // camelCase
   if (/^[A-Z0-9_]+$/.test(x) && x.length > 1 && !SPANISH_WORDS.has(x.toLowerCase())) return false; // CONSTANTE, PDF, CSV
   if (/^\s*[\[{(].*[\]})]\s*$/.test(x) && /["':]/.test(x)) return false; // JSON o similar
