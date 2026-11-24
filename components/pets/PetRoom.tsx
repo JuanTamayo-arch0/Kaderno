@@ -6,6 +6,7 @@ import type { Mood } from '../../lib/pets/art';
 import { PET_SPOT, ROOM_H, ROOM_W, roomOffset, roomSvg, type Home } from '../../lib/pets/home';
 import type { Pet } from '../../lib/pets/store';
 import { PetSprite } from './PetArt';
+import { t } from '../../lib/i18n';
 
 /**
  * Llena el ancho disponible con `height` de alto. La altura manda la escala;
@@ -29,7 +30,7 @@ export function PetRoom({ pet, home, height, mood, style, children }: {
   return (
     <View onLayout={(e: LayoutChangeEvent) => setW(Math.round(e.nativeEvent.layout.width))}
       style={[{ height, overflow: 'hidden', borderRadius: 16, backgroundColor: '#2b2433' }, style]}
-      accessibilityRole="image" accessibilityLabel={`La casa de ${pet.name}`}>
+      accessibilityRole="image" accessibilityLabel={t('La casa de {name}', { name: pet.name })}>
       {w > 0 && (
         <>
           <SvgXml xml={xml} width={w} height={height} />

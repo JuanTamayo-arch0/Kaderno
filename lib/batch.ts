@@ -7,6 +7,7 @@
 //  Cortas = 30 minutos o menos. Una tanda necesita al menos 2.
 // ============================================================
 import { freeGaps, type Suggested } from './day';
+import { trn } from './i18n';
 
 export const BATCH_MAX_EACH = 30;
 export type Batch = { key: string; label: string; ids: string[]; minutes: number };
@@ -24,7 +25,7 @@ export function findBatches<X extends T>(
     const type = t.type && t.type !== 'tarea' ? t.type : null;
     const key = type ? `tipo:${type}` : t.subject_id ? `materia:${t.subject_id}` : null;
     if (!key) continue;
-    const label = type ? names.type(type) : names.subject(t.subject_id!) ?? 'Sin nombre';
+    const label = type ? names.type(type) : names.subject(t.subject_id!) ?? trn('Sin nombre');
     const g = groups.get(key) ?? { label, items: [] };
     g.items.push(t);
     groups.set(key, g);

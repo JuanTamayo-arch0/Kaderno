@@ -14,6 +14,7 @@ import {
 import { SubjectIcon } from '../../components/SubjectIcon';
 import { useMode } from '../../lib/mode';
 import { Screen, Card, Dot, EmptyState, Segmented } from '../../components/ds';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Horario.
@@ -39,7 +40,7 @@ export default function Horario() {
       await loadScheduleNative();
       const [s, sc] = await Promise.all([getSubjects(), getSchedule()]);
       setSubjects(s); setSlots(sc); setRev((n) => n + 1);
-    } catch (e: any) { notify('Error', e?.message ?? 'No se pudo cargar el horario'); }
+    } catch (e: any) { notify(t('Error'), e?.message ?? t('No se pudo cargar el horario')); }
   }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -56,20 +57,20 @@ export default function Horario() {
   async function assign(subjectId: string) {
     if (!edit) return;
     try { await setSlot(edit.day, edit.slot, subjectId); setEdit(null); load(); }
-    catch (e: any) { notify('No se pudo asignar', e?.message ?? ''); }
+    catch (e: any) { notify(t('No se pudo asignar'), e?.message ?? ''); }
   }
   async function remove() {
     if (!edit) return;
     try { await clearSlot(edit.day, edit.slot); setEdit(null); load(); }
-    catch (e: any) { notify('No se pudo quitar', e?.message ?? ''); }
+    catch (e: any) { notify(t('No se pudo quitar'), e?.message ?? ''); }
   }
 
   async function cleanOrphans() {
     if (!orphans.length) return;
-    if (!(await confirm(`¿Quitar ${orphans.length} ${orphans.length === 1 ? 'clase' : 'clases'} sueltas?`,
-      'Están en bloques o días que ya no aparecen en tu horario.', 'Quitar'))) return;
+    if (!(await confirm(t('¿Quitar {length} {v} sueltas?', { length: orphans.length, v: orphans.length === 1 ? 'clase' : 'clases' }),
+      t('Están en bloques o días que ya no aparecen en tu horario.'), t('Quitar')))) return;
     try { await remapSlots(orphans.map((o) => ({ id: o.id, newSlot: null }))); load(); }
-    catch (e: any) { notify('No se pudo limpiar', e?.message ?? ''); }
+    catch (e: any) { notify(t('No se pudo limpiar'), e?.message ?? ''); }
   }
 
   // Guarda la nueva configuración y arrastra las clases al bloque que les toca.
@@ -83,9 +84,9 @@ export default function Horario() {
     const lost = slots.filter((s) => removedSet.has(s.slot) || s.day >= cfg.days);
     if (lost.length) {
       const ok = await confirm(
-        `Se quitarán ${lost.length} ${lost.length === 1 ? 'clase' : 'clases'}`,
-        'Los bloques o días que quitaste tenían clases asignadas. Las demás se conservan y se mueven contigo.',
-        'Aplicar',
+        t('Se quitarán {length} {v}', { length: lost.length, v: lost.length === 1 ? 'clase' : 'clases' }),
+        t('Los bloques o días que quitaste tenían clases asignadas. Las demás se conservan y se mueven contigo.'),
+        t('Aplicar'),
       );
       if (!ok) return;
     }
@@ -103,14 +104,14 @@ export default function Horario() {
       setCfgOpen(false);
       setRev((n) => n + 1);
       load();
-    } catch (e: any) { notify('No se pudo guardar el horario', e?.message ?? ''); }
+    } catch (e: any) { notify(t('No se pudo guardar el horario'), e?.message ?? ''); }
   }
 
   const cfgButton = (
     <Pressable onPress={() => setCfgOpen(true)} hitSlop={8}
       style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, borderColor: C.line, backgroundColor: C.surface }}>
       <Ionicons name="options-outline" size={15} color={C.muted} />
-      <Text style={{ color: C.text, fontSize: 12.5, fontWeight: '600' }}>Ajustar bloques</Text>
+      <Text style={{ color: C.text, fontSize: 12.5, fontWeight: '600' }}>{t('Ajustar bloques')}</Text>
     </Pressable>
   );
 
@@ -118,10 +119,8 @@ export default function Horario() {
     <Pressable onPress={cleanOrphans}
       style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.warn + '1a', borderColor: C.warn + '55', borderWidth: 1, borderRadius: 12, padding: 10, marginBottom: 12 }}>
       <Ionicons name="alert-circle-outline" size={16} color={C.warn} />
-      <Text style={{ color: C.text, fontSize: 12.5, flex: 1 }}>
-        {orphans.length} {orphans.length === 1 ? 'clase quedó' : 'clases quedaron'} fuera de la cuadrícula.
-      </Text>
-      <Text style={{ color: C.warn, fontSize: 12.5, fontWeight: '700' }}>Quitar</Text>
+      <Text style={{ color: C.text, fontSize: 12.5, flex: 1 }}>{t('{length} {v} fuera de la cuadrícula.', { length: orphans.length, v: orphans.length === 1 ? 'clase quedó' : 'clases quedaron' })}</Text>
+      <Text style={{ color: C.warn, fontSize: 12.5, fontWeight: '700' }}>{t('Quitar')}</Text>
     </Pressable>
   ) : null;
 
@@ -130,7 +129,7 @@ export default function Horario() {
       <Text style={{ color: C.text, fontSize: 18, fontWeight: '700', marginBottom: 12 }}>
         {edit ? `${DAY_NAMES[edit.day]} · ${blocks[edit.slot] ? blockLabelLong(blocks[edit.slot], fmt24) : `Bloque ${edit.slot + 1}`}` : ''}
       </Text>
-      {subjects.length === 0 && <Text style={{ color: C.muted }}>Crea materias primero.</Text>}
+      {subjects.length === 0 && <Text style={{ color: C.muted }}>{t('Crea materias primero.')}</Text>}
       {subjects.map((s) => (
         <Pressable key={s.id} onPress={() => assign(s.id)} style={{
           flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 12,
@@ -143,10 +142,10 @@ export default function Horario() {
         </Pressable>
       ))}
       <Pressable onPress={remove} style={{ alignItems: 'center', padding: 12, marginTop: 4 }} accessibilityRole="button">
-        <Text style={{ color: C.badText, fontWeight: '700' }}>Quitar clase</Text>
+        <Text style={{ color: C.badText, fontWeight: '700' }}>{t('Quitar clase')}</Text>
       </Pressable>
       <Pressable onPress={() => setEdit(null)} style={{ alignItems: 'center', marginTop: 4 }}>
-        <Text style={{ color: C.muted }}>Cerrar</Text>
+        <Text style={{ color: C.muted }}>{t('Cerrar')}</Text>
       </Pressable>
     </>
   );
@@ -205,9 +204,9 @@ export default function Horario() {
 
   const today = (
     <Card style={{ width: isWide ? 300 : '100%' }}>
-      <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '700', marginBottom: 10 }}>Hoy · {DAY_NAMES_LONG[todayIdx]}</Text>
-      {!inWeek ? <Text style={{ color: C.muted, fontSize: 13 }}>Hoy no hay clases en tu horario.</Text>
-        : todayClasses.length === 0 ? <Text style={{ color: C.muted, fontSize: 13 }}>Sin clases hoy.</Text> : (
+      <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '700', marginBottom: 10 }}>{t('Hoy · {v}', { v: DAY_NAMES_LONG[todayIdx] })}</Text>
+      {!inWeek ? <Text style={{ color: C.muted, fontSize: 13 }}>{t('Hoy no hay clases en tu horario.')}</Text>
+        : todayClasses.length === 0 ? <Text style={{ color: C.muted, fontSize: 13 }}>{t('Sin clases hoy.')}</Text> : (
           <View style={{ gap: 10 }}>
             {todayClasses.map((x, i) => {
               const sub = subjOf(x.cell!.subject_id);
@@ -216,8 +215,8 @@ export default function Horario() {
                 <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <Dot color={sub?.color ?? C.muted} size={10} />
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '600' }}>{sub?.name ?? 'Materia'}</Text>
-                    <Text style={{ color: live ? C.brand : C.muted, fontSize: 12, fontWeight: live ? '700' : '400' }}>{live ? 'Ahora · ' : ''}{x.label}</Text>
+                    <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '600' }}>{sub?.name ?? t('Materia')}</Text>
+                    <Text style={{ color: live ? C.brand : C.muted, fontSize: 12, fontWeight: live ? '700' : '400' }}>{live ? t('Ahora · ') : ''}{x.label}</Text>
                   </View>
                 </View>
               );
@@ -228,19 +227,19 @@ export default function Horario() {
   );
 
   return (
-    <Screen title={mv.schedule} subtitle={mv.subjectLower === 'área' ? 'Tu semana de trabajo y reuniones fijas' : 'Tu semana de clases'} maxWidth={1300}
+    <Screen title={mv.schedule} subtitle={mv.subjectLower === 'área' ? t('Tu semana de trabajo y reuniones fijas') : t('Tu semana de clases')} maxWidth={1300}
       right={isWide ? cfgButton : undefined}
       header={!isWide ? <Segmented value="horario" onChange={(k) => { if (k === 'materias') router.navigate('/materias'); }}
         items={[{ key: 'materias', label: mv.subjectsTab, icon: (mv.subjectIcon + '-outline') as any }, { key: 'horario', label: mv.schedule, icon: 'grid-outline' }]} /> : undefined}>
       {!isWide && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 12 }}>
-          <Text style={{ color: C.muted, fontSize: 12.5, flex: 1 }}>Toca una celda para poner o quitar una clase.</Text>
+          <Text style={{ color: C.muted, fontSize: 12.5, flex: 1 }}>{t('Toca una celda para poner o quitar una clase.')}</Text>
           {cfgButton}
         </View>
       )}
       {orphanNotice}
       {subjects.length === 0 ? (
-        <EmptyState icon="book-outline" title="Primero crea tus materias" text="El horario se arma con tus materias." action={{ label: 'Ir a Materias', onPress: () => router.navigate('/materias') }} />
+        <EmptyState icon="book-outline" title={t('Primero crea tus materias')} text={t('El horario se arma con tus materias.')} action={{ label: t('Ir a Materias'), onPress: () => router.navigate('/materias') }} />
       ) : (
         // v29: en el celular la cuadrícula ocupa todo el ancho (antes se encogía a celdas de 24 px).
         <View style={{ flexDirection: isWide ? 'row' : 'column', gap: 20, alignItems: isWide ? 'flex-start' : 'stretch' }}>
@@ -323,14 +322,12 @@ function ScheduleConfig({ visible, isWide, onClose, onApply }: {
 
   const body = (
     <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-      <Text style={{ color: C.text, fontSize: 18, fontWeight: '700' }}>Ajustar bloques</Text>
+      <Text style={{ color: C.text, fontSize: 18, fontWeight: '700' }}>{t('Ajustar bloques')}</Text>
       <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 4, lineHeight: 18 }}>
-        Arma los rangos de hora que uses tú. Las clases que ya tienes se mueven con su bloque;
-        sólo se pierden las de los bloques que quites.
-      </Text>
+        {t('Arma los rangos de hora que uses tú. Las clases que ya tienes se mueven con su bloque; sólo se pierden las de los bloques que quites.')}</Text>
 
       {/* ---- Días ---- */}
-      <Text style={lbl}>Días de la semana</Text>
+      <Text style={lbl}>{t('Días de la semana')}</Text>
       <View style={{ flexDirection: 'row', gap: 8 }}>
         {[5, 6, 7].map((n) => {
           const active = dayCount === n;
@@ -338,7 +335,7 @@ function ScheduleConfig({ visible, isWide, onClose, onApply }: {
             <Pressable key={n} onPress={() => setDayCount(n)}
               style={{ flex: 1, paddingVertical: 10, borderRadius: 11, alignItems: 'center', borderWidth: 1, backgroundColor: active ? C.brand : C.surface2, borderColor: active ? C.brand : C.line }}>
               <Text style={{ color: active ? C.onBrand : C.text, fontSize: 13, fontWeight: '700' }}>
-                {n === 5 ? 'Lun–Vie' : n === 6 ? 'Lun–Sáb' : 'Toda'}
+                {n === 5 ? t('Lun–Vie') : n === 6 ? t('Lun–Sáb') : t('Toda')}
               </Text>
             </Pressable>
           );
@@ -346,7 +343,7 @@ function ScheduleConfig({ visible, isWide, onClose, onApply }: {
       </View>
 
       {/* ---- Formato ---- */}
-      <Text style={lbl}>Ver las horas</Text>
+      <Text style={lbl}>{t('Ver las horas')}</Text>
       <View style={{ flexDirection: 'row', gap: 8 }}>
         {[false, true].map((v) => {
           const active = fmt24 === v;
@@ -360,12 +357,12 @@ function ScheduleConfig({ visible, isWide, onClose, onApply }: {
       </View>
 
       {/* ---- Generador ---- */}
-      <Text style={lbl}>Generar automáticamente</Text>
+      <Text style={lbl}>{t('Generar automáticamente')}</Text>
       <View style={{ backgroundColor: C.surface2 + '80', borderRadius: 12, borderWidth: 1, borderColor: C.line, padding: 12, gap: 10 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <Text style={{ color: C.muted, fontSize: 12.5 }}>De</Text>
+          <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('De')}</Text>
           <TimeField value={genStart} onChange={setGenStart} />
-          <Text style={{ color: C.muted, fontSize: 12.5 }}>a</Text>
+          <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('a')}</Text>
           <TimeField value={genEnd} onChange={setGenEnd} />
         </View>
         <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
@@ -374,7 +371,7 @@ function ScheduleConfig({ visible, isWide, onClose, onApply }: {
             return (
               <Pressable key={m} onPress={() => setGenMin(m)}
                 style={{ paddingVertical: 7, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, backgroundColor: active ? C.brand + '22' : C.surface, borderColor: active ? C.brand : C.line }}>
-                <Text style={{ color: active ? C.brand : C.text, fontSize: 12.5, fontWeight: active ? '700' : '500' }}>{m} min</Text>
+                <Text style={{ color: active ? C.brand : C.text, fontSize: 12.5, fontWeight: active ? '700' : '500' }}>{t('{m} min', { m })}</Text>
               </Pressable>
             );
           })}
@@ -382,14 +379,14 @@ function ScheduleConfig({ visible, isWide, onClose, onApply }: {
         <Pressable onPress={generate}
           style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 11, borderWidth: 1, borderColor: C.brand, backgroundColor: C.brand + '18' }}>
           <Ionicons name="grid-outline" size={15} color={C.brand} />
-          <Text style={{ color: C.brand, fontSize: 13, fontWeight: '700' }}>Rellenar bloques</Text>
+          <Text style={{ color: C.brand, fontSize: 13, fontWeight: '700' }}>{t('Rellenar bloques')}</Text>
         </Pressable>
       </View>
 
       {/* ---- Lista manual ---- */}
       <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 18, marginBottom: 8 }}>
-        <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700', flex: 1 }}>Bloques ({blocks.length})</Text>
-        <Pressable onPress={resetDefault} hitSlop={6}><Text style={{ color: C.muted, fontSize: 12.5 }}>Restablecer</Text></Pressable>
+        <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700', flex: 1 }}>{t('Bloques ({length})', { length: blocks.length })}</Text>
+        <Pressable onPress={resetDefault} hitSlop={6}><Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Restablecer')}</Text></Pressable>
       </View>
 
       <View style={{ gap: 8 }}>
@@ -400,7 +397,7 @@ function ScheduleConfig({ visible, isWide, onClose, onApply }: {
             <Text style={{ color: C.muted }}>–</Text>
             <TimeField value={b.end} onChange={(v) => setBlock(b.id, { end: v })} />
             <View style={{ flex: 1 }} />
-            <Pressable onPress={() => delBlock(b.id)} hitSlop={8} disabled={blocks.length <= 1} accessibilityLabel={`Quitar bloque ${i + 1}`}>
+            <Pressable onPress={() => delBlock(b.id)} hitSlop={8} disabled={blocks.length <= 1} accessibilityLabel={t('Quitar bloque {v}', { v: i + 1 })}>
               <Ionicons name="trash-outline" size={17} color={blocks.length <= 1 ? C.line : C.muted} />
             </Pressable>
           </View>
@@ -409,26 +406,25 @@ function ScheduleConfig({ visible, isWide, onClose, onApply }: {
 
       {bad.size > 0 && (
         <Text style={{ color: C.warn, fontSize: 12, marginTop: 8 }}>
-          Hay bloques que se cruzan. Puedes dejarlos así, pero revisa las horas marcadas.
-        </Text>
+          {t('Hay bloques que se cruzan. Puedes dejarlos así, pero revisa las horas marcadas.')}</Text>
       )}
 
       <Pressable onPress={addBlock}
         style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 10, paddingVertical: 11, borderRadius: 11, borderWidth: 1, borderStyle: 'dashed', borderColor: C.line }}>
         <Ionicons name="add" size={16} color={C.muted} />
-        <Text style={{ color: C.muted, fontSize: 13, fontWeight: '600' }}>Agregar bloque</Text>
+        <Text style={{ color: C.muted, fontSize: 13, fontWeight: '600' }}>{t('Agregar bloque')}</Text>
       </Pressable>
 
       <Text style={{ color: C.muted, fontSize: 12, marginTop: 14 }}>
-        Vista previa: {sorted.slice(0, 3).map((b) => blockLabel(b, fmt24)).join(' · ')}{sorted.length > 3 ? ' …' : ''}
+        {t('Vista previa: ')}{sorted.slice(0, 3).map((b) => blockLabel(b, fmt24)).join(' · ')}{sorted.length > 3 ? ' …' : ''}
       </Text>
 
       <Pressable onPress={apply} disabled={busy}
         style={{ backgroundColor: C.brand, borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 16, opacity: busy ? 0.7 : 1 }}>
-        <Text style={{ color: C.onBrand, fontWeight: '700' }}>{busy ? '…' : 'Guardar horario'}</Text>
+        <Text style={{ color: C.onBrand, fontWeight: '700' }}>{busy ? '…' : t('Guardar horario')}</Text>
       </Pressable>
       <Pressable onPress={onClose} style={{ alignItems: 'center', marginTop: 12 }}>
-        <Text style={{ color: C.muted }}>Cancelar</Text>
+        <Text style={{ color: C.muted }}>{t('Cancelar')}</Text>
       </Pressable>
     </ScrollView>
   );

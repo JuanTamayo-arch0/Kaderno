@@ -3,6 +3,7 @@ import { getMyProjectTasks } from './projects';
 import { getSchedule, fetchPrefs } from './db';
 import { SCHEDULE } from './schedule';
 import { buildIcs, classesFromSchedule, type IcsTask } from '../supabase/functions/_shared/ics';
+import { t } from './i18n';
 
 // ============================================================
 //  El mismo calendario .ics que arma la función "ical", pero generado en
@@ -30,5 +31,5 @@ export async function buildMyIcs(now: Date = new Date()): Promise<string> {
   ];
   const classes = classesFromSchedule(slots as any[], SCHEDULE.blocks, names);
   const appUrl = typeof window !== 'undefined' && window.location ? window.location.origin : undefined;
-  return buildIcs({ name: 'Kaderno', tasks: list, classes, now, tz: prefs?.notif?.tz, appUrl });
+  return buildIcs({ name: t('Kaderno'), tasks: list, classes, now, tz: prefs?.notif?.tz, appUrl });
 }

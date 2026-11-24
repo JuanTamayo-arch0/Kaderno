@@ -17,6 +17,7 @@ import { ReviewSession, type SessionMode, type SessionSummary } from '../compone
 import { Decks, CardStats } from '../components/cards/Decks';
 import { Sheet } from '../components/cards/CardForms';
 import { StudySettings } from '../components/cards/StudySettings';
+import { t } from '../lib/i18n';
 
 // ============================================================
 //  Repaso (v20): FSRS, tarjetas nuevas poco a poco, sesión con pasos
@@ -30,7 +31,7 @@ type Data = {
 };
 type Run = { mode: SessionMode; queue: CardRow[]; learning: CardRow[]; label: string } | null;
 
-const DAY = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const DAY = [t('Dom'), t('Lun'), t('Mar'), t('Mié'), t('Jue'), t('Vie'), t('Sáb')];
 
 function Repaso() {
   const router = useRouter();
@@ -64,11 +65,11 @@ function Repaso() {
     setResult(null);
     if (mode === 'cram' && subjectId) {
       const q = cramQueue(data.cards, subjectId);
-      setRun({ mode, queue: q, learning: [], label: `Intensivo de ${data.subjects.find((s) => s.id === subjectId)?.name ?? 'la materia'}` });
+      setRun({ mode, queue: q, learning: [], label: t('Intensivo de {v}', { v: data.subjects.find((s) => s.id === subjectId)?.name ?? 'la materia' }) });
       return;
     }
     const q = subjectId ? buildQueue({ cards: data.cards, now: new Date(), newPerDay: data.prefs.newPerDay, newDoneToday: newDoneToday(data.reviews), subjectId }) : queue;
-    setRun({ mode, queue: interleave(q.due, q.fresh), learning: q.learning, label: subjectId ? (data.subjects.find((s) => s.id === subjectId)?.name ?? 'Mazo') : 'Repaso' });
+    setRun({ mode, queue: interleave(q.due, q.fresh), learning: q.learning, label: subjectId ? (data.subjects.find((s) => s.id === subjectId)?.name ?? t('Mazo')) : t('Repaso') });
   };
 
   // Abrir directo un intensivo (desde el plan del parcial, por ejemplo).
@@ -84,25 +85,25 @@ function Repaso() {
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
       <View style={{ flex: 1 }}>
         <Segmented value={tab} onChange={(t) => { setTab(t); }} items={[
-          { key: 'repasar', label: 'Repasar', icon: 'flash-outline' },
-          { key: 'mazos', label: 'Mazos', icon: 'albums-outline' },
-          { key: 'stats', label: 'Estadísticas', icon: 'stats-chart-outline' },
+          { key: 'repasar', label: t('Repasar'), icon: 'flash-outline' },
+          { key: 'mazos', label: t('Mazos'), icon: 'albums-outline' },
+          { key: 'stats', label: t('Estadísticas'), icon: 'stats-chart-outline' },
         ]} />
       </View>
-      <IconButton icon="options-outline" label="Ajustes de repaso" onPress={() => setSettings(true)} />
+      <IconButton icon="options-outline" label={t('Ajustes de repaso')} onPress={() => setSettings(true)} />
     </View>
   );
 
   let body: React.ReactNode;
-  if (!data) body = err ? <EmptyState icon="cloud-offline-outline" title="No se pudo cargar" text={err} action={{ label: 'Reintentar', onPress: load }} /> : <Skeleton height={280} />;
+  if (!data) body = err ? <EmptyState icon="cloud-offline-outline" title={t('No se pudo cargar')} text={err} action={{ label: t('Reintentar'), onPress: load }} /> : <Skeleton height={280} />;
   else if (tab === 'mazos') body = <Decks cards={data.cards} subjects={data.subjects} noteTitles={data.titles} retention={data.prefs.retention} onChanged={load} />;
   else if (tab === 'stats') body = <CardStats cards={data.cards} reviews={data.reviews} />;
   else if (run) {
     body = (
       <View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-          <Text style={{ color: C.text, fontSize: 15, fontWeight: '800', flex: 1 }}>{run.label}{run.mode === 'five' ? ' · 5 minutos' : ''}</Text>
-          <Button label="Terminar" kind="ghost" size="sm" onPress={() => { setRun(null); load(); }} />
+          <Text style={{ color: C.text, fontSize: 15, fontWeight: '800', flex: 1 }}>{run.label}{run.mode === 'five' ? t(' · 5 minutos') : ''}</Text>
+          <Button label={t('Terminar')} kind="ghost" size="sm" onPress={() => { setRun(null); load(); }} />
         </View>
         <ReviewSession key={run.label + run.mode} queue={run.queue} learning={run.learning} mode={run.mode} retention={data.prefs.retention}
           typeAnswer={data.prefs.typeAnswer} subjects={data.subjects} noteTitles={data.titles}
@@ -112,15 +113,15 @@ function Repaso() {
   } else body = <Home data={data} queue={queue!} result={result} onStart={start} onDismiss={() => setResult(null)} onCreate={() => router.push('/materias')} wide={isWide} />;
 
   return (
-    <Screen title="Repaso" back="/estudiar" nav="repaso" maxWidth={820} header={header}>
+    <Screen title={t('Repaso')} back="/estudiar" nav="repaso" maxWidth={820} header={header}>
       <View style={{ height: 14 }} />
       {!hasFsrsDb() && data && (
         <View style={{ padding: 12, borderRadius: 12, backgroundColor: '#2a2416', borderWidth: 1, borderColor: '#4a3d1f', marginBottom: 12 }}>
-          <Text style={{ color: '#e2d2a8', fontSize: 13 }}>{FSRS_MISSING} Mientras tanto, el repaso funciona como antes.</Text>
+          <Text style={{ color: '#e2d2a8', fontSize: 13 }}>{t('{FSRS_MISSING} Mientras tanto, el repaso funciona como antes.', { FSRS_MISSING })}</Text>
         </View>
       )}
       {body}
-      <Sheet visible={settings} onClose={() => setSettings(false)} title="Ajustes de repaso">
+      <Sheet visible={settings} onClose={() => setSettings(false)} title={t('Ajustes de repaso')}>
         <View style={{ marginHorizontal: -14 }}>
           <StudySettings hideGoal onChange={(p) => setData((d) => (d ? { ...d, prefs: p } : d))} />
         </View>
@@ -163,14 +164,11 @@ function Home({ data, queue, result, onStart, onDismiss, onCreate, wide }: {
         <Card style={{ borderColor: '#22604a', backgroundColor: '#142a22' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Ionicons name="checkmark-done" size={22} color={C.goodText} />
-            <Text style={{ color: C.text, fontSize: 16, fontWeight: '800', flex: 1 }}>{result.cards ? 'Repaso terminado' : 'Sin tarjetas por ahora'}</Text>
-            <IconButton icon="close" label="Cerrar resumen" onPress={onDismiss} />
+            <Text style={{ color: C.text, fontSize: 16, fontWeight: '800', flex: 1 }}>{result.cards ? t('Repaso terminado') : t('Sin tarjetas por ahora')}</Text>
+            <IconButton icon="close" label={t('Cerrar resumen')} onPress={onDismiss} />
           </View>
           {result.cards > 0 && (
-            <Text style={{ color: '#b9dccb', fontSize: 13.5, marginTop: 6, lineHeight: 19 }}>
-              {result.cards} {result.cards === 1 ? 'tarjeta' : 'tarjetas'} en {Math.max(1, Math.round(result.ms / 60000))} min. Recordaste {Math.round((result.recalled / result.cards) * 100)}%.
-              {result.left ? ` Quedan ${result.left} para más tarde.` : ''} Mañana te tocan {tomorrow}.
-            </Text>
+            <Text style={{ color: '#b9dccb', fontSize: 13.5, marginTop: 6, lineHeight: 19 }}>{t('{cards} {v} en {max} min. Recordaste {round}%.{v2} Mañana te tocan {tomorrow}.', { cards: result.cards, v: result.cards === 1 ? 'tarjeta' : 'tarjetas', max: Math.max(1, Math.round(result.ms / 60000)), round: Math.round((result.recalled / result.cards) * 100), v2: result.left ? ` Quedan ${result.left} para más tarde.` : '', tomorrow })}</Text>
           )}
         </Card>
       )}
@@ -180,34 +178,34 @@ function Home({ data, queue, result, onStart, onDismiss, onCreate, wide }: {
           <View style={{ flexDirection: wide ? 'row' : 'column', alignItems: wide ? 'center' : 'flex-start', gap: 10 }}>
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={{ color: C.text, fontSize: 15, fontWeight: '800' }}>
-                {exam[1].title} de {data.subjects.find((s) => s.id === exam[0])?.name ?? 'una materia'} {exam[1].days === 0 ? 'hoy' : exam[1].days === 1 ? 'mañana' : `en ${exam[1].days} días`}
+                {exam[1].title} {t(' de ')}{data.subjects.find((s) => s.id === exam[0])?.name ?? t('una materia')} {exam[1].days === 0 ? 'hoy' : exam[1].days === 1 ? t('mañana') : t('en {days} días', { days: exam[1].days })}
               </Text>
-              <Text style={{ color: '#e2d2a8', fontSize: 13 }}>Repaso intensivo: todas las tarjetas de la materia, aunque no les toque. Solo las que falles cambian su programación.</Text>
+              <Text style={{ color: '#e2d2a8', fontSize: 13 }}>{t('Repaso intensivo: todas las tarjetas de la materia, aunque no les toque. Solo las que falles cambian su programación.')}</Text>
             </View>
-            <Button label="Repaso intensivo" icon="flame-outline" onPress={() => onStart('cram', exam[0])} />
+            <Button label={t('Repaso intensivo')} icon="flame-outline" onPress={() => onStart('cram', exam[0])} />
           </View>
         </Card>
       )}
 
       <Card>
         <View style={{ flexDirection: 'row', gap: 10 }}>
-          <Big n={queue.counts.fresh} label="Nuevas" color={C.brand} hint={`máx. ${data.prefs.newPerDay} al día`} />
-          <Big n={queue.counts.due} label="Para repasar" color={C.goodText} />
-          <Big n={queue.counts.learning} label="Aprendiendo" color={C.warnText} />
+          <Big n={queue.counts.fresh} label={t('Nuevas')} color={C.brand} hint={t('máx. {newPerDay} al día', { newPerDay: data.prefs.newPerDay })} />
+          <Big n={queue.counts.due} label={t('Para repasar')} color={C.goodText} />
+          <Big n={queue.counts.learning} label={t('Aprendiendo')} color={C.warnText} />
         </View>
         {total > 0 ? (
           <>
-            <Text style={{ color: C.muted, fontSize: 13, marginTop: 12 }}>{total} {total === 1 ? 'tarjeta' : 'tarjetas'} hoy, {estimateLabel(total, secs)}.</Text>
+            <Text style={{ color: C.muted, fontSize: 13, marginTop: 12 }}>{t('{total} {v} hoy, {total2}.', { total, v: total === 1 ? 'tarjeta' : 'tarjetas', total2: estimateLabel(total, secs) })}</Text>
             <View style={{ flexDirection: 'row', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
-              <Button label="Empezar" icon="play" size="lg" onPress={() => onStart('normal')} style={{ flex: 2, minWidth: 160 }} />
-              <Button label="Solo 5 minutos" kind="secondary" size="lg" onPress={() => onStart('five')} style={{ flex: 1, minWidth: 150 }} />
+              <Button label={t('Empezar')} icon="play" size="lg" onPress={() => onStart('normal')} style={{ flex: 2, minWidth: 160 }} />
+              <Button label={t('Solo 5 minutos')} kind="secondary" size="lg" onPress={() => onStart('five')} style={{ flex: 1, minWidth: 150 }} />
             </View>
           </>
         ) : (
           <View style={{ marginTop: 12, gap: 8 }}>
-            <Text style={{ color: C.text, fontSize: 15, fontWeight: '700' }}>{data.cards.length ? `Al día. Mañana te tocan ${tomorrow}.` : 'Todavía no tienes tarjetas.'}</Text>
-            <Text style={{ color: C.muted, fontSize: 13 }}>Crea tarjetas desde una nota con "Crear flashcards" o seleccionando un fragmento.</Text>
-            <Button label="Ir a mis notas" kind="secondary" icon="document-text-outline" onPress={onCreate} style={{ alignSelf: 'flex-start' }} />
+            <Text style={{ color: C.text, fontSize: 15, fontWeight: '700' }}>{data.cards.length ? t('Al día. Mañana te tocan {tomorrow}.', { tomorrow }) : t('Todavía no tienes tarjetas.')}</Text>
+            <Text style={{ color: C.muted, fontSize: 13 }}>{t('Crea tarjetas desde una nota con "Crear flashcards" o seleccionando un fragmento.')}</Text>
+            <Button label={t('Ir a mis notas')} kind="secondary" icon="document-text-outline" onPress={onCreate} style={{ alignSelf: 'flex-start' }} />
           </View>
         )}
       </Card>
@@ -216,10 +214,10 @@ function Home({ data, queue, result, onStart, onDismiss, onCreate, wide }: {
 
       {decks.length > 0 && (
         <Card padded={false}>
-          <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '800', padding: 14, paddingBottom: 6 }}>Mazos</Text>
+          <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '800', padding: 14, paddingBottom: 6 }}>{t('Mazos')}</Text>
           {decks.map((d) => (
             <Pressable key={d.s.id} onPress={() => (d.fresh + d.due ? onStart('normal', d.s.id) : undefined)} accessibilityRole="button"
-              accessibilityLabel={`${d.s.name}: ${d.fresh} nuevas, ${d.due} para repasar`}
+              accessibilityLabel={t('{name}: {fresh} nuevas, {due} para repasar', { name: d.s.name, fresh: d.fresh, due: d.due })}
               style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 11, borderTopWidth: 1, borderTopColor: C.surface2, backgroundColor: hovered && d.fresh + d.due ? C.surface2 : 'transparent' })}>
               <Dot color={d.s.color} size={10} />
               <View style={{ flex: 1, minWidth: 0, gap: 5 }}>
@@ -233,20 +231,18 @@ function Home({ data, queue, result, onStart, onDismiss, onCreate, wide }: {
               <Text style={{ color: C.muted, fontSize: 12, width: 64, textAlign: 'right' }}>{d.ret === null ? `${d.total}` : `${d.ret}%`}</Text>
             </Pressable>
           ))}
-          <Text style={{ color: C.muted, fontSize: 11.5, paddingHorizontal: 14, paddingVertical: 10 }}>
-            Azul: nuevas de hoy · Verde: para repasar · La barra es cuánto recordaste en 30 días.{noSubject ? ` ${noSubject} sin materia.` : ''}
-          </Text>
+          <Text style={{ color: C.muted, fontSize: 11.5, paddingHorizontal: 14, paddingVertical: 10 }}>{t('Azul: nuevas de hoy · Verde: para repasar · La barra es cuánto recordaste en 30 días.{v}', { v: noSubject ? ` ${noSubject} sin materia.` : '' })}</Text>
         </Card>
       )}
 
       {data.cards.length > 0 && (
         <Card>
-          <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '800', marginBottom: 12 }}>Los próximos 7 días</Text>
+          <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '800', marginBottom: 12 }}>{t('Los próximos 7 días')}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, height: 100 }}>
             {fc.slice(1).map((x) => {
               const d = new Date(x.day + 'T12:00:00');
               return (
-                <View key={x.day} style={{ flex: 1, alignItems: 'center', gap: 6, height: '100%', justifyContent: 'flex-end' }} accessibilityLabel={`${DAY[d.getDay()]}: ${x.n} tarjetas`}>
+                <View key={x.day} style={{ flex: 1, alignItems: 'center', gap: 6, height: '100%', justifyContent: 'flex-end' }} accessibilityLabel={t('{v}: {n} tarjetas', { v: DAY[d.getDay()], n: x.n })}>
                   {x.n > 0 && <Text style={{ fontSize: 10.5, color: C.muted }}>{x.n}</Text>}
                   <View style={{ width: '62%', height: `${Math.max(3, (x.n / maxF) * 70)}%`, backgroundColor: C.line, borderRadius: 5 }} />
                   <Text style={{ fontSize: 11, color: C.muted }}>{DAY[d.getDay()]}</Text>
@@ -264,13 +260,13 @@ function Home({ data, queue, result, onStart, onDismiss, onCreate, wide }: {
 function SimulacroCard() {
   const router = useRouter();
   return (
-    <Card onPress={() => router.push('/simulacro')} accessibilityLabel="Hacer un simulacro" style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+    <Card onPress={() => router.push('/simulacro')} accessibilityLabel={t('Hacer un simulacro')} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
       <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: C.brand + '1f', alignItems: 'center', justifyContent: 'center' }}>
         <Ionicons name="clipboard-outline" size={19} color={C.brand} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '700' }}>Hacer un simulacro</Text>
-        <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>Preguntas de tus notas, como en el parcial, con nota y errores para repasar.</Text>
+        <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '700' }}>{t('Hacer un simulacro')}</Text>
+        <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{t('Preguntas de tus notas, como en el parcial, con nota y errores para repasar.')}</Text>
       </View>
       <Ionicons name="chevron-forward" size={18} color={C.muted} />
     </Card>

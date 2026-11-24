@@ -1,4 +1,5 @@
-// Fechas y horas del importador.
+
+import { t } from '../i18n';// Fechas y horas del importador.
 //
 // Todo lo que no trae zona horaria se interpreta en hora de Bogotá. Colombia no tiene
 // horario de verano, así que el desfase es fijo (UTC-5) y no hace falta una librería.
@@ -61,15 +62,15 @@ function applyMeridiem(h: number, mer: string | undefined): number | null {
 export function parseDateTime(input: unknown, kind: DateKind): DateResult {
   if (input === null || input === undefined) return { ok: true, iso: null };
   if (typeof input === 'number') {
-    return parseExcelSerial(input, kind) ?? { ok: false, error: 'No es una fecha' };
+    return parseExcelSerial(input, kind) ?? { ok: false, error: t('No es una fecha') };
   }
-  if (typeof input !== 'string') return { ok: false, error: 'No es una fecha' };
+  if (typeof input !== 'string') return { ok: false, error: t('No es una fecha') };
 
   const raw = input.trim();
   if (raw === '') return { ok: true, iso: null };
 
   if (/^\d{5}(\.\d+)?$/.test(raw)) {
-    return parseExcelSerial(parseFloat(raw), kind) ?? { ok: false, error: `"${raw}" no es una fecha` };
+    return parseExcelSerial(parseFloat(raw), kind) ?? { ok: false, error: t('"{raw}" no es una fecha', { raw }) };
   }
 
   const s = normalizeMeridiem(raw);
@@ -91,7 +92,7 @@ export function parseDateTime(input: unknown, kind: DateKind): DateResult {
     return build(raw, y, +m[2], +m[1], m[4], m[5], m[6], m[7], undefined, defH, defM);
   }
 
-  return { ok: false, error: `"${raw}" no es una fecha válida` };
+  return { ok: false, error: t('"{raw}" no es una fecha válida', { raw }) };
 }
 
 function build(
@@ -101,20 +102,20 @@ function build(
   mer: string | undefined, zone: string | undefined,
   defH: number, defM: number,
 ): DateResult {
-  if (!isValidYMD(y, mo, d)) return { ok: false, error: `"${raw}" no es una fecha que exista` };
+  if (!isValidYMD(y, mo, d)) return { ok: false, error: t('"{raw}" no es una fecha que exista', { raw }) };
   let h = defH, mi = defM, sec = 0;
   if (hS !== undefined) {
     // "15/10/2026 14" sin minutos y sin am/pm es ambiguo: lo rechazamos.
-    if (miS === undefined && !mer) return { ok: false, error: `"${raw}": falta la hora completa (por ejemplo 14:00)` };
+    if (miS === undefined && !mer) return { ok: false, error: t('"{raw}": falta la hora completa (por ejemplo 14:00)', { raw }) };
     const hh = applyMeridiem(+hS, mer);
-    if (hh === null) return { ok: false, error: `"${raw}": la hora no es válida` };
+    if (hh === null) return { ok: false, error: t('"{raw}": la hora no es válida', { raw }) };
     h = hh;
     mi = miS !== undefined ? +miS : 0;
     sec = sS !== undefined ? +sS : 0;
-    if (mi > 59 || sec > 59) return { ok: false, error: `"${raw}": la hora no es válida` };
+    if (mi > 59 || sec > 59) return { ok: false, error: t('"{raw}": la hora no es válida', { raw }) };
   }
   const off = zone ? parseOffset(zone) : BOGOTA_OFFSET_MIN;
-  if (off === null) return { ok: false, error: `"${raw}": zona horaria no válida` };
+  if (off === null) return { ok: false, error: t('"{raw}": zona horaria no válida', { raw }) };
   return { ok: true, iso: toIso(y, mo, d, h, mi, sec, off) };
 }
 
@@ -159,7 +160,7 @@ export function formatForJson(iso: string | null): string | null {
 
 /** "15 oct · 2:30 p. m." para mostrar en pantalla. */
 export function formatHuman(iso: string | null, withTime = true): string {
-  if (!iso) return 'Sin fecha';
+  if (!iso) return t('Sin fecha');
   const p = bogotaParts(iso);
   const date = `${p.d} ${MONTHS_ES[p.mo - 1]}`;
   if (!withTime) return date;

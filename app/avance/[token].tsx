@@ -6,6 +6,7 @@ import { C } from '../../lib/theme';
 import { KadernoMark } from '../../components/brand/KadernoLogo';
 import { publicView, type PublicView } from '../../lib/clientLinks';
 import { HEALTH } from '../../lib/projectWork';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Avance del proyecto para el cliente (v25, fase 4): público y de solo
@@ -29,8 +30,8 @@ export default function Avance() {
         {v === null && (
           <View style={{ alignItems: 'center', gap: 10, paddingTop: 40 }}>
             <Ionicons name="lock-closed-outline" size={36} color={C.muted} />
-            <Text style={{ color: C.text, fontSize: 18, fontWeight: '800' }}>Este enlace no está disponible</Text>
-            <Text style={{ color: C.muted, fontSize: 14, textAlign: 'center' }}>Puede que lo hayan apagado o cambiado.</Text>
+            <Text style={{ color: C.text, fontSize: 18, fontWeight: '800' }}>{t('Este enlace no está disponible')}</Text>
+            <Text style={{ color: C.muted, fontSize: 14, textAlign: 'center' }}>{t('Puede que lo hayan apagado o cambiado.')}</Text>
           </View>
         )}
         {v && (
@@ -38,7 +39,7 @@ export default function Avance() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <View style={{ width: 46, height: 46, borderRadius: 13, backgroundColor: v.color + '26', alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 22 }}>{v.icon}</Text></View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: C.muted, fontSize: 13 }}>Avance del proyecto</Text>
+                <Text style={{ color: C.muted, fontSize: 13 }}>{t('Avance del proyecto')}</Text>
                 <Text style={{ color: C.text, fontSize: 22, fontWeight: '800' }}>{v.name}</Text>
               </View>
             </View>
@@ -46,7 +47,7 @@ export default function Avance() {
             <View style={box} accessibilityLabel={`${pct} % terminado`}>
               <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
                 <Text style={{ color: C.text, fontSize: 30, fontWeight: '800' }}>{pct} %</Text>
-                <Text style={{ color: C.muted, fontSize: 13.5 }}>{v.done} de {v.total} tareas terminadas</Text>
+                <Text style={{ color: C.muted, fontSize: 13.5 }}>{t('{done} de {total} tareas terminadas', { done: v.done, total: v.total })}</Text>
               </View>
               <View style={{ height: 10, borderRadius: 5, backgroundColor: C.surface2, overflow: 'hidden' }}><View style={{ width: `${pct}%`, height: 10, backgroundColor: C.good }} /></View>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 }}>
@@ -69,8 +70,8 @@ export default function Avance() {
               </View>
             )}
             <View style={box}>
-              <Text style={{ color: C.text, fontSize: 15, fontWeight: '800' }}>Lo que viene</Text>
-              {v.next.length === 0 ? <Text style={{ color: C.muted, fontSize: 13.5 }}>Nada con fecha en las próximas tres semanas.</Text> : v.next.map((t, i) => (
+              <Text style={{ color: C.text, fontSize: 15, fontWeight: '800' }}>{t('Lo que viene')}</Text>
+              {v.next.length === 0 ? <Text style={{ color: C.muted, fontSize: 13.5 }}>{t('Nada con fecha en las próximas tres semanas.')}</Text> : v.next.map((t, i) => (
                 <View key={i} style={{ flexDirection: 'row', gap: 10 }}>
                   <Text style={{ color: t.due < v.today ? C.badText : C.muted, fontSize: 13, width: 56, fontVariant: ['tabular-nums'] }}>{day(t.due)}</Text>
                   <Text style={{ color: C.text, fontSize: 14, flex: 1 }}>{t.title}</Text>
@@ -78,8 +79,8 @@ export default function Avance() {
               ))}
             </View>
             <View style={box}>
-              <Text style={{ color: C.text, fontSize: 15, fontWeight: '800' }}>Entregado en los últimos 30 días</Text>
-              {v.delivered.length === 0 ? <Text style={{ color: C.muted, fontSize: 13.5 }}>Todavía nada.</Text> : v.delivered.map((t, i) => (
+              <Text style={{ color: C.text, fontSize: 15, fontWeight: '800' }}>{t('Entregado en los últimos 30 días')}</Text>
+              {v.delivered.length === 0 ? <Text style={{ color: C.muted, fontSize: 13.5 }}>{t('Todavía nada.')}</Text> : v.delivered.map((t, i) => (
                 <View key={i} style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
                   <Ionicons name="checkmark-circle" size={16} color={C.good} />
                   <Text style={{ color: C.text, fontSize: 14, flex: 1 }}>{t.title}</Text>
@@ -89,7 +90,7 @@ export default function Avance() {
             </View>
             <View style={{ alignItems: 'center', gap: 6 }}>
               <KadernoMark size={22} />
-              <Text style={{ color: C.muted, fontSize: 12, textAlign: 'center' }}>Actualizado en tiempo real con Kaderno.</Text>
+              <Text style={{ color: C.muted, fontSize: 12, textAlign: 'center' }}>{t('Actualizado en tiempo real con Kaderno.')}</Text>
             </View>
           </>
         )}

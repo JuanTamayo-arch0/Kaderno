@@ -1,4 +1,5 @@
-// ============================================================
+
+import { t } from '../i18n';// ============================================================
 //  La casa de la mascota: un cuarto en pixel art (120 x 64 píxeles).
 //
 //  Capas: papel de pared, zócalo, piso, ventana (con lo que se ve afuera según
@@ -23,26 +24,26 @@ export type HomeItemId =
 export type Home = Partial<Record<'papel' | 'piso' | 'vista', HomeItemId | null> & Record<string, unknown>>;
 
 export const HOME_ITEMS: Record<HomeItemId, { name: string; short: string; slot: HomeSlot; price: number; level: number }> = {
-  papel_rayas: { name: 'Papel a rayas', short: 'Rayas', slot: 'papel', price: 80, level: 1 },
-  papel_ladrillo: { name: 'Pared de ladrillo', short: 'Ladrillo', slot: 'papel', price: 120, level: 1 },
-  papel_madera: { name: 'Paneles de madera', short: 'Madera', slot: 'papel', price: 200, level: 2 },
-  papel_estrellas: { name: 'Papel de estrellas', short: 'Estrellas', slot: 'papel', price: 250, level: 3 },
-  piso_baldosa: { name: 'Piso de baldosa', short: 'Baldosa', slot: 'piso', price: 80, level: 1 },
-  piso_alfombrado: { name: 'Piso alfombrado', short: 'Alfombrado', slot: 'piso', price: 120, level: 1 },
-  piso_marmol: { name: 'Piso de mármol', short: 'Mármol', slot: 'piso', price: 250, level: 3 },
-  vista_montanas: { name: 'Vista a las montañas', short: 'Montañas', slot: 'vista', price: 150, level: 1 },
-  vista_playa: { name: 'Vista a la playa', short: 'Playa', slot: 'vista', price: 200, level: 2 },
-  vista_espacio: { name: 'Vista al espacio', short: 'Espacio', slot: 'vista', price: 400, level: 5 },
-  lampara: { name: 'Lámpara de escritorio', short: 'Lámpara', slot: 'mueble', price: 60, level: 1 },
-  cojin: { name: 'Cojín', short: 'Cojín', slot: 'mueble', price: 60, level: 1 },
-  planta: { name: 'Planta', short: 'Planta', slot: 'mueble', price: 70, level: 1 },
-  alfombra: { name: 'Alfombra', short: 'Alfombra', slot: 'mueble', price: 90, level: 1 },
-  cuadro: { name: 'Cuadro', short: 'Cuadro', slot: 'mueble', price: 100, level: 1 },
-  estante: { name: 'Estante con libros', short: 'Estante', slot: 'mueble', price: 120, level: 1 },
+  papel_rayas: { name: t('Papel a rayas'), short: t('Rayas'), slot: 'papel', price: 80, level: 1 },
+  papel_ladrillo: { name: t('Pared de ladrillo'), short: t('Ladrillo'), slot: 'papel', price: 120, level: 1 },
+  papel_madera: { name: t('Paneles de madera'), short: t('Madera'), slot: 'papel', price: 200, level: 2 },
+  papel_estrellas: { name: t('Papel de estrellas'), short: t('Estrellas'), slot: 'papel', price: 250, level: 3 },
+  piso_baldosa: { name: t('Piso de baldosa'), short: t('Baldosa'), slot: 'piso', price: 80, level: 1 },
+  piso_alfombrado: { name: t('Piso alfombrado'), short: t('Alfombrado'), slot: 'piso', price: 120, level: 1 },
+  piso_marmol: { name: t('Piso de mármol'), short: t('Mármol'), slot: 'piso', price: 250, level: 3 },
+  vista_montanas: { name: t('Vista a las montañas'), short: t('Montañas'), slot: 'vista', price: 150, level: 1 },
+  vista_playa: { name: t('Vista a la playa'), short: t('Playa'), slot: 'vista', price: 200, level: 2 },
+  vista_espacio: { name: t('Vista al espacio'), short: t('Espacio'), slot: 'vista', price: 400, level: 5 },
+  lampara: { name: t('Lámpara de escritorio'), short: t('Lámpara'), slot: 'mueble', price: 60, level: 1 },
+  cojin: { name: t('Cojín'), short: t('Cojín'), slot: 'mueble', price: 60, level: 1 },
+  planta: { name: t('Planta'), short: t('Planta'), slot: 'mueble', price: 70, level: 1 },
+  alfombra: { name: t('Alfombra'), short: t('Alfombra'), slot: 'mueble', price: 90, level: 1 },
+  cuadro: { name: t('Cuadro'), short: t('Cuadro'), slot: 'mueble', price: 100, level: 1 },
+  estante: { name: t('Estante con libros'), short: t('Estante'), slot: 'mueble', price: 120, level: 1 },
 };
 export const HOME_ORDER = (Object.keys(HOME_ITEMS) as HomeItemId[]);
-export const HOME_DEFAULT_NAMES: Record<'papel' | 'piso' | 'vista', string> = { papel: 'Pared lisa', piso: 'Piso de madera', vista: 'Vista a la ciudad' };
-export const HOME_DEFAULT_SHORT: Record<'papel' | 'piso' | 'vista', string> = { papel: 'Lisa', piso: 'Madera', vista: 'Ciudad' };
+export const HOME_DEFAULT_NAMES: Record<'papel' | 'piso' | 'vista', string> = { papel: t('Pared lisa'), piso: t('Piso de madera'), vista: t('Vista a la ciudad') };
+export const HOME_DEFAULT_SHORT: Record<'papel' | 'piso' | 'vista', string> = { papel: t('Lisa'), piso: t('Madera'), vista: t('Ciudad') };
 
 export type DayPart = 'dia' | 'tarde' | 'noche';
 export function dayPart(hour: number): DayPart { return hour >= 6 && hour < 17 ? 'dia' : hour >= 17 && hour < 19 ? 'tarde' : 'noche'; }

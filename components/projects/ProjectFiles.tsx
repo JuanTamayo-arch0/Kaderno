@@ -13,6 +13,7 @@ import {
   restoreVersion, updateFileInfo, uploadNewFile, uploadVersion,
 } from '../../lib/projectFiles';
 import { KIND_ICON, MAX_FILE_BYTES, humanSize, kindOf, matchExisting, previewable, whenLabel } from '../../lib/fileVersions';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Pestaña "Archivos" de un proyecto.
@@ -55,9 +56,9 @@ export function ProjectFiles({ projectId, members, editable, isWide, onChanged }
   useEffect(() => { load(); }, [load]);
 
   const who = useCallback((id: string | null) => {
-    if (!id) return 'Alguien';
+    if (!id) return t('Alguien');
     const m = members.find((x) => x.user_id === id);
-    return m ? nameOf(m.profile) : 'Alguien';
+    return m ? nameOf(m.profile) : t('Alguien');
   }, [members]);
 
   const shown = useMemo(() => {
@@ -67,8 +68,8 @@ export function ProjectFiles({ projectId, members, editable, isWide, onChanged }
   }, [files, query]);
 
   function stage(upload: Upload, target: ProjectFile | null) {
-    if (!ready) { notify('Falta un paso en Supabase', 'Para guardar versiones hay que correr supabase/schema_v15.sql una vez. Está explicado en RUNBOOK.md.'); return; }
-    if (upload.size > MAX_FILE_BYTES) { notify('Archivo muy grande', `"${upload.name}" pesa ${humanSize(upload.size)}. El máximo es ${humanSize(MAX_FILE_BYTES)}.`); return; }
+    if (!ready) { notify(t('Falta un paso en Supabase'), t('Para guardar versiones hay que correr supabase/schema_v15.sql una vez. Está explicado en RUNBOOK.md.')); return; }
+    if (upload.size > MAX_FILE_BYTES) { notify(t('Archivo muy grande'), t('"{name}" pesa {size}. El máximo es {MAX_FILE_BYTES}.', { name: upload.name, size: humanSize(upload.size), MAX_FILE_BYTES: humanSize(MAX_FILE_BYTES) })); return; }
     const suggested = target ? null : matchExisting(upload.name, files ?? []);
     setPending({ projectId, upload, target, suggested });
   }
@@ -77,14 +78,14 @@ export function ProjectFiles({ projectId, members, editable, isWide, onChanged }
     try {
       const f = await pickAnyFile();
       if (f) stage(f, target);
-    } catch (e) { notify('No se pudo leer el archivo', friendlyError(e)); }
+    } catch (e) { notify(t('No se pudo leer el archivo'), friendlyError(e)); }
   }
 
   async function onDropFiles(list: FileList | null | undefined, target: ProjectFile | null) {
     setDragOver(null);
     if (!editable || !list || !list.length) return;
-    if (list.length > 1) toast('Se toma un archivo a la vez: subo el primero.');
-    try { stage(await readWebAny(list[0]), target); } catch (e) { notify('No se pudo leer el archivo', friendlyError(e)); }
+    if (list.length > 1) toast(t('Se toma un archivo a la vez: subo el primero.'));
+    try { stage(await readWebAny(list[0]), target); } catch (e) { notify(t('No se pudo leer el archivo'), friendlyError(e)); }
   }
 
   async function open(f: { name: string; path: string; mime: string | null; id?: string }) {
@@ -95,10 +96,10 @@ export function ProjectFiles({ projectId, members, editable, isWide, onChanged }
       } else {
         await Linking.openURL(await fileUrl(f.path, f.name));
       }
-    } catch (e) { notify('No se pudo abrir', friendlyError(e)); }
+    } catch (e) { notify(t('No se pudo abrir'), friendlyError(e)); }
   }
   async function download(f: { name: string; path: string }) {
-    try { await Linking.openURL(await fileUrl(f.path, f.name)); } catch (e) { notify('No se pudo descargar', friendlyError(e)); }
+    try { await Linking.openURL(await fileUrl(f.path, f.name)); } catch (e) { notify(t('No se pudo descargar'), friendlyError(e)); }
   }
 
   const list = (
@@ -106,27 +107,24 @@ export function ProjectFiles({ projectId, members, editable, isWide, onChanged }
       {/* encabezado */}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
         <View style={{ flex: 1, minWidth: 180 }}>
-          <Text style={{ color: C.text, fontSize: 16, fontWeight: '800' }}>Archivos del proyecto</Text>
+          <Text style={{ color: C.text, fontSize: 16, fontWeight: '800' }}>{t('Archivos del proyecto')}</Text>
           <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>
-            Cada vez que subes una versión nueva, la anterior queda guardada en el historial.
-          </Text>
+            {t('Cada vez que subes una versión nueva, la anterior queda guardada en el historial.')}</Text>
         </View>
-        {editable && <Button label="Subir archivo" icon="cloud-upload-outline" size="sm" onPress={() => pick(null)} />}
+        {editable && <Button label={t('Subir archivo')} icon="cloud-upload-outline" size="sm" onPress={() => pick(null)} />}
       </View>
 
       {!ready && (
         <View style={{ flexDirection: 'row', gap: 10, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: C.warn + '66', backgroundColor: C.warn + '14', marginBottom: 12 }}>
           <Ionicons name="construct-outline" size={18} color={C.warnText} />
           <Text style={{ color: C.text, fontSize: 13, flex: 1, lineHeight: 19 }}>
-            Las versiones de archivos todavía no están activadas en la base. Quien administra Kaderno debe correr
-            <Text style={{ fontWeight: '700' }}> supabase/schema_v15.sql</Text> (ver RUNBOOK.md).
-          </Text>
+            {t('Las versiones de archivos todavía no están activadas en la base. Quien administra Kaderno debe correr')}<Text style={{ fontWeight: '700' }}> {t(' supabase/schema_v15.sql')}</Text> {t(' (ver RUNBOOK.md).')}</Text>
         </View>
       )}
 
       {(files?.length ?? 0) > 6 && (
-        <Field placeholder="Buscar archivo" value={query} onChangeText={setQuery} accessibilityLabel="Buscar archivo"
-          right={query ? <IconButton icon="close" label="Borrar búsqueda" size={16} onPress={() => setQuery('')} /> : undefined} />
+        <Field placeholder={t('Buscar archivo')} value={query} onChangeText={setQuery} accessibilityLabel={t('Buscar archivo')}
+          right={query ? <IconButton icon="close" label={t('Borrar búsqueda')} size={16} onPress={() => setQuery('')} /> : undefined} />
       )}
 
       {error ? (
@@ -134,13 +132,13 @@ export function ProjectFiles({ projectId, members, editable, isWide, onChanged }
       ) : files === null ? (
         <><Skeleton /><Skeleton /><Skeleton /></>
       ) : files.length === 0 ? (
-        <EmptyState icon="folder-open-outline" title="Todavía no hay archivos"
+        <EmptyState icon="folder-open-outline" title={t('Todavía no hay archivos')}
           text={editable
-            ? (FINE_POINTER ? 'Sube el informe, la presentación o los datos del grupo. También puedes soltar un archivo aquí.' : 'Sube el informe, la presentación o los datos del grupo. Cada versión queda guardada.')
-            : 'Cuando alguien del equipo suba un archivo, aparecerá aquí.'}
-          action={editable ? { label: 'Subir el primero', icon: 'cloud-upload-outline', onPress: () => pick(null) } : undefined} />
+            ? (FINE_POINTER ? t('Sube el informe, la presentación o los datos del grupo. También puedes soltar un archivo aquí.') : t('Sube el informe, la presentación o los datos del grupo. Cada versión queda guardada.'))
+            : t('Cuando alguien del equipo suba un archivo, aparecerá aquí.')}
+          action={editable ? { label: t('Subir el primero'), icon: 'cloud-upload-outline', onPress: () => pick(null) } : undefined} />
       ) : shown.length === 0 ? (
-        <Text style={{ color: C.muted, paddingVertical: 16, textAlign: 'center' }}>Ningún archivo coincide con “{query}”.</Text>
+        <Text style={{ color: C.muted, paddingVertical: 16, textAlign: 'center' }}>{t('Ningún archivo coincide con “{query}”.', { query })}</Text>
       ) : (
         <View style={{ borderWidth: 1, borderColor: C.line, borderRadius: 14, backgroundColor: C.surface, overflow: 'hidden' }}>
           {shown.map((f, i) => (
@@ -156,8 +154,7 @@ export function ProjectFiles({ projectId, members, editable, isWide, onChanged }
       )}
       {editable && FINE_POINTER && (files?.length ?? 0) > 0 && (
         <Text style={{ color: C.muted, fontSize: 12, marginTop: 10, textAlign: 'center' }}>
-          Suelta un archivo sobre una fila para subirlo como versión nueva de ese archivo.
-        </Text>
+          {t('Suelta un archivo sobre una fila para subirlo como versión nueva de ese archivo.')}</Text>
       )}
     </View>
   );
@@ -209,7 +206,7 @@ function FileRow({ file, first, who, editable, isWide, highlight, onOpen, onPrev
       backgroundColor: highlight ? C.brand + '1f' : 'transparent',
       borderWidth: highlight ? 2 : 0, borderColor: C.brand,
     }}>
-      <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={`${file.name}, versión ${file.current_version}. Ver historial`}
+      <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={t('{name}, versión {current_version}. Ver historial', { name: file.name, current_version: file.current_version })}
         style={({ pressed, hovered }: any) => ({
           flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingLeft: 14, paddingRight: 6,
           backgroundColor: !highlight && (pressed || hovered) ? C.surface2 : 'transparent',
@@ -219,13 +216,13 @@ function FileRow({ file, first, who, editable, isWide, highlight, onOpen, onPrev
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text numberOfLines={1} style={{ color: C.text, fontSize: 14.5, fontWeight: '700' }}>{file.name}</Text>
-          <Text numberOfLines={1} style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{highlight ? 'Suelta para subir una versión nueva' : meta}</Text>
+          <Text numberOfLines={1} style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{highlight ? t('Suelta para subir una versión nueva') : meta}</Text>
           {!!file.description && !highlight && <Text numberOfLines={1} style={{ color: C.muted, fontSize: 12.5, marginTop: 1 }}>{file.description}</Text>}
         </View>
       </Pressable>
-      <IconButton icon={previewable(file.name, file.mime) ? 'eye-outline' : 'download-outline'} label={previewable(file.name, file.mime) ? `Ver ${file.name}` : `Descargar ${file.name}`} onPress={onPreview} />
-      {editable && isWide && <IconButton icon="cloud-upload-outline" label={`Subir versión nueva de ${file.name}`} onPress={onNewVersion} />}
-      {isWide && <IconButton icon="time-outline" label={`Historial de ${file.name}`} onPress={onOpen} />}
+      <IconButton icon={previewable(file.name, file.mime) ? 'eye-outline' : 'download-outline'} label={previewable(file.name, file.mime) ? t('Ver {name}', { name: file.name }) : `Descargar ${file.name}`} onPress={onPreview} />
+      {editable && isWide && <IconButton icon="cloud-upload-outline" label={t('Subir versión nueva de {name}', { name: file.name })} onPress={onNewVersion} />}
+      {isWide && <IconButton icon="time-outline" label={t('Historial de {name}', { name: file.name })} onPress={onOpen} />}
     </View>
   );
 }
@@ -252,15 +249,15 @@ function UploadDialog({ pending, onClose, onDone }: {
     try {
       if (versionOf) {
         const n = await uploadVersion(versionOf, upload, note);
-        onDone(`Versión ${n} de “${versionOf.name}” guardada`, { ...versionOf, current_version: n });
+        onDone(t('Versión {n} de “{name}” guardada', { n, name: versionOf.name }), { ...versionOf, current_version: n });
       } else {
         await uploadNewFile(projectId, upload, { description: note });
         onDone(`“${upload.name}” subido`);
       }
     } catch (e) {
       setBusy(false);
-      if (e instanceof NeedsV15) notify('Falta un paso en Supabase', e.message);
-      else notify('No se pudo subir', friendlyError(e));
+      if (e instanceof NeedsV15) notify(t('Falta un paso en Supabase'), e.message);
+      else notify(t('No se pudo subir'), friendlyError(e));
     }
   }
 
@@ -268,7 +265,7 @@ function UploadDialog({ pending, onClose, onDone }: {
     <Modal visible transparent animationType="fade" onRequestClose={busy ? undefined : onClose}>
       <Pressable onPress={busy ? undefined : onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
         <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} style={{ backgroundColor: C.surface, borderRadius: 20, padding: 18, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 480 }}>
-          <Text style={{ color: C.text, fontSize: 17, fontWeight: '800' }}>{versionOf ? 'Subir versión nueva' : 'Subir archivo'}</Text>
+          <Text style={{ color: C.text, fontSize: 17, fontWeight: '800' }}>{versionOf ? t('Subir versión nueva') : t('Subir archivo')}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12, padding: 10, borderRadius: 12, backgroundColor: C.surface2 }}>
             <Ionicons name={KIND_ICON[kindOf(upload.name, upload.mime)] as any} size={20} color={C.brand} />
             <View style={{ flex: 1, minWidth: 0 }}>
@@ -279,26 +276,25 @@ function UploadDialog({ pending, onClose, onDone }: {
 
           {target ? (
             <Text style={{ color: C.muted, fontSize: 13, marginTop: 12, lineHeight: 19 }}>
-              Se guardará como <Text style={{ color: C.text, fontWeight: '700' }}>versión {target.current_version + 1}</Text> de “{target.name}”. La versión {target.current_version} queda en el historial.
-            </Text>
+              {t('Se guardará como ')}<Text style={{ color: C.text, fontWeight: '700' }}>{t('versión {v}', { v: target.current_version + 1 })}</Text> {t(' de “')}{target.name}{t('”. La versión ')}{target.current_version} {t(' queda en el historial.')}</Text>
           ) : suggested ? (
             <View style={{ marginTop: 12, gap: 8 }}>
-              <Text style={{ color: C.muted, fontSize: 13 }}>Se parece a un archivo que ya está en el proyecto:</Text>
-              <Choice on={asVersion} onPress={() => setAsVersion(true)} title={`Versión ${suggested.current_version + 1} de “${suggested.name}”`} hint="Recomendado: mantiene todo el historial junto" />
-              <Choice on={!asVersion} onPress={() => setAsVersion(false)} title="Como archivo aparte" hint="Aparece como otro archivo en la lista" />
+              <Text style={{ color: C.muted, fontSize: 13 }}>{t('Se parece a un archivo que ya está en el proyecto:')}</Text>
+              <Choice on={asVersion} onPress={() => setAsVersion(true)} title={t('Versión {v} de “{name}”', { v: suggested.current_version + 1, name: suggested.name })} hint={t('Recomendado: mantiene todo el historial junto')} />
+              <Choice on={!asVersion} onPress={() => setAsVersion(false)} title={t('Como archivo aparte')} hint={t('Aparece como otro archivo en la lista')} />
             </View>
           ) : null}
 
           <Field
-            label={versionOf ? '¿Qué cambió? (opcional)' : 'Descripción (opcional)'}
-            placeholder={versionOf ? 'Ej.: corregí la introducción y las gráficas' : 'Ej.: borrador del informe final'}
+            label={versionOf ? t('¿Qué cambió? (opcional)') : t('Descripción (opcional)')}
+            placeholder={versionOf ? t('Ej.: corregí la introducción y las gráficas') : t('Ej.: borrador del informe final')}
             value={note} onChangeText={setNote} maxLength={500} multiline
             style={{ marginTop: 14 }} inputStyle={{ minHeight: 60, textAlignVertical: 'top' }}
           />
 
           <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 4 }}>
-            <Button label="Cancelar" kind="ghost" onPress={onClose} disabled={busy} />
-            <Button label={busy ? 'Subiendo…' : versionOf ? 'Guardar versión' : 'Subir'} icon="cloud-upload-outline" busy={busy} onPress={go} />
+            <Button label={t('Cancelar')} kind="ghost" onPress={onClose} disabled={busy} />
+            <Button label={busy ? t('Subiendo…') : versionOf ? t('Guardar versión') : t('Subir')} icon="cloud-upload-outline" busy={busy} onPress={go} />
           </View>
         </Pressable>
       </Pressable>
@@ -349,27 +345,27 @@ function FileSheet({ file, who, editable, onClose, onOpen, onDownload, onNewVers
 
   async function saveInfo() {
     setBusy('info');
-    try { await updateFileInfo(current, { name, description: desc }); setEditing(false); toast('Cambios guardados'); await onChanged(); }
-    catch (e) { notify('No se pudo guardar', friendlyError(e)); }
+    try { await updateFileInfo(current, { name, description: desc }); setEditing(false); toast(t('Cambios guardados')); await onChanged(); }
+    catch (e) { notify(t('No se pudo guardar'), friendlyError(e)); }
     finally { setBusy(null); }
   }
   async function restore(v: FileVersion) {
-    const ok = await confirm(`¿Volver a la versión ${v.version}?`,
-      `Se creará la versión ${current.current_version + 1} con el contenido de la ${v.version}. No se pierde ninguna versión.`, 'Restaurar');
+    const ok = await confirm(t('¿Volver a la versión {version}?', { version: v.version }),
+      t('Se creará la versión {v} con el contenido de la {version}. No se pierde ninguna versión.', { v: current.current_version + 1, version: v.version }), t('Restaurar'));
     if (!ok) return;
     setBusy(v.id);
-    try { const n = await restoreVersion(current, v); toast(`Listo: la versión ${n} es igual a la ${v.version}`, { tone: 'good' }); await onChanged(); }
-    catch (e) { notify('No se pudo restaurar', friendlyError(e)); }
+    try { const n = await restoreVersion(current, v); toast(t('Listo: la versión {n} es igual a la {version}', { n, version: v.version }), { tone: 'good' }); await onChanged(); }
+    catch (e) { notify(t('No se pudo restaurar'), friendlyError(e)); }
     finally { setBusy(null); }
   }
   async function remove() {
     const n = versions?.length ?? current.current_version;
-    const ok = await confirm(`¿Eliminar “${current.name}”?`,
-      `Se borran el archivo y ${n === 1 ? 'su única versión' : `sus ${n} versiones`} para todo el equipo. No se puede deshacer.`, 'Eliminar');
+    const ok = await confirm(t('¿Eliminar “{name}”?', { name: current.name }),
+      t('Se borran el archivo y {v} para todo el equipo. No se puede deshacer.', { v: n === 1 ? 'su única versión' : `sus ${n} versiones` }), t('Eliminar'));
     if (!ok) return;
     setBusy('delete');
-    try { await deleteProjectFile(current); toast('Archivo eliminado'); await onDeleted(); }
-    catch (e) { notify('No se pudo eliminar', friendlyError(e)); setBusy(null); }
+    try { await deleteProjectFile(current); toast(t('Archivo eliminado')); await onDeleted(); }
+    catch (e) { notify(t('No se pudo eliminar'), friendlyError(e)); setBusy(null); }
   }
 
   return (
@@ -383,36 +379,34 @@ function FileSheet({ file, who, editable, onClose, onOpen, onDownload, onNewVers
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text numberOfLines={2} style={{ color: C.text, fontSize: 16, fontWeight: '800' }}>{current.name}</Text>
-              <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>Versión actual: {current.current_version} · {humanSize(current.size)}</Text>
+              <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{t('Versión actual: {current_version} · {size}', { current_version: current.current_version, size: humanSize(current.size) })}</Text>
             </View>
-            <IconButton icon="close" label="Cerrar" onPress={onClose} />
+            <IconButton icon="close" label={t('Cerrar')} onPress={onClose} />
           </View>
 
           <ScrollView contentContainerStyle={{ padding: 16 }}>
             {editing ? (
               <View>
-                <Field label="Nombre" value={name} onChangeText={setName} maxLength={200} />
-                <Field label="Descripción" value={desc} onChangeText={setDesc} maxLength={500} multiline inputStyle={{ minHeight: 56, textAlignVertical: 'top' }} />
+                <Field label={t('Nombre')} value={name} onChangeText={setName} maxLength={200} />
+                <Field label={t('Descripción')} value={desc} onChangeText={setDesc} maxLength={500} multiline inputStyle={{ minHeight: 56, textAlignVertical: 'top' }} />
                 <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10 }}>
-                  <Button label="Cancelar" kind="ghost" size="sm" onPress={() => setEditing(false)} />
-                  <Button label="Guardar" size="sm" busy={busy === 'info'} onPress={saveInfo} />
+                  <Button label={t('Cancelar')} kind="ghost" size="sm" onPress={() => setEditing(false)} />
+                  <Button label={t('Guardar')} size="sm" busy={busy === 'info'} onPress={saveInfo} />
                 </View>
               </View>
             ) : (
               <>
                 {!!current.description && <Text style={{ color: C.text, fontSize: 14, lineHeight: 20, marginBottom: 12 }}>{current.description}</Text>}
                 <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-                  {previewable(current.name, current.mime) && <Button label="Ver" icon="eye-outline" size="sm" kind="secondary" onPress={() => onOpen(current)} />}
-                  <Button label="Descargar" icon="download-outline" size="sm" kind="secondary" onPress={() => onDownload(current)} />
-                  {editable && <Button label="Subir versión nueva" icon="cloud-upload-outline" size="sm" onPress={() => onNewVersion(current)} />}
-                  {editable && <Button label="Editar datos" icon="create-outline" size="sm" kind="ghost" onPress={() => { setName(current.name); setDesc(current.description ?? ''); setEditing(true); }} />}
+                  {previewable(current.name, current.mime) && <Button label={t('Ver')} icon="eye-outline" size="sm" kind="secondary" onPress={() => onOpen(current)} />}
+                  <Button label={t('Descargar')} icon="download-outline" size="sm" kind="secondary" onPress={() => onDownload(current)} />
+                  {editable && <Button label={t('Subir versión nueva')} icon="cloud-upload-outline" size="sm" onPress={() => onNewVersion(current)} />}
+                  {editable && <Button label={t('Editar datos')} icon="create-outline" size="sm" kind="ghost" onPress={() => { setName(current.name); setDesc(current.description ?? ''); setEditing(true); }} />}
                 </View>
               </>
             )}
 
-            <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6, marginTop: 20, marginBottom: 8 }}>
-              Historial{versions ? ` · ${versions.length} ${versions.length === 1 ? 'versión' : 'versiones'}` : ''}
-            </Text>
+            <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6, marginTop: 20, marginBottom: 8 }}>{t('Historial{v}', { v: versions ? ` · ${versions.length} ${versions.length === 1 ? 'versión' : 'versiones'}` : '' })}</Text>
             {err ? (
               <Text style={{ color: C.badText, fontSize: 13 }}>{err}</Text>
             ) : versions === null ? (
@@ -425,22 +419,22 @@ function FileSheet({ file, who, editable, onClose, onOpen, onDownload, onNewVers
                 <View key={v.id} style={{ flexDirection: 'row', gap: 12, paddingVertical: 11, borderTopWidth: 1, borderTopColor: C.line }}>
                   <View style={{ alignItems: 'center', width: 38 }}>
                     <View style={{ minWidth: 34, paddingVertical: 3, paddingHorizontal: 6, borderRadius: R.pill, backgroundColor: isCurrent ? C.brand : C.surface2, alignItems: 'center' }}>
-                      <Text style={{ color: isCurrent ? C.onBrand : C.text, fontSize: 12, fontWeight: '800' }}>v{v.version}</Text>
+                      <Text style={{ color: isCurrent ? C.onBrand : C.text, fontSize: 12, fontWeight: '800' }}>{t('v{version}', { version: v.version })}</Text>
                     </View>
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                      <Text numberOfLines={1} style={{ color: C.text, fontSize: 13.5, fontWeight: '700', flexShrink: 1 }}>{v.note ?? (v.version === 1 ? 'Primera versión' : 'Sin nota')}</Text>
-                      {isCurrent && <Badge text="Actual" color={C.good} />}
+                      <Text numberOfLines={1} style={{ color: C.text, fontSize: 13.5, fontWeight: '700', flexShrink: 1 }}>{v.note ?? (v.version === 1 ? t('Primera versión') : t('Sin nota'))}</Text>
+                      {isCurrent && <Badge text={t('Actual')} color={C.good} />}
                       {v.restored_from != null && <Badge text={`igual a v${v.restored_from}`} />}
                     </View>
                     <Text numberOfLines={1} style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>
                       {who(v.uploaded_by)} · {whenLabel(v.created_at)}{v.size ? ` · ${humanSize(v.size)}` : ''}{label !== current.name ? ` · ${label}` : ''}
                     </Text>
                     <View style={{ flexDirection: 'row', gap: 16, marginTop: 6, flexWrap: 'wrap' }}>
-                      {previewable(label, v.mime) && <LinkBtn label="Ver" onPress={() => onOpen({ name: label, path: v.path, mime: v.mime })} />}
-                      <LinkBtn label="Descargar" onPress={() => onDownload({ name: versionedName(label, v.version), path: v.path })} />
-                      {editable && !isCurrent && !same && (busy === v.id ? <ActivityIndicator size="small" color={C.brand} /> : <LinkBtn label="Restaurar" onPress={() => restore(v)} />)}
+                      {previewable(label, v.mime) && <LinkBtn label={t('Ver')} onPress={() => onOpen({ name: label, path: v.path, mime: v.mime })} />}
+                      <LinkBtn label={t('Descargar')} onPress={() => onDownload({ name: versionedName(label, v.version), path: v.path })} />
+                      {editable && !isCurrent && !same && (busy === v.id ? <ActivityIndicator size="small" color={C.brand} /> : <LinkBtn label={t('Restaurar')} onPress={() => restore(v)} />)}
                     </View>
                   </View>
                 </View>
@@ -451,7 +445,7 @@ function FileSheet({ file, who, editable, onClose, onOpen, onDownload, onNewVers
               <Pressable onPress={remove} disabled={busy === 'delete'} accessibilityRole="button"
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 18, alignSelf: 'flex-start', paddingVertical: 8 }}>
                 {busy === 'delete' ? <ActivityIndicator size="small" color={C.bad} /> : <Ionicons name="trash-outline" size={16} color={C.badText} />}
-                <Text style={{ color: C.badText, fontWeight: '700', fontSize: 13.5 }}>Eliminar archivo y su historial</Text>
+                <Text style={{ color: C.badText, fontWeight: '700', fontSize: 13.5 }}>{t('Eliminar archivo y su historial')}</Text>
               </Pressable>
             )}
           </ScrollView>

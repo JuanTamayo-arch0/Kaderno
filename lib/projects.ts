@@ -101,7 +101,7 @@ export type Activity = {
 
 async function uid(): Promise<string> {
   const id = await currentUserId();
-  if (!id) throw new Error('No hay sesión activa');
+  if (!id) throw new Error(t('No hay sesión activa'));
   return id;
 }
 
@@ -109,6 +109,7 @@ async function uid(): Promise<string> {
 
 export { DEFAULT_COLUMNS } from './projectTemplates';
 import { DEFAULT_COLUMNS, TEMPLATES } from './projectTemplates';
+import { t } from './i18n';
 
 // Las plantillas viven aquí, en el cliente, y NO en una tabla. Una plantilla es
 // un puñado de columnas y unas tarjetas de arranque; ponerlas en la base
@@ -153,12 +154,12 @@ async function profilesByIds(ids: string[]): Promise<Record<string, Profile>> {
 // Nombre corto para mostrar: el que puso la persona, o lo que va antes de la
 // arroba del correo, o "Alguien" si el perfil aún no cargó.
 export function nameOf(p: Profile | null | undefined): string {
-  if (!p) return 'Alguien';
+  if (!p) return t('Alguien');
   const n = (p.display_name ?? '').trim();
   if (n) return n;
   const mail = (p.email ?? '').trim();
   if (mail) return mail.split('@')[0];
-  return 'Alguien';
+  return t('Alguien');
 }
 
 export function initialsOf(p: Profile | null | undefined): string {

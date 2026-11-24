@@ -1,5 +1,6 @@
 import { formatDMY, formatForJson } from './dates';
 import type { BoardColumnRef, Member } from './types';
+import { t } from '../i18n';
 
 export interface PromptContext {
   projectName: string;
@@ -27,34 +28,34 @@ export function buildAiPrompt(ctx: PromptContext): string {
   const members = ctx.members.filter((m) => m.role !== 'viewer').map(memberLine).filter(Boolean);
   const project = ctx.subjectName ? `${ctx.projectName} (${ctx.subjectName})` : ctx.projectName;
   const deadlineLine = ctx.deadline
-    ? `Entrega final: ${formatForJson(ctx.deadline)!.replace('T', ' ')}, hora de Bogotá.`
-    : 'El proyecto no tiene entrega final definida: propón fechas razonables.';
+    ? t('Entrega final: {replace}, hora de Bogotá.', { replace: formatForJson(ctx.deadline)!.replace('T', ' ') })
+    : t('El proyecto no tiene entrega final definida: propón fechas razonables.');
 
-  const cols = ctx.columns?.length ? ctx.columns : [{ key: 'todo', label: 'Por hacer' }];
+  const cols = ctx.columns?.length ? ctx.columns : [{ key: 'todo', label: t('Por hacer') }];
   const firstCol = cols[0].label;
   const colNames = cols.map((c) => c.label).join(', ');
 
   const lines = [
-    'Ayúdame a dividir este proyecto universitario en tareas para importarlas en Kaderno.',
+    t('Ayúdame a dividir este proyecto universitario en tareas para importarlas en Kaderno.'),
     '',
-    `Proyecto: ${project}`,
-    members.length ? `Integrantes: ${members.join(', ')}` : 'Integrantes: deja "responsable" vacío.',
-    `Hoy es ${formatDMY(ctx.now)}. ${deadlineLine}`,
+    t('Proyecto: {project}', { project }),
+    members.length ? `Integrantes: ${members.join(', ')}` : t('Integrantes: deja "responsable" vacío.'),
+    t('Hoy es {now}. {deadlineLine}', { now: formatDMY(ctx.now), deadlineLine }),
     '',
-    'Responde SOLO con un JSON válido, sin texto antes ni después, con esta forma:',
+    t('Responde SOLO con un JSON válido, sin texto antes ni después, con esta forma:'),
     `{"tareas": [{"titulo": "", "descripcion": "", "estado": "${firstCol}", "responsable": "correo de un integrante o vacío", "inicio": "AAAA-MM-DDTHH:MM", "entrega": "AAAA-MM-DDTHH:MM", "checklist": [{"texto": "", "hecho": false}]}]}`,
     '',
-    'Reglas:',
-    '- Tareas concretas de 1 a 5 días de trabajo, con un título corto que empiece con un verbo.',
-    '- Reparte la carga de forma equilibrada entre los integrantes y usa sus correos exactos.',
-    '- Todas las fechas entre hoy y la entrega final, en hora de Bogotá; el inicio siempre antes de la entrega.',
-    '- Entre 2 y 6 ítems de checklist por tarea.',
-    `- "estado" debe ser una de estas columnas: ${colNames}. Casi todo empieza en "${firstCol}".`,
-    '- Deja tiempo al final para revisar y unir el trabajo.',
-    '- Si te paso tareas que ya existen (con "id"), devuélvelas con el MISMO "id" para que se actualicen en vez de duplicarse. Si no tienen id, conserva exactamente su título o su código inicial (por ejemplo "H-009").',
+    t('Reglas:'),
+    t('- Tareas concretas de 1 a 5 días de trabajo, con un título corto que empiece con un verbo.'),
+    t('- Reparte la carga de forma equilibrada entre los integrantes y usa sus correos exactos.'),
+    t('- Todas las fechas entre hoy y la entrega final, en hora de Bogotá; el inicio siempre antes de la entrega.'),
+    t('- Entre 2 y 6 ítems de checklist por tarea.'),
+    t('- "estado" debe ser una de estas columnas: {colNames}. Casi todo empieza en "{firstCol}".', { colNames, firstCol }),
+    t('- Deja tiempo al final para revisar y unir el trabajo.'),
+    t('- Si te paso tareas que ya existen (con "id"), devuélvelas con el MISMO "id" para que se actualicen en vez de duplicarse. Si no tienen id, conserva exactamente su título o su código inicial (por ejemplo "H-009").'),
     '',
-    'Enunciado del proyecto:',
-    '[pega aquí el enunciado]',
+    t('Enunciado del proyecto:'),
+    t('[pega aquí el enunciado]'),
   ];
   return lines.join('\n');
 }

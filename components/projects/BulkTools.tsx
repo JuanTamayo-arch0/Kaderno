@@ -14,6 +14,7 @@ import {
   encodeUtf8, exportFileName, formatHuman, previewShift, tasksToCsv, tasksToJson,
   type ExistingTask, type ShiftTarget,
 } from '../../lib/import';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Edición en masa: barra de selección, sus ventanas, y exportar.
@@ -30,11 +31,11 @@ export function BulkBar({ count, total, isWide, onSelectAll, onClear, onAction }
   onSelectAll: () => void; onClear: () => void; onAction: (a: BulkAction) => void;
 }) {
   const acciones: { key: BulkAction; icon: string; label: string; danger?: boolean }[] = [
-    { key: 'columna', icon: 'albums-outline', label: 'Columna' },
-    { key: 'responsable', icon: 'person-outline', label: 'Responsable' },
-    { key: 'fecha', icon: 'calendar-outline', label: 'Entrega' },
-    { key: 'correr', icon: 'play-forward-outline', label: 'Correr fechas' },
-    { key: 'borrar', icon: 'trash-outline', label: 'Borrar', danger: true },
+    { key: 'columna', icon: 'albums-outline', label: t('Columna') },
+    { key: 'responsable', icon: 'person-outline', label: t('Responsable') },
+    { key: 'fecha', icon: 'calendar-outline', label: t('Entrega') },
+    { key: 'correr', icon: 'play-forward-outline', label: t('Correr fechas') },
+    { key: 'borrar', icon: 'trash-outline', label: t('Borrar'), danger: true },
   ];
   return (
     <View style={{ position: 'absolute', left: isWide ? SIDEBAR_W + 24 : 10, right: isWide ? 24 : 10, bottom: isWide ? 20 : 14, alignItems: 'center' }} pointerEvents="box-none">
@@ -43,7 +44,7 @@ export function BulkBar({ count, total, isWide, onSelectAll, onClear, onAction }
           {count} {count === 1 ? 'seleccionada' : 'seleccionadas'}
         </Text>
         <Pressable onPress={count === total ? onClear : onSelectAll} hitSlop={6}>
-          <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '600' }}>{count === total ? 'Quitar todas' : `Todas (${total})`}</Text>
+          <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '600' }}>{count === total ? t('Quitar todas') : t('Todas ({total})', { total })}</Text>
         </Pressable>
         <View style={{ flex: 1, minWidth: 8 }} />
         {acciones.map((a) => (
@@ -54,7 +55,7 @@ export function BulkBar({ count, total, isWide, onSelectAll, onClear, onAction }
             {isWide && <Text style={{ color: a.danger ? C.bad : C.text, fontSize: 12.5, fontWeight: '600' }}>{a.label}</Text>}
           </Pressable>
         ))}
-        <Pressable onPress={onClear} hitSlop={8} accessibilityLabel="Terminar selección" style={{ padding: 4 }}>
+        <Pressable onPress={onClear} hitSlop={8} accessibilityLabel={t('Terminar selección')} style={{ padding: 4 }}>
           <Ionicons name="close" size={19} color={C.muted} />
         </Pressable>
       </View>
@@ -67,7 +68,7 @@ export function BulkBar({ count, total, isWide, onSelectAll, onClear, onAction }
 export async function confirmBulkDelete(projectId: string, tasks: PTask[]): Promise<{ r: BatchResult; text: string } | null> {
   const n = tasks.length;
   const nTxt = `${n} ${n === 1 ? 'tarea' : 'tareas'}`;
-  const ok = await confirm(`¿Borrar ${nTxt}?`, 'Se borran para todo el equipo. Podrás deshacerlo justo después.', 'Borrar');
+  const ok = await confirm(t('¿Borrar {nTxt}?', { nTxt }), t('Se borran para todo el equipo. Podrás deshacerlo justo después.'), t('Borrar'));
   if (!ok) return null;
   const r = await bulkUpdateProjectTasks(projectId, tasks.map((t) => t.id), { delete: true });
   return { r, text: `${nTxt} ${n === 1 ? 'borrada' : 'borradas'}` };
@@ -98,7 +99,7 @@ export function BulkDialog({ action, projectId, tasks, cols, members, onClose, o
     try {
       const r = await bulkUpdateProjectTasks(projectId, ids, patch);
       onDone(r, text);
-    } catch (e: any) { notify('No se pudo aplicar', e.message); }
+    } catch (e: any) { notify(t('No se pudo aplicar'), e.message); }
     finally { setBusy(false); }
   }
 
@@ -112,19 +113,19 @@ export function BulkDialog({ action, projectId, tasks, cols, members, onClose, o
           <ScrollView showsVerticalScrollIndicator={false}>
             {action === 'columna' && (
               <>
-                <Title text={`Mover ${nTxt} a…`} onClose={onClose} />
+                <Title text={t('Mover {nTxt} a…', { nTxt })} onClose={onClose} />
                 {cols.map((c) => (
                   <Option key={c.key} busy={busy} onPress={() => run({ status: c.key }, `${nTxt} movidas a ${c.label}`)}
                     left={<View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: c.color }} />}
-                    text={c.label} hint={c.done ? 'termina aquí' : undefined} />
+                    text={c.label} hint={c.done ? t('termina aquí') : undefined} />
                 ))}
               </>
             )}
             {action === 'responsable' && (
               <>
-                <Title text={`¿Quién hace estas ${n}?`} onClose={onClose} />
-                <Option busy={busy} onPress={() => run({ assignee_id: null }, `${nTxt} sin asignar`)}
-                  left={<Ionicons name="person-remove-outline" size={16} color={C.muted} />} text="Nadie (sin asignar)" />
+                <Title text={t('¿Quién hace estas {n}?', { n })} onClose={onClose} />
+                <Option busy={busy} onPress={() => run({ assignee_id: null }, t('{nTxt} sin asignar', { nTxt }))}
+                  left={<Ionicons name="person-remove-outline" size={16} color={C.muted} />} text={t('Nadie (sin asignar)')} />
                 {members.filter((m) => m.role !== 'viewer').map((m) => (
                   <Option key={m.id} busy={busy} onPress={() => run({ assignee_id: m.user_id }, `${nTxt} asignadas a ${nameOf(m.profile)}`)}
                     left={<View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: colorOf(m.user_id), alignItems: 'center', justifyContent: 'center' }}>
@@ -134,9 +135,9 @@ export function BulkDialog({ action, projectId, tasks, cols, members, onClose, o
                 ))}
               </>
             )}
-            {action === 'fecha' && <DueForm n={n} busy={busy} onClose={onClose} onApply={(iso) => run({ due_at: iso }, iso ? `Entrega de ${nTxt}: ${formatHuman(iso)}` : `${nTxt} sin fecha`)} />}
+            {action === 'fecha' && <DueForm n={n} busy={busy} onClose={onClose} onApply={(iso) => run({ due_at: iso }, iso ? t('Entrega de {nTxt}: {iso}', { nTxt, iso: formatHuman(iso) }) : t('{nTxt} sin fecha', { nTxt }))} />}
             {action === 'correr' && <ShiftForm tasks={tasks.map(toExisting)} busy={busy} onClose={onClose}
-              onApply={(days, target) => run({ shift_days: days, shift_target: target }, `Fechas de ${nTxt} corridas ${Math.abs(days)} ${Math.abs(days) === 1 ? 'día' : 'días'} ${days >= 0 ? 'hacia adelante' : 'hacia atrás'}`)} />}
+              onApply={(days, target) => run({ shift_days: days, shift_target: target }, t('Fechas de {nTxt} corridas {days} {v} {v2}', { nTxt, days: Math.abs(days), v: Math.abs(days) === 1 ? 'día' : 'días', v2: days >= 0 ? 'hacia adelante' : 'hacia atrás' }))} />}
           </ScrollView>
         </Pressable>
       </Pressable>
@@ -148,7 +149,7 @@ function Title({ text, onClose }: { text: string; onClose: () => void }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
       <Text style={{ color: C.text, fontSize: 16.5, fontWeight: '700', flex: 1 }}>{text}</Text>
-      <Pressable onPress={onClose} hitSlop={10} accessibilityLabel="Cerrar"><Ionicons name="close" size={20} color={C.muted} /></Pressable>
+      <Pressable onPress={onClose} hitSlop={10} accessibilityLabel={t('Cerrar')}><Ionicons name="close" size={20} color={C.muted} /></Pressable>
     </View>
   );
 }
@@ -185,8 +186,8 @@ function DueForm({ n, busy, onClose, onApply }: { n: number; busy: boolean; onCl
     });
   return (
     <>
-      <Title text={`Entrega de ${n} ${n === 1 ? 'tarea' : 'tareas'}`} onClose={onClose} />
-      <Text style={{ color: C.muted, fontSize: 12.5, marginBottom: 10 }}>Todas quedan con la misma fecha y hora. Sin hora, a las 11:59 p. m.</Text>
+      <Title text={t('Entrega de {n} {v}', { n, v: n === 1 ? 'tarea' : 'tareas' })} onClose={onClose} />
+      <Text style={{ color: C.muted, fontSize: 12.5, marginBottom: 10 }}>{t('Todas quedan con la misma fecha y hora. Sin hora, a las 11:59 p. m.')}</Text>
       {isWeb ? (
         <View style={{ flexDirection: 'row', gap: 8 }}>
           {webInput('date', date, setDate)}
@@ -195,7 +196,7 @@ function DueForm({ n, busy, onClose, onApply }: { n: number; busy: boolean; onCl
       ) : (
         <>
           <Pressable onPress={() => setPicker(true)} style={{ backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 11, padding: 12 }}>
-            <Text style={{ color: date ? C.text : C.muted }}>{date || 'Elegir fecha'}</Text>
+            <Text style={{ color: date ? C.text : C.muted }}>{date || t('Elegir fecha')}</Text>
           </Pressable>
           {picker && (
             <DateTimePicker value={date ? new Date(`${date}T12:00:00`) : new Date()} mode="date"
@@ -205,10 +206,10 @@ function DueForm({ n, busy, onClose, onApply }: { n: number; busy: boolean; onCl
       )}
       <Pressable onPress={() => iso && onApply(iso)} disabled={!iso || busy}
         style={{ backgroundColor: iso ? C.brand : C.surface2, borderRadius: 12, padding: 13, alignItems: 'center', marginTop: 16 }}>
-        {busy ? <ActivityIndicator color={C.onBrand} /> : <Text style={{ color: iso ? C.onBrand : C.muted, fontWeight: '700' }}>Poner esta entrega</Text>}
+        {busy ? <ActivityIndicator color={C.onBrand} /> : <Text style={{ color: iso ? C.onBrand : C.muted, fontWeight: '700' }}>{t('Poner esta entrega')}</Text>}
       </Pressable>
       <Pressable onPress={() => onApply(null)} disabled={busy} style={{ alignItems: 'center', marginTop: 12 }}>
-        <Text style={{ color: C.muted, fontSize: 13 }}>Quitarles la fecha</Text>
+        <Text style={{ color: C.muted, fontSize: 13 }}>{t('Quitarles la fecha')}</Text>
       </Pressable>
     </>
   );
@@ -224,18 +225,17 @@ function ShiftForm({ tasks, busy, onClose, onApply }: {
 
   return (
     <>
-      <Title text="Correr fechas" onClose={onClose} />
+      <Title text={t('Correr fechas')} onClose={onClose} />
       <Text style={{ color: C.muted, fontSize: 12.5, marginBottom: 12, lineHeight: 18 }}>
-        Para cuando el profesor aplaza la entrega. La hora de cada tarea se conserva.
-      </Text>
+        {t('Para cuando el profesor aplaza la entrega. La hora de cada tarea se conserva.')}</Text>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
-        <Pressable onPress={() => step(-1)} style={stepBtn} accessibilityLabel="Un día menos"><Ionicons name="remove" size={18} color={C.text} /></Pressable>
+        <Pressable onPress={() => step(-1)} style={stepBtn} accessibilityLabel={t('Un día menos')}><Ionicons name="remove" size={18} color={C.text} /></Pressable>
         <TextInput value={String(days)} keyboardType="numbers-and-punctuation"
           onChangeText={(t) => { const v = parseInt(t.replace(/[^\d-]/g, ''), 10); setDays(isNaN(v) ? 0 : Math.max(-365, Math.min(365, v))); }}
           style={{ width: 80, textAlign: 'center', backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 11, color: C.text, padding: 10, fontSize: 18, fontWeight: '700' }} />
-        <Pressable onPress={() => step(1)} style={stepBtn} accessibilityLabel="Un día más"><Ionicons name="add" size={18} color={C.text} /></Pressable>
-        <Text style={{ color: C.muted, fontSize: 13 }}>{Math.abs(days) === 1 ? 'día' : 'días'} {days >= 0 ? 'después' : 'antes'}</Text>
+        <Pressable onPress={() => step(1)} style={stepBtn} accessibilityLabel={t('Un día más')}><Ionicons name="add" size={18} color={C.text} /></Pressable>
+        <Text style={{ color: C.muted, fontSize: 13 }}>{Math.abs(days) === 1 ? t('día') : t('días')} {days >= 0 ? t('después') : 'antes'}</Text>
       </View>
       <View style={{ flexDirection: 'row', gap: 6, justifyContent: 'center', marginTop: 10, flexWrap: 'wrap' }}>
         {[-7, -1, 1, 3, 7, 14].map((d) => (
@@ -245,9 +245,9 @@ function ShiftForm({ tasks, busy, onClose, onApply }: {
         ))}
       </View>
 
-      <Text style={{ color: C.muted, fontSize: 12, marginTop: 16, marginBottom: 8 }}>¿Qué fechas se mueven?</Text>
+      <Text style={{ color: C.muted, fontSize: 12, marginTop: 16, marginBottom: 8 }}>{t('¿Qué fechas se mueven?')}</Text>
       <View style={{ flexDirection: 'row', gap: 8 }}>
-        {([['ambas', 'Inicio y entrega'], ['entrega', 'Solo la entrega']] as const).map(([k, l]) => (
+        {([['ambas', t('Inicio y entrega')], ['entrega', t('Solo la entrega')]] as const).map(([k, l]) => (
           <Pressable key={k} onPress={() => setTarget(k)}
             style={{ flex: 1, paddingVertical: 10, borderRadius: 11, borderWidth: 1, alignItems: 'center', borderColor: target === k ? C.brand : C.line, backgroundColor: target === k ? C.brand + '1c' : 'transparent' }}>
             <Text style={{ color: target === k ? C.brand : C.text, fontSize: 13, fontWeight: target === k ? '700' : '500' }}>{l}</Text>
@@ -256,19 +256,15 @@ function ShiftForm({ tasks, busy, onClose, onApply }: {
       </View>
 
       <View style={{ backgroundColor: C.surface2 + '80', borderRadius: 12, padding: 12, marginTop: 14 }}>
-        <Text style={{ color: C.text, fontSize: 13, fontWeight: '600' }}>{days === 0 ? 'Sin cambios' : prev.summary}</Text>
-        {prev.withoutDates > 0 && <Text style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>{prev.withoutDates} sin fecha: no se tocan.</Text>}
-        {prev.invalidCount > 0 && <Text style={{ color: C.bad, fontSize: 12, marginTop: 4 }}>
-          {prev.invalidCount} quedarían con el inicio después de la entrega. Usa «Inicio y entrega» o menos días.
-        </Text>}
+        <Text style={{ color: C.text, fontSize: 13, fontWeight: '600' }}>{days === 0 ? t('Sin cambios') : prev.summary}</Text>
+        {prev.withoutDates > 0 && <Text style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>{t('{withoutDates} sin fecha: no se tocan.', { withoutDates: prev.withoutDates })}</Text>}
+        {prev.invalidCount > 0 && <Text style={{ color: C.bad, fontSize: 12, marginTop: 4 }}>{t('{invalidCount} quedarían con el inicio después de la entrega. Usa «Inicio y entrega» o menos días.', { invalidCount: prev.invalidCount })}</Text>}
       </View>
 
       <Pressable onPress={() => onApply(days, target)} disabled={busy || days === 0 || prev.invalidCount > 0 || prev.items.length === 0}
         style={{ backgroundColor: days !== 0 && prev.invalidCount === 0 && prev.items.length > 0 ? C.brand : C.surface2, borderRadius: 12, padding: 13, alignItems: 'center', marginTop: 16 }}>
         {busy ? <ActivityIndicator color="#0f1115" /> : (
-          <Text style={{ color: days !== 0 && prev.invalidCount === 0 && prev.items.length > 0 ? C.onBrand : C.muted, fontWeight: '700' }}>
-            Correr {prev.items.length} {prev.items.length === 1 ? 'tarea' : 'tareas'}
-          </Text>
+          <Text style={{ color: days !== 0 && prev.invalidCount === 0 && prev.items.length > 0 ? C.onBrand : C.muted, fontWeight: '700' }}>{t('Correr {length} {v}', { length: prev.items.length, v: prev.items.length === 1 ? 'tarea' : 'tareas' })}</Text>
         )}
       </Pressable>
     </>
@@ -296,7 +292,7 @@ export function ExportSheet({ visible, project, members, onClose }: {
         await saveFile(exportFileName(project.name, 'json'), tasksToJson(tasks, ms, cols), 'application/json');
       }
       onClose();
-    } catch (e: any) { notify('No se pudo exportar', e.message); }
+    } catch (e: any) { notify(t('No se pudo exportar'), e.message); }
     finally { setBusy(null); }
   }
 
@@ -304,12 +300,10 @@ export function ExportSheet({ visible, project, members, onClose }: {
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
         <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} style={{ backgroundColor: C.surface, borderRadius: 20, padding: 18, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 460 }}>
-          <Title text="Exportar tareas" onClose={onClose} />
+          <Title text={t('Exportar tareas')} onClose={onClose} />
           <Text style={{ color: C.muted, fontSize: 12.5, lineHeight: 19, marginBottom: 14 }}>
-            El archivo trae una columna id. Edítalo (en Excel o con una IA) y súbelo con «Importar»: las tareas se actualizan en vez de duplicarse.
-            Nada se borra por faltar en el archivo; para borrar una, escribe «sí» en la columna eliminar.
-          </Text>
-          {([['csv', 'Excel / CSV', 'document-text-outline', 'Se abre directo en Excel en español'], ['json', 'JSON', 'code-slash-outline', 'Para pasárselo a una IA']] as const).map(([k, l, icon, hint]) => (
+            {t('El archivo trae una columna id. Edítalo (en Excel o con una IA) y súbelo con «Importar»: las tareas se actualizan en vez de duplicarse. Nada se borra por faltar en el archivo; para borrar una, escribe «sí» en la columna eliminar.')}</Text>
+          {([['csv', 'Excel / CSV', 'document-text-outline', t('Se abre directo en Excel en español')], ['json', 'JSON', 'code-slash-outline', t('Para pasárselo a una IA')]] as const).map(([k, l, icon, hint]) => (
             <Pressable key={k} onPress={() => exportar(k)} disabled={!!busy}
               style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 13, borderRadius: 12, borderWidth: 1, borderColor: C.line, marginBottom: 8, backgroundColor: pressed ? C.surface2 : 'transparent' })}>
               {busy === k ? <ActivityIndicator color={C.brand} /> : <Ionicons name={icon as any} size={20} color={C.brand} />}

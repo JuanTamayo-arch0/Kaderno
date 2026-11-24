@@ -10,6 +10,7 @@ import { addRule, addUpdate, deleteRule, deleteUpdate, draftUpdate, getRules, ge
 import { weeklyReport, weeklyReportMarkdown } from '../../lib/projectReport';
 import { hace } from './projectUi';
 import { confirm, friendlyError, notify, toast } from '../../lib/feedback';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Proyectos de trabajo (v25, fase 3): el estado semanal del proyecto y
@@ -32,28 +33,28 @@ export function StatusSheet({ visible, project, tasks, members, editable, myId, 
   useEffect(() => {
     if (!visible) return;
     setList(null); setBody(''); setHealth(suggestHealth(report));
-    getUpdates(project.id).then((l) => { setMissing(l === null); setList(l ?? []); }).catch((e) => { notify('No se pudo cargar', friendlyError(e)); setList([]); });
+    getUpdates(project.id).then((l) => { setMissing(l === null); setList(l ?? []); }).catch((e) => { notify(t('No se pudo cargar'), friendlyError(e)); setList([]); });
   }, [visible, project.id]);
   async function write() {
     setAi(true);
     try { const d = await draftUpdate(weeklyReportMarkdown(project.name, report, people)); setBody(d.body); if (d.health) setHealth(d.health); }
-    catch (e) { notify('No se pudo redactar', friendlyError(e)); }
+    catch (e) { notify(t('No se pudo redactar'), friendlyError(e)); }
     finally { setAi(false); }
   }
   async function publish() {
     if (!body.trim()) return;
     setBusy(true);
-    try { const u = await addUpdate(project.id, health, body); const next = [u, ...(list ?? [])]; setList(next); setBody(''); onChanged(u); toast('Estado publicado: le llega al equipo'); }
-    catch (e) { notify('No se pudo publicar', friendlyError(e)); }
+    try { const u = await addUpdate(project.id, health, body); const next = [u, ...(list ?? [])]; setList(next); setBody(''); onChanged(u); toast(t('Estado publicado: le llega al equipo')); }
+    catch (e) { notify(t('No se pudo publicar'), friendlyError(e)); }
     finally { setBusy(false); }
   }
   async function remove(u: ProjectUpdate) {
-    if (!(await confirm('¿Borrar este estado?', undefined, 'Borrar'))) return;
-    try { await deleteUpdate(u.id); const next = (list ?? []).filter((x) => x.id !== u.id); setList(next); onChanged(next[0] ?? null); } catch (e) { notify('No se pudo', friendlyError(e)); }
+    if (!(await confirm(t('¿Borrar este estado?'), undefined, t('Borrar')))) return;
+    try { await deleteUpdate(u.id); const next = (list ?? []).filter((x) => x.id !== u.id); setList(next); onChanged(next[0] ?? null); } catch (e) { notify(t('No se pudo'), friendlyError(e)); }
   }
-  const who = (id: string) => people.find((p) => p.user_id === id)?.name ?? 'Ex integrante';
+  const who = (id: string) => people.find((p) => p.user_id === id)?.name ?? t('Ex integrante');
   return (
-    <Sheet visible={visible} onClose={onClose} title="Estado del proyecto" subtitle="Una nota corta cada semana: cómo va, qué riesgo hay y qué sigue. Le llega a todo el equipo." maxWidth={620}>
+    <Sheet visible={visible} onClose={onClose} title={t('Estado del proyecto')} subtitle={t('Una nota corta cada semana: cómo va, qué riesgo hay y qué sigue. Le llega a todo el equipo.')} maxWidth={620}>
       {missing && <Text style={{ color: C.warnText, fontSize: 13 }}>{NEEDS_V24_3}</Text>}
       {editable && !missing && (
         <View style={{ gap: 10, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: C.line }}>
@@ -65,27 +66,25 @@ export function StatusSheet({ visible, project, tasks, members, editable, myId, 
               </Pressable>
             ))}
           </View>
-          <Text style={{ color: C.muted, fontSize: 12 }}>
-            Esta semana: {report.done.length} hechas, {report.next.length} para los próximos 7 días{report.late.length ? `, ${report.late.length} atrasadas` : ''}.
-          </Text>
-          <TextInput value={body} onChangeText={setBody} multiline maxLength={2000} placeholder="Ej: Vamos bien con la maqueta; las pruebas se corren al viernes porque falta el acceso al servidor." placeholderTextColor={C.muted}
-            accessibilityLabel="Estado del proyecto" style={[{ minHeight: 90, backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 11, color: C.text, padding: 10, fontSize: 14, textAlignVertical: 'top' }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
+          <Text style={{ color: C.muted, fontSize: 12 }}>{t('Esta semana: {length} hechas, {length2} para los próximos 7 días{v}.', { length: report.done.length, length2: report.next.length, v: report.late.length ? `, ${report.late.length} atrasadas` : '' })}</Text>
+          <TextInput value={body} onChangeText={setBody} multiline maxLength={2000} placeholder={t('Ej: Vamos bien con la maqueta; las pruebas se corren al viernes porque falta el acceso al servidor.')} placeholderTextColor={C.muted}
+            accessibilityLabel={t('Estado del proyecto')} style={[{ minHeight: 90, backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 11, color: C.text, padding: 10, fontSize: 14, textAlignVertical: 'top' }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-            <Button label="Redactar con IA" icon="sparkles-outline" size="sm" kind="secondary" busy={ai} onPress={write} />
+            <Button label={t('Redactar con IA')} icon="sparkles-outline" size="sm" kind="secondary" busy={ai} onPress={write} />
             <View style={{ flex: 1 }} />
-            <Button label="Publicar" icon="send" size="sm" busy={busy} disabled={!body.trim()} onPress={publish} />
+            <Button label={t('Publicar')} icon="send" size="sm" busy={busy} disabled={!body.trim()} onPress={publish} />
           </View>
         </View>
       )}
       {list === null && <ActivityIndicator color={C.brand} />}
-      {list?.length === 0 && !missing && <Text style={{ color: C.muted, fontSize: 13 }}>Todavía no hay estados. El primero ayuda a que todos sepan cómo va.</Text>}
+      {list?.length === 0 && !missing && <Text style={{ color: C.muted, fontSize: 13 }}>{t('Todavía no hay estados. El primero ayuda a que todos sepan cómo va.')}</Text>}
       {list?.map((u) => (
         <View key={u.id} style={{ gap: 4, paddingVertical: 8, borderTopWidth: 1, borderTopColor: C.line }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Ionicons name={HEALTH[u.health].icon as any} size={15} color={HEALTH[u.health].color} />
             <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{HEALTH[u.health].label}</Text>
             <Text style={{ color: C.muted, fontSize: 12, flex: 1 }}>· {who(u.author_id)} · {hace(u.created_at)}</Text>
-            {u.author_id === myId && <Pressable onPress={() => remove(u)} accessibilityLabel="Borrar estado" hitSlop={6}><Ionicons name="trash-outline" size={15} color={C.muted} /></Pressable>}
+            {u.author_id === myId && <Pressable onPress={() => remove(u)} accessibilityLabel={t('Borrar estado')} hitSlop={6}><Ionicons name="trash-outline" size={15} color={C.muted} /></Pressable>}
           </View>
           <Text style={{ color: C.text, fontSize: 13.5, lineHeight: 20 }} selectable>{u.body}</Text>
         </View>
@@ -114,15 +113,15 @@ export function RulesSheet({ visible, project, cols, members, editable, onClose 
     setBusy(true); setErr(null);
     try {
       const r = await addRule({ project_id: project.id, trigger: draft.trigger!, column_key: draft.trigger === 'moved' ? draft.column_key ?? null : null, action: draft.action!, user_id: draft.action === 'notify_assignee' ? null : draft.user_id ?? null });
-      setRules([...(rules ?? []), r]); toast('Regla creada');
+      setRules([...(rules ?? []), r]); toast(t('Regla creada'));
     } catch (e2) { setErr(friendlyError(e2)); }
     finally { setBusy(false); }
   }
   async function toggle(r: Rule) {
-    try { await setRuleEnabled(r.id, !r.enabled); setRules((l) => l?.map((x) => (x.id === r.id ? { ...x, enabled: !r.enabled } : x)) ?? null); } catch (e) { notify('No se pudo', friendlyError(e)); }
+    try { await setRuleEnabled(r.id, !r.enabled); setRules((l) => l?.map((x) => (x.id === r.id ? { ...x, enabled: !r.enabled } : x)) ?? null); } catch (e) { notify(t('No se pudo'), friendlyError(e)); }
   }
   async function remove(r: Rule) {
-    try { await deleteRule(r.id); setRules((l) => l?.filter((x) => x.id !== r.id) ?? null); } catch (e) { notify('No se pudo', friendlyError(e)); }
+    try { await deleteRule(r.id); setRules((l) => l?.filter((x) => x.id !== r.id) ?? null); } catch (e) { notify(t('No se pudo'), friendlyError(e)); }
   }
   const pick = (label: string, on: boolean, onPress: () => void) => (
     <Pressable key={label} onPress={onPress} accessibilityRole="radio" accessibilityState={{ checked: on }} style={chip(on)}>
@@ -130,43 +129,43 @@ export function RulesSheet({ visible, project, cols, members, editable, onClose 
     </Pressable>
   );
   return (
-    <Sheet visible={visible} onClose={onClose} title="Reglas automáticas" subtitle="Kaderno hace lo repetitivo por ti. Con Gratis, 2 por proyecto; con Pro, 20." maxWidth={600}>
+    <Sheet visible={visible} onClose={onClose} title={t('Reglas automáticas')} subtitle={t('Kaderno hace lo repetitivo por ti. Con Gratis, 2 por proyecto; con Pro, 20.')} maxWidth={600}>
       {missing && <Text style={{ color: C.warnText, fontSize: 13 }}>{NEEDS_V24_3}</Text>}
       {rules === null && <ActivityIndicator color={C.brand} />}
       {rules?.map((r) => (
         <View key={r.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6, opacity: r.enabled ? 1 : 0.55 }}>
           <Ionicons name="flash-outline" size={16} color={C.brand} />
           <Text style={{ color: C.text, fontSize: 13.5, flex: 1 }}>{ruleText(r, cols, name)}</Text>
-          {editable && <Pressable onPress={() => toggle(r)} accessibilityRole="switch" accessibilityState={{ checked: r.enabled }} hitSlop={6}><Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>{r.enabled ? 'Pausar' : 'Activar'}</Text></Pressable>}
-          {editable && <Pressable onPress={() => remove(r)} accessibilityLabel="Borrar regla" hitSlop={6}><Ionicons name="trash-outline" size={15} color={C.muted} /></Pressable>}
+          {editable && <Pressable onPress={() => toggle(r)} accessibilityRole="switch" accessibilityState={{ checked: r.enabled }} hitSlop={6}><Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>{r.enabled ? t('Pausar') : t('Activar')}</Text></Pressable>}
+          {editable && <Pressable onPress={() => remove(r)} accessibilityLabel={t('Borrar regla')} hitSlop={6}><Ionicons name="trash-outline" size={15} color={C.muted} /></Pressable>}
         </View>
       ))}
-      {rules?.length === 0 && !missing && <Text style={{ color: C.muted, fontSize: 13 }}>Sin reglas todavía.</Text>}
+      {rules?.length === 0 && !missing && <Text style={{ color: C.muted, fontSize: 13 }}>{t('Sin reglas todavía.')}</Text>}
       {editable && !missing && (
         <View style={{ gap: 8, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: C.line }}>
-          <Text style={{ color: C.text, fontSize: 13, fontWeight: '800' }}>Nueva regla</Text>
-          <Text style={{ color: C.muted, fontSize: 12 }}>Cuando…</Text>
+          <Text style={{ color: C.text, fontSize: 13, fontWeight: '800' }}>{t('Nueva regla')}</Text>
+          <Text style={{ color: C.muted, fontSize: 12 }}>{t('Cuando…')}</Text>
           <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
-            {pick('pase a una columna', draft.trigger === 'moved', () => setDraft({ ...draft, trigger: 'moved' }))}
-            {pick('se cree una tarea', draft.trigger === 'created', () => setDraft({ ...draft, trigger: 'created' }))}
-            {pick('se venza una tarea', draft.trigger === 'overdue', () => setDraft({ ...draft, trigger: 'overdue', action: draft.action === 'assign' ? 'notify' : draft.action }))}
+            {pick(t('pase a una columna'), draft.trigger === 'moved', () => setDraft({ ...draft, trigger: 'moved' }))}
+            {pick(t('se cree una tarea'), draft.trigger === 'created', () => setDraft({ ...draft, trigger: 'created' }))}
+            {pick(t('se venza una tarea'), draft.trigger === 'overdue', () => setDraft({ ...draft, trigger: 'overdue', action: draft.action === 'assign' ? 'notify' : draft.action }))}
           </View>
           {draft.trigger === 'moved' && <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>{cols.map((c) => pick(c.label, draft.column_key === c.key, () => setDraft({ ...draft, column_key: c.key })))}</View>}
-          <Text style={{ color: C.muted, fontSize: 12 }}>Entonces…</Text>
+          <Text style={{ color: C.muted, fontSize: 12 }}>{t('Entonces…')}</Text>
           <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
             {draft.trigger !== 'overdue' && pick('asignar a', draft.action === 'assign', () => setDraft({ ...draft, action: 'assign' }))}
             {pick('avisar a', draft.action === 'notify', () => setDraft({ ...draft, action: 'notify' }))}
-            {pick('avisar a quien la tiene', draft.action === 'notify_assignee', () => setDraft({ ...draft, action: 'notify_assignee' }))}
+            {pick(t('avisar a quien la tiene'), draft.action === 'notify_assignee', () => setDraft({ ...draft, action: 'notify_assignee' }))}
           </View>
           {(draft.action === 'assign' || draft.action === 'notify') && (
             <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
-              {draft.action === 'notify' && pick('el dueño', !draft.user_id, () => setDraft({ ...draft, user_id: null }))}
+              {draft.action === 'notify' && pick(t('el dueño'), !draft.user_id, () => setDraft({ ...draft, user_id: null }))}
               {members.map((m) => pick(nameOf(m.profile), draft.user_id === m.user_id, () => setDraft({ ...draft, user_id: m.user_id })))}
             </View>
           )}
           {!ruleError(draft) && <Text style={{ color: C.text, fontSize: 13 }}>{ruleText(draft as Rule, cols, name)}.</Text>}
           {err && <Text style={{ color: C.badText, fontSize: 13 }}>{err}</Text>}
-          <Button label="Crear regla" icon="add" size="sm" busy={busy} onPress={add} style={{ alignSelf: 'flex-start' }} />
+          <Button label={t('Crear regla')} icon="add" size="sm" busy={busy} onPress={add} style={{ alignSelf: 'flex-start' }} />
         </View>
       )}
     </Sheet>

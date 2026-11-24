@@ -4,6 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { C, uiScheme } from '../lib/theme';
 import { fromISODate, isoDate, fmtLongDate, fmtHHMM, capitalize, addDays, startOfDay } from '../lib/time';
+import { t } from '../lib/i18n';
 
 // Campos de fecha y hora: en web usan los controles nativos del navegador
 // (<input type="date|time">); en el celular, el selector del sistema.
@@ -25,19 +26,19 @@ export function DateField({ value, onChange, allowClear = true, label }: {
         <View style={{ flex: 1 }}>
           {Platform.OS === 'web' ? (
             React.createElement('input', {
-              type: 'date', value: value ?? '', 'aria-label': label ?? 'Fecha',
+              type: 'date', value: value ?? '', 'aria-label': label ?? t('Fecha'),
               onChange: (e: any) => onChange(e.target.value || null),
               style: webInput(),
             })
           ) : (
-            <Pressable onPress={() => setShow(true)} accessibilityRole="button" accessibilityLabel={label ?? 'Fecha'}
+            <Pressable onPress={() => setShow(true)} accessibilityRole="button" accessibilityLabel={label ?? t('Fecha')}
               style={{ backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 10, padding: 12, minHeight: 44, justifyContent: 'center' }}>
-              <Text style={{ color: value ? C.text : C.muted }}>{value ? capitalize(fmtLongDate(fromISODate(value))) : 'Sin fecha'}</Text>
+              <Text style={{ color: value ? C.text : C.muted }}>{value ? capitalize(fmtLongDate(fromISODate(value))) : t('Sin fecha')}</Text>
             </Pressable>
           )}
         </View>
         {allowClear && value && (
-          <Pressable onPress={() => onChange(null)} accessibilityLabel="Quitar fecha" hitSlop={8} style={{ padding: 8 }}>
+          <Pressable onPress={() => onChange(null)} accessibilityLabel={t('Quitar fecha')} hitSlop={8} style={{ padding: 8 }}>
             <Ionicons name="close-circle" size={20} color={C.muted} />
           </Pressable>
         )}
@@ -61,19 +62,19 @@ export function TimeField({ value, onChange, label, disabled }: {
         <View style={{ flex: 1 }}>
           {Platform.OS === 'web' ? (
             React.createElement('input', {
-              type: 'time', value: value ?? '', disabled, 'aria-label': label ?? 'Hora',
+              type: 'time', value: value ?? '', disabled, 'aria-label': label ?? t('Hora'),
               onChange: (e: any) => onChange(e.target.value || null),
               style: webInput(),
             })
           ) : (
-            <Pressable onPress={() => !disabled && setShow(true)} accessibilityRole="button" accessibilityLabel={label ?? 'Hora'}
+            <Pressable onPress={() => !disabled && setShow(true)} accessibilityRole="button" accessibilityLabel={label ?? t('Hora')}
               style={{ backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 10, padding: 12, minHeight: 44, justifyContent: 'center' }}>
-              <Text style={{ color: value ? C.text : C.muted }}>{value ? fmtHHMM(value) : 'Sin hora'}</Text>
+              <Text style={{ color: value ? C.text : C.muted }}>{value ? fmtHHMM(value) : t('Sin hora')}</Text>
             </Pressable>
           )}
         </View>
         {value && !disabled && (
-          <Pressable onPress={() => onChange(null)} accessibilityLabel="Quitar hora" hitSlop={8} style={{ padding: 8 }}>
+          <Pressable onPress={() => onChange(null)} accessibilityLabel={t('Quitar hora')} hitSlop={8} style={{ padding: 8 }}>
             <Ionicons name="close-circle" size={20} color={C.muted} />
           </Pressable>
         )}
@@ -91,8 +92,8 @@ export function DateShortcuts({ value, onChange }: { value: string | null; onCha
   const today = startOfDay(new Date());
   const fri = addDays(today, ((5 - today.getDay() + 7) % 7) || 7);
   const opts = [
-    { label: 'Hoy', d: today }, { label: 'Mañana', d: addDays(today, 1) },
-    { label: 'Viernes', d: fri }, { label: 'En una semana', d: addDays(today, 7) },
+    { label: t('Hoy'), d: today }, { label: t('Mañana'), d: addDays(today, 1) },
+    { label: t('Viernes'), d: fri }, { label: t('En una semana'), d: addDays(today, 7) },
   ];
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>

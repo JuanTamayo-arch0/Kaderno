@@ -1,6 +1,7 @@
 import Papa from 'papaparse';
 import { decodeText } from './encoding';
 import type { FileFormat, ParsedFile } from './types';
+import { t } from '../i18n';
 
 export const MAX_FILE_BYTES = 2 * 1024 * 1024;
 export const MAX_ROWS = 500;
@@ -37,8 +38,8 @@ export function stripFences(text: string): string {
 
 /** Lee un archivo elegido por el usuario. */
 export function parseImportFile(file: { name?: string; bytes: Uint8Array }): ParsedFile {
-  if (file.bytes.length === 0) throw new ImportError('El archivo está vacío');
-  if (file.bytes.length > MAX_FILE_BYTES) throw new ImportError('El archivo pesa más de 2 MB');
+  if (file.bytes.length === 0) throw new ImportError(t('El archivo está vacío'));
+  if (file.bytes.length > MAX_FILE_BYTES) throw new ImportError(t('El archivo pesa más de 2 MB'));
   const { text, encoding } = decodeText(file.bytes);
   const format = detectFormat(file.name, text);
   const parsed = format === 'json' ? parseJsonText(text) : parseCsvText(text);
@@ -48,8 +49,8 @@ export function parseImportFile(file: { name?: string; bytes: Uint8Array }): Par
 
 /** Lee texto pegado directamente (por ejemplo, la respuesta de una IA). */
 export function parseImportText(text: string): ParsedFile {
-  if (!text.trim()) throw new ImportError('No hay nada para importar');
-  if (text.length > MAX_FILE_BYTES) throw new ImportError('El texto es demasiado largo');
+  if (!text.trim()) throw new ImportError(t('No hay nada para importar'));
+  if (text.length > MAX_FILE_BYTES) throw new ImportError(t('El texto es demasiado largo'));
   return detectFormat(undefined, text) === 'json' ? parseJsonText(text) : parseCsvText(text);
 }
 
@@ -60,7 +61,7 @@ export function parseJsonText(text: string): ParsedFile {
   try {
     data = JSON.parse(stripFences(text));
   } catch (e) {
-    throw new ImportError('El JSON no es válido. Revisa que esté completo y sin texto extra');
+    throw new ImportError(t('El JSON no es válido. Revisa que esté completo y sin texto extra'));
   }
   let list: unknown;
   if (Array.isArray(data)) list = data;
@@ -69,7 +70,7 @@ export function parseJsonText(text: string): ParsedFile {
     list = o.tareas ?? o.tasks ?? o.items ?? o.data;
   }
   if (!Array.isArray(list)) {
-    throw new ImportError('El JSON debe ser una lista de tareas o un objeto con la clave "tareas"');
+    throw new ImportError(t('El JSON debe ser una lista de tareas o un objeto con la clave "tareas"'));
   }
   const headers: string[] = [];
   const seen = new Set<string>();
@@ -91,8 +92,8 @@ export function parseJsonText(text: string): ParsedFile {
     rows.push(obj);
     rowNumbers.push(idx + 1);
   });
-  if (rows.length === 0) throw new ImportError('El archivo no tiene tareas');
-  if (rows.length > MAX_ROWS) throw new ImportError(`Máximo ${MAX_ROWS} tareas por archivo (este tiene ${rows.length})`);
+  if (rows.length === 0) throw new ImportError(t('El archivo no tiene tareas'));
+  if (rows.length > MAX_ROWS) throw new ImportError(t('Máximo {MAX_ROWS} tareas por archivo (este tiene {length})', { MAX_ROWS, length: rows.length }));
   return { format: 'json', headers, rows, rowNumbers, warnings };
 }
 
@@ -127,11 +128,11 @@ export function parseCsvText(text: string): ParsedFile {
   const data = result.data as string[][];
   if (result.errors.length) {
     const quoteErr = result.errors.find((e) => e.type === 'Quotes');
-    if (quoteErr) throw new ImportError(`Hay comillas sin cerrar cerca de la fila ${(quoteErr.row ?? 0) + 1}`);
+    if (quoteErr) throw new ImportError(t('Hay comillas sin cerrar cerca de la fila {v}', { v: (quoteErr.row ?? 0) + 1 }));
   }
   const isEmpty = (r: string[]) => r.every((c) => (c ?? '').trim() === '');
   const headerIdx = data.findIndex((r) => !isEmpty(r));
-  if (headerIdx < 0) throw new ImportError('El archivo está vacío');
+  if (headerIdx < 0) throw new ImportError(t('El archivo está vacío'));
 
   const headers: string[] = [];
   const counts = new Map<string, number>();
@@ -158,7 +159,7 @@ export function parseCsvText(text: string): ParsedFile {
     rows.push(obj);
     rowNumbers.push(i + 1);
   }
-  if (rows.length === 0) throw new ImportError('El archivo solo tiene encabezados, no hay tareas');
-  if (rows.length > MAX_ROWS) throw new ImportError(`Máximo ${MAX_ROWS} tareas por archivo (este tiene ${rows.length})`);
+  if (rows.length === 0) throw new ImportError(t('El archivo solo tiene encabezados, no hay tareas'));
+  if (rows.length > MAX_ROWS) throw new ImportError(t('Máximo {MAX_ROWS} tareas por archivo (este tiene {length})', { MAX_ROWS, length: rows.length }));
   return { format: 'csv', headers, rows, rowNumbers, delimiter, warnings };
 }

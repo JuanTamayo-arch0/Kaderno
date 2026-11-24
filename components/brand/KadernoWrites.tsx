@@ -4,6 +4,7 @@ import { LOGO, logoColors, pencilShapes, PENCIL, type LogoTone } from '../../lib
 import { PENCIL_ANIM_TOTAL, pencilPoseAt } from '../../lib/pencilAnim';
 import { prefersReducedMotion } from '../../lib/motion';
 import { KadernoMark } from './KadernoLogo';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  El logo que se escribe (v28): el lápiz sale de la margen, escribe la K y
@@ -66,7 +67,7 @@ export function KadernoWrites({ size = 96, tone = 'papel', replay = 0, delay = 0
     h('g', { ref: pen, transform: `translate(${PENCIL.cx} ${PENCIL.tip})` }, h('g', { transform: `translate(${-PENCIL.cx} ${-PENCIL.tip})` }, pieces)),
   );
   return (
-    <Pressable onPress={() => setTap((n) => n + 1)} accessibilityRole="image" accessibilityLabel="Logo de Kaderno" accessibilityHint="Tócalo para ver el lápiz escribir otra vez">
+    <Pressable onPress={() => setTap((n) => n + 1)} accessibilityRole="image" accessibilityLabel={t('Logo de Kaderno')} accessibilityHint={t('Tócalo para ver el lápiz escribir otra vez')}>
       {svg}
     </Pressable>
   );

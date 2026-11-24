@@ -10,6 +10,7 @@ import { isoDate, addDays, startOfDay } from '../../lib/time';
 import { toast, friendlyError } from '../../lib/feedback';
 import { dataChanged } from '../../lib/uiBus';
 import { refreshNavCounts } from '../../lib/navCounts';
+import { trn } from '../../lib/i18n';
 
 // ============================================================
 //  Ordenar la bandeja (v21, sección 2): una por una, con botones grandes.
@@ -35,11 +36,11 @@ export function InboxSort({ visible, items, subjects, onClose }: { visible: bool
     finally { setBusy(false); }
   }
   const today = startOfDay(new Date());
-  const toDay = (iso: string, label: string) => act(() => updateTask(t.id, { due_date: iso, inbox: false, subject_id: subject }), `Para ${label}`);
+  const toDay = (iso: string, label: string) => act(() => updateTask(t.id, { due_date: iso, inbox: false, subject_id: subject }), trn('Para {label}', { label }));
   // v27: "Algún día" ya no la saca sin fecha a Hoy: queda aparte en la bandeja (schema_v26).
-  const someday = () => act(() => setSomeday(t.id, true), 'Guardada para algún día');
-  const toNote = () => act(async () => { await addNote({ subject_id: subject, title: t.title, content: t.description ?? '', image_path: null }); await deleteTask(t.id); }, 'Convertida en nota');
-  const remove = () => act(() => deleteTask(t.id), 'Borrada');
+  const someday = () => act(() => setSomeday(t.id, true), trn('Guardada para algún día'));
+  const toNote = () => act(async () => { await addNote({ subject_id: subject, title: t.title, content: t.description ?? '', image_path: null }); await deleteTask(t.id); }, trn('Convertida en nota'));
+  const remove = () => act(() => deleteTask(t.id), trn('Borrada'));
 
   useEffect(() => {
     if (!visible || Platform.OS !== 'web' || typeof window === 'undefined') return;
@@ -48,7 +49,7 @@ export function InboxSort({ visible, items, subjects, onClose }: { visible: bool
       if (tag === 'INPUT' || tag === 'TEXTAREA' || e.ctrlKey || e.metaKey) return;
       const k = e.key.toLowerCase();
       if (k === 'h') toDay(isoDate(today), 'hoy');
-      else if (k === 'm') toDay(isoDate(addDays(today, 1)), 'mañana');
+      else if (k === 'm') toDay(isoDate(addDays(today, 1)), trn('mañana'));
       else if (k === 'n') toNote();
       else if (k === 'a') someday();
       else if (e.key === 'Delete' || e.key === 'Backspace') remove();
@@ -60,29 +61,29 @@ export function InboxSort({ visible, items, subjects, onClose }: { visible: bool
   });
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Ordenar la bandeja" subtitle={list.length ? `${list.length} por ordenar` : 'Listo'}
-      footer={<Button label={list.length ? 'Seguir después' : 'Listo'} kind={list.length ? 'secondary' : 'primary'} onPress={onClose} style={{ flex: 1 }} />}>
+    <Sheet visible={visible} onClose={onClose} title={trn('Ordenar la bandeja')} subtitle={list.length ? trn('{length} por ordenar', { length: list.length }) : trn('Listo')}
+      footer={<Button label={list.length ? trn('Seguir después') : trn('Listo')} kind={list.length ? 'secondary' : 'primary'} onPress={onClose} style={{ flex: 1 }} />}>
       {!t ? (
-        <Text style={{ color: C.text, fontSize: 15, textAlign: 'center', paddingVertical: 20 }}>La bandeja está vacía. Todo en su lugar.</Text>
+        <Text style={{ color: C.text, fontSize: 15, textAlign: 'center', paddingVertical: 20 }}>{trn('La bandeja está vacía. Todo en su lugar.')}</Text>
       ) : (
         <>
           <View style={{ padding: 16, borderRadius: 14, backgroundColor: C.surface2, gap: 4 }}>
             <Text style={{ color: C.text, fontSize: 18, fontWeight: '700' }}>{t.title}</Text>
             {!!t.description && <Text style={{ color: C.muted, fontSize: 13 }} numberOfLines={3}>{t.description}</Text>}
           </View>
-          <SubjectPicker subjects={subjects} value={subject} onChange={setSubject} placeholder="Sin materia" />
+          <SubjectPicker subjects={subjects} value={subject} onChange={setSubject} placeholder={trn('Sin materia')} />
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-            <Button label="Hoy (H)" icon="today-outline" onPress={() => toDay(isoDate(today), 'hoy')} style={{ flexGrow: 1 }} disabled={busy} />
-            <Button label="Mañana (M)" icon="arrow-forward" onPress={() => toDay(isoDate(addDays(today, 1)), 'mañana')} style={{ flexGrow: 1 }} disabled={busy} />
-            <Button label="Elegir día" icon="calendar-outline" kind="secondary" onPress={() => setPickDate(!pickDate)} style={{ flexGrow: 1 }} />
+            <Button label={trn('Hoy (H)')} icon="today-outline" onPress={() => toDay(isoDate(today), 'hoy')} style={{ flexGrow: 1 }} disabled={busy} />
+            <Button label={trn('Mañana (M)')} icon="arrow-forward" onPress={() => toDay(isoDate(addDays(today, 1)), trn('mañana'))} style={{ flexGrow: 1 }} disabled={busy} />
+            <Button label={trn('Elegir día')} icon="calendar-outline" kind="secondary" onPress={() => setPickDate(!pickDate)} style={{ flexGrow: 1 }} />
           </View>
-          {pickDate && <DateField label="Día" value={null} onChange={(v) => { if (v) toDay(v, 'ese día'); }} />}
+          {pickDate && <DateField label={trn('Día')} value={null} onChange={(v) => { if (v) toDay(v, trn('ese día')); }} />}
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-            <Button label="Convertir en nota (N)" icon="document-text-outline" kind="secondary" onPress={toNote} style={{ flexGrow: 1 }} disabled={busy} />
-            <Button label="Algún día (A)" icon="time-outline" kind="secondary" onPress={someday} style={{ flexGrow: 1 }} disabled={busy} />
-            <Button label="Borrar" icon="trash-outline" kind="ghost" onPress={remove} disabled={busy} />
+            <Button label={trn('Convertir en nota (N)')} icon="document-text-outline" kind="secondary" onPress={toNote} style={{ flexGrow: 1 }} disabled={busy} />
+            <Button label={trn('Algún día (A)')} icon="time-outline" kind="secondary" onPress={someday} style={{ flexGrow: 1 }} disabled={busy} />
+            <Button label={trn('Borrar')} icon="trash-outline" kind="ghost" onPress={remove} disabled={busy} />
           </View>
-          {list.length > 1 && <Button label="Saltar" kind="ghost" size="sm" onPress={() => setI((x) => (x + 1) % list.length)} />}
+          {list.length > 1 && <Button label={trn('Saltar')} kind="ghost" size="sm" onPress={() => setI((x) => (x + 1) % list.length)} />}
         </>
       )}
     </Sheet>

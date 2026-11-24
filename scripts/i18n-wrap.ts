@@ -15,9 +15,36 @@
 import ts from 'typescript';
 import fs from 'node:fs';
 import path from 'node:path';
-import { inNonUiPosition, insideT, isHumanText, jsxTextValue, looksSpanish, markedOk, fileOk, q, TEXT_PROPS } from './i18nRules';
+import { inNonUiPosition, insideT, isHumanText, isJsxHuman, jsxTextValue, looksLabel, looksSpanish, markedOk, fileOk, q, TEXT_PROPS } from './i18nRules';
 
 const ROOT = path.resolve(__dirname, '..');
+
+/** ¿Hay una variable local llamada `t` visible en este punto? */
+function bindsT(name: ts.BindingName | undefined): boolean {
+  if (!name) return false;
+  if (ts.isIdentifier(name)) return name.text === 't';
+  return name.elements.some((e) => !ts.isOmittedExpression(e) && bindsT(e.name));
+}
+export function shadowsT(node: ts.Node): boolean {
+  for (let p: ts.Node | undefined = node.parent; p; p = p.parent) {
+    if (ts.isFunctionLike(p) && p.parameters?.some((x) => bindsT(x.name))) return true;
+    if (ts.isFunctionDeclaration(p) && p.name?.text === 't') return true;
+    if (ts.isCatchClause(p) && p.variableDeclaration && bindsT(p.variableDeclaration.name)) return true;
+    if ((ts.isForOfStatement(p) || ts.isForInStatement(p) || ts.isForStatement(p)) && p.initializer && ts.isVariableDeclarationList(p.initializer)
+      && p.initializer.declarations.some((d) => bindsT(d.name))) return true;
+    if (ts.isBlock(p) || ts.isSourceFile(p) || ts.isModuleBlock(p) || ts.isCaseClause(p) || ts.isDefaultClause(p)) {
+      const stmts = (p as any).statements as ts.NodeArray<ts.Statement>;
+      for (const st of stmts) {
+        if (ts.isVariableStatement(st) && st.declarationList.declarations.some((d) => bindsT(d.name))) {
+          // Solo cuenta si es local (no el import del archivo).
+          if (!ts.isSourceFile(p)) return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+const fn = (node: ts.Node) => (shadowsT(node) ? 'trn' : 't');
 type Edit = { start: number; end: number; text: string };
 
 /** Nombre de variable para una expresión dentro de una plantilla. */
@@ -56,7 +83,7 @@ function templateCall(node: ts.TemplateExpression, sf: ts.SourceFile): string {
     pairs.push([name, span.expression.getText(sf)]);
     key += `{${name}}` + span.literal.text;
   }
-  return `t(${q(key)}, ${varsObj(pairs)})`;
+  return `${fn(node)}(${q(key)}, ${varsObj(pairs)})`;
 }
 
 /** ¿La expresión de JSX es un valor (texto o número) y no un elemento? */
@@ -87,7 +114,7 @@ function wrapFile(file: string): { edits: Edit[]; text: string } {
       const kids = node.children.filter((c) => !(ts.isJsxText(c) && !c.text.trim() && c.text.includes('\n')));
       const texts = kids.filter(ts.isJsxText);
       const allSimple = kids.length > 1 && kids.every((c) => ts.isJsxText(c) || ts.isJsxExpression(c) && valueLike(c.expression));
-      const human = texts.some((c) => isHumanText(jsxTextValue(c.text)));
+      const human = texts.some((c) => isJsxHuman(jsxTextValue(c.text)));
       if (allSimple && human && !markedOk(sf, node)) {
         const used = new Set<string>();
         const pairs: [string, string][] = [];
@@ -105,16 +132,16 @@ function wrapFile(file: string): { edits: Edit[]; text: string } {
         const start = node.openingElement.getEnd();
         const end = node.closingElement.getStart(sf);
         if (!key.includes('{') || pairs.length) {
-          edits.push({ start, end, text: `{t(${q(key)}${pairs.length ? ', ' + varsObj(pairs) : ''})}` });
+          edits.push({ start, end, text: `{${fn(node)}(${q(key)}${pairs.length ? ', ' + varsObj(pairs) : ''})}` });
           return; // lo de adentro ya quedó
         }
       }
     }
     if (ts.isJsxText(node)) {
       const v = jsxTextValue(node.text);
-      if (v.trim() && isHumanText(v)) {
+      if (v.trim() && isJsxHuman(v)) {
         // Conserva los espacios de afuera como JSX los mostraría.
-        edits.push({ start: node.getStart(sf), end: node.getEnd(), text: `{t(${q(v)})}` });
+        edits.push({ start: node.getStart(sf), end: node.getEnd(), text: `{${fn(node)}(${q(v)})}` });
       }
       return;
     }
@@ -123,9 +150,9 @@ function wrapFile(file: string): { edits: Edit[]; text: string } {
       const p = node.parent;
       const textKey = p && ts.isPropertyAssignment(p) && p.initializer === node && TEXT_PROPS.has(p.name.getText(sf));
       const jsxProp = p && ts.isJsxAttribute(p);
-      const ok = (looksSpanish(v) || ((textKey || jsxProp) && isHumanText(v) && /^[A-ZÁÉÍÓÚÑ¿¡]/.test(v.trim()))) && !inNonUiPosition(node);
+      const ok = (looksSpanish(v) || looksLabel(v) || ((textKey || jsxProp) && isHumanText(v) && /^[A-ZÁÉÍÓÚÑ¿¡]/.test(v.trim()))) && !inNonUiPosition(node);
       if (ok) {
-        const call = `t(${q(v)})`;
+        const call = `${fn(node)}(${q(v)})`;
         edits.push({ start: node.getStart(sf), end: node.getEnd(), text: jsxProp ? `{${call}}` : call });
       }
       return;
@@ -155,23 +182,23 @@ function apply(text: string, edits: Edit[]): string {
   return out;
 }
 
-/** Agrega `import { t } from '.../lib/i18n'` si hace falta. */
+/** Agrega `import { t } from '.../lib/i18n'` (y `trn` si se usó) si hace falta. */
 function ensureImport(file: string, text: string): string {
-  if (!/\bt\(/.test(text)) return text;
+  const need = ['t', 'trn'].filter((n) => new RegExp(`(^|[^\\w.$])${n}\\(`).test(text));
+  if (!need.length) return text;
   const rel = path.relative(path.dirname(file), path.join(ROOT, 'lib', 'i18n')).replace(/\\/g, '/');
   const spec = rel.startsWith('.') ? rel : './' + rel;
   const re = new RegExp(`import \\{([^}]*)\\} from '${spec.replace(/[.\/]/g, (c) => '\\' + c)}';`);
   const m = text.match(re);
   if (m) {
     const names = m[1].split(',').map((s) => s.trim()).filter(Boolean);
-    if (names.includes('t')) return text;
-    return text.replace(re, `import { ${['t', ...names].join(', ')} } from '${spec}';`);
+    const all = [...new Set([...need, ...names])];
+    return text.replace(re, `import { ${all.join(', ')} } from '${spec}';`);
   }
-  // Después del último import.
   const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
   const imports = sf.statements.filter(ts.isImportDeclaration);
   const at = imports.length ? imports[imports.length - 1].getEnd() : 0;
-  return text.slice(0, at) + `\nimport { t } from '${spec}';` + text.slice(at);
+  return text.slice(0, at) + `\nimport { ${need.join(', ')} } from '${spec}';` + text.slice(at);
 }
 
 export function wrapPath(file: string, dry: boolean): number {

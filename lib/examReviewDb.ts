@@ -10,9 +10,10 @@ import { getGoal } from './ritualsDb';
 import { computeEffort, effortWindow, shouldAsk, type Effort, type PastResult } from './examReview';
 import { dueDay } from './time';
 import { localISO } from './day';
+import { t } from './i18n';
 
 const missing = (e: any) => !!e && (e.code === '42P01' || e.code === 'PGRST205' || /does not exist|Could not find/i.test(String(e.message ?? '')));
-export const NEEDS_V21_3 = 'Para guardar cómo te fue falta correr schema_v21.sql (fase 3) en Supabase.';
+export const NEEDS_V21_3 = t('Para guardar cómo te fue falta correr schema_v21.sql (fase 3) en Supabase.');
 const DISMISS_KEY = 'kd-exam-review-dismissed';
 
 export type ExamResult = PastResult & {
@@ -93,7 +94,7 @@ export async function saveResult(exam: Task, r: {
   score: number | null; max: number; skipped: boolean; felt: number | null; reasons: string[]; change: string | null; weight: number | null; focusMin: number;
 }): Promise<void> {
   const u = await currentUserId();
-  if (!u) throw new Error('Inicia sesión otra vez.');
+  if (!u) throw new Error(t('Inicia sesión otra vez.'));
   let gradeId: string | null = null;
   if (!r.skipped && r.score != null && exam.subject_id) {
     const g = await findGrade(exam.subject_id, exam.title);

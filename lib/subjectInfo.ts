@@ -6,9 +6,10 @@
 // ============================================================
 import type { TimeBlock } from './schedule';
 import { addDays, dayDiff, dueDay, startOfDay, compareDue, type DueLike } from './time';
+import { t } from './i18n';
 
-const DAY_SHORT = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-const DAY_LONG = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+const DAY_SHORT = [t('Lun'), t('Mar'), t('Mié'), t('Jue'), t('Vie'), t('Sáb'), t('Dom')];
+const DAY_LONG = [t('Lunes'), t('Martes'), t('Miércoles'), t('Jueves'), t('Viernes'), t('Sábado'), t('Domingo')];
 
 export type SlotLike = { day: number; slot: number; subject_id: string };
 
@@ -27,7 +28,7 @@ export function joinEs(xs: string[]): string {
 /** "Lun y Mié" con los días en que la materia tiene clase. */
 export function classDays(slots: SlotLike[], subjectId: string): { days: number[]; label: string } {
   const days = Array.from(new Set(slots.filter((s) => s.subject_id === subjectId).map((s) => s.day))).sort((a, b) => a - b);
-  return { days, label: joinEs(days.map((d) => DAY_SHORT[d] ?? `Día ${d + 1}`)) };
+  return { days, label: joinEs(days.map((d) => DAY_SHORT[d] ?? t('Día {v}', { v: d + 1 }))) };
 }
 
 export type NextClass = { date: Date; start: Date; end: Date; day: number; block: TimeBlock; now: boolean };
@@ -62,17 +63,17 @@ export function nextClass(slots: SlotLike[], subjectId: string, blocks: TimeBloc
 
 export function dayWord(d: Date, now = new Date()): string {
   const diff = dayDiff(startOfDay(d), startOfDay(now));
-  if (diff === 0) return 'Hoy';
-  if (diff === 1) return 'Mañana';
+  if (diff === 0) return t('Hoy');
+  if (diff === 1) return t('Mañana');
   return DAY_LONG[mondayIndex(d)];
 }
 
 export function countdown(d: Date, now = new Date()): string {
   const diff = dayDiff(startOfDay(d), startOfDay(now));
-  if (diff < 0) return diff === -1 ? 'Venció ayer' : `Venció hace ${-diff} días`;
-  if (diff === 0) return 'Hoy';
-  if (diff === 1) return 'Mañana';
-  return `En ${diff} días`;
+  if (diff < 0) return diff === -1 ? t('Venció ayer') : t('Venció hace {v} días', { v: -diff });
+  if (diff === 0) return t('Hoy');
+  if (diff === 1) return t('Mañana');
+  return t('En {diff} días', { diff });
 }
 
 export function normText(s: string): string {
@@ -109,7 +110,7 @@ export function nextEvaluation(tasks: TaskLike[], grades: GradeLike[], now = new
 
 export type TaskGroupKey = 'overdue' | 'week' | 'later' | 'none';
 export const TASK_GROUP_LABEL: Record<TaskGroupKey, string> = {
-  overdue: 'Vencidas', week: 'Esta semana', later: 'Más adelante', none: 'Sin fecha',
+  overdue: t('Vencidas'), week: t('Esta semana'), later: t('Más adelante'), none: t('Sin fecha'),
 };
 
 /** Agrupa pendientes en vencidas, próximos 7 días, más adelante y sin fecha. */

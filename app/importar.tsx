@@ -18,6 +18,7 @@ import { dataChanged } from '../lib/uiBus';
 import { refreshNavCounts } from '../lib/navCounts';
 import { Screen, Button, Card, Badge, Dot, SectionLabel, EmptyState } from '../components/ds';
 import { SubjectPicker } from '../components/SubjectPicker';
+import { t } from '../lib/i18n';
 
 // ============================================================
 //  Importar cronograma: las entregas del semestre (tareas personales).
@@ -43,14 +44,14 @@ function Importar() {
     AsyncStorage.getItem('kd-import-text').then((raw) => {
       if (!raw) return;
       AsyncStorage.removeItem('kd-import-text').catch(() => {});
-      try { const j = JSON.parse(raw); if (j?.text) { setText(String(j.text)); if (j.subjectId) setSubjectId(j.subjectId); toast('Texto del cronograma leído de la foto: revísalo y toca Revisar.'); } } catch { /* noop */ }
+      try { const j = JSON.parse(raw); if (j?.text) { setText(String(j.text)); if (j.subjectId) setSubjectId(j.subjectId); toast(t('Texto del cronograma leído de la foto: revísalo y toca Revisar.')); } } catch { /* noop */ }
     }).catch(() => {});
   }, []);
   const subj = subjects.find((s) => s.id === subjectId) ?? null;
 
   function review() {
     const r = parseSyllabus(text, subjects, taskTypeList(), subjectId);
-    if (!r.length) { notify('No encontré entregas', 'Pega el cronograma con una entrega por línea, o usa el prompt para IA.'); return; }
+    if (!r.length) { notify(t('No encontré entregas'), t('Pega el cronograma con una entrega por línea, o usa el prompt para IA.')); return; }
     setRows(r);
   }
   async function upload() {
@@ -60,11 +61,11 @@ function Importar() {
       const t = decodeUtf8Strict(f.bytes) ?? decodeCp1252(f.bytes);
       setText(t);
       setRows(parseSyllabus(t, subjects, taskTypeList(), subjectId));
-    } catch (e) { notify('No se pudo leer el archivo', friendlyError(e)); }
+    } catch (e) { notify(t('No se pudo leer el archivo'), friendlyError(e)); }
   }
   async function copyPrompt() {
     const ok = await copyText(syllabusPrompt(subj?.name ?? null, new Date().getFullYear()));
-    if (ok) { setCopied(true); setTimeout(() => setCopied(false), 2500); toast('Prompt copiado. Pégalo en tu IA junto con el cronograma o el programa del curso.'); }
+    if (ok) { setCopied(true); setTimeout(() => setCopied(false), 2500); toast(t('Prompt copiado. Pégalo en tu IA junto con el cronograma o el programa del curso.')); }
   }
   const chosen = useMemo(() => (rows ?? []).filter((r) => r.include), [rows]);
 
@@ -83,58 +84,57 @@ function Importar() {
         }));
       }
       dataChanged(); refreshNavCounts(true);
-      toast(`${ids.length} ${ids.length === 1 ? 'entrega importada' : 'entregas importadas'}`, {
-        tone: 'good', actionLabel: 'Deshacer',
-        onAction: () => { Promise.all(ids.map((id) => deleteTask(id))).then(() => { dataChanged(); toast('Importación deshecha'); }).catch(() => {}); },
+      toast(`${ids.length} ${ids.length === 1 ? t('entrega importada') : 'entregas importadas'}`, {
+        tone: 'good', actionLabel: t('Deshacer'),
+        onAction: () => { Promise.all(ids.map((id) => deleteTask(id))).then(() => { dataChanged(); toast(t('Importación deshecha')); }).catch(() => {}); },
       });
       router.replace('/');
     } catch (e) {
-      notify('La importación quedó a medias', `${ids.length} de ${chosen.length} se guardaron. ${friendlyError(e)}`);
+      notify(t('La importación quedó a medias'), t('{length} de {length2} se guardaron. {e}', { length: ids.length, length2: chosen.length, e: friendlyError(e) }));
     } finally { setBusy(false); }
   }
 
   const setRow = (i: number, patch: Partial<SylRow>) => setRows((rs) => rs ? rs.map((r, k) => k === i ? { ...r, ...patch } : r) : rs);
 
   return (
-    <Screen title="Importar cronograma" subtitle="Todas las entregas del semestre en un paso" back="/" nav="index" maxWidth={900}>
+    <Screen title={t('Importar cronograma')} subtitle={t('Todas las entregas del semestre en un paso')} back="/" nav="index" maxWidth={900}>
       {rows === null ? (
         <>
           <Card>
-            <Text style={{ color: C.text, fontWeight: '700', fontSize: 15 }}>1. ¿De qué materia es?</Text>
-            <Text style={{ color: C.muted, fontSize: 13, marginTop: 4, marginBottom: 10 }}>Se usa cuando la línea no dice la materia.</Text>
-            <SubjectPicker subjects={subjects} value={subjectId} onChange={setSubjectId} placeholder="Varias o ninguna" />
+            <Text style={{ color: C.text, fontWeight: '700', fontSize: 15 }}>{t('1. ¿De qué materia es?')}</Text>
+            <Text style={{ color: C.muted, fontSize: 13, marginTop: 4, marginBottom: 10 }}>{t('Se usa cuando la línea no dice la materia.')}</Text>
+            <SubjectPicker subjects={subjects} value={subjectId} onChange={setSubjectId} placeholder={t('Varias o ninguna')} />
           </Card>
           <Card style={{ marginTop: 12 }}>
-            <Text style={{ color: C.text, fontWeight: '700', fontSize: 15 }}>2. Pega el cronograma</Text>
+            <Text style={{ color: C.text, fontWeight: '700', fontSize: 15 }}>{t('2. Pega el cronograma')}</Text>
             <Text style={{ color: C.muted, fontSize: 13, marginTop: 4, marginBottom: 10, lineHeight: 19 }}>
-              Una entrega por línea (por ejemplo "20/10 Parcial 1"), una tabla copiada de Excel o un archivo CSV.
-            </Text>
-            <TextInput value={text} onChangeText={setText} multiline accessibilityLabel="Cronograma"
-              placeholder={'20/10/2026 10:00 | Examen | Parcial 1 | Temas 1 a 4\n27/10 Quiz de lectura\nSemana 8: Entrega del proyecto 6 nov'}
+              {t('Una entrega por línea (por ejemplo "20/10 Parcial 1"), una tabla copiada de Excel o un archivo CSV.')}</Text>
+            <TextInput value={text} onChangeText={setText} multiline accessibilityLabel={t('Cronograma')}
+              placeholder={t('20/10/2026 10:00 | Examen | Parcial 1 | Temas 1 a 4\n27/10 Quiz de lectura\nSemana 8: Entrega del proyecto 6 nov')}
               placeholderTextColor={C.muted}
               style={[{ minHeight: 180, textAlignVertical: 'top', backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 10, color: C.text, padding: 12, fontSize: 14, lineHeight: 20 }, Platform.OS === 'web' ? ({ fontFamily: 'monospace' } as any) : null]} />
             <View style={{ flexDirection: 'row', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
-              <Button label="Revisar" icon="eye-outline" onPress={review} disabled={!text.trim()} />
-              <Button label="Subir archivo" icon="document-attach-outline" kind="secondary" onPress={upload} />
+              <Button label={t('Revisar')} icon="eye-outline" onPress={review} disabled={!text.trim()} />
+              <Button label={t('Subir archivo')} icon="document-attach-outline" kind="secondary" onPress={upload} />
             </View>
           </Card>
           <Card style={{ marginTop: 12, flexDirection: isWide ? 'row' : 'column', gap: 12, alignItems: isWide ? 'center' : 'flex-start' }}>
             <Ionicons name="sparkles-outline" size={22} color={C.brand2} />
             <View style={{ flex: 1 }}>
-              <Text style={{ color: C.text, fontWeight: '700' }}>¿El cronograma está en PDF o desordenado?</Text>
-              <Text style={{ color: C.muted, fontSize: 13, marginTop: 3, lineHeight: 19 }}>Copia este prompt, pégalo en ChatGPT, Claude o Gemini junto con el cronograma o el programa del curso, y pega aquí lo que te responda.</Text>
+              <Text style={{ color: C.text, fontWeight: '700' }}>{t('¿El cronograma está en PDF o desordenado?')}</Text>
+              <Text style={{ color: C.muted, fontSize: 13, marginTop: 3, lineHeight: 19 }}>{t('Copia este prompt, pégalo en ChatGPT, Claude o Gemini junto con el cronograma o el programa del curso, y pega aquí lo que te responda.')}</Text>
             </View>
-            <Button label={copied ? 'Copiado' : 'Copiar prompt'} icon={copied ? 'checkmark' : 'copy-outline'} kind="secondary" onPress={copyPrompt} />
+            <Button label={copied ? t('Copiado') : t('Copiar prompt')} icon={copied ? 'checkmark' : 'copy-outline'} kind="secondary" onPress={copyPrompt} />
           </Card>
         </>
       ) : (
         <>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
-            <Text style={{ color: C.text, fontWeight: '700', fontSize: 15, flex: 1 }}>{chosen.length} de {rows.length} para importar</Text>
-            <Button label="Volver a editar" kind="ghost" size="sm" icon="arrow-back" onPress={() => setRows(null)} />
+            <Text style={{ color: C.text, fontWeight: '700', fontSize: 15, flex: 1 }}>{t('{length} de {length2} para importar', { length: chosen.length, length2: rows.length })}</Text>
+            <Button label={t('Volver a editar')} kind="ghost" size="sm" icon="arrow-back" onPress={() => setRows(null)} />
           </View>
-          {rows.some((r) => r.warning) && <Text style={{ color: C.muted, fontSize: 13, marginBottom: 8 }}>Las entregas con fecha pasada quedan sin marcar. Revisa las que no tienen fecha.</Text>}
-          {rows.length === 0 && <EmptyState compact icon="document-outline" title="No hay filas" />}
+          {rows.some((r) => r.warning) && <Text style={{ color: C.muted, fontSize: 13, marginBottom: 8 }}>{t('Las entregas con fecha pasada quedan sin marcar. Revisa las que no tienen fecha.')}</Text>}
+          {rows.length === 0 && <EmptyState compact icon="document-outline" title={t('No hay filas')} />}
           {rows.map((r, i) => {
             const sub = subjects.find((s) => s.id === r.subjectId);
             const tm = taskTypeMeta(r.typeKey);
@@ -147,12 +147,12 @@ function Importar() {
                     <Ionicons name={r.include ? 'checkbox' : 'square-outline'} size={22} color={r.include ? C.brand : C.muted} />
                   </Pressable>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <TextInput value={r.title} onChangeText={(v) => setRow(i, { title: v })} accessibilityLabel="Título"
+                    <TextInput value={r.title} onChangeText={(v) => setRow(i, { title: v })} accessibilityLabel={t('Título')}
                       style={[{ color: C.text, fontSize: 15, fontWeight: '600', paddingVertical: 2 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4, flexWrap: 'wrap' }}>
-                      {sub ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}><Dot color={sub.color} /><Text style={{ color: C.muted, fontSize: 12.5 }}>{sub.name}</Text></View> : <Text style={{ color: C.muted, fontSize: 12.5 }}>Sin materia</Text>}
+                      {sub ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}><Dot color={sub.color} /><Text style={{ color: C.muted, fontSize: 12.5 }}>{sub.name}</Text></View> : <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Sin materia')}</Text>}
                       {r.typeKey && r.typeKey !== 'tarea' && <Badge text={tm.label} color={tm.color} />}
-                      <Text style={{ color: r.dueDate ? C.text : C.muted, fontSize: 12.5 }}>{due || 'Sin fecha'}</Text>
+                      <Text style={{ color: r.dueDate ? C.text : C.muted, fontSize: 12.5 }}>{due || t('Sin fecha')}</Text>
                       {!!r.warning && <Badge text={r.warning} color={C.warn} />}
                     </View>
                     {!!r.description && <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 4 }} numberOfLines={2}>{r.description}</Text>}
@@ -162,7 +162,7 @@ function Importar() {
             );
           })}
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
-            <Button label="Cancelar" kind="secondary" onPress={() => setRows(null)} style={{ flex: 1 }} />
+            <Button label={t('Cancelar')} kind="secondary" onPress={() => setRows(null)} style={{ flex: 1 }} />
             <Button label={`Importar ${chosen.length}`} icon="download-outline" onPress={doImport} busy={busy} disabled={!chosen.length} style={{ flex: 2 }} />
           </View>
         </>

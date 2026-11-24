@@ -6,6 +6,7 @@ import { confirm, notify } from '../../lib/confirm';
 import { ProgressBar } from '../ProgressBar';
 import { Activity, Load, Member, PTask, Profile, Project, ProjectRole, colorOf, deleteProject, initialsOf, leaveProject, nameOf, regenJoinCode, removeMember, setMemberRole, workload } from '../../lib/projects';
 import { Pill, hace, isWeb, secTitle } from './projectUi';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Vista Equipo del proyecto: integrantes, papeles, código para unirse y carga de trabajo.
@@ -26,48 +27,47 @@ export function Equipo({ project, members, tasks, activity, myId, role, isWide, 
     const code = project?.join_code ?? '';
     if (!code) return;
     if (isWeb && typeof navigator !== 'undefined' && navigator.clipboard) {
-      try { await navigator.clipboard.writeText(code); notify('Código copiado', 'Pásaselo a quien quieras invitar.'); return; } catch { /* sigue abajo */ }
+      try { await navigator.clipboard.writeText(code); notify(t('Código copiado'), t('Pásaselo a quien quieras invitar.')); return; } catch { /* sigue abajo */ }
     }
-    notify('Código del proyecto', code);
+    notify(t('Código del proyecto'), code);
   }
 
   async function regen() {
     if (!project) return;
-    const ok = await confirm('¿Cambiar el código?',
-      'El código de ahora deja de servir. Quien ya está adentro se queda; quien tenga el código viejo no podrá entrar.', 'Cambiar');
+    const ok = await confirm(t('¿Cambiar el código?'),
+      t('El código de ahora deja de servir. Quien ya está adentro se queda; quien tenga el código viejo no podrá entrar.'), t('Cambiar'));
     if (!ok) return;
     setBusy(true);
     try { await regenJoinCode(project.id); onChanged(); }
-    catch (e: any) { notify('No se pudo cambiar', e.message); }
+    catch (e: any) { notify(t('No se pudo cambiar'), e.message); }
     finally { setBusy(false); }
   }
 
   async function salir() {
     if (!project) return;
-    if (isOwner) return notify('Eres quien creó el proyecto', 'No puedes salirte de tu propio proyecto: bórralo o pásalo a otra persona sacándote después.');
-    const ok = await confirm('¿Salir del proyecto?', 'Dejarás de ver el tablero. Puedes volver a entrar con el código.', 'Salir');
+    if (isOwner) return notify(t('Eres quien creó el proyecto'), t('No puedes salirte de tu propio proyecto: bórralo o pásalo a otra persona sacándote después.'));
+    const ok = await confirm(t('¿Salir del proyecto?'), t('Dejarás de ver el tablero. Puedes volver a entrar con el código.'), t('Salir'));
     if (!ok) return;
     try { await leaveProject(project.id); onLeft(); }
-    catch (e: any) { notify('No se pudo salir', e.message); }
+    catch (e: any) { notify(t('No se pudo salir'), e.message); }
   }
 
   async function borrar() {
     if (!project) return;
-    const ok = await confirm('¿Borrar el proyecto?',
-      `Se borra "${project.name}" con sus ${tasks.length} tarjetas para todo el equipo. Esto no se puede deshacer.`, 'Borrar');
+    const ok = await confirm(t('¿Borrar el proyecto?'),
+      t('Se borra "{name}" con sus {length} tarjetas para todo el equipo. Esto no se puede deshacer.', { name: project.name, length: tasks.length }), t('Borrar'));
     if (!ok) return;
     try { await deleteProject(project.id); onLeft(); }
-    catch (e: any) { notify('No se pudo borrar', e.message); }
+    catch (e: any) { notify(t('No se pudo borrar'), e.message); }
   }
 
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: isWide ? 24 : 14, paddingBottom: 70, maxWidth: 900, width: '100%' }}>
       {/* ---------- Invitar ---------- */}
       <View style={{ backgroundColor: C.surface, borderWidth: 1, borderColor: C.line, borderRadius: R.lg, padding: 16, marginBottom: 14 }}>
-        <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '700' }}>Invitar al proyecto</Text>
+        <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '700' }}>{t('Invitar al proyecto')}</Text>
         <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 4, lineHeight: 19 }}>
-          Quien tenga este código puede entrar desde la pantalla de Proyectos. Entra como editor.
-        </Text>
+          {t('Quien tenga este código puede entrar desde la pantalla de Proyectos. Entra como editor.')}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
           <View style={{ backgroundColor: C.surface2, borderWidth: 1, borderColor: C.line, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 18 }}>
             <Text style={{ color: C.text, fontSize: 21, fontWeight: '800', letterSpacing: 5 }}>{project?.join_code ?? '······'}</Text>
@@ -75,13 +75,13 @@ export function Equipo({ project, members, tasks, activity, myId, role, isWide, 
           <Pressable onPress={copyCode}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.brand, borderRadius: 11, paddingVertical: 12, paddingHorizontal: 16 }}>
             <Ionicons name="copy-outline" size={15} color="#0f1115" />
-            <Text style={{ color: C.onBrand, fontWeight: '700', fontSize: 13 }}>Copiar</Text>
+            <Text style={{ color: C.onBrand, fontWeight: '700', fontSize: 13 }}>{t('Copiar')}</Text>
           </Pressable>
           {isOwner && (
             <Pressable onPress={regen} disabled={busy}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: C.line, borderRadius: 11, paddingVertical: 12, paddingHorizontal: 16 }}>
               <Ionicons name="refresh" size={15} color={C.muted} />
-              <Text style={{ color: C.text, fontWeight: '600', fontSize: 13 }}>Cambiar código</Text>
+              <Text style={{ color: C.text, fontWeight: '600', fontSize: 13 }}>{t('Cambiar código')}</Text>
             </Pressable>
           )}
         </View>
@@ -91,7 +91,7 @@ export function Equipo({ project, members, tasks, activity, myId, role, isWide, 
       <WorkloadPanel loads={loads} unassigned={unassigned} balanced={balanced} myId={myId} />
 
       {/* ---------- Integrantes ---------- */}
-      <Text style={secTitle}>Integrantes</Text>
+      <Text style={secTitle}>{t('Integrantes')}</Text>
       <View style={{ backgroundColor: C.surface, borderWidth: 1, borderColor: C.line, borderRadius: R.lg, overflow: 'hidden', marginBottom: 14 }}>
         {members.map((m, i) => (
           <MemberRow key={m.id} member={m} first={i === 0} isMe={m.user_id === myId} canManage={isOwner}
@@ -100,10 +100,10 @@ export function Equipo({ project, members, tasks, activity, myId, role, isWide, 
       </View>
 
       {/* ---------- Bitácora ---------- */}
-      <Text style={secTitle}>Movimientos recientes</Text>
+      <Text style={secTitle}>{t('Movimientos recientes')}</Text>
       <View style={{ backgroundColor: C.surface, borderWidth: 1, borderColor: C.line, borderRadius: R.lg, padding: 14, marginBottom: 18 }}>
         {activity.length === 0 ? (
-          <Text style={{ color: C.muted, fontSize: 12.5 }}>Todavía no hay movimientos.</Text>
+          <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Todavía no hay movimientos.')}</Text>
         ) : activity.map((a) => (
           <View key={a.id} style={{ flexDirection: 'row', gap: 9, alignItems: 'flex-start', marginBottom: 10 }}>
             <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: colorOf(a.actor_id), alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>
@@ -121,12 +121,12 @@ export function Equipo({ project, members, tasks, activity, myId, role, isWide, 
       <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
         {!isOwner && (
           <Pressable onPress={salir} style={{ borderWidth: 1, borderColor: C.line, borderRadius: 11, paddingVertical: 12, paddingHorizontal: 16 }}>
-            <Text style={{ color: C.text, fontWeight: '600', fontSize: 13 }}>Salir del proyecto</Text>
+            <Text style={{ color: C.text, fontWeight: '600', fontSize: 13 }}>{t('Salir del proyecto')}</Text>
           </Pressable>
         )}
         {isOwner && (
           <Pressable onPress={borrar} style={{ borderWidth: 1, borderColor: C.bad + '66', borderRadius: 11, paddingVertical: 12, paddingHorizontal: 16 }}>
-            <Text style={{ color: C.bad, fontWeight: '700', fontSize: 13 }}>Borrar proyecto</Text>
+            <Text style={{ color: C.bad, fontWeight: '700', fontSize: 13 }}>{t('Borrar proyecto')}</Text>
           </Pressable>
         )}
       </View>
@@ -145,17 +145,17 @@ export function MemberRow({ member, first, isMe, canManage, onChanged }: {
     const next = member.role === 'editor' ? 'viewer' : 'editor';
     setBusy(true);
     try { await setMemberRole(member.id, next); onChanged(); }
-    catch (e: any) { notify('No se pudo cambiar', e.message); }
+    catch (e: any) { notify(t('No se pudo cambiar'), e.message); }
     finally { setBusy(false); }
   }
 
   async function sacar() {
-    const ok = await confirm(`¿Sacar a ${nameOf(member.profile)}?`,
-      'Deja de ver el proyecto. Sus tarjetas se quedan, pero sin responsable.', 'Sacar');
+    const ok = await confirm(t('¿Sacar a {profile}?', { profile: nameOf(member.profile) }),
+      t('Deja de ver el proyecto. Sus tarjetas se quedan, pero sin responsable.'), t('Sacar'));
     if (!ok) return;
     setBusy(true);
     try { await removeMember(member.id); onChanged(); }
-    catch (e: any) { notify('No se pudo sacar', e.message); }
+    catch (e: any) { notify(t('No se pudo sacar'), e.message); }
     finally { setBusy(false); }
   }
 
@@ -166,10 +166,10 @@ export function MemberRow({ member, first, isMe, canManage, onChanged }: {
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text numberOfLines={1} style={{ color: C.text, fontSize: 14, fontWeight: '600' }}>
-          {nameOf(member.profile)}{isMe ? '  (tú)' : ''}
+          {nameOf(member.profile)}{isMe ? t('  (tú)') : ''}
         </Text>
         <Text numberOfLines={1} style={{ color: C.muted, fontSize: 11.5, marginTop: 1 }}>
-          {esOwner ? 'Creó el proyecto' : member.role === 'editor' ? 'Puede editar' : 'Solo mira'}
+          {esOwner ? t('Creó el proyecto') : member.role === 'editor' ? t('Puede editar') : t('Solo mira')}
         </Text>
       </View>
 
@@ -178,7 +178,7 @@ export function MemberRow({ member, first, isMe, canManage, onChanged }: {
           <Pressable onPress={cambiarPapel} disabled={busy}
             style={{ borderWidth: 1, borderColor: C.line, borderRadius: R.pill, paddingVertical: 6, paddingHorizontal: 11 }}>
             <Text style={{ color: C.text, fontSize: 11.5, fontWeight: '600' }}>
-              {member.role === 'editor' ? 'Pasar a solo mirar' : 'Dejar editar'}
+              {member.role === 'editor' ? t('Pasar a solo mirar') : t('Dejar editar')}
             </Text>
           </Pressable>
           <Pressable onPress={sacar} disabled={busy} hitSlop={8}>
@@ -202,12 +202,11 @@ export function WorkloadPanel({ loads, unassigned, balanced, myId }: {
 
   return (
     <>
-      <Text style={secTitle}>Cómo va repartido</Text>
+      <Text style={secTitle}>{t('Cómo va repartido')}</Text>
       <View style={{ backgroundColor: C.surface, borderWidth: 1, borderColor: C.line, borderRadius: R.lg, padding: 14, marginBottom: 14 }}>
         {conAlgo === 0 ? (
           <Text style={{ color: C.muted, fontSize: 12.5, lineHeight: 19 }}>
-            Todavía nadie tiene tareas asignadas. Abre una tarjeta y elige quién la hace: aquí verás si el trabajo quedó parejo.
-          </Text>
+            {t('Todavía nadie tiene tareas asignadas. Abre una tarjeta y elige quién la hace: aquí verás si el trabajo quedó parejo.')}</Text>
         ) : (
           <>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 12 }}>
@@ -216,10 +215,10 @@ export function WorkloadPanel({ loads, unassigned, balanced, myId }: {
                 {/* El aviso dice POR QUÉ está disparejo: no es lo mismo que a
                     alguien le toque el doble a que alguien no tenga nada. */}
                 {balanced
-                  ? 'El trabajo está bastante parejo'
+                  ? t('El trabajo está bastante parejo')
                   : sinNada > 0
-                    ? `El reparto está disparejo: ${sinNada === 1 ? 'hay 1 integrante' : `hay ${sinNada} integrantes`} sin nada pendiente`
-                    : 'El reparto está disparejo: a alguien le tocó bastante más que al resto'}
+                    ? t('El reparto está disparejo: {v} sin nada pendiente', { v: sinNada === 1 ? 'hay 1 integrante' : `hay ${sinNada} integrantes` })
+                    : t('El reparto está disparejo: a alguien le tocó bastante más que al resto')}
               </Text>
             </View>
 
@@ -230,11 +229,11 @@ export function WorkloadPanel({ loads, unassigned, balanced, myId }: {
                     <Text style={{ color: '#0f1115', fontSize: 8.5, fontWeight: '800' }}>{initialsOf(l.profile)}</Text>
                   </View>
                   <Text style={{ color: C.text, fontSize: 13, fontWeight: '600', flex: 1 }}>
-                    {nameOf(l.profile)}{l.user_id === myId ? ' (tú)' : ''}
+                    {nameOf(l.profile)}{l.user_id === myId ? t(' (tú)') : ''}
                   </Text>
                   {l.late > 0 && <Pill text={`${l.late} atrasada${l.late === 1 ? '' : 's'}`} color={C.bad} />}
                   {l.late === 0 && l.soon > 0 && <Pill text={`${l.soon} pronto`} color={C.warn} />}
-                  <Text style={{ color: C.muted, fontSize: 11.5, fontWeight: '700' }}>{l.pending} pend.</Text>
+                  <Text style={{ color: C.muted, fontSize: 11.5, fontWeight: '700' }}>{t('{pending} pend.', { pending: l.pending })}</Text>
                 </View>
                 <ProgressBar done={l.done} total={l.total} height={6} compact />
               </View>
@@ -244,7 +243,7 @@ export function WorkloadPanel({ loads, unassigned, balanced, myId }: {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, borderTopWidth: 1, borderTopColor: C.line, paddingTop: 11, marginTop: 2 }}>
                 <Ionicons name="help-circle-outline" size={15} color={C.muted} />
                 <Text style={{ color: C.muted, fontSize: 12.5, flex: 1 }}>
-                  {unassigned === 1 ? '1 tarjeta sin dueño: nadie la está mirando.' : `${unassigned} tarjetas sin dueño: nadie las está mirando.`}
+                  {unassigned === 1 ? t('1 tarjeta sin dueño: nadie la está mirando.') : t('{unassigned} tarjetas sin dueño: nadie las está mirando.', { unassigned })}
                 </Text>
               </View>
             )}

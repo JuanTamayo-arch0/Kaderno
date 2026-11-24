@@ -1,4 +1,5 @@
-// ============================================================
+
+import { t } from './i18n';// ============================================================
 //  Comentarios en tareas de proyecto (v23, fase 2). Puro, con pruebas:
 //  @menciones mientras se escribe, cuáles quedaron en el texto y cómo
 //  pintarlas.
@@ -10,7 +11,7 @@ const norm = (s: string) => (s ?? '').toLowerCase().normalize('NFD').replace(/[�
 
 /** Nombre para mencionar: el nombre visible o la parte del correo antes de la @. */
 export function mentionName(p: { display_name?: string | null; email?: string | null } | null | undefined): string {
-  const n = (p?.display_name ?? '').trim() || (p?.email ?? '').split('@')[0] || 'Integrante';
+  const n = (p?.display_name ?? '').trim() || (p?.email ?? '').split('@')[0] || t('Integrante');
   return n.replace(/[@\n]/g, '').slice(0, 40);
 }
 

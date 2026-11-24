@@ -7,6 +7,7 @@ import { deleteTask, setSomeday, type Task } from '../../lib/db';
 import { toast, friendlyError } from '../../lib/feedback';
 import { dataChanged } from '../../lib/uiBus';
 import { refreshNavCounts } from '../../lib/navCounts';
+import { t, trn } from '../../lib/i18n';
 export { sampleSomeday } from '../../lib/someday';
 
 // ============================================================
@@ -27,8 +28,8 @@ export function SomedayRow({ t, onDone }: { t: Task; onDone: (id: string) => voi
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: 12, borderWidth: 1, borderColor: C.line }}>
       <Text style={{ color: C.text, fontSize: 14, flex: 1 }} numberOfLines={2}>{t.title}</Text>
-      <Button label="Rescatar" size="sm" kind="secondary" disabled={busy} onPress={() => run(() => setSomeday(t.id, false), 'De vuelta en la bandeja para darle día')} />
-      <Button label="Borrar" size="sm" kind="ghost" disabled={busy} onPress={() => run(() => deleteTask(t.id), 'Borrada')} />
+      <Button label={trn('Rescatar')} size="sm" kind="secondary" disabled={busy} onPress={() => run(() => setSomeday(t.id, false), trn('De vuelta en la bandeja para darle día'))} />
+      <Button label={trn('Borrar')} size="sm" kind="ghost" disabled={busy} onPress={() => run(() => deleteTask(t.id), trn('Borrada'))} />
     </View>
   );
 }
@@ -38,10 +39,10 @@ export function SomedaySheet({ visible, items, onClose }: { visible: boolean; it
   useEffect(() => { if (visible) setGone(new Set()); }, [visible]);
   const list = items.filter((t) => !gone.has(t.id));
   return (
-    <Sheet visible={visible} onClose={onClose} title="Algún día" subtitle="Ideas sin compromiso: no aparecen en Hoy"
-      footer={<Button label="Listo" onPress={onClose} style={{ flex: 1 }} />}>
+    <Sheet visible={visible} onClose={onClose} title={t('Algún día')} subtitle={t('Ideas sin compromiso: no aparecen en Hoy')}
+      footer={<Button label={t('Listo')} onPress={onClose} style={{ flex: 1 }} />}>
       {list.length === 0
-        ? <Text style={{ color: C.muted, fontSize: 14, textAlign: 'center', paddingVertical: 16 }}>Nada guardado para algún día.</Text>
+        ? <Text style={{ color: C.muted, fontSize: 14, textAlign: 'center', paddingVertical: 16 }}>{t('Nada guardado para algún día.')}</Text>
         : list.map((t) => <SomedayRow key={t.id} t={t} onDone={(id) => setGone((g) => new Set(g).add(id))} />)}
     </Sheet>
   );

@@ -8,6 +8,7 @@ import { cleanGoal } from './streaks';
 import { fetchPrefs, savePrefs, isMissingColumn, getTasks, reviewFlashcard, type Flashcard } from './db';
 import { schedule, stateOf, dueOf, DEFAULT_RETENTION, localISODate, type CardRating, type FsrsPatch } from './fsrs';
 import { buildQueue, secondsPerCard, type CardKind, type CardLike, type Draft, type ReviewStat } from './cards';
+import { t } from './i18n';
 
 export type CardRow = CardLike & Flashcard & {
   kind: CardKind; fsrs_state: number; stability: number | null; difficulty: number | null; due_at: string | null;
@@ -16,7 +17,7 @@ export type CardRow = CardLike & Flashcard & {
 
 let FSRS_DB: boolean | null = null;
 export function hasFsrsDb(): boolean { return FSRS_DB !== false; }
-export const FSRS_MISSING = 'Para el repaso nuevo (FSRS, tarjetas de completar, estadísticas) falta correr schema_v19.sql en Supabase.';
+export const FSRS_MISSING = t('Para el repaso nuevo (FSRS, tarjetas de completar, estadísticas) falta correr schema_v19.sql en Supabase.');
 
 function withDefaults(r: any): CardRow {
   return {
@@ -112,7 +113,7 @@ export async function noteTitles(ids: string[]): Promise<Record<string, string>>
   const uniq = [...new Set(ids.filter(Boolean))].slice(0, 500);
   if (!uniq.length) return {};
   const { data } = await supabase.from('notes').select('id, title').in('id', uniq);
-  return Object.fromEntries(((data ?? []) as { id: string; title: string }[]).map((n) => [n.id, n.title || 'Nota']));
+  return Object.fromEntries(((data ?? []) as { id: string; title: string }[]).map((n) => [n.id, n.title || t('Nota')]));
 }
 
 // ---------- Responder ----------
@@ -190,7 +191,7 @@ export async function aiCards(content: string, count: number, existing: string[]
     // El mensaje claro de la función (por ejemplo, el tope diario).
     let msg = '';
     try { const ctx: any = (error as any).context; const j = ctx?.json ? await ctx.json() : null; msg = j?.error ?? ''; } catch { /* noop */ }
-    throw new Error(msg || 'No se pudo hablar con la IA. Intenta de nuevo.');
+    throw new Error(msg || t('No se pudo hablar con la IA. Intenta de nuevo.'));
   }
   const cards = ((data as any)?.cards ?? []) as any[];
   return cards.map((c) => ({ kind: c.kind === 'cloze' ? 'cloze' : 'basic', front: String(c.front ?? ''), back: String(c.back ?? '') }));

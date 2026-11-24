@@ -9,6 +9,7 @@ import { useMode, type Space } from '../lib/mode';
 import { needsSorting, suggestSpace } from '../lib/spaces';
 import { dataChanged } from '../lib/uiBus';
 import { friendlyError, notify, toast } from '../lib/feedback';
+import { t } from '../lib/i18n';
 
 // ============================================================
 //  Ordenar en espacios (v26, fase 2), una sola vez: quien ya tenía "Los dos"
@@ -53,12 +54,12 @@ export function SpaceSortSheet() {
       const study = subjects.filter((s) => pick[s.id] !== 'trabajo').map((s) => s.id);
       const work = subjects.filter((s) => pick[s.id] === 'trabajo').map((s) => s.id);
       const ok = (await setSubjectsSpace(study, 'estudio')) && (await setSubjectsSpace(work, 'trabajo'));
-      if (!ok) { notify('Falta un paso en el servidor', 'Para separar Estudio y Trabajo hay que correr schema_v25.sql en Supabase. Mientras tanto, todo se ve junto.'); }
+      if (!ok) { notify(t('Falta un paso en el servidor'), t('Para separar Estudio y Trabajo hay que correr schema_v25.sql en Supabase. Mientras tanto, todo se ve junto.')); }
       await savePrefs({ spacesSorted: true });
       setOpen(false);
-      if (ok) toast(`Listo: ${study.length} en Estudio y ${work.length} en Trabajo`, { tone: 'good' });
+      if (ok) toast(t('Listo: {length} en Estudio y {length2} en Trabajo', { length: study.length, length2: work.length }), { tone: 'good' });
       dataChanged();
-    } catch (e) { notify('No se pudo guardar', friendlyError(e)); }
+    } catch (e) { notify(t('No se pudo guardar'), friendlyError(e)); }
     finally { setBusy(false); }
   }
   async function later() {
@@ -69,12 +70,12 @@ export function SpaceSortSheet() {
   if (!open || !subjects) return null;
   const nWork = subjects.filter((s) => pick[s.id] === 'trabajo').length;
   return (
-    <Sheet visible={open} onClose={later} title="¿Qué es de Estudio y qué de Trabajo?" maxWidth={560}
-      subtitle="Desde ahora cada espacio muestra solo lo suyo. Revisa la sugerencia; después lo cambias en cada una con Editar."
+    <Sheet visible={open} onClose={later} title={t('¿Qué es de Estudio y qué de Trabajo?')} maxWidth={560}
+      subtitle={t('Desde ahora cada espacio muestra solo lo suyo. Revisa la sugerencia; después lo cambias en cada una con Editar.')}
       footer={<>
-        <Button label="Más tarde" kind="ghost" onPress={later} />
+        <Button label={t('Más tarde')} kind="ghost" onPress={later} />
         <View style={{ flex: 1 }} />
-        <Button label={`Guardar (${subjects.length - nWork} Estudio, ${nWork} Trabajo)`} icon="checkmark" busy={busy} onPress={save} />
+        <Button label={t('Guardar ({v} Estudio, {nWork} Trabajo)', { v: subjects.length - nWork, nWork })} icon="checkmark" busy={busy} onPress={save} />
       </>}>
       <View style={{ gap: 8 }}>
         {subjects.map((s) => (
@@ -83,13 +84,13 @@ export function SpaceSortSheet() {
               <SubjectIcon icon={s.icon} box={32} emoji={16} />
             </View>
             <Text style={{ color: C.text, fontSize: 14, fontWeight: '600', flex: 1 }} numberOfLines={1}>{s.name}</Text>
-            <View style={{ flexDirection: 'row', padding: 3, gap: 3, borderRadius: 10, backgroundColor: C.surface2 }} accessibilityRole="radiogroup" accessibilityLabel={`Espacio de ${s.name}`}>
+            <View style={{ flexDirection: 'row', padding: 3, gap: 3, borderRadius: 10, backgroundColor: C.surface2 }} accessibilityRole="radiogroup" accessibilityLabel={t('Espacio de {name}', { name: s.name })}>
               {(['estudio', 'trabajo'] as Space[]).map((k) => {
                 const on = pick[s.id] === k;
                 return (
                   <Pressable key={k} onPress={() => setPick((p) => ({ ...p, [s.id]: k }))} accessibilityRole="radio" accessibilityState={{ checked: on }}
                     style={{ paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8, minHeight: 32, justifyContent: 'center', backgroundColor: on ? C.brand : 'transparent' }}>
-                    <Text style={{ color: on ? C.onBrand : C.muted, fontSize: 12.5, fontWeight: '700' }}>{k === 'trabajo' ? 'Trabajo' : 'Estudio'}</Text>
+                    <Text style={{ color: on ? C.onBrand : C.muted, fontSize: 12.5, fontWeight: '700' }}>{k === 'trabajo' ? t('Trabajo') : t('Estudio')}</Text>
                   </Pressable>
                 );
               })}

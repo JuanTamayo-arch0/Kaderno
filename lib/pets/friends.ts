@@ -14,6 +14,7 @@ import { petSheet, SHEET_FRAMES, type Frame, type Mood, type Outfit, type Specie
 import { PetMotion, type World } from './motion';
 import { domBounds, domObstacle, domPerches, domRectOf, ownPetBox, ownPetHop } from './dom';
 import type { PatioState } from './patio';
+import { t } from '../i18n';
 
 export const FRIEND_SIZE = 56;
 const FRAMES: Frame[] = SHEET_FRAMES;
@@ -138,8 +139,8 @@ export class FriendsController {
   greet(from: string, to: string, fromName: string, toName: string, me: string) {
     const a = from === me ? 'yo' : from, b = to === me ? 'yo' : to;
     this.hop(a); this.hop(b);
-    this.say(from, toName ? `¡Hola, ${toName.split(' ')[0]}!` : '¡Hola!');
-    setTimeout(() => this.say(to, `¡Hola, ${fromName.split(' ')[0]}!`), 400);
+    this.say(from, toName ? t('¡Hola, {v}!', { v: toName.split(' ')[0] }) : t('¡Hola!'));
+    setTimeout(() => this.say(to, t('¡Hola, {v}!', { v: fromName.split(' ')[0] })), 400);
     // La que saluda va hacia la otra (si su dueño no está enfocado).
     const fa = this.friends.get(from), target = b === 'yo' ? ownPetBox() : this.friends.get(to)?.m;
     if (fa && target && !fa.m.on && fa.spec.state !== 'work' && fa.spec.state !== 'away') {
@@ -148,7 +149,7 @@ export class FriendsController {
   }
   celebrate(big: boolean) {
     const now = performance.now();
-    this.friends.forEach((f) => { f.partyUntil = now + (big ? 4000 : 1600); f.m.wake(); f.m.celebrate(big ? 3 : 1); if (big) this.say(f.spec.uid, '¡Meta!', 3500); });
+    this.friends.forEach((f) => { f.partyUntil = now + (big ? 4000 : 1600); f.m.wake(); f.m.celebrate(big ? 3 : 1); if (big) this.say(f.spec.uid, t('¡Meta!'), 3500); });
     if (this.friends.size) ownPetHop();
   }
 

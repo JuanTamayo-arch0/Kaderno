@@ -70,10 +70,10 @@ test('matriz: balance de la semana para el ritual del lunes', () => {
 test('matriz: la vista está en Hoy y la estrella en la tarea', async () => {
   const fs = await import('node:fs');
   const hoy = fs.readFileSync('app/(tabs)/index.tsx', 'utf8');
-  assert.match(hoy, /k: 'matriz', label: 'Matriz'/);
-  assert.match(hoy, /label: t\.important \? 'Quitar importante' : 'Marcar importante'/);
+  assert.match(hoy, /k: 'matriz', label: t\('Matriz'\)/);
+  assert.match(hoy, /label: t\.important \? trn\('Quitar importante'\) : trn\('Marcar importante'\)/);
   const modal = fs.readFileSync('components/TaskModal.tsx', 'utf8');
-  assert.match(modal, /accessibilityLabel="Importante"/);
+  assert.match(modal, /accessibilityLabel=\{t\('Importante'\)\}/);
   const sql = fs.readFileSync('supabase/schema_v26.sql', 'utf8');
   assert.match(sql, /add column if not exists important boolean not null default false/);
 });

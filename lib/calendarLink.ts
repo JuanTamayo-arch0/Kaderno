@@ -1,4 +1,5 @@
-// ============================================================
+
+import { t } from './i18n';// ============================================================
 //  Enlace del calendario (.ics) y diagnóstico cuando falla.
 //
 //  Por qué existe: el iPhone muestra "No se puede conectar mediante SSL"
@@ -40,32 +41,32 @@ export function diagnoseCalendar(status: number, body: string, viaKaderno: boole
   const b = (body ?? '').slice(0, 400);
   if (status === 200 && b.trimStart().startsWith('BEGIN:VCALENDAR')) {
     const n = (body.match(/BEGIN:VEVENT/g) ?? []).length;
-    return { ok: true, title: 'El enlace funciona', detail: `Devuelve un calendario con ${n} ${n === 1 ? 'evento' : 'eventos'}. Si tu calendario aún no lo muestra, espera unos minutos: Google tarda en actualizar.` };
+    return { ok: true, title: t('El enlace funciona'), detail: t('Devuelve un calendario con {n} {v}. Si tu calendario aún no lo muestra, espera unos minutos: Google tarda en actualizar.', { n, v: n === 1 ? 'evento' : 'eventos' }) };
   }
   if (status === 200) {
-    return { ok: false, title: 'La respuesta no es un calendario', detail: viaKaderno
-      ? 'El servidor devolvió la página de la app en vez del calendario. Falta el bloque "location /calendario/" en Nginx (ver RUNBOOK.md, versión 13).'
-      : 'Algo entre tu navegador y Supabase cambió la respuesta. Prueba de nuevo o usa "Descargar .ics".' };
+    return { ok: false, title: t('La respuesta no es un calendario'), detail: viaKaderno
+      ? t('El servidor devolvió la página de la app en vez del calendario. Falta el bloque "location /calendario/" en Nginx (ver RUNBOOK.md, versión 13).')
+      : t('Algo entre tu navegador y Supabase cambió la respuesta. Prueba de nuevo o usa "Descargar .ics".') };
   }
   if (status === 401 || status === 403) {
-    return { ok: false, title: 'La función pide inicio de sesión', detail: 'Por eso el iPhone dice "No se puede conectar mediante SSL". Hay que desplegar la función sin verificación: npx supabase functions deploy ical --no-verify-jwt (o desactivar "Enforce JWT verification" en Supabase, Edge Functions, ical).' };
+    return { ok: false, title: t('La función pide inicio de sesión'), detail: t('Por eso el iPhone dice "No se puede conectar mediante SSL". Hay que desplegar la función sin verificación: npx supabase functions deploy ical --no-verify-jwt (o desactivar "Enforce JWT verification" en Supabase, Edge Functions, ical).') };
   }
   if (status === 404 && /enlace no v[aá]lido|reemplazado/i.test(b)) {
-    return { ok: false, title: 'Ese enlace ya no existe', detail: 'Se creó un enlace nuevo después. Copia el que aparece aquí y vuelve a suscribirte.' };
+    return { ok: false, title: t('Ese enlace ya no existe'), detail: t('Se creó un enlace nuevo después. Copia el que aparece aquí y vuelve a suscribirte.') };
   }
   if (status === 404) {
-    return { ok: false, title: 'La función del calendario no está desplegada', detail: 'Despliégala con: npx supabase functions deploy ical --no-verify-jwt' };
+    return { ok: false, title: t('La función del calendario no está desplegada'), detail: t('Despliégala con: npx supabase functions deploy ical --no-verify-jwt') };
   }
   if (status === 400) {
-    return { ok: false, title: 'El enlace está incompleto', detail: 'Copia el enlace completo, sin espacios al final.' };
+    return { ok: false, title: t('El enlace está incompleto'), detail: t('Copia el enlace completo, sin espacios al final.') };
   }
   if (status >= 500) {
-    return { ok: false, title: 'La función del calendario falló', detail: `Respondió ${status}. Revisa los registros en Supabase, Edge Functions, ical, Logs. Mientras tanto puedes usar "Descargar .ics".` };
+    return { ok: false, title: t('La función del calendario falló'), detail: t('Respondió {status}. Revisa los registros en Supabase, Edge Functions, ical, Logs. Mientras tanto puedes usar "Descargar .ics".', { status }) };
   }
   if (status === 0) {
-    return { ok: false, title: 'No se pudo conectar', detail: viaKaderno
-      ? 'Revisa el certificado del dominio (sudo certbot renew) y el bloque de Nginx para /calendario/.'
-      : 'Puede ser la versión anterior de la función (no permitía esta prueba desde el navegador). Vuelve a desplegarla: npx supabase functions deploy ical --no-verify-jwt' };
+    return { ok: false, title: t('No se pudo conectar'), detail: viaKaderno
+      ? t('Revisa el certificado del dominio (sudo certbot renew) y el bloque de Nginx para /calendario/.')
+      : t('Puede ser la versión anterior de la función (no permitía esta prueba desde el navegador). Vuelve a desplegarla: npx supabase functions deploy ical --no-verify-jwt') };
   }
-  return { ok: false, title: `Respuesta inesperada (${status})`, detail: 'Prueba de nuevo en un momento o usa "Descargar .ics".' };
+  return { ok: false, title: t('Respuesta inesperada ({status})', { status }), detail: t('Prueba de nuevo en un momento o usa "Descargar .ics".') };
 }

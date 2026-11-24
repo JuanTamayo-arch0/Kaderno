@@ -2,6 +2,7 @@
 //  Enfocar juntos: lógica pura de las salas (sin red ni React).
 // ============================================================
 import { ITEMS, SPECIES, type Outfit } from './pets/art';
+import { t } from './i18n';
 
 export type RoomState = 'work' | 'break' | 'online' | 'away';
 
@@ -46,11 +47,11 @@ export function minutesLeft(p: Pick<PresenceInfo, 'endsAt' | 'remainingMs'>, now
 }
 
 export function personState(p: PresenceInfo | undefined, now: number): { state: RoomState; label: string; detail: string } {
-  if (!p) return { state: 'away', label: 'Fuera', detail: '' };
+  if (!p) return { state: 'away', label: t('Fuera'), detail: '' };
   const left = minutesLeft(p, now);
-  if (p.state === 'work') return { state: 'work', label: 'Enfocado', detail: left ? `quedan ${left} min` : '' };
-  if (p.state === 'break') return { state: 'break', label: 'Descanso', detail: left ? `vuelve en ${left} min` : '' };
-  return { state: 'online', label: 'En la sala', detail: '' };
+  if (p.state === 'work') return { state: 'work', label: t('Enfocado'), detail: left ? `quedan ${left} min` : '' };
+  if (p.state === 'break') return { state: 'break', label: t('Descanso'), detail: left ? t('vuelve en {left} min', { left }) : '' };
+  return { state: 'online', label: t('En la sala'), detail: '' };
 }
 
 const ORDER: Record<RoomState, number> = { work: 0, break: 1, online: 2, away: 3 };
@@ -78,7 +79,7 @@ export function stateCounts(rows: RoomRow[]): string {
   if (w) parts.push(w === 1 ? '1 enfocado' : `${w} enfocados`);
   if (b) parts.push(b === 1 ? '1 en descanso' : `${b} en descanso`);
   if (o) parts.push(o === 1 ? '1 en la sala' : `${o} en la sala`);
-  return parts.length ? parts.join(', ') : 'Nadie conectado ahora';
+  return parts.length ? parts.join(', ') : t('Nadie conectado ahora');
 }
 
 export function groupProgress(people: RoomPerson[], goal: number): { done: number; goal: number; frac: number; label: string; reached: boolean } {
@@ -86,7 +87,7 @@ export function groupProgress(people: RoomPerson[], goal: number): { done: numbe
   const g = Math.max(1, goal || 8);
   return {
     done, goal: g, frac: Math.min(1, done / g), reached: done >= g,
-    label: done >= g ? `¡Meta cumplida! ${done} pomodoros juntos hoy` : `Juntos hoy: ${done} de ${g} pomodoros`,
+    label: done >= g ? t('¡Meta cumplida! {done} pomodoros juntos hoy', { done }) : t('Juntos hoy: {done} de {g} pomodoros', { done, g }),
   };
 }
 
@@ -110,9 +111,9 @@ export function joinPlan(p: Proposal, now: number): { waitMs: number; endsAt: nu
 
 export function proposalText(p: Proposal, now: number): string {
   const wait = Math.ceil((p.startAt - now) / 1000);
-  if (wait > 0) return `${p.name} propone un pomodoro de ${p.workMin} min. Empieza en ${wait} s.`;
+  if (wait > 0) return t('{name} propone un pomodoro de {workMin} min. Empieza en {wait} s.', { name: p.name, workMin: p.workMin, wait });
   const left = Math.ceil((p.startAt + p.workMin * 60000 - now) / 60000);
-  return `${p.name} empezó un pomodoro de ${p.workMin} min. Quedan ${left} min.`;
+  return t('{name} empezó un pomodoro de {workMin} min. Quedan {left} min.', { name: p.name, workMin: p.workMin, left });
 }
 
 /** Valida lo que llega por el canal (nunca confiar en el otro lado). */
@@ -131,7 +132,7 @@ export function parsePresence(x: any): PresenceInfo | null {
   const st = x.state === 'work' || x.state === 'break' ? x.state : 'idle';
   const num = (v: any) => (typeof v === 'number' && isFinite(v) ? v : null);
   return {
-    uid: x.uid.slice(0, 40), name: typeof x.name === 'string' ? x.name.slice(0, 40) : 'Alguien',
+    uid: x.uid.slice(0, 40), name: typeof x.name === 'string' ? x.name.slice(0, 40) : t('Alguien'),
     pet: typeof x.pet === 'string' && x.pet in SPECIES ? x.pet : null, outfit: cleanOutfit(x.outfit), state: st,
     endsAt: num(x.endsAt), remainingMs: num(x.remainingMs), task: typeof x.task === 'string' ? x.task.slice(0, 80) : null, at: num(x.at) ?? 0,
   };

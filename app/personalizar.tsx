@@ -12,6 +12,7 @@ import { STUDY_ACCENTS, WORK_ACCENTS, isKadernoTheme, accentOf, workAccentOf, sp
 import { useMode, getSpace } from '../lib/mode';
 import { fetchPrefs, savePrefs, uploadWallpaperFromUri, cleanOldWallpapers } from '../lib/db';
 import { notify } from '../lib/confirm';
+import { t, trn } from '../lib/i18n';
 
 function Personalizar() {
   const router = useRouter();
@@ -50,7 +51,7 @@ function Personalizar() {
       return url;
     } catch (e: any) {
       if (pickSeq.current === seq) {
-        notify('El fondo no se pudo subir', 'Se usará solo en este dispositivo. Revisa tu conexión y vuelve a intentarlo.');
+        notify(t('El fondo no se pudo subir'), t('Se usará solo en este dispositivo. Revisa tu conexión y vuelve a intentarlo.'));
       }
       return null;
     } finally {
@@ -70,7 +71,7 @@ function Personalizar() {
       const seq = ++pickSeq.current;
       set({ bgCustom: uri, bgId: 'custom' });
       await pushWallpaper(uri, seq, a.mimeType ?? undefined);
-    } catch (e: any) { notify('No se pudo cargar la imagen', e?.message ?? ''); }
+    } catch (e: any) { notify(t('No se pudo cargar la imagen'), e?.message ?? ''); }
   }
 
   // Fondos guardados antes de que existiera el bucket: el base64 completo vivía
@@ -119,24 +120,24 @@ function Personalizar() {
   const footer = (
     <View style={{ backgroundColor: C.surface, borderTopWidth: 1, borderTopColor: C.line, alignItems: 'center' }}>
       <View style={{ padding: 14, maxWidth: 932, width: '100%' }}>
-        <Button label={uploading ? 'Subiendo fondo…' : 'Guardar y aplicar'} onPress={apply} busy={saving} disabled={uploading} size="lg" full />
-        {Platform.OS === 'web' && <Text style={{ color: C.muted, fontSize: 12, textAlign: 'center', marginTop: 6 }}>La app se recarga con la nueva apariencia.</Text>}
+        <Button label={uploading ? t('Subiendo fondo…') : t('Guardar y aplicar')} onPress={apply} busy={saving} disabled={uploading} size="lg" full />
+        {Platform.OS === 'web' && <Text style={{ color: C.muted, fontSize: 12, textAlign: 'center', marginTop: 6 }}>{t('La app se recarga con la nueva apariencia.')}</Text>}
       </View>
     </View>
   );
 
   return (
-    <Screen title="Apariencia" subtitle="Tema, color, fondo, letra y tamaño" back="/ajustes" nav="personalizar" maxWidth={900} footer={footer}
-      right={<Button label="Restablecer" kind="ghost" size="sm" onPress={() => { pickSeq.current++; setUploading(false); setS({ ...DEFAULTS, bgCustom: null }); }} />}>
+    <Screen title={t('Apariencia')} subtitle={t('Tema, color, fondo, letra y tamaño')} back="/ajustes" nav="personalizar" maxWidth={900} footer={footer}
+      right={<Button label={t('Restablecer')} kind="ghost" size="sm" onPress={() => { pickSeq.current++; setUploading(false); setS({ ...DEFAULTS, bgCustom: null }); }} />}>
         <ThemePreview s={s} />
         {/* ---------------- TEMA ---------------- */}
-        <Section title="Tema" subtitle={both ? `Estás ajustando ${work ? 'Trabajo' : 'Estudio'}. Claro u oscuro y la letra valen para los dos espacios; el acento es de cada uno. El logo no cambia de color.` : 'Los de Kaderno, con el color de acento que quieras. El logo no cambia de color.'} />
+        <Section title={t('Tema')} subtitle={both ? t('Estás ajustando {v}. Claro u oscuro y la letra valen para los dos espacios; el acento es de cada uno. El logo no cambia de color.', { v: work ? 'Trabajo' : 'Estudio' }) : t('Los de Kaderno, con el color de acento que quieras. El logo no cambia de color.')} />
         <View style={grid}>
           {BRAND_THEMES.map((t) => <ThemeCard key={t.id} id={t.id} accentId={s.accentId} workAccentId={s.workAccentId} work={work} wide active={s.themeId === t.id || (work && !isKadernoTheme(s.themeId) && THEMES[s.themeId]?.scheme === t.scheme)} onPress={() => set({ themeId: t.id })} />)}
         </View>
         {(isKadernoTheme(s.themeId) || work) && (
           <>
-            <Text style={groupLbl}>Color de acento{both ? (work ? ' en Trabajo' : ' en Estudio') : ''}</Text>
+            <Text style={groupLbl}>{t('Color de acento{v}', { v: both ? (work ? ' en Trabajo' : ' en Estudio') : '' })}</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }} accessibilityRole="radiogroup">
               {(work ? WORK_ACCENTS : STUDY_ACCENTS).map((a) => {
                 const on = (work ? workAccentOf(s.workAccentId) : accentOf(s.accentId)).id === a.id;
@@ -154,21 +155,21 @@ function Personalizar() {
             </View>
           </>
         )}
-        {work && <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 12 }}>Los temas de colores y los fondos de pantalla son del espacio Estudio.</Text>}
+        {work && <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 12 }}>{t('Los temas de colores y los fondos de pantalla son del espacio Estudio.')}</Text>}
         {!work && (<>
         <Pressable onPress={() => setMore(!more)} accessibilityRole="button" accessibilityState={{ expanded: more }}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 16, paddingVertical: 6, alignSelf: 'flex-start' }}>
           <Ionicons name={more ? 'chevron-down' : 'chevron-forward'} size={16} color={C.muted} />
-          <Text style={{ color: C.text, fontSize: 14, fontWeight: '700' }}>Más colores</Text>
-          <Text style={{ color: C.muted, fontSize: 12.5 }}>· los temas de antes</Text>
+          <Text style={{ color: C.text, fontSize: 14, fontWeight: '700' }}>{t('Más colores')}</Text>
+          <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('· los temas de antes')}</Text>
         </Pressable>
         {more && (
           <>
-            <Text style={groupLbl}>Oscuros</Text>
+            <Text style={groupLbl}>{t('Oscuros')}</Text>
             <View style={grid}>
               {MORE_THEMES.filter((t) => t.scheme === 'dark').map((t) => <ThemeCard key={t.id} id={t.id} active={s.themeId === t.id} onPress={() => set({ themeId: t.id })} />)}
             </View>
-            <Text style={groupLbl}>Claros</Text>
+            <Text style={groupLbl}>{t('Claros')}</Text>
             <View style={grid}>
               {MORE_THEMES.filter((t) => t.scheme === 'light').map((t) => <ThemeCard key={t.id} id={t.id} active={s.themeId === t.id} onPress={() => set({ themeId: t.id })} />)}
             </View>
@@ -176,55 +177,51 @@ function Personalizar() {
         )}
 
         {/* ---------------- FONDO ---------------- */}
-        <Section title="Fondo de pantalla" subtitle="Detrás de las tarjetas" />
+        <Section title={t('Fondo de pantalla')} subtitle={t('Detrás de las tarjetas')} />
         <View style={grid}>
-          <BgSwatch label="Ninguno" active={s.bgId === 'none'} onPress={() => set({ bgId: 'none' })} plain />
+          <BgSwatch label={t('Ninguno')} active={s.bgId === 'none'} onPress={() => set({ bgId: 'none' })} plain />
           {s.bgCustom && (
-            <BgSwatch label="Mi foto" active={s.bgId === 'custom'} onPress={() => set({ bgId: 'custom' })} imageUri={s.bgCustom} busy={uploading} />
+            <BgSwatch label={t('Mi foto')} active={s.bgId === 'custom'} onPress={() => set({ bgId: 'custom' })} imageUri={s.bgCustom} busy={uploading} />
           )}
           {BACKGROUNDS.map((b) => (
             <BgSwatch key={b.id} label={b.name} css={b.css} solid={b.solid} active={s.bgId === b.id} onPress={() => set({ bgId: b.id })} />
           ))}
           <Pressable onPress={pickBg} disabled={uploading} style={[swatchBox, { borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', opacity: uploading ? 0.5 : 1 }]}>
             <Ionicons name="cloud-upload-outline" size={20} color={C.muted} />
-            <Text style={{ color: C.muted, fontSize: 11.5, marginTop: 4 }}>Subir foto</Text>
+            <Text style={{ color: C.muted, fontSize: 11.5, marginTop: 4 }}>{t('Subir foto')}</Text>
           </Pressable>
         </View>
         <Text style={{ color: C.muted, fontSize: 12, marginTop: 8 }}>
-          {uploading ? 'Subiendo tu foto… se guardará en tu cuenta.' : 'Tu foto se guarda en tu cuenta, así la ves en cualquier dispositivo.'}
+          {uploading ? t('Subiendo tu foto… se guardará en tu cuenta.') : t('Tu foto se guarda en tu cuenta, así la ves en cualquier dispositivo.')}
         </Text>
 
         </>)}
 
         {/* ---------------- FUENTE ---------------- */}
-        <Section title="Tipo de letra" subtitle="La fuente de todos los textos" />
+        <Section title={t('Tipo de letra')} subtitle={t('La fuente de todos los textos')} />
         <View style={{ gap: 8 }}>
           {FONTS.map((f) => {
             const active = s.fontId === f.id;
             return (
               <Pressable key={f.id} onPress={() => set({ fontId: f.id })}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 12, backgroundColor: active ? C.brand + '18' : C.surface, borderWidth: 1, borderColor: active ? C.brand : C.line }}>
-                <Text style={{ color: C.text, fontSize: 17, fontWeight: '700', flex: 1, ...(f.family ? ({ fontFamily: f.family } as any) : {}) }}>
-                  {f.name} · Aa Bb 123
-                </Text>
+                <Text style={{ color: C.text, fontSize: 17, fontWeight: '700', flex: 1, ...(f.family ? ({ fontFamily: f.family } as any) : {}) }}>{t('{name} · Aa Bb 123', { name: f.name })}</Text>
                 {active && <Ionicons name="checkmark-circle" size={20} color={C.brand} />}
               </Pressable>
             );
           })}
         </View>
-        {Platform.OS !== 'web' && <Text style={{ color: C.muted, fontSize: 12, marginTop: 8 }}>Las fuentes se ven al 100% en la versión web; en móvil algunas usan la del sistema.</Text>}
+        {Platform.OS !== 'web' && <Text style={{ color: C.muted, fontSize: 12, marginTop: 8 }}>{t('Las fuentes se ven al 100% en la versión web; en móvil algunas usan la del sistema.')}</Text>}
 
         {/* ---------------- LETRA DE LAS NOTAS ---------------- */}
-        <Section title="Letra de las notas" subtitle="Para leer y escribir tus apuntes" />
+        <Section title={t('Letra de las notas')} subtitle={t('Para leer y escribir tus apuntes')} />
         <View style={{ gap: 8 }}>
           {NOTE_FONTS.map((f) => {
             const active = (s.noteFontId ?? 'serif') === f.id;
             return (
               <Pressable key={f.id} onPress={() => set({ noteFontId: f.id })} accessibilityRole="radio" accessibilityState={{ checked: active }}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 12, backgroundColor: active ? C.brand + '18' : C.surface, borderWidth: 1, borderColor: active ? C.brand : C.line }}>
-                <Text style={{ color: C.text, fontSize: 16, flex: 1, ...(f.family ? ({ fontFamily: f.family } as any) : {}) }}>
-                  {f.name} · El aire es un gas y se comprime
-                </Text>
+                <Text style={{ color: C.text, fontSize: 16, flex: 1, ...(f.family ? ({ fontFamily: f.family } as any) : {}) }}>{t('{name} · El aire es un gas y se comprime', { name: f.name })}</Text>
                 {active && <Ionicons name="checkmark-circle" size={20} color={C.brand} />}
               </Pressable>
             );
@@ -232,7 +229,7 @@ function Personalizar() {
         </View>
 
         {/* ---------------- TAMAÑO ---------------- */}
-        <Section title="Tamaño de la interfaz" subtitle="Escala general de texto y espacios" />
+        <Section title={t('Tamaño de la interfaz')} subtitle={t('Escala general de texto y espacios')} />
         <View style={{ flexDirection: 'row', gap: 8 }}>
           {SIZES.map((sz) => {
             const active = s.sizeId === sz.id;
@@ -331,11 +328,11 @@ function ThemePreview({ s }: { s: PSettings }) {
   const ff = fontFamilyOf(s.fontId);
   const t = (extra: any) => ({ ...(ff ? { fontFamily: ff } : {}), ...extra });
   return (
-    <View style={{ borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: C.line, marginBottom: 6 }} accessibilityLabel={`Vista previa del tema ${theme.name}`}>
+    <View style={{ borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: C.line, marginBottom: 6 }} accessibilityLabel={trn('Vista previa del tema {name}', { name: theme.name })}>
       <View style={{ backgroundColor: p.bg, padding: 16, gap: 10 }}>
-        <Text style={t({ color: p.muted, fontSize: 12 })}>Vista previa · {theme.name}</Text>
-        <Text style={t({ color: p.text, fontSize: 22, fontWeight: '800' })}>Hoy</Text>
-        {[{ title: 'Informe de laboratorio', meta: 'Física · Hoy, 11:59 pm', tone: p.warnText }, { title: 'Parcial 2: series', meta: 'Cálculo II · vie 16, 8:00 am', tone: p.muted }].map((x) => (
+        <Text style={t({ color: p.muted, fontSize: 12 })}>{trn('Vista previa · {name}', { name: theme.name })}</Text>
+        <Text style={t({ color: p.text, fontSize: 22, fontWeight: '800' })}>{trn('Hoy')}</Text>
+        {[{ title: trn('Informe de laboratorio'), meta: trn('Física · Hoy, 11:59 pm'), tone: p.warnText }, { title: trn('Parcial 2: series'), meta: trn('Cálculo II · vie 16, 8:00 am'), tone: p.muted }].map((x) => (
           <View key={x.title} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: p.surface, borderColor: p.line, borderWidth: 1, borderRadius: 12, padding: 12 }}>
             <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: p.muted }} />
             <View style={{ flex: 1 }}>
@@ -345,8 +342,8 @@ function ThemePreview({ s }: { s: PSettings }) {
           </View>
         ))}
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          <View style={{ backgroundColor: p.brand, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16 }}><Text style={t({ color: p.onBrand, fontWeight: '700' })}>Nueva tarea</Text></View>
-          <View style={{ backgroundColor: p.surface2, borderColor: p.line, borderWidth: 1, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16 }}><Text style={t({ color: p.text, fontWeight: '700' })}>Cancelar</Text></View>
+          <View style={{ backgroundColor: p.brand, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16 }}><Text style={t({ color: p.onBrand, fontWeight: '700' })}>{trn('Nueva tarea')}</Text></View>
+          <View style={{ backgroundColor: p.surface2, borderColor: p.line, borderWidth: 1, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16 }}><Text style={t({ color: p.text, fontWeight: '700' })}>{trn('Cancelar')}</Text></View>
         </View>
       </View>
     </View>

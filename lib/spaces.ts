@@ -7,6 +7,7 @@
 //  tiene "Los dos" ve filtrado por espacio; con un modo se ve todo.
 // ============================================================
 import type { Mode, Space } from './mode';
+import { t } from './i18n';
 
 type S = { id: string; space?: string | null; credits?: number | null; default_template?: string | null };
 
@@ -47,5 +48,5 @@ export function needsSorting(subjects: S[], setting: Mode): boolean {
 /** Línea de Hoy: cuánto del otro espacio vence hoy o está vencido. */
 export function otherSpaceLine(n: number, other: Space): string | null {
   if (!n) return null;
-  return `En ${other === 'trabajo' ? 'Trabajo' : 'Estudio'}: ${n} ${n === 1 ? 'cosa' : 'cosas'} para hoy`;
+  return t('En {v}: {n} {v2} para hoy', { v: other === 'trabajo' ? 'Trabajo' : 'Estudio', n, v2: n === 1 ? 'cosa' : 'cosas' });
 }

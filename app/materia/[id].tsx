@@ -46,6 +46,7 @@ import { WoopSheet } from '../../components/goals/WoopSheet';
 import { TemplatePicker } from '../../components/notes/TemplatePicker';
 import { openClassNote } from '../../lib/notesDb';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Página de una materia.
@@ -64,7 +65,7 @@ function MateriaDetalle() {
   const goBack = useGoBack('/materias');
   const { isWide, width } = useResponsive();
   const { session } = useAuth();
-  const [snap] = useState(() => snapshotFor<{ s: Subject; t: Task[]; n: Note[]; g: Grade[] }>(session && id ? `materia:${session.user.id}:${id}` : null));
+  const [snap] = useState(() => snapshotFor<{ s: Subject; t: Task[]; n: Note[]; g: Grade[] }>(session && id ? t('materia:{id}:{id2}', { id: session.user.id, id2: id }) : null));
   const [subject, setSubject] = useState<Subject | null | undefined>(snap.initial?.s ?? undefined);
   const [allSubjects, setAllSubjects] = useState<Subject[]>([]);
   const [tasks, setTasks] = useState<Task[]>(snap.initial?.t ?? []);
@@ -105,7 +106,7 @@ function MateriaDetalle() {
       const today = new Date().toISOString().slice(0, 10);
       const exam = t.filter((x) => x.status !== 'done' && ['examen', 'quiz'].includes(String(x.type)) && x.due_date && x.due_date >= today).sort((a, b) => String(a.due_date).localeCompare(String(b.due_date)))[0];
       if (exam) getSessions(exam.id).then(setExamSessions).catch(() => {}); else setExamSessions([]);
-    } catch (e) { notify('No se pudo cargar', friendlyError(e)); setSubject((s) => s ?? null); }
+    } catch (e) { notify(t('No se pudo cargar'), friendlyError(e)); setSubject((s) => s ?? null); }
   }, [id]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
   useEffect(() => onDataChanged(load), [load]);
@@ -137,7 +138,7 @@ function MateriaDetalle() {
   async function toggle(t: Task) {
     const done = t.status !== 'done';
     setTasks((xs) => xs.map((x) => x.id === t.id ? { ...x, status: done ? 'done' : 'pending' } : x));
-    try { await toggleTask(t.id, done); refreshNavCounts(true); if (done) { emitPetEvent({ type: 'tarea_hecha', allDone: false }); refreshCoinsSoon(); } if (done) toast(`Hecha: ${t.title}`, { tone: 'good', actionLabel: 'Deshacer', onAction: () => toggle({ ...t, status: 'done' }) }); }
+    try { await toggleTask(t.id, done); refreshNavCounts(true); if (done) { emitPetEvent({ type: 'tarea_hecha', allDone: false }); refreshCoinsSoon(); } if (done) toast(trn('Hecha: {title}', { title: t.title }), { tone: 'good', actionLabel: trn('Deshacer'), onAction: () => toggle({ ...t, status: 'done' }) }); }
     catch (e) { setTasks((xs) => xs.map((x) => x.id === t.id ? t : x)); toast(friendlyError(e), { tone: 'bad' }); }
   }
   function remove(t: Task) { removeTask(t, () => setHidden((h) => new Set(h).add(t.id))); }
@@ -147,32 +148,32 @@ function MateriaDetalle() {
       const r = await openClassNote(id);
       if (isWide) { setOpenNote(r.id); setTabState('notas'); router.setParams({ tab: 'notas', nota: r.id } as any); load(); }
       else router.push({ pathname: '/nota/[id]', params: { id: r.id, edit: '1' } } as any);
-    } catch (e) { notify('No se pudo abrir', friendlyError(e)); }
+    } catch (e) { notify(t('No se pudo abrir'), friendlyError(e)); }
   }
   async function createNote(content: string) {
     if (busyNew) return;
     setBusyNew(true);
     try {
-      const nid = await addNote({ subject_id: id, title: 'Nota sin título', content, image_path: null });
+      const nid = await addNote({ subject_id: id, title: t('Nota sin título'), content, image_path: null });
       if (isWide) {
         const now = new Date().toISOString();
-        setNotes((xs) => [{ id: nid, subject_id: id, title: 'Nota sin título', content, image_path: null, ocr_status: 'done', created_at: now, updated_at: now, summary: null }, ...xs]);
+        setNotes((xs) => [{ id: nid, subject_id: id, title: t('Nota sin título'), content, image_path: null, ocr_status: 'done', created_at: now, updated_at: now, summary: null }, ...xs]);
         setNewNoteId(nid); setOpenNote(nid); setTabState('notas');
         router.setParams({ tab: 'notas', nota: nid } as any);
       } else router.push({ pathname: '/nota/[id]', params: { id: nid, edit: '1' } } as any);
-    } catch (e) { notify('No se pudo crear la nota', friendlyError(e)); }
+    } catch (e) { notify(t('No se pudo crear la nota'), friendlyError(e)); }
     finally { setBusyNew(false); }
   }
   async function removeGrade(g: Grade) {
-    if (!(await confirm(`¿Borrar ${g.name}?`, undefined, 'Borrar'))) return;
-    try { await deleteGrade(g.id); load(); } catch (e) { notify('No se pudo borrar', friendlyError(e)); }
+    if (!(await confirm(t('¿Borrar {name}?', { name: g.name }), undefined, t('Borrar')))) return;
+    try { await deleteGrade(g.id); load(); } catch (e) { notify(t('No se pudo borrar'), friendlyError(e)); }
   }
 
-  if (subject === undefined) return <Screen back="/materias" nav="materias" title="Materia"><Skeleton height={120} /><Skeleton /><Skeleton /></Screen>;
+  if (subject === undefined) return <Screen back="/materias" nav="materias" title={t('Materia')}><Skeleton height={120} /><Skeleton /><Skeleton /></Screen>;
   if (subject === null) return (
-    <Screen back="/materias" nav="materias" title="Materia">
-      <EmptyState icon="help-circle-outline" title="No encontramos esta materia" text="Puede que esté archivada. Búscala en la Papelera."
-        action={{ label: 'Ir a Materias', onPress: () => router.replace('/materias') }} />
+    <Screen back="/materias" nav="materias" title={t('Materia')}>
+      <EmptyState icon="help-circle-outline" title={t('No encontramos esta materia')} text={t('Puede que esté archivada. Búscala en la Papelera.')}
+        action={{ label: t('Ir a Materias'), onPress: () => router.replace('/materias') }} />
     </Screen>
   );
 
@@ -185,11 +186,11 @@ function MateriaDetalle() {
   const passMark = gScale.pass;
   const { needed, remainingWeight } = neededFor(grades, passMark, scale);
   const fmt = (n: number) => n.toFixed(2);
-  const neededText = !grades.length ? 'Agrega tus evaluaciones con su peso'
-    : remainingWeight <= 0 ? (avg != null && avg >= passMark ? 'Materia ganada' : 'Ya están todas las notas')
-    : needed == null ? '' : needed <= 0 ? `Ya aseguraste el ${fmt(passMark)}`
-    : needed > scale ? `No alcanza para ${fmt(passMark)} con el ${remainingWeight}% que falta`
-    : `Necesitas ${fmt(needed)} en el ${remainingWeight}% que falta`;
+  const neededText = !grades.length ? t('Agrega tus evaluaciones con su peso')
+    : remainingWeight <= 0 ? (avg != null && avg >= passMark ? t('Materia ganada') : t('Ya están todas las notas'))
+    : needed == null ? '' : needed <= 0 ? t('Ya aseguraste el {passMark}', { passMark: fmt(passMark) })
+    : needed > scale ? t('No alcanza para {passMark} con el {remainingWeight}% que falta', { passMark: fmt(passMark), remainingWeight })
+    : t('Necesitas {needed} en el {remainingWeight}% que falta', { needed: fmt(needed), remainingWeight });
   const nextEval = nextEvaluation(live, grades);
   const stats: StatsData = {
     avg, scale, passMark, neededText, next: nextEval, pending: pending.length,
@@ -220,10 +221,10 @@ function MateriaDetalle() {
       <WoopSheet visible={woop} onClose={() => setWoop(false)} subjectId={subject.id} subject={subject.name} scale={scale} goal={goal} onSaved={setGoal} />
       <GradeModal visible={gradeModal} subjectId={subject.id} defaultScale={scale} editGrade={editGrade} onClose={() => { setGradeModal(false); setEditGrade(null); }} onSaved={() => { setGradeModal(false); setEditGrade(null); load(); }} />
       <ActionMenu visible={menu} title={subject.name} onClose={() => setMenu(false)} actions={[
-        { label: 'Editar materia', icon: 'create-outline', onPress: () => setEditModal({}) },
-        { label: 'Nueva nota', icon: 'document-text-outline', onPress: newNote },
-        { label: 'Exportar notas en PDF', icon: 'share-outline', onPress: () => exportSubjectPdf(subject.name, iconChar(subject.icon, '📘'), notes).catch((e) => notify('No se pudo exportar', friendlyError(e))) },
-        { label: 'Archivar materia', icon: 'archive-outline', danger: true, onPress: () => setEditModal({}) },
+        { label: t('Editar materia'), icon: 'create-outline', onPress: () => setEditModal({}) },
+        { label: t('Nueva nota'), icon: 'document-text-outline', onPress: newNote },
+        { label: t('Exportar notas en PDF'), icon: 'share-outline', onPress: () => exportSubjectPdf(subject.name, iconChar(subject.icon, '📘'), notes).catch((e) => notify(t('No se pudo exportar'), friendlyError(e))) },
+        { label: t('Archivar materia'), icon: 'archive-outline', danger: true, onPress: () => setEditModal({}) },
       ]} />
     </>
   );
@@ -250,8 +251,8 @@ function MateriaDetalle() {
               onDeleted={(n) => { setNotes((xs) => xs.filter((x) => x.id !== n.id)); setOpenNote(null); router.setParams({ nota: undefined } as any); }} />
           ) : (
             <View style={{ flex: 1, justifyContent: 'center' }}>
-              <EmptyState icon="document-text-outline" title="Tus apuntes de esta materia van aquí" text="Escribe una nota con fórmulas, tablas e imágenes, o digitaliza una página de tu cuaderno."
-                action={{ label: 'Nueva nota', icon: 'add', onPress: newNote }} />
+              <EmptyState icon="document-text-outline" title={t('Tus apuntes de esta materia van aquí')} text={t('Escribe una nota con fórmulas, tablas e imágenes, o digitaliza una página de tu cuaderno.')}
+                action={{ label: t('Nueva nota'), icon: 'add', onPress: newNote }} />
             </View>
           )}
         </View>
@@ -294,12 +295,12 @@ function MateriaDetalle() {
         {nextCls?.now && (
           <Pressable onPress={classNote} accessibilityRole="button" style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 14, backgroundColor: hovered ? subject.color + '30' : subject.color + '1c', borderWidth: 1, borderColor: subject.color + '66' })}>
             <Ionicons name="create-outline" size={18} color={subject.color} />
-            <Text style={{ color: C.text, fontSize: 14, fontWeight: '700', flex: 1 }}>{work ? `Reunión de ${subject.name} ahora · Abrir las notas de hoy` : `Clase de ${subject.name} ahora · Abrir apuntes de hoy`}</Text>
+            <Text style={{ color: C.text, fontSize: 14, fontWeight: '700', flex: 1 }}>{work ? t('Reunión de {name} ahora · Abrir las notas de hoy', { name: subject.name }) : t('Clase de {name} ahora · Abrir apuntes de hoy', { name: subject.name })}</Text>
             <Ionicons name="chevron-forward" size={16} color={C.muted} />
           </Pressable>
         )}
         {!work && <GoalRow goal={goal} accent={subject.color} onPress={() => setWoop(true)} />}
-        {!work && <PrepRow text={prepText(quizzes) ?? (notes.length ? 'Ponte a prueba antes del parcial: un simulacro con preguntas de tus notas.' : null)}
+        {!work && <PrepRow text={prepText(quizzes) ?? (notes.length ? t('Ponte a prueba antes del parcial: un simulacro con preguntas de tus notas.') : null)}
           plan={examSessions.length ? planProgress(examSessions).text : null} accent={subject.color}
           onSim={() => router.push({ pathname: '/simulacro', params: { materia: subject.id } } as any)} />}
         <SubjectTabs value={tab} onChange={setTab} counts={counts} accent={subject.color} pills={!isWide} short={!isWide} />
@@ -325,16 +326,16 @@ function GoalRow({ goal, accent, onPress }: { goal: Goal | null; accent: string;
     return (
       <Pressable onPress={onPress} accessibilityRole="button" style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', paddingHorizontal: 12, minHeight: 34, borderRadius: 99, borderWidth: 1, borderStyle: 'dashed', borderColor: C.line, backgroundColor: hovered ? C.surface2 : 'transparent' })}>
         <Ionicons name="flag-outline" size={15} color={accent} />
-        <Text style={{ color: C.text, fontSize: 13, fontWeight: '600' }}>Ponerte una meta</Text>
+        <Text style={{ color: C.text, fontSize: 13, fontWeight: '600' }}>{t('Ponerte una meta')}</Text>
       </Pressable>
     );
   }
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`Meta: ${goal.wish}. Editar`}
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={t('Meta: {wish}. Editar', { wish: goal.wish })}
       style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 12, paddingHorizontal: 14, borderRadius: 14, borderWidth: 1, borderColor: accent + '55', backgroundColor: hovered ? C.surface2 : accent + '10' })}>
       <Ionicons name="flag" size={18} color={accent} style={{ marginTop: 1 }} />
       <View style={{ flex: 1, gap: 2 }}>
-        <Text style={{ color: C.text, fontSize: 14, fontWeight: '700' }}>Meta: {goal.wish}</Text>
+        <Text style={{ color: C.text, fontSize: 14, fontWeight: '700' }}>{t('Meta: {wish}', { wish: goal.wish })}</Text>
         {!!goal.plan && <Text style={{ color: C.muted, fontSize: 12.5, fontStyle: 'italic' }}>{goal.plan}</Text>}
       </View>
       <Ionicons name="create-outline" size={16} color={C.muted} />
@@ -354,7 +355,7 @@ function PrepRow({ text, plan, accent, onSim }: { text: string | null; plan: str
       </View>
       <Pressable onPress={onSim} accessibilityRole="button" style={({ hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, minHeight: 36, borderRadius: 10, borderWidth: 1, borderColor: C.line, backgroundColor: hovered ? C.surface2 : 'transparent' })}>
         <Ionicons name="play-outline" size={15} color={C.brand} />
-        <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>Hacer simulacro</Text>
+        <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{t('Hacer simulacro')}</Text>
       </Pressable>
     </View>
   );
@@ -376,43 +377,41 @@ function Grades({ subject, grades, avg, doneWeight, scale, passMark, target, onA
       <Card style={{ marginBottom: 14 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 12 }}>
           <View>
-            <Text style={{ color: C.muted, fontSize: 12.5 }}>Promedio actual</Text>
-            <Text style={{ color: C.text, fontSize: 32, fontWeight: '800' }}>{avg == null ? 'Sin notas' : avg.toFixed(2)}{avg != null && <Text style={{ color: C.muted, fontSize: 15, fontWeight: '600' }}> / {scale}</Text>}</Text>
+            <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Promedio actual')}</Text>
+            <Text style={{ color: C.text, fontSize: 32, fontWeight: '800' }}>{avg == null ? t('Sin notas') : avg.toFixed(2)}{avg != null && <Text style={{ color: C.muted, fontSize: 15, fontWeight: '600' }}> / {scale}</Text>}</Text>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
-            <Text style={{ color: C.muted, fontSize: 12.5 }}>Calificado</Text>
+            <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Calificado')}</Text>
             <Text style={{ color: C.text, fontSize: 18, fontWeight: '700' }}>{doneWeight}%</Text>
           </View>
         </View>
         {/* Barra del semestre: lo calificado, lo pendiente y lo que falta registrar. */}
-        <View style={{ height: 10, borderRadius: 8, backgroundColor: C.surface2, flexDirection: 'row', overflow: 'hidden' }} accessibilityLabel={`Calificado ${doneWeight}%, pendiente ${Math.max(0, totalWeight - doneWeight)}%, sin registrar ${missing}%`}>
+        <View style={{ height: 10, borderRadius: 8, backgroundColor: C.surface2, flexDirection: 'row', overflow: 'hidden' }} accessibilityLabel={t('Calificado {doneWeight}%, pendiente {max}%, sin registrar {missing}%', { doneWeight, max: Math.max(0, totalWeight - doneWeight), missing })}>
           <View style={{ width: `${Math.min(100, doneWeight)}%`, backgroundColor: subject.color }} />
           <View style={{ width: `${Math.min(100, Math.max(0, totalWeight - doneWeight))}%`, backgroundColor: subject.color + '55' }} />
         </View>
         <View style={{ flexDirection: 'row', gap: 14, marginTop: 8, flexWrap: 'wrap' }}>
           <Legend color={subject.color} text={`Calificado ${doneWeight}%`} />
-          {totalWeight - doneWeight > 0 && <Legend color={subject.color + '55'} text={`Por calificar ${totalWeight - doneWeight}%`} />}
-          {missing > 0 && <Legend color={C.surface2} text={`Sin registrar ${missing}%`} />}
+          {totalWeight - doneWeight > 0 && <Legend color={subject.color + '55'} text={t('Por calificar {v}%', { v: totalWeight - doneWeight })} />}
+          {missing > 0 && <Legend color={C.surface2} text={t('Sin registrar {missing}%', { missing })} />}
         </View>
         <Simulator key={String(target ?? '')} grades={grades} scale={scale} passMark={target ?? passMark} />
       </Card>
       {missing > 0 && grades.length > 0 && (
-        <Text style={{ color: C.muted, fontSize: 13, marginBottom: 6, lineHeight: 18 }}>
-          Te falta registrar el {missing}% de la nota. Agrega las evaluaciones que faltan (aunque no tengan nota) para que el cálculo sea exacto.
-        </Text>
+        <Text style={{ color: C.muted, fontSize: 13, marginBottom: 6, lineHeight: 18 }}>{t('Te falta registrar el {missing}% de la nota. Agrega las evaluaciones que faltan (aunque no tengan nota) para que el cálculo sea exacto.', { missing })}</Text>
       )}
-      <SectionLabel text="Evaluaciones" count={grades.length} right={<Button label="Agregar" icon="add" size="sm" kind="secondary" onPress={onAdd} />} />
-      {grades.length === 0 && <EmptyState compact icon="ribbon-outline" title="Sin evaluaciones" text="Agrega los parciales, talleres y quices con su peso. Puedes dejar la nota vacía hasta que te la den." />}
+      <SectionLabel text={t('Evaluaciones')} count={grades.length} right={<Button label={t('Agregar')} icon="add" size="sm" kind="secondary" onPress={onAdd} />} />
+      {grades.length === 0 && <EmptyState compact icon="ribbon-outline" title={t('Sin evaluaciones')} text={t('Agrega los parciales, talleres y quices con su peso. Puedes dejar la nota vacía hasta que te la den.')} />}
       {grades.map((g) => (
-        <Card key={g.id} style={{ marginBottom: 8, paddingVertical: 12 }} onPress={() => onEdit(g)} accessibilityLabel={`Editar ${g.name}`}>
+        <Card key={g.id} style={{ marginBottom: 8, paddingVertical: 12 }} onPress={() => onEdit(g)} accessibilityLabel={t('Editar {name}', { name: g.name })}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <View style={{ flex: 1 }}>
               <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '700' }}>{g.name}</Text>
-              <Text style={{ color: C.muted, fontSize: 12.5 }}>Peso {g.weight}%{g.score != null ? ` · aporta ${((g.score / g.max_score) * scale * g.weight / 100).toFixed(2)}` : ''}</Text>
+              <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Peso {weight}%{v}', { weight: g.weight, v: g.score != null ? ` · aporta ${((g.score / g.max_score) * scale * g.weight / 100).toFixed(2)}` : '' })}</Text>
             </View>
-            <Text style={{ color: g.score == null ? C.muted : g.score / g.max_score < 0.6 ? C.badText : C.text, fontSize: 16, fontWeight: '700' }}>{g.score == null ? 'Pendiente' : g.score}<Text style={{ color: C.muted, fontWeight: '500', fontSize: 13 }}>{g.score == null ? '' : ` / ${g.max_score}`}</Text></Text>
-            <IconButton icon="create-outline" label={`Editar ${g.name}`} onPress={() => onEdit(g)} />
-            <IconButton icon="trash-outline" label={`Borrar ${g.name}`} onPress={() => onRemove(g)} />
+            <Text style={{ color: g.score == null ? C.muted : g.score / g.max_score < 0.6 ? C.badText : C.text, fontSize: 16, fontWeight: '700' }}>{g.score == null ? t('Pendiente') : g.score}<Text style={{ color: C.muted, fontWeight: '500', fontSize: 13 }}>{g.score == null ? '' : ` / ${g.max_score}`}</Text></Text>
+            <IconButton icon="create-outline" label={t('Editar {name}', { name: g.name })} onPress={() => onEdit(g)} />
+            <IconButton icon="trash-outline" label={t('Borrar {name}', { name: g.name })} onPress={() => onRemove(g)} />
           </View>
           <View style={{ height: 5, backgroundColor: C.surface2, borderRadius: 6, marginTop: 6 }}>
             <View style={{ height: '100%', width: `${g.score == null ? 0 : Math.min(100, (g.score / g.max_score) * 100)}%`, backgroundColor: subject.color, borderRadius: 6 }} />
@@ -435,16 +434,16 @@ function Simulator({ grades, scale, passMark }: { grades: Grade[]; scale: number
   const [target, setTarget] = useState(passMark.toFixed(1));
   const t = parseFloat(target.replace(',', '.'));
   const { needed, remainingWeight } = neededFor(grades, isNaN(t) ? passMark : t, scale);
-  let msg = 'Ya están todas las notas.';
+  let msg = trn('Ya están todas las notas.');
   if (remainingWeight > 0 && needed != null) {
-    if (needed <= 0) msg = `Ya aseguraste el ${isNaN(t) ? passMark : t}. Bien hecho.`;
-    else if (needed > scale) msg = `Con el ${remainingWeight}% que falta no alcanza para ${t}. El máximo posible es menor.`;
-    else msg = `Necesitas ${needed.toFixed(2)} en promedio en el ${remainingWeight}% que falta.`;
+    if (needed <= 0) msg = trn('Ya aseguraste el {v}. Bien hecho.', { v: isNaN(t) ? passMark : t });
+    else if (needed > scale) msg = trn('Con el {remainingWeight}% que falta no alcanza para {t}. El máximo posible es menor.', { remainingWeight, t });
+    else msg = trn('Necesitas {toFixed} en promedio en el {remainingWeight}% que falta.', { toFixed: needed.toFixed(2), remainingWeight });
   }
   return (
     <View style={{ marginTop: 14, flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-      <Text style={{ color: C.muted, fontSize: 13.5 }}>Quiero sacar</Text>
-      <TextInput value={target} onChangeText={setTarget} keyboardType="decimal-pad" accessibilityLabel="Nota final deseada"
+      <Text style={{ color: C.muted, fontSize: 13.5 }}>{trn('Quiero sacar')}</Text>
+      <TextInput value={target} onChangeText={setTarget} keyboardType="decimal-pad" accessibilityLabel={trn('Nota final deseada')}
         style={{ width: 64, textAlign: 'center', backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 8, color: C.text, padding: 8, fontSize: 15, fontWeight: '700' }} />
       <Text style={{ color: C.text, fontSize: 13.5, flex: 1, minWidth: 200 }}>{msg}</Text>
     </View>

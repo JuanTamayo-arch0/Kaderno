@@ -18,14 +18,15 @@ import { getDiary } from '../../lib/dayDb';
 import { slotLabel } from '../../lib/planSlots';
 import { toast, notify, friendlyError } from '../../lib/feedback';
 import { dataChanged, streakChanged } from '../../lib/uiBus';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Ritual del lunes (v20, sección J.1), 3 minutos en cuatro pasos:
 //  tu semana, lo importante, ¿cuándo? y la meta de días.
 // ============================================================
 
-const STEPS = ['Tu semana', 'Lo importante', '¿Cuándo?', 'Tu meta'];
-const DAY = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const STEPS = [t('Tu semana'), t('Lo importante'), t('¿Cuándo?'), t('Tu meta')];
+const DAY = [t('Dom'), t('Lun'), t('Mar'), t('Mié'), t('Jue'), t('Vie'), t('Sáb')];
 const dayLabel = (iso: string) => { const d = new Date(iso + 'T12:00:00'); return `${DAY[d.getDay()]} ${d.getDate()}`; };
 
 export function WeekRitual({ visible, weekStart, onClose, onDone }: { visible: boolean; weekStart: string; onClose: () => void; onDone: () => void }) {
@@ -84,13 +85,13 @@ export function WeekRitual({ visible, weekStart, onClose, onDone }: { visible: b
 
   const togglePrio = (t: Task) => setPrio((list) => {
     if (list.some((p) => p.kind === 'task' && p.taskId === t.id)) return list.filter((p) => !(p.kind === 'task' && p.taskId === t.id));
-    if (list.length >= 3) { toast('Máximo 3: lo importante es poco.'); return list; }
+    if (list.length >= 3) { toast(trn('Máximo 3: lo importante es poco.')); return list; }
     return [...list, { kind: 'task', taskId: t.id, title: t.title }];
   });
   const addText = () => {
     const v = text.trim();
     if (!v) return;
-    if (prio.length >= 3) { toast('Máximo 3: lo importante es poco.'); return; }
+    if (prio.length >= 3) { toast(t('Máximo 3: lo importante es poco.')); return; }
     setPrio((l) => [...l, { kind: 'text', title: v }]); setText('');
   };
 
@@ -105,10 +106,10 @@ export function WeekRitual({ visible, weekStart, onClose, onDone }: { visible: b
       }
       await saveWeekPlan(weekStart, { priorities: list, goal_days: goal, done_at: new Date().toISOString(), snoozed_until: null });
       await saveStudyPrefs({ weeklyGoal: goal }).catch(() => {});
-      toast('Semana planeada. Tus prioridades quedan arriba en Hoy.', { tone: 'good' });
+      toast(t('Semana planeada. Tus prioridades quedan arriba en Hoy.'), { tone: 'good' });
       dataChanged(); streakChanged(0);
       onDone(); onClose();
-    } catch (e) { notify('No se pudo guardar', friendlyError(e)); }
+    } catch (e) { notify(t('No se pudo guardar'), friendlyError(e)); }
     finally { setBusy(false); }
   }
 
@@ -118,7 +119,7 @@ export function WeekRitual({ visible, weekStart, onClose, onDone }: { visible: b
     <>
       {summary && (
         <View style={{ padding: 12, borderRadius: 12, backgroundColor: C.surface2, gap: 4 }}>
-          <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>La semana pasada</Text>
+          <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>{t('La semana pasada')}</Text>
           <Text style={{ color: C.text, fontSize: 13.5 }}>{summary.text}</Text>
           {!!summary.vs && <Text style={{ color: C.muted, fontSize: 13 }}>{summary.vs}</Text>}
           {!!balance && <Text style={{ color: C.muted, fontSize: 13 }}>{balance}</Text>}
@@ -131,21 +132,21 @@ export function WeekRitual({ visible, weekStart, onClose, onDone }: { visible: b
       )}
       {someday.length > 0 && (
         <View style={{ gap: 6 }}>
-          <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700' }}>De "Algún día": ¿rescatas alguna o la sueltas?</Text>
+          <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700' }}>{t('De "Algún día": ¿rescatas alguna o la sueltas?')}</Text>
           {someday.map((t) => <SomedayRow key={t.id} t={t} onDone={(id) => setGoneSomeday((g) => new Set(g).add(id))} />)}
         </View>
       )}
       {diary.length > 0 && (
         <View style={{ gap: 4 }}>
-          <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>Lo que aprendiste</Text>
+          <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>{t('Lo que aprendiste')}</Text>
           {diary.slice(-5).map((d) => <Text key={d.day} style={{ color: C.muted, fontSize: 13 }}>{dayLabel(d.day)}: <Text style={{ color: C.text }}>{d.note}</Text></Text>)}
         </View>
       )}
-      <Group title={`Esta semana${classes ? ` · ${classes} ${classes === 1 ? 'clase' : 'clases'}` : ''}`} rows={items.thisWeek} empty="Nada con fecha esta semana." />
-      <Group title="La próxima" rows={items.nextWeek} empty="Nada con fecha la próxima semana." />
+      <Group title={t('Esta semana{v}', { v: classes ? ` · ${classes} ${classes === 1 ? 'clase' : 'clases'}` : '' })} rows={items.thisWeek} empty={t('Nada con fecha esta semana.')} />
+      <Group title={t('La próxima')} rows={items.nextWeek} empty={t('Nada con fecha la próxima semana.')} />
       {goals.length > 0 && (
         <View style={{ gap: 6 }}>
-          <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>Tus metas</Text>
+          <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>{t('Tus metas')}</Text>
           {goals.slice(0, 3).map((g) => (
             <View key={g.id} style={{ gap: 2 }}>
               <Text style={{ color: C.text, fontSize: 13.5 }}>{g.wish}</Text>
@@ -158,7 +159,7 @@ export function WeekRitual({ visible, weekStart, onClose, onDone }: { visible: b
   );
   else if (step === 1) body = (
     <>
-      <Text style={{ color: C.text, fontSize: 14 }}>Elige hasta 3 cosas que, si las haces, la semana valió la pena.</Text>
+      <Text style={{ color: C.text, fontSize: 14 }}>{t('Elige hasta 3 cosas que, si las haces, la semana valió la pena.')}</Text>
       {cands.map((t) => {
         const on = prio.some((p) => p.kind === 'task' && p.taskId === t.id);
         return (
@@ -174,20 +175,20 @@ export function WeekRitual({ visible, weekStart, onClose, onDone }: { visible: b
         <View key={'t' + i} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 11, borderRadius: 12, borderWidth: 1, borderColor: C.brand, backgroundColor: C.brand + '14' }}>
           <Ionicons name="create-outline" size={18} color={C.brand} />
           <Text style={{ color: C.text, fontSize: 14, flex: 1 }}>{p.title}</Text>
-          <Pressable onPress={() => setPrio((l) => l.filter((x) => x !== p))} accessibilityLabel={`Quitar ${p.title}`} hitSlop={8}><Ionicons name="close" size={18} color={C.muted} /></Pressable>
+          <Pressable onPress={() => setPrio((l) => l.filter((x) => x !== p))} accessibilityLabel={t('Quitar {title}', { title: p.title })} hitSlop={8}><Ionicons name="close" size={18} color={C.muted} /></Pressable>
         </View>
       ))}
       <View style={{ flexDirection: 'row', gap: 8 }}>
-        <TextInput value={text} onChangeText={setText} onSubmitEditing={addText} placeholder="Otra cosa (ej: ir a asesoría de Cálculo)" placeholderTextColor={C.muted} maxLength={120}
-          accessibilityLabel="Escribir otra prioridad" style={{ flex: 1, backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 12, color: C.text, padding: 11, fontSize: 14 }} />
-        <Button label="Agregar" kind="secondary" size="sm" onPress={addText} />
+        <TextInput value={text} onChangeText={setText} onSubmitEditing={addText} placeholder={t('Otra cosa (ej: ir a asesoría de Cálculo)')} placeholderTextColor={C.muted} maxLength={120}
+          accessibilityLabel={t('Escribir otra prioridad')} style={{ flex: 1, backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 12, color: C.text, padding: 11, fontSize: 14 }} />
+        <Button label={t('Agregar')} kind="secondary" size="sm" onPress={addText} />
       </View>
-      <Text style={{ color: C.muted, fontSize: 12.5 }}>{prio.length} de 3</Text>
+      <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('{length} de 3', { length: prio.length })}</Text>
     </>
   );
   else if (step === 2) body = (
     <>
-      {prio.length === 0 && <Text style={{ color: C.muted, fontSize: 13.5 }}>No elegiste prioridades. Puedes seguir o volver atrás.</Text>}
+      {prio.length === 0 && <Text style={{ color: C.muted, fontSize: 13.5 }}>{t('No elegiste prioridades. Puedes seguir o volver atrás.')}</Text>}
       {prio.map((p, i) => (
         <View key={i} style={{ gap: 8, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: C.line }}>
           <Text style={{ color: C.text, fontSize: 14, fontWeight: '700' }}>{p.title}</Text>
@@ -202,7 +203,7 @@ export function WeekRitual({ visible, weekStart, onClose, onDone }: { visible: b
                 </Pressable>
               );
             })}
-            {opts[i] && opts[i].length === 0 && <Text style={{ color: C.muted, fontSize: 12.5 }}>Sin huecos libres antes de la entrega.</Text>}
+            {opts[i] && opts[i].length === 0 && <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Sin huecos libres antes de la entrega.')}</Text>}
           </View>
         </View>
       ))}
@@ -210,26 +211,26 @@ export function WeekRitual({ visible, weekStart, onClose, onDone }: { visible: b
   );
   else body = (
     <>
-      <Text style={{ color: C.text, fontSize: 14 }}>¿Cuántos días vas a estudiar algo esta semana?</Text>
+      <Text style={{ color: C.text, fontSize: 14 }}>{t('¿Cuántos días vas a estudiar algo esta semana?')}</Text>
       <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }} accessibilityRole="radiogroup">
         {[2, 3, 4, 5, 6, 7].map((n) => (
-          <Pressable key={n} onPress={() => setGoal(n)} accessibilityRole="radio" accessibilityState={{ checked: goal === n }} accessibilityLabel={`${n} días`}
+          <Pressable key={n} onPress={() => setGoal(n)} accessibilityRole="radio" accessibilityState={{ checked: goal === n }} accessibilityLabel={t('{n} días', { n })}
             style={{ minWidth: 48, minHeight: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 99, borderWidth: 1, borderColor: goal === n ? C.brand : C.line, backgroundColor: goal === n ? C.brand : 'transparent' }}>
             <Text style={{ color: goal === n ? C.onBrand : C.text, fontSize: 15, fontWeight: '700' }}>{n}</Text>
           </Pressable>
         ))}
       </View>
-      <Text style={{ color: C.muted, fontSize: 12.5 }}>Un día cuenta con 10 min de enfoque, 1 tarea o 10 tarjetas. Mejor una meta que cumplas que una que te pese.</Text>
+      <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Un día cuenta con 10 min de enfoque, 1 tarea o 10 tarjetas. Mejor una meta que cumplas que una que te pese.')}</Text>
     </>
   );
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Planea tu semana" subtitle={`Paso ${step + 1} de 4 · ${STEPS[step]}`}
+    <Sheet visible={visible} onClose={onClose} title={t('Planea tu semana')} subtitle={t('Paso {v} de 4 · {v2}', { v: step + 1, v2: STEPS[step] })}
       footer={<>
-        <Button label={step === 0 ? 'Cerrar' : 'Atrás'} kind="secondary" onPress={() => (step === 0 ? onClose() : setStep(step - 1))} style={{ flex: 1 }} />
+        <Button label={step === 0 ? t('Cerrar') : t('Atrás')} kind="secondary" onPress={() => (step === 0 ? onClose() : setStep(step - 1))} style={{ flex: 1 }} />
         {step < 3
-          ? <Button label="Siguiente" icon="arrow-forward" onPress={() => setStep(step + 1)} disabled={!tasks} style={{ flex: 2 }} />
-          : <Button label="Listo" icon="checkmark" onPress={finish} busy={busy} style={{ flex: 2 }} />}
+          ? <Button label={t('Siguiente')} icon="arrow-forward" onPress={() => setStep(step + 1)} disabled={!tasks} style={{ flex: 2 }} />
+          : <Button label={t('Listo')} icon="checkmark" onPress={finish} busy={busy} style={{ flex: 2 }} />}
       </>}>
       <View style={{ flexDirection: 'row', gap: 6 }}>
         {STEPS.map((_, i) => <View key={i} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: i <= step ? C.brand : C.surface2 }} />)}
@@ -251,7 +252,7 @@ function Group({ title, rows, empty }: { title: string; rows: Task[]; empty: str
           {['examen', 'quiz'].includes(String(t.type)) && <Text style={{ color: C.badText, fontSize: 11.5, fontWeight: '800' }}>{t.type === 'quiz' ? 'QUIZ' : 'EXAMEN'}</Text>}
         </View>
       ))}
-      {rows.length > 8 && <Text style={{ color: C.muted, fontSize: 12.5 }}>y {rows.length - 8} más</Text>}
+      {rows.length > 8 && <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('y {v} más', { v: rows.length - 8 })}</Text>}
     </View>
   );
 }

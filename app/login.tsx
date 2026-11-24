@@ -12,6 +12,7 @@ import { C, currentTheme, inkOn, RAD } from '../lib/theme';
 import { BRAND } from '../lib/brand';
 import { KadernoWordmark } from '../components/brand/KadernoLogo';
 import { KadernoWrites } from '../components/brand/KadernoWrites';
+import { t } from '../lib/i18n';
 
 type Mode = 'in' | 'up';
 
@@ -19,27 +20,27 @@ type Mode = 'in' | 'up';
 // "entrar" y "crear cuenta" no se confundan nunca.
 const COPY = {
   in: {
-    title: 'Hola de nuevo',
-    sub: 'Entra para seguir donde lo dejaste.',
-    cta: 'Entrar',
+    title: t('Hola de nuevo'),
+    sub: t('Entra para seguir donde lo dejaste.'),
+    cta: t('Entrar'),
     icon: 'log-in-outline' as const,
-    panelTitle: 'Tu semestre, bajo control.',
-    panelSub: 'Sigue donde lo dejaste: tus tareas, apuntes y horario te esperan.',
+    panelTitle: t('Tu semestre, bajo control.'),
+    panelSub: t('Sigue donde lo dejaste: tus tareas, apuntes y horario te esperan.'),
   },
   up: {
-    title: 'Crea tu cuenta',
-    sub: 'Organiza tus materias en menos de un minuto.',
-    cta: 'Crear cuenta',
+    title: t('Crea tu cuenta'),
+    sub: t('Organiza tus materias en menos de un minuto.'),
+    cta: t('Crear cuenta'),
     icon: 'sparkles-outline' as const,
-    panelTitle: 'Empieza gratis hoy.',
-    panelSub: 'Sin tarjeta. Tus datos se guardan y se sincronizan entre dispositivos.',
+    panelTitle: t('Empieza gratis hoy.'),
+    panelSub: t('Sin tarjeta. Tus datos se guardan y se sincronizan entre dispositivos.'),
   },
 };
 
 const FEATURES = [
-  { icon: 'calendar-outline' as const, t: 'Todo lo que entregas, en una sola vista' },
-  { icon: 'camera-outline' as const, t: 'Digitaliza apuntes con la cámara' },
-  { icon: 'sparkles-outline' as const, t: 'El Oráculo responde sobre tus materias' },
+  { icon: 'calendar-outline' as const, t: t('Todo lo que entregas, en una sola vista') },
+  { icon: 'camera-outline' as const, t: t('Digitaliza apuntes con la cámara') },
+  { icon: 'sparkles-outline' as const, t: t('El Oráculo responde sobre tus materias') },
 ];
 
 function strengthOf(pw: string): { score: number; label: string; color: string } {
@@ -49,11 +50,11 @@ function strengthOf(pw: string): { score: number; label: string; color: string }
   if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) s++;
   if (/\d/.test(pw) || /[^A-Za-z0-9]/.test(pw)) s++;
   const map = [
-    { label: 'Muy débil', color: C.bad },
-    { label: 'Débil', color: C.bad },
-    { label: 'Aceptable', color: C.warn },
-    { label: 'Buena', color: C.good },
-    { label: 'Excelente', color: C.good },
+    { label: t('Muy débil'), color: C.bad },
+    { label: t('Débil'), color: C.bad },
+    { label: t('Aceptable'), color: C.warn },
+    { label: t('Buena'), color: C.good },
+    { label: t('Excelente'), color: C.good },
   ];
   return { score: s, ...map[s] };
 }
@@ -98,11 +99,11 @@ export default function Login() {
   }
 
   function validate(): string | null {
-    if (!SUPABASE_READY) return 'La app no tiene configurado Supabase. Revisa kaderno-config.js en el servidor.';
-    if (mode === 'up' && !name.trim()) return 'Escribe tu nombre.';
-    if (!/^\S+@\S+\.\S+$/.test(email.trim())) return 'Ese correo no parece válido.';
-    if (password.length < 6) return 'La contraseña debe tener al menos 6 caracteres.';
-    if (mode === 'up' && password !== confirm) return 'Las contraseñas no coinciden.';
+    if (!SUPABASE_READY) return t('La app no tiene configurado Supabase. Revisa kaderno-config.js en el servidor.');
+    if (mode === 'up' && !name.trim()) return t('Escribe tu nombre.');
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) return t('Ese correo no parece válido.');
+    if (password.length < 6) return t('La contraseña debe tener al menos 6 caracteres.');
+    if (mode === 'up' && password !== confirm) return t('Las contraseñas no coinciden.');
     return null;
   }
 
@@ -124,7 +125,7 @@ export default function Login() {
         if (data.user && !data.session) setSent(true);
       }
     } catch (e: any) {
-      setMsg({ kind: 'error', text: traducirError(e?.message ?? 'No se pudo autenticar') });
+      setMsg({ kind: 'error', text: traducirError(e?.message ?? t('No se pudo autenticar')) });
     } finally {
       setBusy(false);
     }
@@ -132,7 +133,7 @@ export default function Login() {
 
   async function recuperar() {
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
-      setMsg({ kind: 'error', text: 'Escribe tu correo arriba y vuelve a tocar aquí.' });
+      setMsg({ kind: 'error', text: t('Escribe tu correo arriba y vuelve a tocar aquí.') });
       return;
     }
     setBusy(true);
@@ -140,9 +141,9 @@ export default function Login() {
       const redirectTo = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : undefined;
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
       if (error) throw error;
-      setMsg({ kind: 'ok', text: 'Te enviamos un enlace para restablecer la contraseña.' });
+      setMsg({ kind: 'ok', text: t('Te enviamos un enlace para restablecer la contraseña.') });
     } catch (e: any) {
-      setMsg({ kind: 'error', text: traducirError(e?.message ?? 'No se pudo enviar el correo') });
+      setMsg({ kind: 'error', text: traducirError(e?.message ?? t('No se pudo enviar el correo')) });
     } finally { setBusy(false); }
   }
 
@@ -163,7 +164,7 @@ export default function Login() {
       <KadernoWrites size={mark} tone="papel" replay={replay} />
       <View style={{ flexShrink: 1 }}>
         <KadernoWordmark size={word} color="#fff" style={{ lineHeight: Math.round(word * 1.05) }} />
-        <Text style={{ color: 'rgba(255,255,255,0.78)', fontSize: Math.max(13, Math.round(word * 0.24)), marginTop: 4 }}>Tus tareas, apuntes, horario y estudio.</Text>
+        <Text style={{ color: 'rgba(255,255,255,0.78)', fontSize: Math.max(13, Math.round(word * 0.24)), marginTop: 4 }}>{t('Tus tareas, apuntes, horario y estudio.')}</Text>
       </View>
     </View>
   );
@@ -173,15 +174,15 @@ export default function Login() {
     <View style={{ backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)', gap: 11 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <Ionicons name="today-outline" size={15} color="#fff" />
-        <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800', flex: 1 }}>Hoy</Text>
+        <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800', flex: 1 }}>{t('Hoy')}</Text>
         <View style={{ backgroundColor: 'rgba(242,103,78,0.22)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
-          <Text style={{ color: '#FFB4A6', fontSize: 10.5, fontWeight: '700' }}>2 pendientes</Text>
+          <Text style={{ color: '#FFB4A6', fontSize: 10.5, fontWeight: '700' }}>{t('2 pendientes')}</Text>
         </View>
       </View>
       {[
-        { t: 'Cálculo II · Taller 3', d: 'Mañana', done: false },
-        { t: 'Química · Informe de lab', d: 'Viernes', done: false },
-        { t: 'Historia · Lectura cap. 4', d: 'Hecho', done: true },
+        { t: t('Cálculo II · Taller 3'), d: t('Mañana'), done: false },
+        { t: t('Química · Informe de lab'), d: t('Viernes'), done: false },
+        { t: 'Historia · Lectura cap. 4', d: t('Hecho'), done: true },
       ].map((r) => (
         <View key={r.t} style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
           <View style={{ width: 16, height: 16, borderRadius: 8, borderWidth: 1.5, borderColor: r.done ? BRAND.margin : 'rgba(255,255,255,0.6)',
@@ -233,13 +234,13 @@ export default function Login() {
       <View style={{ width: 68, height: 68, borderRadius: 34, backgroundColor: C.good + '22', alignItems: 'center', justifyContent: 'center' }}>
         <Ionicons name="mail-open-outline" size={30} color={C.goodText} />
       </View>
-      <Text style={{ color: C.text, fontSize: 20, fontWeight: '800', marginTop: 16 }}>Revisa tu correo</Text>
+      <Text style={{ color: C.text, fontSize: 20, fontWeight: '800', marginTop: 16 }}>{t('Revisa tu correo')}</Text>
       <Text style={{ color: C.muted, fontSize: 14, textAlign: 'center', marginTop: 8, lineHeight: 20 }}>
-        Te enviamos un enlace de confirmación a{'\n'}
+        {t('Te enviamos un enlace de confirmación a')}{'\n'}
         <Text style={{ color: C.text, fontWeight: '700' }}>{email}</Text>
       </Text>
       <Pressable onPress={() => { setSent(false); switchMode('in'); }} style={{ marginTop: 22 }}>
-        <Text style={{ color: accent, fontWeight: '700' }}>Volver a iniciar sesión</Text>
+        <Text style={{ color: accent, fontWeight: '700' }}>{t('Volver a iniciar sesión')}</Text>
       </Pressable>
     </View>
   );
@@ -255,25 +256,25 @@ export default function Login() {
           <Text style={{ color: C.muted, fontSize: 14.5, marginTop: 6, marginBottom: 20 }}>{copy.sub}</Text>
 
           {!SUPABASE_READY && (
-            <Banner kind="error" text="Falta configurar Supabase (kaderno-config.js o .env). El login no funcionará." />
+            <Banner kind="error" text={t('Falta configurar Supabase (kaderno-config.js o .env). El login no funcionará.')} />
           )}
           {msg && <Banner kind={msg.kind} text={msg.text} />}
 
           {mode === 'up' && (
-            <Field label="Nombre" icon="person-outline">
-              <Input value={name} onChangeText={setName} placeholder="Tu nombre" autoComplete="name" />
+            <Field label={t('Nombre')} icon="person-outline">
+              <Input value={name} onChangeText={setName} placeholder={t('Tu nombre')} autoComplete="name" />
             </Field>
           )}
 
-          <Field label="Correo" icon="mail-outline">
+          <Field label={t('Correo')} icon="mail-outline">
             <Input value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address"
               autoComplete="email" placeholder="tucorreo@ejemplo.com" enterKeyHint="next" />
           </Field>
 
-          <Field label="Contraseña" icon="lock-closed-outline">
+          <Field label={t('Contraseña')} icon="lock-closed-outline">
             <Input value={password} onChangeText={setPassword} secureTextEntry={!showPw}
               autoComplete={mode === 'in' ? 'current-password' : 'new-password'} placeholder="••••••••" onSubmitEditing={mode === 'in' ? submit : undefined} enterKeyHint={mode === 'in' ? 'go' : 'next'}
-              right={<Pressable onPress={() => setShowPw((v) => !v)} hitSlop={10} style={{ width: 40, height: 40, marginRight: -10, alignItems: 'center', justifyContent: 'center' }} accessibilityRole="button" accessibilityLabel={showPw ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
+              right={<Pressable onPress={() => setShowPw((v) => !v)} hitSlop={10} style={{ width: 40, height: 40, marginRight: -10, alignItems: 'center', justifyContent: 'center' }} accessibilityRole="button" accessibilityLabel={showPw ? t('Ocultar contraseña') : t('Mostrar contraseña')}>
                 <Ionicons name={showPw ? 'eye-off-outline' : 'eye-outline'} size={19} color={C.muted} />
               </Pressable>} />
           </Field>
@@ -290,8 +291,8 @@ export default function Login() {
                 <Text style={{ color: pwInfo.color, fontSize: 11.5, marginTop: 5, fontWeight: '600' }}>{pwInfo.label}</Text>
               )}
 
-              <Field label="Confirmar contraseña" icon="checkmark-done-outline">
-                <Input value={confirm} onChangeText={setConfirm} secureTextEntry={!showPw} placeholder="Repite la contraseña" onSubmitEditing={submit} enterKeyHint="go"
+              <Field label={t('Confirmar contraseña')} icon="checkmark-done-outline">
+                <Input value={confirm} onChangeText={setConfirm} secureTextEntry={!showPw} placeholder={t('Repite la contraseña')} onSubmitEditing={submit} enterKeyHint="go"
                   tone={confirm.length > 0 ? (confirm === password ? 'good' : 'bad') : undefined} />
               </Field>
             </>
@@ -299,7 +300,7 @@ export default function Login() {
 
           {mode === 'in' && (
             <Pressable onPress={recuperar} style={{ alignSelf: 'flex-end', marginTop: 12 }} hitSlop={8}>
-              <Text style={{ color: C.muted, fontSize: 13 }}>¿Olvidaste tu contraseña?</Text>
+              <Text style={{ color: C.muted, fontSize: 13 }}>{t('¿Olvidaste tu contraseña?')}</Text>
             </Pressable>
           )}
 
@@ -313,22 +314,21 @@ export default function Login() {
                 boxShadow: hovered && !busy ? `0 8px 22px ${accent}55` : `0 2px 8px ${accent}33` } as any : null),
             })}>
             {busy ? <ActivityIndicator color={inkOn(accent)} size="small" /> : <Ionicons name={copy.icon} size={18} color={inkOn(accent)} />}
-            <Text style={{ color: inkOn(accent), fontWeight: '800', fontSize: 15.5 }}>{busy ? 'Un momento…' : copy.cta}</Text>
+            <Text style={{ color: inkOn(accent), fontWeight: '800', fontSize: 15.5 }}>{busy ? t('Un momento…') : copy.cta}</Text>
           </Pressable>
 
           {mode === 'up' && (
             <Text style={{ color: C.muted, fontSize: 11.5, textAlign: 'center', marginTop: 14, lineHeight: 17 }}>
-              Al crear la cuenta aceptas que guardemos tus apuntes y tareas para sincronizarlos entre tus dispositivos.
-            </Text>
+              {t('Al crear la cuenta aceptas que guardemos tus apuntes y tareas para sincronizarlos entre tus dispositivos.')}</Text>
           )}
 
           <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 22 }}>
             <Text style={{ color: C.muted, fontSize: 13.5 }}>
-              {mode === 'in' ? '¿Aún no tienes cuenta?' : '¿Ya tienes cuenta?'}
+              {mode === 'in' ? t('¿Aún no tienes cuenta?') : t('¿Ya tienes cuenta?')}
             </Text>
             <Pressable onPress={() => switchMode(mode === 'in' ? 'up' : 'in')} hitSlop={6}>
               <Text style={{ color: accent, fontSize: 13.5, fontWeight: '800' }}>
-                {mode === 'in' ? 'Regístrate' : 'Entra'}
+                {mode === 'in' ? t('Regístrate') : t('Entra')}
               </Text>
             </Pressable>
           </View>
@@ -374,7 +374,7 @@ function ModeSwitch({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => voi
         return (
           <Pressable key={m} onPress={() => onChange(m)} accessibilityRole="tab" accessibilityState={{ selected: on }}
             style={{ flex: 1, paddingVertical: 11, borderRadius: 11, alignItems: 'center' }}>
-            <Text style={{ color: on ? C.text : C.muted, fontWeight: '800', fontSize: 14 }}>{m === 'in' ? 'Entrar' : 'Crear cuenta'}</Text>
+            <Text style={{ color: on ? C.text : C.muted, fontWeight: '800', fontSize: 14 }}>{m === 'in' ? t('Entrar') : t('Crear cuenta')}</Text>
           </Pressable>
         );
       })}
@@ -423,12 +423,12 @@ function Banner({ kind, text }: { kind: 'error' | 'ok'; text: string }) {
 // Traduce los errores más comunes de Supabase.
 function traducirError(m: string): string {
   const s = m.toLowerCase();
-  if (s.includes('invalid login credentials')) return 'Correo o contraseña incorrectos.';
-  if (s.includes('email not confirmed')) return 'Todavía no confirmaste tu correo. Revisa tu bandeja de entrada.';
-  if (s.includes('user already registered')) return 'Ya existe una cuenta con ese correo. Intenta entrar.';
-  if (s.includes('password should be')) return 'La contraseña debe tener al menos 6 caracteres.';
-  if (s.includes('failed to fetch') || s.includes('network')) return 'No hay conexión con el servidor. Revisa la configuración de Supabase.';
-  if (s.includes('rate limit') || s.includes('too many')) return 'Demasiados intentos. Espera un momento.';
+  if (s.includes('invalid login credentials')) return t('Correo o contraseña incorrectos.');
+  if (s.includes('email not confirmed')) return t('Todavía no confirmaste tu correo. Revisa tu bandeja de entrada.');
+  if (s.includes('user already registered')) return t('Ya existe una cuenta con ese correo. Intenta entrar.');
+  if (s.includes('password should be')) return t('La contraseña debe tener al menos 6 caracteres.');
+  if (s.includes('failed to fetch') || s.includes('network')) return t('No hay conexión con el servidor. Revisa la configuración de Supabase.');
+  if (s.includes('rate limit') || s.includes('too many')) return t('Demasiados intentos. Espera un momento.');
   return m;
 }
 

@@ -16,6 +16,7 @@ import { weeksLabel } from '../../lib/streaks';
 import { Countdown } from '../../components/day/Countdown';
 import { getTasks, type Task } from '../../lib/db';
 import { useMode } from '../../lib/mode';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Estudiar: Enfoque, Repaso y Oráculo en un solo lugar, más el avance
@@ -52,14 +53,14 @@ export default function Estudiar() {
   const R = 40, CIRC = 2 * Math.PI * R;
 
   return (
-    <Screen title={mv.studySection === 'Herramientas' ? 'Enfoque' : 'Estudiar'} subtitle={mv.studySection === 'Herramientas' ? 'Enfoque, horas y tu avance' : 'Enfoque, repaso y tu avance'} maxWidth={1100}>
+    <Screen title={mv.studySection === 'Herramientas' ? t('Enfoque') : t('Estudiar')} subtitle={mv.studySection === 'Herramientas' ? t('Enfoque, horas y tu avance') : t('Enfoque, repaso y tu avance')} maxWidth={1100}>
       <Countdown tasks={tasks} />
       {mv.studySection === 'Herramientas' ? (
-        <Card onPress={() => router.push('/horas' as any)} accessibilityLabel="Abrir registro de horas" style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+        <Card onPress={() => router.push('/horas' as any)} accessibilityLabel={t('Abrir registro de horas')} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 }}>
           <Ionicons name="time-outline" size={22} color={C.brand} />
           <View style={{ flex: 1 }}>
-            <Text style={{ color: C.text, fontSize: 15, fontWeight: '700' }}>Registro de horas</Text>
-            <Text style={{ color: C.muted, fontSize: 12.5 }}>Por proyecto y por {mv.subjectLower}, con informe para cobrar o reportar.</Text>
+            <Text style={{ color: C.text, fontSize: 15, fontWeight: '700' }}>{t('Registro de horas')}</Text>
+            <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Por proyecto y por {subjectLower}, con informe para cobrar o reportar.', { subjectLower: mv.subjectLower })}</Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={C.muted} />
         </Card>
@@ -68,37 +69,37 @@ export default function Estudiar() {
         {/* Enfoque */}
         <Card style={col}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-            <Pressable onPress={() => router.push('/enfoque')} accessibilityRole="button" accessibilityLabel="Abrir enfoque">
+            <Pressable onPress={() => router.push('/enfoque')} accessibilityRole="button" accessibilityLabel={t('Abrir enfoque')}>
               <View style={{ width: 100, height: 100, alignItems: 'center', justifyContent: 'center' }}>
                 <ProgressRing size={100} stroke={8} inset={6} frac={focus.frac} color={focus.state.mode === 'work' ? C.brand : C.good} track={C.surface2} />
                 <Text style={{ color: C.text, fontSize: 20, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{focus.label}</Text>
               </View>
             </Pressable>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: C.text, fontSize: 16, fontWeight: '700' }}>Enfoque</Text>
+              <Text style={{ color: C.text, fontSize: 16, fontWeight: '700' }}>{t('Enfoque')}</Text>
               <Text style={{ color: C.muted, fontSize: 13, marginTop: 2 }} numberOfLines={2}>
-                {focus.state.taskTitle ? `En: ${focus.state.taskTitle}` : focus.state.mode === 'work' ? `Pomodoro de ${focus.state.workMin} min` : 'Descanso'}
+                {focus.state.taskTitle ? t('En: {taskTitle}', { taskTitle: focus.state.taskTitle }) : focus.state.mode === 'work' ? t('Pomodoro de {workMin} min', { workMin: focus.state.workMin }) : t('Descanso')}
               </Text>
               <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-                <Button label={focus.state.running ? 'Pausar' : focus.remaining < focus.total ? 'Seguir' : 'Empezar'} icon={focus.state.running ? 'pause' : 'play'} size="sm"
+                <Button label={focus.state.running ? t('Pausar') : focus.remaining < focus.total ? t('Seguir') : t('Empezar')} icon={focus.state.running ? 'pause' : 'play'} size="sm"
                   onPress={() => focus.state.running ? pauseFocus() : startFocus()} />
-                {focus.remaining < focus.total && <Button label="Reiniciar" kind="secondary" size="sm" onPress={resetFocus} />}
-                <Button label="Opciones" kind="ghost" size="sm" onPress={() => router.push('/enfoque')} />
+                {focus.remaining < focus.total && <Button label={t('Reiniciar')} kind="secondary" size="sm" onPress={resetFocus} />}
+                <Button label={t('Opciones')} kind="ghost" size="sm" onPress={() => router.push('/enfoque')} />
               </View>
             </View>
           </View>
         </Card>
 
         {/* Repaso */}
-        <Card style={col} onPress={() => router.push('/repaso')} accessibilityLabel="Abrir repaso">
+        <Card style={col} onPress={() => router.push('/repaso')} accessibilityLabel={t('Abrir repaso')}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
             <View style={{ width: 52, height: 52, borderRadius: 14, backgroundColor: C.brand2 + '22', alignItems: 'center', justifyContent: 'center' }}>
               <Ionicons name="albums-outline" size={26} color={C.brand2} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: C.text, fontSize: 16, fontWeight: '700' }}>Repaso</Text>
+              <Text style={{ color: C.text, fontSize: 16, fontWeight: '700' }}>{t('Repaso')}</Text>
               <Text style={{ color: C.muted, fontSize: 13, marginTop: 2 }}>
-                {due ? `${due} ${due === 1 ? 'tarjeta toca' : 'tarjetas tocan'} hoy` : 'Nada para hoy. Crea tarjetas desde tus notas.'}
+                {due ? `${due} ${due === 1 ? t('tarjeta toca') : t('tarjetas tocan')} hoy` : t('Nada para hoy. Crea tarjetas desde tus notas.')}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={C.muted} />
@@ -109,45 +110,45 @@ export default function Estudiar() {
         <Card style={col}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <Ionicons name="sparkles-outline" size={20} color={C.brand} />
-            <Text style={{ color: C.text, fontSize: 16, fontWeight: '700', flex: 1 }}>Oráculo</Text>
-            <Pressable onPress={() => router.push('/oraculo')} accessibilityRole="link" style={{ paddingVertical: 10, paddingHorizontal: 8, marginVertical: -10, marginRight: -8 }}><Text style={{ color: C.brand, fontWeight: '700', fontSize: 13 }}>Abrir</Text></Pressable>
+            <Text style={{ color: C.text, fontSize: 16, fontWeight: '700', flex: 1 }}>{t('Oráculo')}</Text>
+            <Pressable onPress={() => router.push('/oraculo')} accessibilityRole="link" style={{ paddingVertical: 10, paddingHorizontal: 8, marginVertical: -10, marginRight: -8 }}><Text style={{ color: C.brand, fontWeight: '700', fontSize: 13 }}>{t('Abrir')}</Text></Pressable>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.surface2, borderRadius: 12, borderWidth: 1, borderColor: C.line, paddingLeft: 12 }}>
-            <TextInput value={q} onChangeText={setQ} onSubmitEditing={ask} enterKeyHint="send" placeholder="Pregunta algo sobre tus apuntes…" placeholderTextColor={C.muted} accessibilityLabel="Pregunta para el Oráculo"
+            <TextInput value={q} onChangeText={setQ} onSubmitEditing={ask} enterKeyHint="send" placeholder={t('Pregunta algo sobre tus apuntes…')} placeholderTextColor={C.muted} accessibilityLabel={t('Pregunta para el Oráculo')}
               style={[{ flex: 1, minWidth: 0, color: C.text, fontSize: 15, paddingVertical: 11, minHeight: 44 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
-            <Pressable onPress={ask} accessibilityLabel="Preguntar" style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+            <Pressable onPress={ask} accessibilityLabel={t('Preguntar')} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
               <Ionicons name="arrow-up-circle" size={26} color={q.trim() ? C.brand : C.muted} />
             </Pressable>
           </View>
         </Card>
 
         {/* Capturar */}
-        <Card style={col} onPress={() => router.push('/capturar')} accessibilityLabel="Digitalizar apunte">
+        <Card style={col} onPress={() => router.push('/capturar')} accessibilityLabel={t('Digitalizar apunte')}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
             <View style={{ width: 52, height: 52, borderRadius: 14, backgroundColor: C.brand + '1f', alignItems: 'center', justifyContent: 'center' }}>
               <Ionicons name="camera-outline" size={26} color={C.brand} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: C.text, fontSize: 16, fontWeight: '700' }}>Digitalizar apunte</Text>
-              <Text style={{ color: C.muted, fontSize: 13, marginTop: 2 }}>Foto o imagen a texto editable</Text>
+              <Text style={{ color: C.text, fontSize: 16, fontWeight: '700' }}>{t('Digitalizar apunte')}</Text>
+              <Text style={{ color: C.muted, fontSize: 13, marginTop: 2 }}>{t('Foto o imagen a texto editable')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={C.muted} />
           </View>
         </Card>
       </View>
 
-      <SectionLabel text="Tu semana" style={{ marginTop: 24 }} />
+      <SectionLabel text={t('Tu semana')} style={{ marginTop: 24 }} />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
         {streak.s && <StreakCard s={streak.s} onChanged={streak.reload} style={col} />}
         <Card style={col}>
           <View style={{ flexDirection: 'row', gap: 10 }}>
-            <Stat label="Hoy" value={short(detail.todayMin)} />
-            <Stat label="7 días" value={short(detail.weekMin)} />
+            <Stat label={t('Hoy')} value={short(detail.todayMin)} />
+            <Stat label={t('7 días')} value={short(detail.weekMin)} />
             {streak.s
-              ? <Stat label="Racha semanal" value={weeksLabel(streak.s.weekly)} tone={streak.s.weekly ? C.goodText : undefined} />
-              : <Stat label="Racha" value={`${detail.streak} ${detail.streak === 1 ? 'día' : 'días'}`} tone={detail.streak ? C.goodText : undefined} />}
+              ? <Stat label={t('Racha semanal')} value={weeksLabel(streak.s.weekly)} tone={streak.s.weekly ? C.goodText : undefined} />
+              : <Stat label={t('Racha')} value={`${detail.streak} ${detail.streak === 1 ? t('día') : t('días')}`} tone={detail.streak ? C.goodText : undefined} />}
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, height: 90, marginTop: 16 }} accessibilityLabel="Minutos de enfoque por día">
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, height: 90, marginTop: 16 }} accessibilityLabel={t('Minutos de enfoque por día')}>
             {detail.byDay.map((d, i) => (
               <View key={i} style={{ flex: 1, alignItems: 'center', gap: 5, height: '100%', justifyContent: 'flex-end' }}>
                 <View style={{ width: '60%', height: `${Math.max(4, (d.min / maxMin) * 100)}%`, backgroundColor: d.label === 'Hoy' ? C.brand : C.line, borderRadius: 5 }} />
@@ -162,7 +163,7 @@ export default function Estudiar() {
                 return (
                   <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <Dot color={s?.color ?? C.muted} />
-                    <Text style={{ color: C.text, fontSize: 13, flex: 1 }} numberOfLines={1}>{s?.name ?? 'Sin materia'}</Text>
+                    <Text style={{ color: C.text, fontSize: 13, flex: 1 }} numberOfLines={1}>{s?.name ?? t('Sin materia')}</Text>
                     <Text style={{ color: C.muted, fontSize: 13 }}>{fmtMin(r.minutes)}</Text>
                   </View>
                 );
@@ -174,10 +175,10 @@ export default function Estudiar() {
         <Card style={col}>
           <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
             <View>
-              <Text style={{ color: C.muted, fontSize: 12.5 }}>Promedio del semestre</Text>
-              <Text style={{ color: C.text, fontSize: 30, fontWeight: '800' }}>{sem.avg == null ? 'Sin notas' : sem.avg.toFixed(2)}<Text style={{ color: C.muted, fontSize: 14, fontWeight: '600' }}>{sem.avg == null ? '' : ' / 5'}</Text></Text>
+              <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Promedio del semestre')}</Text>
+              <Text style={{ color: C.text, fontSize: 30, fontWeight: '800' }}>{sem.avg == null ? t('Sin notas') : sem.avg.toFixed(2)}<Text style={{ color: C.muted, fontSize: 14, fontWeight: '600' }}>{sem.avg == null ? '' : ' / 5'}</Text></Text>
             </View>
-            <Text style={{ color: C.muted, fontSize: 12 }}>Ponderado por créditos</Text>
+            <Text style={{ color: C.muted, fontSize: 12 }}>{t('Ponderado por créditos')}</Text>
           </View>
           <View style={{ marginTop: 12, gap: 8 }}>
             {sem.rows.map((r) => {
@@ -187,12 +188,12 @@ export default function Estudiar() {
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 32 }}>
                   <Dot color={s?.color ?? C.muted} />
                   <Text style={{ color: C.text, fontSize: 13.5, flex: 1 }} numberOfLines={1}>{r.name}</Text>
-                  <Text style={{ color: C.muted, fontSize: 12 }}>{r.credits} cr.</Text>
-                  <Text style={{ color: r.avg == null ? C.muted : r.avg < 3 ? C.badText : C.text, fontSize: 13.5, fontWeight: '700', width: 64, textAlign: 'right' }}>{r.avg == null ? 'Sin notas' : r.avg.toFixed(1)}</Text>
+                  <Text style={{ color: C.muted, fontSize: 12 }}>{t('{credits} cr.', { credits: r.credits })}</Text>
+                  <Text style={{ color: r.avg == null ? C.muted : r.avg < 3 ? C.badText : C.text, fontSize: 13.5, fontWeight: '700', width: 64, textAlign: 'right' }}>{r.avg == null ? t('Sin notas') : r.avg.toFixed(1)}</Text>
                 </Pressable>
               );
             })}
-            {sem.rows.length === 0 && <Text style={{ color: C.muted, fontSize: 13 }}>Crea materias y agrega calificaciones para ver tu promedio.</Text>}
+            {sem.rows.length === 0 && <Text style={{ color: C.muted, fontSize: 13 }}>{t('Crea materias y agrega calificaciones para ver tu promedio.')}</Text>}
           </View>
         </Card>
       </View>

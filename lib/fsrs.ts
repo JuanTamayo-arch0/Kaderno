@@ -7,6 +7,7 @@
 //  Reemplaza a lib/srs.ts (SM-2), que queda para la base sin schema_v19.
 // ============================================================
 import { fsrs, createEmptyCard, Rating, State, type Card, type Grade } from 'ts-fsrs';
+import { t } from './i18n';
 
 export type FsrsState = 0 | 1 | 2 | 3;
 export type CardRating = 1 | 2 | 3 | 4;
@@ -126,23 +127,23 @@ export function spanLabel(ms: number): string {
   const h = Math.round(min / 60);
   if (h < 24) return `${h} h`;
   const d = Math.round(ms / 86_400_000);
-  if (d < 31) return d === 1 ? '1 día' : `${d} días`;
+  if (d < 31) return d === 1 ? t('1 día') : t('{d} días', { d });
   const m = Math.round(d / 30.4);
-  if (m < 12) return m === 1 ? '1 mes' : `${m} meses`;
+  if (m < 12) return m === 1 ? t('1 mes') : `${m} meses`;
   const y = Math.round((d / 365) * 10) / 10;
-  return y === 1 ? '1 año' : `${String(y).replace('.', ',')} años`;
+  return y === 1 ? t('1 año') : t('{replace} años', { replace: String(y).replace('.', ',') });
 }
 
 /** "Ahora", "En 10 min", "Mañana", "En 6 días", "Nueva". */
 export function dueLabel(row: FsrsRow, now: Date): string {
   const due = dueOf(row);
-  if (!due) return 'Nueva';
+  if (!due) return t('Nueva');
   const ms = due.getTime() - now.getTime();
-  if (ms <= 0) return 'Para hoy';
+  if (ms <= 0) return t('Para hoy');
   const days = Math.round((startOfDay(due) - startOfDay(now)) / 86_400_000);
-  if (days <= 0) return `En ${spanLabel(ms)}`;
-  if (days === 1) return 'Mañana';
-  return `En ${spanLabel(days * 86_400_000)}`;
+  if (days <= 0) return t('En {ms}', { ms: spanLabel(ms) });
+  if (days === 1) return t('Mañana');
+  return t('En {spanLabel}', { spanLabel: spanLabel(days * 86_400_000) });
 }
 function startOfDay(d: Date): number { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); }
 

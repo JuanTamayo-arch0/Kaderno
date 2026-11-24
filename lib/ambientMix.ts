@@ -1,4 +1,5 @@
-// ============================================================
+
+import { t } from './i18n';// ============================================================
 //  Sonidos de fondo del Enfoque: catálogo y lógica de la mezcla.
 //  Puro (sin React ni Web Audio) para poder probarlo. El motor que
 //  suena está en lib/ambient.ts.
@@ -17,14 +18,14 @@ export type AmbientPrefs = {
 };
 
 export const SOUNDS: { id: SoundId; label: string; hint: string }[] = [
-  { id: 'lluvia', label: 'Lluvia', hint: 'Lluvia suave, sin truenos' },
-  { id: 'mar', label: 'Mar', hint: 'Olas lejanas' },
-  { id: 'bosque', label: 'Bosque', hint: 'Viento en las hojas y pájaros' },
-  { id: 'rio', label: 'Río', hint: 'Arroyo continuo' },
-  { id: 'viento', label: 'Viento', hint: 'Ráfagas suaves' },
-  { id: 'fuego', label: 'Fuego', hint: 'Chimenea que crepita' },
-  { id: 'rosa', label: 'Ruido rosa', hint: 'Parejo y suave' },
-  { id: 'cafe', label: 'Ruido café', hint: 'Grave, como un motor lejano' },
+  { id: 'lluvia', label: t('Lluvia'), hint: t('Lluvia suave, sin truenos') },
+  { id: 'mar', label: t('Mar'), hint: t('Olas lejanas') },
+  { id: 'bosque', label: t('Bosque'), hint: t('Viento en las hojas y pájaros') },
+  { id: 'rio', label: t('Río'), hint: t('Arroyo continuo') },
+  { id: 'viento', label: t('Viento'), hint: t('Ráfagas suaves') },
+  { id: 'fuego', label: t('Fuego'), hint: t('Chimenea que crepita') },
+  { id: 'rosa', label: t('Ruido rosa'), hint: t('Parejo y suave') },
+  { id: 'cafe', label: t('Ruido café'), hint: t('Grave, como un motor lejano') },
 ];
 /** Los que salen como chips en la tarjeta del reloj (Viento queda en el mezclador). */
 export const CHIP_SOUNDS: SoundId[] = ['lluvia', 'mar', 'bosque', 'rio', 'fuego', 'rosa', 'cafe'];
@@ -83,13 +84,13 @@ export function setLevel(mix: Mix, id: SoundId, v: number): Mix {
 }
 
 export function soundLabel(id: SoundId): string {
-  return id === 'pajaros' ? 'Pájaros' : (SOUNDS.find((s) => s.id === id)?.label ?? id);
+  return id === 'pajaros' ? t('Pájaros') : (SOUNDS.find((s) => s.id === id)?.label ?? id);
 }
 
 /** "Lluvia", "Lluvia y bosque", "Lluvia, mar y fuego", o "Silencio". Ordena por volumen. */
 export function mixLabel(mix: Mix): string {
   const ids = activeIds(mix).sort((a, b) => (mix[b] ?? 0) - (mix[a] ?? 0));
-  if (!ids.length) return 'Silencio';
+  if (!ids.length) return t('Silencio');
   const names = ids.map((id, i) => (i === 0 ? soundLabel(id) : soundLabel(id).toLowerCase()));
   if (names.length === 1) return names[0];
   return names.slice(0, -1).join(', ') + ' y ' + names[names.length - 1];

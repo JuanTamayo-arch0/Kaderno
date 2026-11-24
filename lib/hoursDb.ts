@@ -6,9 +6,10 @@ import { Platform } from 'react-native';
 import { supabase } from './supabase';
 import { fetchPrefs, savePrefs } from './db';
 import type { HourSession, Rates } from './hours';
+import { t } from './i18n';
 
 const missing = (e: any) => !!e && (e.code === '42703' || e.code === 'PGRST204' || e.code === '42883' || e.code === 'PGRST202' || /does not exist|Could not find/i.test(String(e.message ?? '')));
-export const NEEDS_V23_5 = 'Para el registro de horas por proyecto falta correr schema_v23.sql (fase 5) en Supabase.';
+export const NEEDS_V23_5 = t('Para el registro de horas por proyecto falta correr schema_v23.sql (fase 5) en Supabase.');
 
 /** Sesiones del periodo [from, to). Sin la fase 5, sin proyecto ni nota. */
 export async function getHours(from: Date, to: Date): Promise<{ list: HourSession[]; v5: boolean }> {
@@ -64,7 +65,7 @@ export async function projectHours(projectId: string, from: Date, to: Date): Pro
 export async function printReport(html: string, title: string): Promise<void> {
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     const w = window.open('', '_blank');
-    if (!w) throw new Error('El navegador bloqueó la ventana del informe. Permite las ventanas emergentes para Kaderno.');
+    if (!w) throw new Error(t('El navegador bloqueó la ventana del informe. Permite las ventanas emergentes para Kaderno.'));
     w.document.open(); w.document.write(html); w.document.close(); w.document.title = title;
     setTimeout(() => { try { w.focus(); w.print(); } catch { /* noop */ } }, 300);
     return;
@@ -105,7 +106,7 @@ export async function getTimesheets(weekStart: string, projectId?: string): Prom
 }
 export async function submitWeek(projectId: string, weekStart: string, note?: string): Promise<Timesheet> {
   const { data, error } = await supabase.rpc('timesheet_submit', { p_project: projectId, p_week: weekStart, p_note: note ?? null });
-  if (error) { if (missing(error)) throw new Error('Para mandar horas falta correr schema_v24.sql en Supabase.'); throw new Error(String(error.message)); }
+  if (error) { if (missing(error)) throw new Error(t('Para mandar horas falta correr schema_v24.sql en Supabase.')); throw new Error(String(error.message)); }
   return data as Timesheet;
 }
 export async function decideWeek(projectId: string, userId: string, weekStart: string, status: 'aprobada' | 'devuelta', note?: string): Promise<Timesheet> {

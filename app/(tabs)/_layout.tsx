@@ -6,6 +6,7 @@ import { useAuth } from '../../lib/auth';
 import { C } from '../../lib/theme';
 import { useResponsive } from '../../lib/responsive';
 import { vtNavigate } from '../../lib/motion';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Pestañas.
@@ -39,14 +40,14 @@ export default function TabsLayout() {
 
   return (
     <Tabs tabBar={(props) => <Bar {...props} />} screenOptions={{ headerShown: false }}>
-      <Tabs.Screen name="index" options={{ title: 'Hoy' }} />
-      <Tabs.Screen name="materias" options={{ title: 'Materias' }} />
-      <Tabs.Screen name="estudiar" options={{ title: 'Estudiar' }} />
-      <Tabs.Screen name="proyectos" options={{ title: 'Proyectos' }} />
-      <Tabs.Screen name="horario" options={{ title: 'Horario' }} />
-      <Tabs.Screen name="enfoque" options={{ title: 'Enfoque' }} />
-      <Tabs.Screen name="oraculo" options={{ title: 'Oráculo' }} />
-      <Tabs.Screen name="capturar" options={{ title: 'Capturar' }} />
+      <Tabs.Screen name="index" options={{ title: t('Hoy') }} />
+      <Tabs.Screen name="materias" options={{ title: t('Materias') }} />
+      <Tabs.Screen name="estudiar" options={{ title: t('Estudiar') }} />
+      <Tabs.Screen name="proyectos" options={{ title: t('Proyectos') }} />
+      <Tabs.Screen name="horario" options={{ title: t('Horario') }} />
+      <Tabs.Screen name="enfoque" options={{ title: t('Enfoque') }} />
+      <Tabs.Screen name="oraculo" options={{ title: t('Oráculo') }} />
+      <Tabs.Screen name="capturar" options={{ title: t('Capturar') }} />
     </Tabs>
   );
 }

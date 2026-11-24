@@ -1,4 +1,5 @@
 import { play } from './sound';
+import { t, trn } from './i18n';
 // ============================================================
 //  Avisos, confirmaciones y mensajes cortos ("toasts") propios.
 //
@@ -66,10 +67,10 @@ function pushDialog(title: string, message: string | undefined, buttons: DialogB
 export function notify(title: string, message?: string): Promise<void> {
   // v24: el tope del día con Gratis ofrece ver los planes.
   if (UPSELL.test(String(message ?? '')) || UPSELL.test(title)) {
-    return pushDialog(title, message, [{ label: 'Ahora no', tone: 'plain', value: false }, { label: 'Ver planes', tone: 'primary', value: true }])
+    return pushDialog(title, message, [{ label: t('Ahora no'), tone: 'plain', value: false }, { label: t('Ver planes'), tone: 'primary', value: true }])
       .then((go) => { if (go) openPlans(); });
   }
-  return pushDialog(title, message, [{ label: 'Entendido', tone: 'primary', value: true }]).then(() => undefined);
+  return pushDialog(title, message, [{ label: t('Entendido'), tone: 'primary', value: true }]).then(() => undefined);
 }
 
 const UPSELL = /con Kaderno Pro/i;
@@ -79,8 +80,8 @@ function openPlans() { import('expo-router').then((m) => m.router.push('/plan' a
 export function confirm(
   title: string,
   message?: string,
-  okLabel = 'Sí, continuar',
-  cancelLabel = 'Cancelar',
+  okLabel = t('Sí, continuar'),
+  cancelLabel = t('Cancelar'),
   opts: { danger?: boolean } = {},
 ): Promise<boolean> {
   const danger = opts.danger ?? /eliminar|borrar|quitar|archivar|salir|cerrar sesi/i.test(okLabel);
@@ -93,7 +94,7 @@ export function confirm(
 /** Mensaje corto abajo de la pantalla, con acción opcional. */
 export function toast(message: string, opts: Partial<Omit<ToastReq, 'id' | 'message'>> = {}): number {
   const id = seq++;
-  if (UPSELL.test(message) && !opts.actionLabel) opts = { ...opts, actionLabel: 'Ver planes', onAction: openPlans };
+  if (UPSELL.test(message) && !opts.actionLabel) opts = { ...opts, actionLabel: trn('Ver planes'), onAction: openPlans };
   const t: ToastReq = { id, message, duration: opts.actionLabel ? 6000 : 3200, ...opts };
   if (t.tone === 'bad') { try { play('error'); } catch { /* */ } }
   state = { ...state, toasts: [...state.toasts.slice(-2), t] };
@@ -131,7 +132,7 @@ export function deleteWithUndo(opts: {
     opts.commit().catch((e) => { opts.restore(); (opts.onError ?? defaultError)(e); });
   };
   const id = toast(opts.message, {
-    actionLabel: 'Deshacer',
+    actionLabel: t('Deshacer'),
     onAction: () => { done = true; pendingCommits.delete(id); opts.restore(); },
     onTimeout: run,
   });
@@ -139,17 +140,17 @@ export function deleteWithUndo(opts: {
 }
 export function flushPendingDeletes(): void { [...pendingCommits.values()].forEach((f) => f()); }
 
-function defaultError(e: unknown) { notify('No se pudo completar', friendlyError(e)); }
+function defaultError(e: unknown) { notify(t('No se pudo completar'), friendlyError(e)); }
 
 /** Convierte errores técnicos en algo que un estudiante entienda. */
 export function friendlyError(e: unknown): string {
   const raw = (e as any)?.message ?? String(e ?? '');
   const msg = String(raw);
-  if (/Failed to fetch|NetworkError|Network request failed|ERR_INTERNET|timeout/i.test(msg)) return 'Parece que no hay conexión. Revisa tu internet e inténtalo de nuevo.';
-  if (/JWT|session|sesi[oó]n activa|not authenticated|401/i.test(msg)) return 'Tu sesión venció. Vuelve a iniciar sesión.';
-  if (/row-level security|permission denied|42501|403/i.test(msg)) return 'No tienes permiso para hacer esto.';
-  if (/function .*(oracle|ai|ocr)|FunctionsHttpError|FunctionsFetchError|Edge Function|non-2xx/i.test(msg)) return 'La función de inteligencia artificial no respondió. Inténtalo en un momento.';
-  if (/does not exist|schema cache|PGRST20|42703|42883/i.test(msg)) return 'Falta actualizar la base de datos (ver RUNBOOK.md). Avísale a quien administra Kaderno.';
-  if (/duplicate key|23505/i.test(msg)) return 'Ya existe un elemento igual.';
-  return msg || 'Ocurrió un error inesperado.';
+  if (/Failed to fetch|NetworkError|Network request failed|ERR_INTERNET|timeout/i.test(msg)) return t('Parece que no hay conexión. Revisa tu internet e inténtalo de nuevo.');
+  if (/JWT|session|sesi[oó]n activa|not authenticated|401/i.test(msg)) return t('Tu sesión venció. Vuelve a iniciar sesión.');
+  if (/row-level security|permission denied|42501|403/i.test(msg)) return t('No tienes permiso para hacer esto.');
+  if (/function .*(oracle|ai|ocr)|FunctionsHttpError|FunctionsFetchError|Edge Function|non-2xx/i.test(msg)) return t('La función de inteligencia artificial no respondió. Inténtalo en un momento.');
+  if (/does not exist|schema cache|PGRST20|42703|42883/i.test(msg)) return t('Falta actualizar la base de datos (ver RUNBOOK.md). Avísale a quien administra Kaderno.');
+  if (/duplicate key|23505/i.test(msg)) return t('Ya existe un elemento igual.');
+  return msg || t('Ocurrió un error inesperado.');
 }

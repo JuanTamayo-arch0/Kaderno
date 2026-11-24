@@ -1,4 +1,5 @@
-// ============================================================
+
+import { t } from './i18n';// ============================================================
 //  Días de estudio y rachas amables (v20, sección D). Puro, con pruebas.
 //  Las reglas son las mismas que usa la base (schema_v19.sql, fase 2):
 //  la base escribe (escudos, reparar); esto solo calcula lo que se ve.
@@ -109,17 +110,17 @@ export function summarize(rows: StudyDayRow[], today: string, goalIn: number = D
 
 /** Qué falta para que hoy cuente, en una frase corta. */
 export function todayHint(s: StreakSummary): string {
-  if (s.today.ok) return 'Hoy ya cuenta.';
+  if (s.today.ok) return t('Hoy ya cuenta.');
   const mins = Math.max(1, DAY_RULE.focus - s.today.focus);
   const cards = Math.max(1, DAY_RULE.cards - s.today.cards);
-  return `Para que hoy cuente: ${mins} min de enfoque, 1 tarea o ${cards} ${cards === 1 ? 'tarjeta' : 'tarjetas'}.`;
+  return t('Para que hoy cuente: {mins} min de enfoque, 1 tarea o {cards} {v}.', { mins, cards, v: cards === 1 ? 'tarjeta' : 'tarjetas' });
 }
 
 /** Mensaje sin culpa cuando se rompe la racha. */
 export function brokeMessage(s: StreakSummary): string | null {
   if (!s.repair) return null;
-  if (s.repair.missed === 1) return 'Te saltaste un día: no pasa nada. Lo importante es no saltarse dos.';
-  return `Te saltaste dos días. Si hoy haces el doble, recuperas tu racha de ${s.repair.prev} ${s.repair.prev === 1 ? 'día' : 'días'}.`;
+  if (s.repair.missed === 1) return t('Te saltaste un día: no pasa nada. Lo importante es no saltarse dos.');
+  return t('Te saltaste dos días. Si hoy haces el doble, recuperas tu racha de {prev} {v}.', { prev: s.repair.prev, v: s.repair.prev === 1 ? 'día' : 'días' });
 }
 
 /** Avance para reparar (0 a 1) y texto. */
@@ -130,8 +131,8 @@ export function repairProgress(s: StreakSummary): { frac: number; text: string }
   const frac = Math.min(1, Math.max(f, c));
   const leftF = Math.max(0, REPAIR_RULE.focus - s.repair.focus);
   const leftC = Math.max(0, REPAIR_RULE.cards - s.repair.cards);
-  return { frac, text: frac >= 1 ? 'Listo: racha reparada.' : `Te faltan ${leftF} min de enfoque o ${leftC} tarjetas.` };
+  return { frac, text: frac >= 1 ? t('Listo: racha reparada.') : t('Te faltan {leftF} min de enfoque o {leftC} tarjetas.', { leftF, leftC }) };
 }
 
 export function weeksLabel(n: number): string { return `${n} ${n === 1 ? 'semana' : 'semanas'}`; }
-export function daysLabel(n: number): string { return `${n} ${n === 1 ? 'día' : 'días'}`; }
+export function daysLabel(n: number): string { return `${n} ${n === 1 ? t('día') : t('días')}`; }

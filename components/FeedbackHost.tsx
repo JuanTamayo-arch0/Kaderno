@@ -5,6 +5,7 @@ import { C } from '../lib/theme';
 import { useResponsive, SIDEBAR_W } from '../lib/responsive';
 import { subscribeFeedback, dismissToast, flushPendingDeletes, type DialogReq, type ToastReq } from '../lib/feedback';
 import { Button } from './ds';
+import { trn } from '../lib/i18n';
 
 // Dibuja los avisos, confirmaciones y toasts de lib/feedback.ts.
 export function FeedbackHost() {
@@ -88,7 +89,7 @@ function ToastView({ t }: { t: ToastReq }) {
           <Text style={{ color: C.brand, fontWeight: '800', fontSize: 14 }}>{t.actionLabel}</Text>
         </Pressable>
       ) : (
-        <Pressable onPress={() => dismissToast(t.id, 'close')} accessibilityLabel="Cerrar aviso" style={{ padding: 8 }}>
+        <Pressable onPress={() => dismissToast(t.id, 'close')} accessibilityLabel={trn('Cerrar aviso')} style={{ padding: 8 }}>
           <Text style={{ color: C.muted, fontSize: 16 }}>×</Text>
         </Pressable>
       )}

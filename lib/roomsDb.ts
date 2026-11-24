@@ -4,10 +4,11 @@
 // ============================================================
 import { supabase } from './supabase';
 import type { RoomPerson } from './roomsLogic';
+import { t } from './i18n';
 
 export type StudyRoom = { id: string; owner_id: string; project_id: string | null; name: string; code: string | null; goal: number; created_at: string };
 
-export const ROOMS_MISSING = 'Para estudiar en salas falta correr schema_v19.sql en Supabase.';
+export const ROOMS_MISSING = t('Para estudiar en salas falta correr schema_v19.sql en Supabase.');
 
 function missing(err: any): boolean {
   if (!err) return false;
@@ -16,7 +17,7 @@ function missing(err: any): boolean {
 }
 function fail(err: any): never {
   if (missing(err)) throw new Error(ROOMS_MISSING);
-  throw new Error(String(err?.message ?? 'No se pudo completar'));
+  throw new Error(String(err?.message ?? t('No se pudo completar')));
 }
 
 /** Mis salas (de amigos y de proyectos en las que entré), la más nueva primero. */

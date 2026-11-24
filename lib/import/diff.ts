@@ -3,6 +3,7 @@ import { FIELD_LABELS } from './fields';
 import { columnLabel, mergeChecklist } from './values';
 import type { ExistingTask, Field, Member, NormalizedTask, ProjectContext, RowIssue } from './types';
 import type { MatchKind } from './match';
+import { t, trn } from '../i18n';
 
 export interface FieldChange {
   field: Field;
@@ -36,15 +37,15 @@ export interface FileDiff {
 }
 
 function memberName(members: Member[], id: string | null): string {
-  if (!id) return 'Sin asignar';
+  if (!id) return t('Sin asignar');
   const m = members.find((x) => x.user_id === id);
-  return m?.name || m?.email || 'Integrante';
+  return m?.name || m?.email || t('Integrante');
 }
 
 function checklistSummary(items: { text: string; done: boolean }[]): string {
-  if (!items.length) return 'Sin checklist';
+  if (!items.length) return t('Sin checklist');
   const done = items.filter((i) => i.done).length;
-  return `${items.length} ítems, ${done} hechos`;
+  return t('{length} ítems, {done} hechos', { length: items.length, done });
 }
 
 function sameChecklist(a: { text: string; done: boolean }[], b: { text: string; done: boolean }[]): boolean {
@@ -52,7 +53,7 @@ function sameChecklist(a: { text: string; done: boolean }[], b: { text: string; 
 }
 
 function short(s: string | null, n = 60): string {
-  if (!s) return 'Vacío';
+  if (!s) return t('Vacío');
   return s.length > n ? s.slice(0, n - 1) + '…' : s;
 }
 
@@ -94,7 +95,7 @@ export function computeFileDiff(tasks: NormalizedTask[], existing: ExistingTask[
     }
     if (!e) {
       diff.unknownIds.push(t);
-      diff.issues.push({ row: t.row, field: 'id', level: 'warning', message: 'Esta tarea no existe en el proyecto (quizá se borró). La fila se ignorará' });
+      diff.issues.push({ row: t.row, field: 'id', level: 'warning', message: trn('Esta tarea no existe en el proyecto (quizá se borró). La fila se ignorará') });
       continue;
     }
     if (t.delete) {
@@ -126,7 +127,7 @@ export function computeFileDiff(tasks: NormalizedTask[], existing: ExistingTask[
     const start = has('start') ? t.start_at : e.start_at;
     const due = has('due') ? t.due_at : e.due_at;
     if (start && due && Date.parse(start) > Date.parse(due)) {
-      diff.issues.push({ row: t.row, field: 'start', level: 'error', message: 'Con este cambio el inicio queda después de la entrega' });
+      diff.issues.push({ row: t.row, field: 'start', level: 'error', message: trn('Con este cambio el inicio queda después de la entrega') });
       continue;
     }
 
@@ -145,6 +146,6 @@ export function diffSummary(d: FileDiff): string {
   if (d.updates.length) parts.push(`${d.updates.length} ${d.updates.length === 1 ? 'cambia' : 'cambian'}`);
   if (d.creates.length) parts.push(`${d.creates.length} ${d.creates.length === 1 ? 'nueva' : 'nuevas'}`);
   if (d.deletes.length) parts.push(`${d.deletes.length} se ${d.deletes.length === 1 ? 'borra' : 'borran'}`);
-  if (!parts.length) return 'No hay cambios';
+  if (!parts.length) return t('No hay cambios');
   return parts.join(', ');
 }

@@ -5,9 +5,10 @@
 // ============================================================
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase';
 import type { ExtEvent } from '../components/day/Timeline';
+import { t } from './i18n';
 
 const missing = (e: any) => !!e && (e.code === '42P01' || e.code === 'PGRST205' || e.code === '42703' || /does not exist|Could not find/i.test(String(e.message ?? '')));
-export const NEEDS_V20_3 = 'Para esto falta correr schema_v20.sql (fase 3) en Supabase.';
+export const NEEDS_V20_3 = t('Para esto falta correr schema_v20.sql (fase 3) en Supabase.');
 
 export type ExtCalendar = { id: string; name: string; color: string; last_sync: string | null; last_error: string | null };
 export const CAL_COLORS = ['#8a93a6', '#4f8cff', '#2bb673', '#f5a524', '#e5484d', '#a855f7'];
@@ -20,7 +21,7 @@ export async function getCalendars(): Promise<ExtCalendar[]> {
 
 async function invokeError(error: any): Promise<string> {
   try { const ctx = error?.context; const j = ctx?.json ? await ctx.json() : null; if (j?.error) return j.error; } catch { /* noop */ }
-  return 'No se pudo leer el calendario. Intenta de nuevo.';
+  return t('No se pudo leer el calendario. Intenta de nuevo.');
 }
 
 /** Lee el calendario ahora. Devuelve cuántos eventos trajo. */
@@ -36,12 +37,12 @@ export function looksLikeCalendarUrl(url: string): boolean {
 
 export async function addCalendar(name: string, url: string, color: string): Promise<{ id: string; events: number | null; error: string | null }> {
   const clean = url.trim();
-  if (!looksLikeCalendarUrl(clean)) throw new Error('Pega la dirección completa (empieza con https:// o webcal://).');
-  const { data, error } = await supabase.from('external_calendars').insert({ name: name.trim().slice(0, 60) || 'Mi calendario', url: clean, color }).select('id').single();
+  if (!looksLikeCalendarUrl(clean)) throw new Error(t('Pega la dirección completa (empieza con https:// o webcal://).'));
+  const { data, error } = await supabase.from('external_calendars').insert({ name: name.trim().slice(0, 60) || t('Mi calendario'), url: clean, color }).select('id').single();
   if (error) {
     if (missing(error)) throw new Error(NEEDS_V20_3);
     if (/plan Gratis/i.test(String(error.message))) throw new Error(String(error.message));
-    if (/(hasta|Máximo) (5|10)/i.test(String(error.message))) throw new Error(/10/.test(String(error.message)) ? 'Puedes conectar hasta 10 calendarios.' : 'Puedes conectar hasta 5 calendarios.');
+    if (/(hasta|Máximo) (5|10)/i.test(String(error.message))) throw new Error(/10/.test(String(error.message)) ? t('Puedes conectar hasta 10 calendarios.') : t('Puedes conectar hasta 5 calendarios.'));
     throw error;
   }
   const id = (data as { id: string }).id;
@@ -111,6 +112,6 @@ export async function fetchSharedNote(token: string): Promise<SharedNote> {
     headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
   });
   const j = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(j?.error ?? 'Este enlace ya no funciona.');
+  if (!res.ok) throw new Error(j?.error ?? t('Este enlace ya no funciona.'));
   return j as SharedNote;
 }

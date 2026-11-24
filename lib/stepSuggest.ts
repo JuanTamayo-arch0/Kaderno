@@ -1,4 +1,5 @@
-// ============================================================
+
+import { t } from './i18n';// ============================================================
 //  Sugerir microtareas a partir del título y la descripción.
 //  Funciona sin internet: lee listas, frases y rangos de ejercicios de la
 //  descripción, y si no hay suficiente usa pasos típicos según el tipo
@@ -9,14 +10,14 @@
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
 
 const TEMPLATES: { re: RegExp; steps: string[] }[] = [
-  { re: /\b(examen|parcial|final|quiz|quices|previo|evaluacion)\b/, steps: ['Reunir los temas y apuntes', 'Hacer un resumen o mapa de cada tema', 'Resolver ejercicios de práctica', 'Repasar los errores', 'Simulacro con tiempo'] },
-  { re: /\b(informe|laboratorio|lab|practica)\b/, steps: ['Organizar los datos tomados', 'Hacer tablas y gráficas', 'Analizar resultados y calcular el error', 'Escribir conclusiones', 'Revisar formato y referencias'] },
-  { re: /\b(exposicion|presentacion|sustentacion|diapositivas|pitch)\b/, steps: ['Definir la estructura y los puntos clave', 'Preparar las diapositivas', 'Repartir quién dice qué', 'Ensayar con tiempo', 'Preparar respuestas a posibles preguntas'] },
-  { re: /\b(ensayo|articulo|resena|escrito|monografia)\b/, steps: ['Definir la tesis o idea central', 'Buscar y leer fuentes', 'Hacer el esquema', 'Escribir el borrador', 'Revisar redacción y citas'] },
-  { re: /\b(lectura|leer|capitulo|libro)\b/, steps: ['Leer y subrayar', 'Anotar ideas principales', 'Hacer un resumen corto', 'Escribir dudas para clase'] },
-  { re: /\b(taller|ejercicios|problemas|guia)\b/, steps: ['Leer todos los enunciados', 'Resolver los ejercicios', 'Revisar los que quedaron con dudas', 'Pasar en limpio y entregar'] },
-  { re: /\b(proyecto|prototipo|programa|codigo|app|software)\b/, steps: ['Definir requisitos y alcance', 'Diseñar la solución', 'Implementar', 'Probar y corregir', 'Documentar y entregar'] },
-  { re: /\b(video|podcast)\b/, steps: ['Escribir el guion', 'Grabar', 'Editar', 'Revisar y publicar'] },
+  { re: /\b(examen|parcial|final|quiz|quices|previo|evaluacion)\b/, steps: [t('Reunir los temas y apuntes'), t('Hacer un resumen o mapa de cada tema'), t('Resolver ejercicios de práctica'), t('Repasar los errores'), t('Simulacro con tiempo')] },
+  { re: /\b(informe|laboratorio|lab|practica)\b/, steps: [t('Organizar los datos tomados'), t('Hacer tablas y gráficas'), t('Analizar resultados y calcular el error'), t('Escribir conclusiones'), t('Revisar formato y referencias')] },
+  { re: /\b(exposicion|presentacion|sustentacion|diapositivas|pitch)\b/, steps: [t('Definir la estructura y los puntos clave'), t('Preparar las diapositivas'), t('Repartir quién dice qué'), t('Ensayar con tiempo'), t('Preparar respuestas a posibles preguntas')] },
+  { re: /\b(ensayo|articulo|resena|escrito|monografia)\b/, steps: [t('Definir la tesis o idea central'), t('Buscar y leer fuentes'), t('Hacer el esquema'), t('Escribir el borrador'), t('Revisar redacción y citas')] },
+  { re: /\b(lectura|leer|capitulo|libro)\b/, steps: [t('Leer y subrayar'), t('Anotar ideas principales'), t('Hacer un resumen corto'), t('Escribir dudas para clase')] },
+  { re: /\b(taller|ejercicios|problemas|guia)\b/, steps: [t('Leer todos los enunciados'), t('Resolver los ejercicios'), t('Revisar los que quedaron con dudas'), t('Pasar en limpio y entregar')] },
+  { re: /\b(proyecto|prototipo|programa|codigo|app|software)\b/, steps: [t('Definir requisitos y alcance'), t('Diseñar la solución'), t('Implementar'), t('Probar y corregir'), t('Documentar y entregar')] },
+  { re: /\b(video|podcast)\b/, steps: [t('Escribir el guion'), t('Grabar'), t('Editar'), t('Revisar y publicar')] },
 ];
 
 function cleanItem(s: string): string {
@@ -32,7 +33,7 @@ function splitRange(text: string): string[] {
   if (!m) return [];
   const from = parseInt(m[2], 10), to = parseInt(m[3], 10);
   if (!(to > from) || to - from > 80) return [];
-  const label = m[1].startsWith('ejercicio') ? 'Ejercicios' : m[1].startsWith('problema') ? 'Problemas' : m[1].startsWith('pregunta') ? 'Preguntas' : 'Puntos';
+  const label = m[1].startsWith('ejercicio') ? t('Ejercicios') : m[1].startsWith('problema') ? t('Problemas') : m[1].startsWith('pregunta') ? t('Preguntas') : t('Puntos');
   const total = to - from + 1;
   if (total <= 5) return [];
   const parts = Math.min(6, Math.ceil(total / 5));
@@ -78,6 +79,6 @@ export function suggestSteps(title: string, description: string | null | undefin
     const tpl = TEMPLATES.find((t) => t.re.test(hay));
     if (tpl) tpl.steps.forEach(push);
   }
-  if (out.length === 0) ['Entender qué se pide', 'Hacer un primer borrador', 'Revisar y entregar'].forEach(push);
+  if (out.length === 0) [t('Entender qué se pide'), t('Hacer un primer borrador'), t('Revisar y entregar')].forEach(push);
   return out.slice(0, 8);
 }

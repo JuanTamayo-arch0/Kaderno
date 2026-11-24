@@ -5,6 +5,7 @@
 // ============================================================
 import { classesOf, type AgendaBlock, type AgendaSlot, type AgendaSubject } from './agenda';
 import { classNoteTitle } from './noteLinks';
+import { trn } from './i18n';
 
 export type CaptureMode = 'notes' | 'board' | 'pdf' | 'schedule';
 export type Figure = { id: number; x: number; y: number; w: number; h: number; caption: string };
@@ -62,7 +63,7 @@ export function resolveFigures(md: string, paths: Record<string, string | null>)
 /** Pizarra: cada foto como imagen, con el texto leído debajo si se quiere. */
 export function boardMarkdown(paths: string[], texts: string[], withText: boolean): string {
   return paths.map((p, i) => {
-    const img = `![Pizarra${paths.length > 1 ? ` ${i + 1}` : ''}](kd-img:${p})`;
+    const img = trn('![Pizarra{v}](kd-img:{p})', { v: paths.length > 1 ? ` ${i + 1}` : '', p });
     const t = (texts[i] ?? '').replace(/!\[[^\]\n]*\]\(figura:[^)]+\)/g, '').trim();
     return withText && t ? `${img}\n\n${t}` : img;
   }).join('\n\n');

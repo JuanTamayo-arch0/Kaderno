@@ -11,13 +11,14 @@ import { fmtHours } from '../../lib/day';
 import { dueDay, DAY_LONG } from '../../lib/time';
 import { toast, friendlyError, notify, confirm } from '../../lib/feedback';
 import { dataChanged, openExamReview, onDataChanged } from '../../lib/uiBus';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  ¿Cómo te fue? (v22, fase 3): la nota del parcial frente al esfuerzo,
 //  el porqué y lo que harás distinto (que vuelve al planear el próximo).
 // ============================================================
 
-const FELT = ['Nada', 'Poco', 'Más o menos', 'Bien', 'Muy bien'];
+const FELT = [t('Nada'), t('Poco'), t('Más o menos'), t('Bien'), t('Muy bien')];
 const field = [{ color: C.text, fontSize: 15, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: C.line, backgroundColor: C.surface2 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null];
 
 export function ExamReviewSheet({ exam, onClose }: { exam: Task | null; onClose: () => void }) {
@@ -47,7 +48,7 @@ export function ExamReviewSheet({ exam, onClose }: { exam: Task | null; onClose:
 
   async function save(skipped = false) {
     if (!exam || !data) return;
-    if (skipped && !(await confirm('¿No lo presentaste?', 'No se pide nota y no vuelve a preguntar por este parcial.', 'No lo presenté'))) return;
+    if (skipped && !(await confirm(t('¿No lo presentaste?'), t('No se pide nota y no vuelve a preguntar por este parcial.'), t('No lo presenté')))) return;
     setBusy(true);
     try {
       const w = Number(weightText.replace(',', '.'));
@@ -55,40 +56,40 @@ export function ExamReviewSheet({ exam, onClose }: { exam: Task | null; onClose:
         score: skipped ? null : parsed?.score ?? null, max: parsed?.max ?? data.gradeMax, skipped, felt, reasons: mine,
         change, weight: Number.isFinite(w) && w > 0 && w <= 100 ? w : null, focusMin: data.effort.minutes,
       });
-      toast(skipped ? 'Listo, no se vuelve a preguntar' : change.trim() ? 'Guardado. Te lo recuerdo al planear el próximo parcial.' : 'Guardado en Calificaciones', { tone: 'good' });
+      toast(skipped ? t('Listo, no se vuelve a preguntar') : change.trim() ? t('Guardado. Te lo recuerdo al planear el próximo parcial.') : t('Guardado en Calificaciones'), { tone: 'good' });
       dataChanged();
       onClose();
-    } catch (e) { notify('No se pudo guardar', friendlyError(e)); }
+    } catch (e) { notify(t('No se pudo guardar'), friendlyError(e)); }
     finally { setBusy(false); }
   }
 
   const e = data?.effort;
   return (
-    <Sheet visible={!!exam} onClose={onClose} title={`¿Cómo te fue en ${exam.title}?`} subtitle={when ? `Fue el ${when}.` : undefined}
+    <Sheet visible={!!exam} onClose={onClose} title={t('¿Cómo te fue en {title}?', { title: exam.title })} subtitle={when ? t('Fue el {when}.', { when }) : undefined}
       footer={step === 'grade' ? <>
-        <Button label="No lo presenté" kind="secondary" onPress={() => save(true)} disabled={!data || busy} style={{ flex: 1 }} />
-        <Button label="Ver qué pasó" icon="analytics-outline" onPress={() => setStep('result')} disabled={!parsed || !data} style={{ flex: 2 }} />
+        <Button label={t('No lo presenté')} kind="secondary" onPress={() => save(true)} disabled={!data || busy} style={{ flex: 1 }} />
+        <Button label={t('Ver qué pasó')} icon="analytics-outline" onPress={() => setStep('result')} disabled={!parsed || !data} style={{ flex: 2 }} />
       </> : <>
-        <Button label="Atrás" kind="secondary" onPress={() => setStep('grade')} style={{ flex: 1 }} />
-        <Button label="Guardar" icon="checkmark" onPress={() => save(false)} busy={busy} style={{ flex: 2 }} />
+        <Button label={t('Atrás')} kind="secondary" onPress={() => setStep('grade')} style={{ flex: 1 }} />
+        <Button label={t('Guardar')} icon="checkmark" onPress={() => save(false)} busy={busy} style={{ flex: 2 }} />
       </>}>
       {step === 'grade' ? (
         <View style={{ gap: 14 }}>
           <View style={{ gap: 6 }}>
-            <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700' }}>Tu nota</Text>
-            <TextInput value={scoreText} onChangeText={setScoreText} placeholder={`Ej: 4,2 (sobre ${fmtGrade(data?.gradeMax ?? 5)}) o 38/50`} placeholderTextColor={C.muted}
-              keyboardType="decimal-pad" accessibilityLabel="Tu nota" autoFocus style={field} />
-            {!!scoreText && !parsed && <Text style={{ color: C.badText, fontSize: 12.5 }}>Escribe una nota entre 0 y {fmtGrade(data?.gradeMax ?? 5)}, o con su escala (38/50).</Text>}
+            <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700' }}>{t('Tu nota')}</Text>
+            <TextInput value={scoreText} onChangeText={setScoreText} placeholder={t('Ej: 4,2 (sobre {fmtGrade}) o 38/50', { fmtGrade: fmtGrade(data?.gradeMax ?? 5) })} placeholderTextColor={C.muted}
+              keyboardType="decimal-pad" accessibilityLabel={t('Tu nota')} autoFocus style={field} />
+            {!!scoreText && !parsed && <Text style={{ color: C.badText, fontSize: 12.5 }}>{t('Escribe una nota entre 0 y {fmtGrade}, o con su escala (38/50).', { fmtGrade: fmtGrade(data?.gradeMax ?? 5) })}</Text>}
           </View>
           {!hasGrade && (
             <View style={{ gap: 6 }}>
-              <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700' }}>¿Cuánto vale en la materia? <Text style={{ color: C.muted, fontWeight: '400' }}>(opcional)</Text></Text>
-              <TextInput value={weightText} onChangeText={setWeightText} placeholder="Ej: 25 (%)" placeholderTextColor={C.muted} keyboardType="decimal-pad" accessibilityLabel="Peso en porcentaje" style={[...field, { maxWidth: 140 }]} />
-              <Text style={{ color: C.muted, fontSize: 12 }}>Se agrega a Calificaciones para calcular tu promedio.</Text>
+              <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700' }}>{t('¿Cuánto vale en la materia? ')}<Text style={{ color: C.muted, fontWeight: '400' }}>{t('(opcional)')}</Text></Text>
+              <TextInput value={weightText} onChangeText={setWeightText} placeholder={t('Ej: 25 (%)')} placeholderTextColor={C.muted} keyboardType="decimal-pad" accessibilityLabel={t('Peso en porcentaje')} style={[...field, { maxWidth: 140 }]} />
+              <Text style={{ color: C.muted, fontSize: 12 }}>{t('Se agrega a Calificaciones para calcular tu promedio.')}</Text>
             </View>
           )}
           <View style={{ gap: 8 }}>
-            <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700' }}>¿Qué tan preparado te sentiste?</Text>
+            <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700' }}>{t('¿Qué tan preparado te sentiste?')}</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }} accessibilityRole="radiogroup">
               {FELT.map((l, i) => (
                 <Pressable key={l} onPress={() => setFelt(felt === i + 1 ? null : i + 1)} accessibilityRole="radio" accessibilityState={{ checked: felt === i + 1 }}
@@ -112,20 +113,20 @@ export function ExamReviewSheet({ exam, onClose }: { exam: Task | null; onClose:
           </View>
 
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            <Stat label="Enfoque" value={fmtHours(e.minutes)} />
-            <Stat label="Días distintos" value={String(e.days)} />
-            <Stat label="Empezaste" value={e.firstDaysBefore == null ? '—' : e.firstDaysBefore === 0 ? 'el mismo día' : `${e.firstDaysBefore} ${e.firstDaysBefore === 1 ? 'día' : 'días'} antes`} />
-            <Stat label="Últimas 48 h" value={e.minutes ? `${Math.round(e.last48Share * 100)} %` : '—'} />
-            {e.sessionsTotal > 0 && <Stat label="Plan" value={`${e.sessionsDone} de ${e.sessionsTotal}`} />}
-            <Stat label="Tarjetas" value={String(e.cardReviews)} />
-            <Stat label="Simulacros" value={e.quizzes ? `${e.quizzes}${e.bestQuiz != null ? ` · ${Math.round(e.bestQuiz)} %` : ''}` : '0'} />
+            <Stat label={t('Enfoque')} value={fmtHours(e.minutes)} />
+            <Stat label={t('Días distintos')} value={String(e.days)} />
+            <Stat label={t('Empezaste')} value={e.firstDaysBefore == null ? '—' : e.firstDaysBefore === 0 ? 'el mismo día' : `${e.firstDaysBefore} ${e.firstDaysBefore === 1 ? t('día') : t('días')} antes`} />
+            <Stat label={t('Últimas 48 h')} value={e.minutes ? `${Math.round(e.last48Share * 100)} %` : '—'} />
+            {e.sessionsTotal > 0 && <Stat label={t('Plan')} value={`${e.sessionsDone} de ${e.sessionsTotal}`} />}
+            <Stat label={t('Tarjetas')} value={String(e.cardReviews)} />
+            <Stat label={t('Simulacros')} value={e.quizzes ? `${e.quizzes}${e.bestQuiz != null ? ` · ${Math.round(e.bestQuiz)} %` : ''}` : '0'} />
           </View>
 
           <HoursChart points={chartPoints(data.history, { focus_min: e.minutes, pct: v.pct, title: exam.title })} targetPct={v.targetPct} />
 
           {v.reasons.length > 0 && (
             <View style={{ gap: 8 }}>
-              <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>{v.reached ? 'Lo que se ve en los datos' : 'Por qué, según los datos'}</Text>
+              <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>{v.reached ? t('Lo que se ve en los datos') : t('Por qué, según los datos')}</Text>
               {v.reasons.map((r) => (
                 <View key={r.key + r.tone} style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
                   <Ionicons name={r.tone === 'good' ? 'checkmark' : 'close'} size={16} color={r.tone === 'good' ? C.goodText : C.badText} style={{ marginTop: 2 }} />
@@ -136,7 +137,7 @@ export function ExamReviewSheet({ exam, onClose }: { exam: Task | null; onClose:
           )}
 
           <View style={{ gap: 8 }}>
-            <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>¿Qué más pasó? <Text style={{ color: C.muted, fontWeight: '400', fontSize: 12.5 }}>Lo que los datos no ven</Text></Text>
+            <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>{t('¿Qué más pasó? ')}<Text style={{ color: C.muted, fontWeight: '400', fontSize: 12.5 }}>{t('Lo que los datos no ven')}</Text></Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
               {MY_REASONS.map((r) => {
                 const on = mine.includes(r.key);
@@ -151,13 +152,13 @@ export function ExamReviewSheet({ exam, onClose }: { exam: Task | null; onClose:
           </View>
 
           <View style={{ gap: 8 }}>
-            <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>{v.reached ? '¿Algo que repetirías o cambiarías?' : '¿Qué harás distinto la próxima vez?'}</Text>
-            <TextInput value={change} onChangeText={setChange} maxLength={300} placeholder="Una frase. Te la recuerdo al planear el próximo parcial." placeholderTextColor={C.muted}
-              accessibilityLabel="Qué harás distinto" style={field} />
+            <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>{v.reached ? t('¿Algo que repetirías o cambiarías?') : t('¿Qué harás distinto la próxima vez?')}</Text>
+            <TextInput value={change} onChangeText={setChange} maxLength={300} placeholder={t('Una frase. Te la recuerdo al planear el próximo parcial.')} placeholderTextColor={C.muted}
+              accessibilityLabel={t('Qué harás distinto')} style={field} />
             {tips.length > 0 && (
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                 {tips.map((t) => (
-                  <Pressable key={t} onPress={() => setChange(t)} accessibilityRole="button" accessibilityLabel={`Usar: ${t}`}
+                  <Pressable key={t} onPress={() => setChange(t)} accessibilityRole="button" accessibilityLabel={trn('Usar: {t}', { t })}
                     style={({ hovered }: any) => ({ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: hovered ? C.surface2 : C.surface, borderWidth: 1, borderColor: C.line })}>
                     <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '600' }}>{t}</Text>
                   </Pressable>
@@ -181,7 +182,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 /** Horas de enfoque contra nota (%) de tus parciales. */
-export function HoursChart({ points, targetPct, caption, title = 'Tus parciales: horas y nota' }: { points: { x: number; y: number; title: string; current: boolean }[]; targetPct: number; caption?: string; title?: string | null }) {
+export function HoursChart({ points, targetPct, caption, title = t('Tus parciales: horas y nota') }: { points: { x: number; y: number; title: string; current: boolean }[]; targetPct: number; caption?: string; title?: string | null }) {
   const [w, setW] = useState(0);
   if (points.length < 2) return null;
   const H = 150, padL = 38, padB = 22;
@@ -192,7 +193,7 @@ export function HoursChart({ points, targetPct, caption, title = 'Tus parciales:
     <View style={{ gap: 6 }}>
       {!!title && <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>{title}</Text>}
       <View onLayout={(ev) => setW(ev.nativeEvent.layout.width)} style={{ height: H, borderRadius: 12, backgroundColor: C.surface2, overflow: 'hidden' }}
-        accessibilityLabel={`Gráfica de ${points.length} parciales: horas de enfoque y nota`}>
+        accessibilityLabel={t('Gráfica de {length} parciales: horas de enfoque y nota', { length: points.length })}>
         {w > 0 && <>
           {[0, 50, 100].map((g) => (
             <View key={g} style={{ position: 'absolute', left: padL, right: 10, top: Y(g), height: 1, backgroundColor: C.line }}>
@@ -201,7 +202,7 @@ export function HoursChart({ points, targetPct, caption, title = 'Tus parciales:
           ))}
           <View style={{ position: 'absolute', left: padL, right: 10, top: Y(targetPct), borderTopWidth: 1, borderStyle: 'dashed', borderColor: C.goodText }} />
           {[0, Math.round(maxX / 2), maxX].map((h) => (
-            <Text key={h} style={{ position: 'absolute', left: X(h) - 14, bottom: 4, width: 28, textAlign: 'center', color: C.muted, fontSize: 10 }}>{h} h</Text>
+            <Text key={h} style={{ position: 'absolute', left: X(h) - 14, bottom: 4, width: 28, textAlign: 'center', color: C.muted, fontSize: 10 }}>{t('{h} h', { h })}</Text>
           ))}
           {points.map((p, i) => (
             <View key={i} accessibilityLabel={`${p.title}: ${Math.round(p.x * 10) / 10} h, ${Math.round(p.y)} %`}
@@ -210,7 +211,7 @@ export function HoursChart({ points, targetPct, caption, title = 'Tus parciales:
           ))}
         </>}
       </View>
-      <Text style={{ color: C.muted, fontSize: 11.5 }}>{caption ?? 'El punto grande es este parcial. La línea punteada es tu meta.'}</Text>
+      <Text style={{ color: C.muted, fontSize: 11.5 }}>{caption ?? t('El punto grande es este parcial. La línea punteada es tu meta.')}</Text>
     </View>
   );
 }
@@ -229,11 +230,11 @@ export function ExamReviewCard({ tasks }: { tasks: Task[] }) {
     <Card style={{ marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap', borderLeftWidth: 4, borderLeftColor: C.brand2 }}>
       <Ionicons name="school-outline" size={22} color={C.brand2} />
       <View style={{ flex: 1, minWidth: 180 }}>
-        <Text style={{ color: C.text, fontWeight: '700', fontSize: 14 }}>¿Cómo te fue en {t.title}?</Text>
-        <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{d ? `Fue el ${DAY_LONG[d.getDay()]}. ` : ''}Pon la nota y mira si el esfuerzo alcanzó.</Text>
+        <Text style={{ color: C.text, fontWeight: '700', fontSize: 14 }}>{trn('¿Cómo te fue en {title}?', { title: t.title })}</Text>
+        <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{trn('{v}Pon la nota y mira si el esfuerzo alcanzó.', { v: d ? `Fue el ${DAY_LONG[d.getDay()]}. ` : '' })}</Text>
       </View>
-      <Button label="Poner la nota" size="sm" onPress={() => openExamReview(t)} />
-      <Button label="Ahora no" size="sm" kind="ghost" onPress={() => { dismissReview(t.id); setPending((p) => p.filter((x) => x.id !== t.id)); }} />
+      <Button label={trn('Poner la nota')} size="sm" onPress={() => openExamReview(t)} />
+      <Button label={trn('Ahora no')} size="sm" kind="ghost" onPress={() => { dismissReview(t.id); setPending((p) => p.filter((x) => x.id !== t.id)); }} />
     </Card>
   );
 }
@@ -246,16 +247,16 @@ export function ExamResultsList({ subjectId }: { subjectId: string }) {
   const done = list.filter((r) => !r.skipped && r.score != null);
   return (
     <Card style={{ marginTop: 16, gap: 10 }}>
-      <Text style={{ color: C.text, fontSize: 15, fontWeight: '800' }}>Tus parciales: esfuerzo y nota</Text>
-      <HoursChart points={chartPoints(done.slice(1), done[0] ? { focus_min: done[0].focus_min, pct: (Number(done[0].score) / Number(done[0].max_score)) * 100, title: done[0].title } : null)} targetPct={60} caption="El punto grande es el más reciente. La línea punteada es aprobar." title={null} />
+      <Text style={{ color: C.text, fontSize: 15, fontWeight: '800' }}>{t('Tus parciales: esfuerzo y nota')}</Text>
+      <HoursChart points={chartPoints(done.slice(1), done[0] ? { focus_min: done[0].focus_min, pct: (Number(done[0].score) / Number(done[0].max_score)) * 100, title: done[0].title } : null)} targetPct={60} caption={t('El punto grande es el más reciente. La línea punteada es aprobar.')} title={null} />
       {list.map((r) => (
         <View key={r.id} style={{ paddingVertical: 8, borderTopWidth: 1, borderTopColor: C.line, gap: 2 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Text style={{ color: C.text, fontSize: 14, fontWeight: '700', flex: 1 }} numberOfLines={1}>{r.title}</Text>
-            <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>{r.skipped ? 'No lo presenté' : `${fmtGrade(Number(r.score))} / ${fmtGrade(Number(r.max_score))}`}</Text>
+            <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>{r.skipped ? t('No lo presenté') : `${fmtGrade(Number(r.score))} / ${fmtGrade(Number(r.max_score))}`}</Text>
           </View>
-          {!r.skipped && <Text style={{ color: C.muted, fontSize: 12.5 }}>{fmtHours(r.focus_min)} de enfoque{r.exam_date ? ` · ${r.exam_date.slice(8, 10)}/${r.exam_date.slice(5, 7)}` : ''}</Text>}
-          {!!r.change && <Text style={{ color: C.text, fontSize: 12.5, fontStyle: 'italic' }}>Para la próxima: {r.change}</Text>}
+          {!r.skipped && <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('{focus_min} de enfoque{v}', { focus_min: fmtHours(r.focus_min), v: r.exam_date ? ` · ${r.exam_date.slice(8, 10)}/${r.exam_date.slice(5, 7)}` : '' })}</Text>}
+          {!!r.change && <Text style={{ color: C.text, fontSize: 12.5, fontStyle: 'italic' }}>{t('Para la próxima: {change}', { change: r.change })}</Text>}
         </View>
       ))}
     </Card>

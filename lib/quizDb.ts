@@ -7,6 +7,7 @@ import type { QuizQuestion, QuizAnswer } from './quiz';
 import type { RecallResult, GradeResult } from '../supabase/functions/_shared/quiz';
 import { planSessions, sessionTitle, type SessionKind } from './examPlan';
 import { suggestSlotsForDay } from './planHelpers';
+import { t } from './i18n';
 
 async function fnError(error: any): Promise<Error> {
   try { const b = await error?.context?.json?.(); if (b?.error) return new Error(b.error); } catch { /* noop */ }
@@ -18,7 +19,7 @@ export async function aiQuiz(notes: { title: string; content: string }[], count:
   const { data, error } = await supabase.functions.invoke('ai', { body: { task: 'quiz', notes, count, subject, quick } });
   if (error) throw await fnError(error);
   const qs = (data as { questions?: QuizQuestion[] })?.questions ?? [];
-  if (!qs.length) throw new Error('La IA no devolvió preguntas, intenta de nuevo.');
+  if (!qs.length) throw new Error(t('La IA no devolvió preguntas, intenta de nuevo.'));
   return qs;
 }
 export async function aiGrade(items: { q: string; expected: string; given: string }[]): Promise<GradeResult[]> {
@@ -31,7 +32,7 @@ export async function aiRecall(title: string, content: string, headings: string[
   const { data, error } = await supabase.functions.invoke('ai', { body: { task: 'recall', title, content, headings, recalled } });
   if (error) throw await fnError(error);
   const r = (data as { result?: RecallResult })?.result;
-  if (!r) throw new Error('La IA no pudo comparar tu respuesta, intenta de nuevo.');
+  if (!r) throw new Error(t('La IA no pudo comparar tu respuesta, intenta de nuevo.'));
   return r;
 }
 
@@ -117,7 +118,7 @@ export async function createPlan(exam: Task, sessions: DraftSession[]): Promise<
   }));
   const { error } = await supabase.from('assignments').insert(rows);
   if (error) {
-    if (isMissingColumn(error)) throw new Error('Para el plan de repaso falta correr schema_v19.sql (fase 3) en Supabase.');
+    if (isMissingColumn(error)) throw new Error(t('Para el plan de repaso falta correr schema_v19.sql (fase 3) en Supabase.'));
     throw error;
   }
   return rows.length;

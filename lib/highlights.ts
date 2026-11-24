@@ -1,4 +1,5 @@
-// ============================================================
+
+import { t } from './i18n';// ============================================================
 //  Anotar PDFs (v22, fase 2). Puro, con pruebas.
 //  Los rectángulos de un resaltado van en proporciones de la página (0 a 1)
 //  para que no dependan del zoom ni del tamaño de la pantalla.
@@ -9,10 +10,10 @@ export type HlColor = 'yellow' | 'green' | 'blue' | 'pink';
 export type FileKind = 'subject' | 'project';
 
 export const HL_COLORS: { key: HlColor; label: string; fill: string; dot: string }[] = [
-  { key: 'yellow', label: 'Amarillo', fill: 'rgba(250, 204, 21, 0.38)', dot: '#facc15' },
-  { key: 'green', label: 'Verde', fill: 'rgba(52, 211, 153, 0.36)', dot: '#34d399' },
-  { key: 'blue', label: 'Azul', fill: 'rgba(96, 165, 250, 0.36)', dot: '#60a5fa' },
-  { key: 'pink', label: 'Rosado', fill: 'rgba(244, 114, 182, 0.36)', dot: '#f472b6' },
+  { key: 'yellow', label: t('Amarillo'), fill: 'rgba(250, 204, 21, 0.38)', dot: '#facc15' },
+  { key: 'green', label: t('Verde'), fill: 'rgba(52, 211, 153, 0.36)', dot: '#34d399' },
+  { key: 'blue', label: t('Azul'), fill: 'rgba(96, 165, 250, 0.36)', dot: '#60a5fa' },
+  { key: 'pink', label: t('Rosado'), fill: 'rgba(244, 114, 182, 0.36)', dot: '#f472b6' },
 ];
 export const hlColor = (k: string) => HL_COLORS.find((c) => c.key === k) ?? HL_COLORS[0];
 
@@ -77,8 +78,8 @@ export function parseFileLink(href: string): { kind: FileKind; id: string; page:
 /** La cita para la nota, con la fuente que abre el PDF en esa página. */
 export function quoteMarkdown(text: string, fileName: string, kind: FileKind, fileId: string, page: number, comment?: string | null): string {
   const body = cleanPdfText(text).slice(0, 4000);
-  const name = (fileName || 'Archivo').replace(/[\[\]]/g, '');
-  const lines = [`> ${body}`, '>', `> [${name}, pág. ${page}](${fileLink(kind, fileId, page)})`];
+  const name = (fileName || t('Archivo')).replace(/[\[\]]/g, '');
+  const lines = [`> ${body}`, '>', t('> [{name}, pág. {page}]({kind})', { name, page, kind: fileLink(kind, fileId, page) })];
   if (comment?.trim()) lines.push('', comment.trim());
   return lines.join('\n') + '\n';
 }

@@ -3,6 +3,7 @@ import { Platform, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C, RAD } from '../lib/theme';
 import { QUADRANT_ORDER, quadrantInfo, type Quadrant } from '../lib/eisenhower';
+import { t } from '../lib/i18n';
 
 // ============================================================
 //  Vista "Matriz" de Hoy (v27, fase 1): cuatro cuadrantes según urgente e
@@ -48,7 +49,7 @@ export function EisenhowerMatrix({ items, work, wide, onDrop }: {
     <View style={{ gap: 12 }}>
       <View style={{ flexDirection: 'row', gap: 12, alignItems: 'stretch' }}>{cell('hacer')}{cell('planear')}</View>
       <View style={{ flexDirection: 'row', gap: 12, alignItems: 'stretch' }}>{cell('rapido')}{cell('soltar')}</View>
-      <Text style={{ color: C.muted, fontSize: 12.5 }}>Arrastra una tarea a otro cuadrante para cambiar si es importante. La urgencia sale de la fecha: si la cambias de fila, te ofrezco moverla.</Text>
+      <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Arrastra una tarea a otro cuadrante para cambiar si es importante. La urgencia sale de la fecha: si la cambias de fila, te ofrezco moverla.')}</Text>
     </View>
   );
 }

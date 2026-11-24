@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { C } from './theme';
 import { getTaskTypes, type TaskTypeRow } from './db';
+import { t } from './i18n';
 
 // ============================================================
 //  Tipos de tarea: cinco por defecto (con Repaso, v20) + los que cree el usuario.
@@ -30,12 +31,12 @@ export type TypeMeta = {
 // al color que tuviera C en el momento de importar el módulo.
 type Tone = 'brand' | 'brand2' | 'good' | 'warn' | 'bad';
 const BUILTIN: { key: string; label: string; icon: string; tone: Tone }[] = [
-  { key: 'tarea', label: 'Tarea', icon: '📝', tone: 'brand' },
-  { key: 'examen', label: 'Examen', icon: '📕', tone: 'bad' },
-  { key: 'quiz', label: 'Quiz', icon: '✍️', tone: 'warn' },
-  { key: 'proyecto', label: 'Proyecto', icon: '📦', tone: 'brand2' },
+  { key: 'tarea', label: t('Tarea'), icon: '📝', tone: 'brand' },
+  { key: 'examen', label: t('Examen'), icon: '📕', tone: 'bad' },
+  { key: 'quiz', label: t('Quiz'), icon: '✍️', tone: 'warn' },
+  { key: 'proyecto', label: t('Proyecto'), icon: '📦', tone: 'brand2' },
   // v20: sesiones del plan de repaso de un examen.
-  { key: 'repaso', label: 'Repaso', icon: '🔁', tone: 'good' },
+  { key: 'repaso', label: t('Repaso'), icon: '🔁', tone: 'good' },
 ];
 export const BUILTIN_KEYS = BUILTIN.map((b) => b.key);
 

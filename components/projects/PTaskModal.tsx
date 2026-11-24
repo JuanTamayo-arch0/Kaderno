@@ -15,6 +15,7 @@ import { play } from '../../lib/sound';
 import { BoardColumn, Member, PStep, PTask, addProjectStep, addProjectTask, colorOf, deleteProjectStep, deleteProjectTask, initialsOf, logActivity, nameOf, toggleProjectStep, updateProjectTask } from '../../lib/projects';
 import { btnPrimary, hace, input, isWeb, lbl, pad } from './projectUi';
 import { TaskComments } from './TaskComments';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Ventana de una tarea de proyecto: datos, responsable, fecha y microtareas.
@@ -84,12 +85,12 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
   }
 
   async function guardar() {
-    if (!title.trim()) return notify('Ponle título a la tarea');
+    if (!title.trim()) return notify(t('Ponle título a la tarea'));
     setBusy(true);
     const due = date ? `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` : null;
     const [hh, mm] = /^\d{2}:\d{2}$/.test(time) ? time.split(':').map(Number) : [23, 59];
     const dueAt = date ? new Date(date.getFullYear(), date.getMonth(), date.getDate(), hh, mm).toISOString() : null;
-    if (start && date && start > date) { setBusy(false); return notify('El inicio va antes de la entrega'); }
+    if (start && date && start > date) { setBusy(false); return notify(t('El inicio va antes de la entrega')); }
     const startAt = start ? new Date(start.getFullYear(), start.getMonth(), start.getDate(), 8, 0).toISOString() : null;
     const startPatch = start || task?.start_at ? { start_at: startAt } : {};
     const allLabels = cleanLabels([...labels, ...cleanLabels(labelTxt)]);
@@ -105,19 +106,19 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
           project_id: projectId, title: title.trim(), status: st,
           description: desc.trim() || null, assignee_id: assignee, due_date: due, due_at: dueAt, ...startPatch, ...v25,
         });
-        await logActivity(projectId, 'task_new', `creó “${creada.title}”`, { task_id: creada.id });
+        await logActivity(projectId, 'task_new', t('creó “{title}”', { title: creada.title }), { task_id: creada.id });
       }
       onSaved();
-    } catch (e: any) { notify('No se pudo guardar', e.message); }
+    } catch (e: any) { notify(t('No se pudo guardar'), e.message); }
     finally { setBusy(false); }
   }
 
   async function borrar() {
     if (!task) return;
-    const ok = await confirm('¿Borrar esta tarea?', `Se borra "${task.title}" para todo el equipo.`, 'Borrar');
+    const ok = await confirm(t('¿Borrar esta tarea?'), t('Se borra "{title}" para todo el equipo.', { title: task.title }), t('Borrar'));
     if (!ok) return;
     try { await deleteProjectTask(task.id); onSaved(); }
-    catch (e: any) { notify('No se pudo borrar', e.message); }
+    catch (e: any) { notify(t('No se pudo borrar'), e.message); }
   }
 
   async function agregarPaso() {
@@ -127,7 +128,7 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
     try {
       await addProjectStep(projectId, task.id, t, (steps.length + 1) * 1000);
       onStepsChanged();
-    } catch (e: any) { notify('No se pudo agregar', e.message); }
+    } catch (e: any) { notify(trn('No se pudo agregar'), e.message); }
   }
 
   const hechos = steps.filter((s) => s.done).length;
@@ -139,26 +140,25 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
               <Text style={{ color: C.text, fontSize: 17, fontWeight: '700', flex: 1 }}>
-                {task ? 'Tarea' : 'Nueva tarea'}
+                {task ? t('Tarea') : t('Nueva tarea')}
               </Text>
               <Pressable onPress={onClose} hitSlop={10}><Ionicons name="close" size={20} color={C.muted} /></Pressable>
             </View>
 
             {!editable && (
               <Text style={{ color: C.muted, fontSize: 12, marginBottom: 10 }}>
-                Solo puedes mirar: en este proyecto no tienes permiso de editar.
-              </Text>
+                {t('Solo puedes mirar: en este proyecto no tienes permiso de editar.')}</Text>
             )}
 
             <TextInput value={title} onChangeText={setTitle} editable={editable}
-              placeholder="¿Qué hay que hacer?" placeholderTextColor={C.muted} style={input} />
+              placeholder={t('¿Qué hay que hacer?')} placeholderTextColor={C.muted} style={input} />
 
-            <Text style={lbl}>Detalle (opcional)</Text>
+            <Text style={lbl}>{t('Detalle (opcional)')}</Text>
             <TextInput value={desc} onChangeText={setDesc} editable={editable} multiline
-              placeholder="Instrucciones, enlaces, lo que sea" placeholderTextColor={C.muted}
+              placeholder={t('Instrucciones, enlaces, lo que sea')} placeholderTextColor={C.muted}
               style={[input, { minHeight: 70, textAlignVertical: 'top' }]} />
 
-            <Text style={lbl}>Columna</Text>
+            <Text style={lbl}>{t('Columna')}</Text>
             <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
               {cols.map((c) => {
                 const on = c.key === st;
@@ -172,11 +172,11 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
               })}
             </View>
 
-            <Text style={lbl}>¿Quién la hace?</Text>
+            <Text style={lbl}>{t('¿Quién la hace?')}</Text>
             <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
               <Pressable onPress={() => editable && setAssignee(null)}
                 style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: R.pill, borderWidth: 1, backgroundColor: assignee === null ? C.surface2 : 'transparent', borderColor: assignee === null ? C.brand : C.line }}>
-                <Text style={{ color: assignee === null ? C.brand : C.muted, fontSize: 12.5, fontWeight: assignee === null ? '700' : '500' }}>Nadie aún</Text>
+                <Text style={{ color: assignee === null ? C.brand : C.muted, fontSize: 12.5, fontWeight: assignee === null ? '700' : '500' }}>{t('Nadie aún')}</Text>
               </Pressable>
               {members.map((m) => {
                 const on = m.user_id === assignee;
@@ -192,7 +192,7 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
               })}
             </View>
 
-            <Text style={lbl}>Fecha y hora de entrega</Text>
+            <Text style={lbl}>{t('Fecha y hora de entrega')}</Text>
             {isWeb ? (
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 {React.createElement('input', {
@@ -206,7 +206,7 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
                   type: 'time',
                   value: time,
                   disabled: !editable || !date,
-                  'aria-label': 'Hora de entrega',
+                  'aria-label': t('Hora de entrega'),
                   onChange: (e: any) => setTime(e.target.value),
                   style: { backgroundColor: C.surface2, border: `1px solid ${C.line}`, borderRadius: 11, color: C.text, padding: 12, fontSize: 14, colorScheme: uiScheme(), flex: 1, minWidth: 0, boxSizing: 'border-box', opacity: date ? 1 : 0.5 },
                 })}
@@ -214,7 +214,7 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
             ) : (
               <>
                 <Pressable onPress={() => editable && setShowPicker(true)} style={input}>
-                  <Text style={{ color: date ? C.text : C.muted }}>{date ? date.toLocaleDateString('es') : 'Sin fecha'}</Text>
+                  <Text style={{ color: date ? C.text : C.muted }}>{date ? date.toLocaleDateString('es') : t('Sin fecha')}</Text>
                 </Pressable>
                 {showPicker && (
                   <DateTimePicker value={date ?? new Date()} mode="date"
@@ -224,25 +224,25 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
             )}
             {date && editable && (
               <Pressable onPress={() => { setDate(null); setTime(''); }} style={{ alignSelf: 'flex-start', marginTop: 6 }}>
-                <Text style={{ color: C.muted, fontSize: 12 }}>Quitar la fecha</Text>
+                <Text style={{ color: C.muted, fontSize: 12 }}>{t('Quitar la fecha')}</Text>
               </Pressable>
             )}
 
-            <Text style={lbl}>Empieza (opcional)</Text>
+            <Text style={lbl}>{t('Empieza (opcional)')}</Text>
             {isWeb ? (
               React.createElement('input', {
                 type: 'date',
                 value: start ? `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}` : '',
                 max: date ? `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` : undefined,
                 disabled: !editable,
-                'aria-label': 'Fecha de inicio',
+                'aria-label': t('Fecha de inicio'),
                 onChange: (e: any) => { const v = e.target.value; setStart(v ? new Date(v + 'T00:00:00') : null); },
                 style: { backgroundColor: C.surface2, border: `1px solid ${C.line}`, borderRadius: 11, color: C.text, padding: 12, fontSize: 14, colorScheme: uiScheme(), width: '100%', boxSizing: 'border-box' },
               })
             ) : (
               <>
                 <Pressable onPress={() => editable && setShowStart(true)} style={input}>
-                  <Text style={{ color: start ? C.text : C.muted }}>{start ? start.toLocaleDateString('es') : 'Sin inicio'}</Text>
+                  <Text style={{ color: start ? C.text : C.muted }}>{start ? start.toLocaleDateString('es') : t('Sin inicio')}</Text>
                 </Pressable>
                 {showStart && (
                   <DateTimePicker value={start ?? date ?? new Date()} mode="date" maximumDate={date ?? undefined}
@@ -252,17 +252,17 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
             )}
             {start && editable && (
               <Pressable onPress={() => setStart(null)} style={{ alignSelf: 'flex-start', marginTop: 6 }}>
-                <Text style={{ color: C.muted, fontSize: 12 }}>Quitar el inicio</Text>
+                <Text style={{ color: C.muted, fontSize: 12 }}>{t('Quitar el inicio')}</Text>
               </Pressable>
             )}
 
             {!more ? (
               <Pressable onPress={() => setMore(true)} style={{ alignSelf: 'flex-start', marginTop: 14 }} accessibilityRole="button">
-                <Text style={{ color: C.brand, fontSize: 13, fontWeight: '700' }}>+ Prioridad, etiquetas, bloqueos y repetir</Text>
+                <Text style={{ color: C.brand, fontSize: 13, fontWeight: '700' }}>{t('+ Prioridad, etiquetas, bloqueos y repetir')}</Text>
               </Pressable>
             ) : (
               <>
-                <Text style={lbl}>Prioridad</Text>
+                <Text style={lbl}>{t('Prioridad')}</Text>
                 <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
                   {[null, ...PRIORITIES].map((p) => {
                     const on = (p?.key ?? null) === prio;
@@ -270,35 +270,35 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
                       <Pressable key={p?.key ?? 'none'} onPress={() => editable && setPrio(p?.key ?? null)} accessibilityRole="radio" accessibilityState={{ checked: on }}
                         style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 7, paddingHorizontal: 11, borderRadius: R.pill, borderWidth: 1, borderColor: on ? (p?.color ?? C.brand) : C.line, backgroundColor: on ? (p?.color ?? C.brand) + '22' : 'transparent' }}>
                         {p && <Ionicons name="flag" size={12} color={p.color} />}
-                        <Text style={{ color: on ? C.text : C.muted, fontSize: 12.5, fontWeight: on ? '700' : '500' }}>{p?.label ?? 'Sin prioridad'}</Text>
+                        <Text style={{ color: on ? C.text : C.muted, fontSize: 12.5, fontWeight: on ? '700' : '500' }}>{p?.label ?? t('Sin prioridad')}</Text>
                       </Pressable>
                     );
                   })}
                 </View>
 
-                <Text style={lbl}>Etiquetas</Text>
+                <Text style={lbl}>{t('Etiquetas')}</Text>
                 <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
                   {labels.map((l) => (
-                    <Pressable key={l} onPress={() => editable && setLabels(labels.filter((x) => x !== l))} accessibilityLabel={`Quitar etiqueta ${l}`}
+                    <Pressable key={l} onPress={() => editable && setLabels(labels.filter((x) => x !== l))} accessibilityLabel={t('Quitar etiqueta {l}', { l })}
                       style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 9, borderRadius: R.pill, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.line }}>
                       <Text style={{ color: C.text, fontSize: 12 }}>#{l}</Text>{editable && <Ionicons name="close" size={11} color={C.muted} />}
                     </Pressable>
                   ))}
                   {projectLabels(allTasks).filter((l) => !labels.includes(l)).slice(0, 6).map((l) => (
-                    <Pressable key={l} onPress={() => editable && setLabels(cleanLabels([...labels, l]))} accessibilityLabel={`Agregar etiqueta ${l}`}
+                    <Pressable key={l} onPress={() => editable && setLabels(cleanLabels([...labels, l]))} accessibilityLabel={t('Agregar etiqueta {l}', { l })}
                       style={{ paddingVertical: 4, paddingHorizontal: 9, borderRadius: R.pill, borderWidth: 1, borderColor: C.line, borderStyle: 'dashed' }}>
                       <Text style={{ color: C.muted, fontSize: 12 }}>+ {l}</Text>
                     </Pressable>
                   ))}
                 </View>
                 {editable && (
-                  <TextInput value={labelTxt} onChangeText={setLabelTxt} placeholder="Nueva etiqueta (Enter para agregar)" placeholderTextColor={C.muted}
-                    onSubmitEditing={() => { setLabels(cleanLabels([...labels, ...cleanLabels(labelTxt)])); setLabelTxt(''); }} style={input} accessibilityLabel="Nueva etiqueta" />
+                  <TextInput value={labelTxt} onChangeText={setLabelTxt} placeholder={t('Nueva etiqueta (Enter para agregar)')} placeholderTextColor={C.muted}
+                    onSubmitEditing={() => { setLabels(cleanLabels([...labels, ...cleanLabels(labelTxt)])); setLabelTxt(''); }} style={input} accessibilityLabel={t('Nueva etiqueta')} />
                 )}
 
                 {(allTasks.length > 1 || blocked.length > 0) && (
                   <>
-                    <Text style={lbl}>Bloqueada por (espera a que se terminen)</Text>
+                    <Text style={lbl}>{t('Bloqueada por (espera a que se terminen)')}</Text>
                     <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
                       {allTasks.filter((x) => x.id !== task?.id && !x.done && !(x.blocked_by ?? []).includes(task?.id ?? '-')).slice(0, 20).map((x) => {
                         const on = blocked.includes(x.id);
@@ -315,21 +315,20 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
                 )}
 
                 {date && <View style={{ marginTop: 12 }}><RepeatPicker value={repeat} onChange={setRepeat} date={`${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`} /></View>}
-                {!date && <Text style={{ color: C.muted, fontSize: 12, marginTop: 10 }}>Para que se repita, ponle fecha de entrega.</Text>}
+                {!date && <Text style={{ color: C.muted, fontSize: 12, marginTop: 10 }}>{t('Para que se repita, ponle fecha de entrega.')}</Text>}
               </>
             )}
 
             {/* ---------- Microtareas ---------- */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 18, marginBottom: 8 }}>
               <Ionicons name="list-outline" size={15} color={C.muted} />
-              <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700', flex: 1 }}>Microtareas</Text>
+              <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700', flex: 1 }}>{t('Microtareas')}</Text>
               {steps.length > 0 && <Text style={{ color: C.muted, fontSize: 12 }}>{hechos}/{steps.length}</Text>}
             </View>
 
             {!task ? (
               <Text style={{ color: C.muted, fontSize: 12, lineHeight: 18 }}>
-                Guarda la tarea primero y aquí podrás partirla en pasos (con sugerencias según la descripción) y ver su avance.
-              </Text>
+                {t('Guarda la tarea primero y aquí podrás partirla en pasos (con sugerencias según la descripción) y ver su avance.')}</Text>
             ) : (
               <View style={{ backgroundColor: C.surface2 + '80', borderRadius: 12, borderWidth: 1, borderColor: C.line, padding: 10 }}>
                 {steps.length > 0 && (
@@ -346,7 +345,7 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
                         play(next ? 'step' : 'uncheck');
                         onStepPatch?.(s.id, next);
                         try { await toggleProjectStep(s.id, next); onStepsChanged(); }
-                        catch (e: any) { onStepPatch?.(s.id, !next); notify('No se pudo marcar', e.message); }
+                        catch (e: any) { onStepPatch?.(s.id, !next); notify(t('No se pudo marcar'), e.message); }
                       }}
                       key={s.done ? 'si' : 'no'} dataSet={s.done ? { anim: 'pop' } : undefined}
                       style={{ width: 19, height: 19, borderRadius: 6, borderWidth: 2, borderColor: s.done ? C.good : C.line, backgroundColor: s.done ? C.good : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
@@ -357,7 +356,7 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
                       <Pressable hitSlop={8}
                         onPress={async () => {
                           try { await deleteProjectStep(s.id); onStepsChanged(); }
-                          catch (e: any) { notify('No se pudo borrar', e.message); }
+                          catch (e: any) { notify(t('No se pudo borrar'), e.message); }
                         }}>
                         <Ionicons name="close" size={15} color={C.muted} />
                       </Pressable>
@@ -367,7 +366,7 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
                 {editable && (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
                     <TextInput value={nuevoPaso} onChangeText={setNuevoPaso} onSubmitEditing={agregarPaso}
-                      placeholder="Agregar un paso" placeholderTextColor={C.muted} returnKeyType="done"
+                      placeholder={t('Agregar un paso')} placeholderTextColor={C.muted} returnKeyType="done"
                       style={{ flex: 1, backgroundColor: C.surface, borderColor: C.line, borderWidth: 1, borderRadius: 9, color: C.text, paddingVertical: 9, paddingHorizontal: 11, fontSize: 13 }} />
                     <Pressable onPress={agregarPaso} hitSlop={8}><Ionicons name="add-circle" size={22} color={C.brand} /></Pressable>
                   </View>
@@ -380,35 +379,35 @@ export function PTaskModal({ visible, task, projectId, status, cols, members, st
                   try {
                     for (let i = 0; i < titles.length; i++) await addProjectStep(projectId, task.id, titles[i], (steps.length + i + 1) * 1000);
                     onStepsChanged();
-                  } catch (e: any) { notify('No se pudo agregar', e.message); }
+                  } catch (e: any) { notify(t('No se pudo agregar'), e.message); }
                 }} />
             )}
 
             {editable && (
               <Pressable onPress={guardar} disabled={busy} style={btnPrimary}>
-                <Text style={{ color: C.onBrand, fontWeight: '700' }}>{busy ? '…' : task ? 'Guardar' : 'Crear tarea'}</Text>
+                <Text style={{ color: C.onBrand, fontWeight: '700' }}>{busy ? '…' : task ? t('Guardar') : t('Crear tarea')}</Text>
               </Pressable>
             )}
             {task && !task.done && (
               <Pressable onPress={async () => {
                 const r = await startStopwatch({ title: task.title, projectId, projectTaskId: task.id });
-                toast(r.saved ? `Cronómetro en "${task.title}". El anterior quedó anotado (${r.saved} min).` : `Cronómetro en "${task.title}"`); onClose();
-              }} accessibilityRole="button" accessibilityLabel="Iniciar cronómetro en esta tarea"
+                toast(r.saved ? t('Cronómetro en "{title}". El anterior quedó anotado ({saved} min).', { title: task.title, saved: r.saved }) : t('Cronómetro en "{title}"', { title: task.title })); onClose();
+              }} accessibilityRole="button" accessibilityLabel={t('Iniciar cronómetro en esta tarea')}
                 style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 12, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: C.line }}>
                 <Ionicons name="play-circle-outline" size={18} color={C.brand} />
-                <Text style={{ color: C.brand, fontWeight: '700', fontSize: 13.5 }}>Iniciar cronómetro</Text>
+                <Text style={{ color: C.brand, fontWeight: '700', fontSize: 13.5 }}>{t('Iniciar cronómetro')}</Text>
               </Pressable>
             )}
             {editable && task && (
               <Pressable onPress={borrar} style={{ alignItems: 'center', marginTop: 14 }}>
-                <Text style={{ color: C.bad, fontWeight: '600', fontSize: 13 }}>Borrar tarea</Text>
+                <Text style={{ color: C.bad, fontWeight: '600', fontSize: 13 }}>{t('Borrar tarea')}</Text>
               </Pressable>
             )}
             {task && (
               <TaskComments projectId={projectId} taskId={task.id} taskTitle={task.title} members={members} myId={myId} isOwner={isOwner} onCountChange={onCommentCount} />
             )}
             <Pressable onPress={onClose} style={{ alignItems: 'center', marginTop: 12 }}>
-              <Text style={{ color: C.muted }}>Cerrar</Text>
+              <Text style={{ color: C.muted }}>{t('Cerrar')}</Text>
             </Pressable>
           </ScrollView>
         </Pressable>

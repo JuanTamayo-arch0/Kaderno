@@ -7,6 +7,7 @@ import { KadernoLockup, KadernoMark } from '../../components/brand/KadernoLogo';
 import { fetchSharedNote, type SharedNote } from '../../lib/calendarsDb';
 import { noteToHtml } from '../../lib/noteHtml';
 import { useAuth } from '../../lib/auth';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Nota compartida (v21, sección 10): pública, de solo lectura, sin sesión.
@@ -56,7 +57,7 @@ export default function NotaCompartida() {
   }, [token]);
 
   useEffect(() => {
-    if (Platform.OS === 'web' && typeof document !== 'undefined') document.title = note ? `${note.title} · Kaderno` : 'Nota compartida · Kaderno';
+    if (Platform.OS === 'web' && typeof document !== 'undefined') document.title = note ? `${note.title} · Kaderno` : t('Nota compartida · Kaderno');
   }, [note]);
 
   const updated = note?.updated_at ? new Date(note.updated_at).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' }) : null;
@@ -65,19 +66,19 @@ export default function NotaCompartida() {
       <View style={{ width: '100%', maxWidth: 760 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 22, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: C.line }}>
           <KadernoLockup size={26} />
-          <Text numberOfLines={1} style={{ color: C.muted, fontSize: 13, fontWeight: '700', flex: 1 }}>{narrow ? '' : '· nota compartida'}</Text>
-          <Button label={session ? 'Ir a Kaderno' : 'Probar Kaderno'} size="sm" kind="ghost" onPress={() => router.replace(session ? '/' : '/login')} />
+          <Text numberOfLines={1} style={{ color: C.muted, fontSize: 13, fontWeight: '700', flex: 1 }}>{narrow ? '' : t('· nota compartida')}</Text>
+          <Button label={session ? t('Ir a Kaderno') : t('Probar Kaderno')} size="sm" kind="ghost" onPress={() => router.replace(session ? '/' : '/login')} />
         </View>
         {!note && !error && <ActivityIndicator color={C.brand} style={{ marginTop: 40 }} />}
         {error && (
           <View accessibilityLiveRegion="polite">
-            <EmptyState icon="link-outline" title="Este enlace ya no funciona" text="Quien lo compartió pudo desactivarlo o cambiarlo. Pídele uno nuevo." />
+            <EmptyState icon="link-outline" title={t('Este enlace ya no funciona')} text={t('Quien lo compartió pudo desactivarlo o cambiarlo. Pídele uno nuevo.')} />
           </View>
         )}
         {note && (
           <>
             <Text accessibilityRole="header" dataSet={{ head: '1' }} style={{ color: C.text, fontSize: 28, fontWeight: '800', lineHeight: 34 }}>{note.title}</Text>
-            {updated && <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 6 }}>Actualizada el {updated}</Text>}
+            {updated && <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 6 }}>{t('Actualizada el {updated}', { updated })}</Text>}
             {Platform.OS === 'web' ? (
               <>
                 <style dangerouslySetInnerHTML={{ __html: CSS }} />
@@ -88,7 +89,7 @@ export default function NotaCompartida() {
             )}
             <View style={{ alignItems: 'center', gap: 6, marginTop: 36 }}>
               <KadernoMark size={22} />
-              <Text style={{ color: C.muted, fontSize: 12, textAlign: 'center' }}>Escrita en Kaderno. Solo se puede leer; quien la compartió puede apagar el enlace.</Text>
+              <Text style={{ color: C.muted, fontSize: 12, textAlign: 'center' }}>{t('Escrita en Kaderno. Solo se puede leer; quien la compartió puede apagar el enlace.')}</Text>
             </View>
           </>
         )}

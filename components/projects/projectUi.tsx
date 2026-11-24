@@ -2,6 +2,7 @@ import { Platform, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C, R } from '../../lib/theme';
 import { PStep, PTask } from '../../lib/projects';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Piezas pequeñas compartidas por la pantalla de proyecto: puntero, fechas, casillas, etiquetas y estilos.
@@ -37,8 +38,8 @@ export function dueInfo(t: Pick<PTask, 'due_date' | 'due_at'>, done: boolean): {
   d.setHours(0, 0, 0, 0);
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const days = Math.round((d.getTime() - today.getTime()) / 86400000);
-  let label = days === 0 ? 'Hoy' : days === 1 ? 'Mañana' : days === -1 ? 'Ayer'
-    : days < 0 ? `Hace ${-days}d`
+  let label = days === 0 ? trn('Hoy') : days === 1 ? trn('Mañana') : days === -1 ? trn('Ayer')
+    : days < 0 ? trn('Hace {v}d', { v: -days })
     : d.toLocaleDateString('es', { day: 'numeric', month: 'short' });
   if (hasTime && at) label += ` ${at.toLocaleTimeString('es', { hour: 'numeric', minute: '2-digit' })}`;
   const late = at ? at.getTime() < Date.now() : days < 0;
@@ -68,11 +69,11 @@ export function hace(iso: string): string {
   if (isNaN(then)) return '';
   const min = Math.max(0, Math.round((Date.now() - then) / 60000));
   if (min < 1) return 'ahora';
-  if (min < 60) return `hace ${min} min`;
+  if (min < 60) return t('hace {min} min', { min });
   const h = Math.round(min / 60);
-  if (h < 24) return `hace ${h} h`;
+  if (h < 24) return t('hace {h} h', { h });
   const d = Math.round(h / 24);
-  if (d < 30) return `hace ${d} d`;
+  if (d < 30) return t('hace {d} d', { d });
   return new Date(iso).toLocaleDateString('es', { day: 'numeric', month: 'short' });
 }
 

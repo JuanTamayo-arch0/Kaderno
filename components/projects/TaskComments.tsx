@@ -7,6 +7,7 @@ import { Member, colorOf, initialsOf, logActivity, nameOf } from '../../lib/proj
 import { mentionQuery, mentionMatches, insertMention, mentionsIn, commentParts, type MentionPerson } from '../../lib/comments';
 import { getComments, addComment, editComment, deleteComment, commentsAvailable, type TaskComment } from '../../lib/commentsDb';
 import { COARSE_POINTER, hace } from './projectUi';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Comentarios de una tarea de proyecto (v23, fase 2): con @menciones,
@@ -53,8 +54,8 @@ export function TaskComments({ projectId, taskId, taskTitle, members, myId, isOw
       const c = await addComment(projectId, taskId, body, mentionsIn(body, people));
       setText(''); setCaret(0);
       setList((l) => { const n = [...(l ?? []), c]; onCountChange?.(taskId, n.length); return n; });
-      logActivity(projectId, 'comment', `comentó en "${taskTitle}"`, { task_id: taskId });
-    } catch (e: any) { notify('No se pudo comentar', e?.message ?? String(e)); }
+      logActivity(projectId, 'comment', t('comentó en "{taskTitle}"', { taskTitle }), { task_id: taskId });
+    } catch (e: any) { notify(t('No se pudo comentar'), e?.message ?? String(e)); }
     finally { setBusy(false); }
   }
   async function saveEdit() {
@@ -65,12 +66,12 @@ export function TaskComments({ projectId, taskId, taskTitle, members, myId, isOw
       await editComment(editing.id, body, mentionsIn(body, people));
       setList((l) => l?.map((c) => (c.id === editing.id ? { ...c, body, edited_at: new Date().toISOString() } : c)) ?? null);
       setEditing(null);
-    } catch (e: any) { notify('No se pudo editar', e?.message ?? String(e)); }
+    } catch (e: any) { notify(t('No se pudo editar'), e?.message ?? String(e)); }
   }
   async function remove(c: TaskComment) {
-    if (!(await confirm('¿Borrar el comentario?', undefined, 'Borrar'))) return;
+    if (!(await confirm(t('¿Borrar el comentario?'), undefined, t('Borrar')))) return;
     try { await deleteComment(c.id); setList((l) => { const n = l?.filter((x) => x.id !== c.id) ?? []; onCountChange?.(taskId, n.length); return n; }); }
-    catch (e: any) { notify('No se pudo borrar', e?.message ?? String(e)); }
+    catch (e: any) { notify(t('No se pudo borrar'), e?.message ?? String(e)); }
   }
 
   const onKey = (e: any) => {
@@ -82,13 +83,13 @@ export function TaskComments({ projectId, taskId, taskTitle, members, myId, isOw
 
   if (!commentsAvailable() && list?.length === 0) return null;
   return (
-    <View style={{ marginTop: 22, borderTopWidth: 1, borderTopColor: C.line, paddingTop: 16 }} accessibilityLabel="Comentarios">
+    <View style={{ marginTop: 22, borderTopWidth: 1, borderTopColor: C.line, paddingTop: 16 }} accessibilityLabel={t('Comentarios')}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
         <Ionicons name="chatbubbles-outline" size={16} color={C.muted} />
-        <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '700', flex: 1 }}>Comentarios{list?.length ? ` · ${list.length}` : ''}</Text>
+        <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '700', flex: 1 }}>{t('Comentarios{v}', { v: list?.length ? ` · ${list.length}` : '' })}</Text>
       </View>
       {list === null && <ActivityIndicator color={C.brand} />}
-      {list?.length === 0 && <Text style={{ color: C.muted, fontSize: 13, marginBottom: 8 }}>Todavía nadie comenta. Escribe @ para mencionar a alguien del equipo.</Text>}
+      {list?.length === 0 && <Text style={{ color: C.muted, fontSize: 13, marginBottom: 8 }}>{t('Todavía nadie comenta. Escribe @ para mencionar a alguien del equipo.')}</Text>}
       {list?.map((c) => {
         const m = byId[c.author_id];
         const mine = c.author_id === myId;
@@ -100,27 +101,27 @@ export function TaskComments({ projectId, taskId, taskTitle, members, myId, isOw
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{m ? nameOf(m.profile) : 'Ex integrante'}</Text>
+                <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{m ? nameOf(m.profile) : t('Ex integrante')}</Text>
                 <Text style={{ color: C.muted, fontSize: 11.5 }}>{hace(c.created_at)}{c.edited_at ? ' · editado' : ''}</Text>
                 <View style={{ flex: 1 }} />
                 {mine && !isEditing && (
-                  <Pressable onPress={() => setEditing({ id: c.id, text: c.body })} accessibilityRole="button" accessibilityLabel="Editar comentario" hitSlop={6}>
-                    <Text style={{ color: C.muted, fontSize: 12 }}>Editar</Text>
+                  <Pressable onPress={() => setEditing({ id: c.id, text: c.body })} accessibilityRole="button" accessibilityLabel={t('Editar comentario')} hitSlop={6}>
+                    <Text style={{ color: C.muted, fontSize: 12 }}>{t('Editar')}</Text>
                   </Pressable>
                 )}
                 {(mine || isOwner) && !isEditing && (
-                  <Pressable onPress={() => remove(c)} accessibilityRole="button" accessibilityLabel="Borrar comentario" hitSlop={6}>
-                    <Text style={{ color: C.muted, fontSize: 12 }}>Borrar</Text>
+                  <Pressable onPress={() => remove(c)} accessibilityRole="button" accessibilityLabel={t('Borrar comentario')} hitSlop={6}>
+                    <Text style={{ color: C.muted, fontSize: 12 }}>{t('Borrar')}</Text>
                   </Pressable>
                 )}
               </View>
               {isEditing ? (
                 <View style={{ gap: 6, marginTop: 4 }}>
-                  <TextInput value={editing!.text} onChangeText={(t) => setEditing({ id: c.id, text: t })} multiline autoFocus accessibilityLabel="Editar comentario"
+                  <TextInput value={editing!.text} onChangeText={(t) => setEditing({ id: c.id, text: t })} multiline autoFocus accessibilityLabel={t('Editar comentario')}
                     style={[box, { minHeight: 60 }]} />
                   <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'flex-end' }}>
-                    <Pressable onPress={() => setEditing(null)}><Text style={{ color: C.muted, fontSize: 13 }}>Cancelar</Text></Pressable>
-                    <Pressable onPress={saveEdit}><Text style={{ color: C.brand, fontSize: 13, fontWeight: '700' }}>Guardar</Text></Pressable>
+                    <Pressable onPress={() => setEditing(null)}><Text style={{ color: C.muted, fontSize: 13 }}>{t('Cancelar')}</Text></Pressable>
+                    <Pressable onPress={saveEdit}><Text style={{ color: C.brand, fontSize: 13, fontWeight: '700' }}>{t('Guardar')}</Text></Pressable>
                   </View>
                 </View>
               ) : (
@@ -149,15 +150,15 @@ export function TaskComments({ projectId, taskId, taskTitle, members, myId, isOw
           </View>
         )}
         <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-end' }}>
-          <TextInput ref={input} value={text} onChangeText={setText} multiline placeholder="Escribe un comentario… (@ para mencionar)" placeholderTextColor={C.muted}
-            onSelectionChange={(e) => setCaret(e.nativeEvent.selection.end)} onKeyPress={onKey} accessibilityLabel="Nuevo comentario" maxLength={4000}
+          <TextInput ref={input} value={text} onChangeText={setText} multiline placeholder={t('Escribe un comentario… (@ para mencionar)')} placeholderTextColor={C.muted}
+            onSelectionChange={(e) => setCaret(e.nativeEvent.selection.end)} onKeyPress={onKey} accessibilityLabel={t('Nuevo comentario')} maxLength={4000}
             style={[box, { flex: 1, minHeight: 44, maxHeight: 140 }]} />
-          <Pressable onPress={send} disabled={busy || !text.trim()} accessibilityRole="button" accessibilityLabel="Enviar comentario"
+          <Pressable onPress={send} disabled={busy || !text.trim()} accessibilityRole="button" accessibilityLabel={t('Enviar comentario')}
             style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: text.trim() ? C.brand : C.surface2, alignItems: 'center', justifyContent: 'center' }}>
             {busy ? <ActivityIndicator color={C.onBrand} /> : <Ionicons name="send" size={17} color={text.trim() ? C.onBrand : C.muted} />}
           </Pressable>
         </View>
-        {Platform.OS === 'web' && !COARSE_POINTER && <Text style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>Ctrl + Enter para enviar</Text>}
+        {Platform.OS === 'web' && !COARSE_POINTER && <Text style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>{t('Ctrl + Enter para enviar')}</Text>}
       </View>
     </View>
   );

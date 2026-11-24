@@ -1,4 +1,5 @@
-// ============================================================
+
+import { t } from './i18n';// ============================================================
 //  Informe semanal del proyecto (v24, fase 5). Puro, con pruebas: lo hecho
 //  en los últimos 7 días, lo que viene en los próximos 7, lo atrasado y la
 //  carga de cada quien, listo para mandarle al jefe o al cliente.
@@ -48,9 +49,9 @@ export function weeklyReportMarkdown(projectName: string, r: WeeklyReport, peopl
   const pct = r.total ? Math.round((r.doneTotal / r.total) * 100) : 0;
   const out = [
     `# Informe semanal: ${projectName}`, '',
-    `Del ${short(r.from)} al ${short(r.to)}. Avance total: ${r.doneTotal} de ${r.total} tareas (${pct} %).`, '',
-    `## Lo hecho esta semana (${r.done.length})`, '', ...(r.done.length ? r.done.map((t) => line(t)) : ['- Nada terminado esta semana.']), '',
-    `## Lo que viene en los próximos 7 días (${r.next.length})`, '', ...(r.next.length ? r.next.map((t) => line(t, true)) : ['- Nada con fecha en los próximos 7 días.']), '',
+    t('Del {from} al {to}. Avance total: {doneTotal} de {total} tareas ({pct} %).', { from: short(r.from), to: short(r.to), doneTotal: r.doneTotal, total: r.total, pct }), '',
+    `## Lo hecho esta semana (${r.done.length})`, '', ...(r.done.length ? r.done.map((t) => line(t)) : [t('- Nada terminado esta semana.')]), '',
+    `## Lo que viene en los próximos 7 días (${r.next.length})`, '', ...(r.next.length ? r.next.map((t) => line(t, true)) : [t('- Nada con fecha en los próximos 7 días.')]), '',
   ];
   if (r.late.length) out.push(`## Atrasado (${r.late.length})`, '', ...r.late.map((t) => line(t, true)), '');
   if (r.load.length || r.unassigned) {

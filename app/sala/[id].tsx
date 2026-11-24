@@ -16,6 +16,7 @@ import { RequireAuth } from '../../components/RequireAuth';
 import { PatioHint, patioMembers } from '../../components/rooms/PetPatio';
 import { usePets, activePet } from '../../lib/pets/store';
 import { petsSeen, setRoomMembers, roomFx } from '../../lib/rooms';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Sala de estudio: quién está, en qué estado y cuánto le queda,
@@ -70,12 +71,12 @@ function Sala() {
     prevDone.current = doneNow;
   }, [doneNow]);
 
-  if (room === undefined) return <Screen title="Sala" back="/enfoque"><Skeleton height={120} /><Skeleton height={220} /></Screen>;
+  if (room === undefined) return <Screen title={t('Sala')} back="/enfoque"><Skeleton height={120} /><Skeleton height={220} /></Screen>;
   if (!room) {
     return (
-      <Screen title="Sala" back="/enfoque">
-        <EmptyState icon="people-outline" title="No encontramos esta sala" text={err ?? 'Puede que la hayan borrado o que ya no estés en ella.'}
-          action={{ label: 'Volver a Enfoque', onPress: () => router.replace('/enfoque' as any) }} />
+      <Screen title={t('Sala')} back="/enfoque">
+        <EmptyState icon="people-outline" title={t('No encontramos esta sala')} text={err ?? t('Puede que la hayan borrado o que ya no estés en ella.')}
+          action={{ label: t('Volver a Enfoque'), onPress: () => router.replace('/enfoque' as any) }} />
       </Screen>
     );
   }
@@ -94,15 +95,15 @@ function Sala() {
   const share = async () => {
     if (!room.code) return;
     const link = joinLink(origin, room.code);
-    const text = `Estudiemos juntos en Kaderno: entra a "${room.name}" con el código ${formatCode(room.code)} o en ${link}`;
+    const text = t('Estudiemos juntos en Kaderno: entra a "{name}" con el código {code} o en {link}', { name: room.name, code: formatCode(room.code), link });
     if (Platform.OS === 'web' && typeof navigator !== 'undefined' && (navigator as any).share && !isWide) {
       try { await (navigator as any).share({ title: room.name, text, url: link }); return; } catch { /* cancelado */ }
     }
-    if (await copyText(link)) toast('Enlace copiado. Quien lo abra entra a la sala.', { tone: 'good' });
+    if (await copyText(link)) toast(t('Enlace copiado. Quien lo abra entra a la sala.'), { tone: 'good' });
   };
   const leave = async () => {
-    const msg = room.project_id ? 'Puedes volver desde el proyecto cuando quieras.' : isOwner && people.length > 1 ? 'La sala pasa a quien llegó primero después de ti.' : people.length <= 1 ? 'Eres la última persona: la sala se borra.' : 'Para volver necesitas el código.';
-    if (!(await confirm('¿Salir de la sala?', msg, 'Salir de la sala'))) return;
+    const msg = room.project_id ? t('Puedes volver desde el proyecto cuando quieras.') : isOwner && people.length > 1 ? t('La sala pasa a quien llegó primero después de ti.') : people.length <= 1 ? t('Eres la última persona: la sala se borra.') : t('Para volver necesitas el código.');
+    if (!(await confirm(t('¿Salir de la sala?'), msg, t('Salir de la sala')))) return;
     try { await leaveRoom(room.id); await exitRoom(); router.replace('/enfoque' as any); }
     catch (e: any) { toast(String(e.message ?? e), { tone: 'bad' }); }
   };
@@ -110,30 +111,30 @@ function Sala() {
     try { const r = await updateRoom(room.id, null, Math.min(50, Math.max(1, g))); setRoom(r); } catch (e: any) { toast(String(e.message ?? e), { tone: 'bad' }); }
   };
   const regen = async () => {
-    if (!(await confirm('¿Cambiar el código?', 'El código y el enlace de ahora dejan de servir. Quienes ya están en la sala siguen adentro.', 'Cambiar código'))) return;
-    try { setRoom(await newRoomCode(room.id)); toast('Código nuevo listo.', { tone: 'good' }); } catch (e: any) { toast(String(e.message ?? e), { tone: 'bad' }); }
+    if (!(await confirm(t('¿Cambiar el código?'), t('El código y el enlace de ahora dejan de servir. Quienes ya están en la sala siguen adentro.'), t('Cambiar código')))) return;
+    try { setRoom(await newRoomCode(room.id)); toast(t('Código nuevo listo.'), { tone: 'good' }); } catch (e: any) { toast(String(e.message ?? e), { tone: 'bad' }); }
   };
 
   const together = (
     <Card>
-      <Text style={{ color: C.text, fontSize: 15, fontWeight: '800', marginBottom: 8 }} accessibilityRole="header">Empezar juntos</Text>
+      <Text style={{ color: C.text, fontSize: 15, fontWeight: '800', marginBottom: 8 }} accessibilityRole="header">{t('Empezar juntos')}</Text>
       {canJoin ? (
         <View style={{ gap: 10 }}>
           <Text style={{ color: C.text, fontSize: 14 }} accessibilityLiveRegion="polite">{proposalText(p!, now)}</Text>
-          <Button label="Me uno" icon="play" onPress={() => acceptProposal(p!)} style={{ alignSelf: 'flex-start' }} />
+          <Button label={t('Me uno')} icon="play" onPress={() => acceptProposal(p!)} style={{ alignSelf: 'flex-start' }} />
         </View>
       ) : waiting ? (
-        <Text style={{ color: C.goodText, fontSize: 22, fontWeight: '800' }} accessibilityLiveRegion="polite">Empiezan todos en {waiting} s</Text>
+        <Text style={{ color: C.goodText, fontSize: 22, fontWeight: '800' }} accessibilityLiveRegion="polite">{t('Empiezan todos en {waiting} s', { waiting })}</Text>
       ) : f.state.running ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <Text style={{ color: f.state.mode === 'work' ? C.brand : C.goodText, fontSize: 26, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{f.label}</Text>
-          <Text style={{ color: C.muted, fontSize: 13.5, flex: 1 }}>{f.state.mode === 'work' ? 'Estás enfocado. Este pomodoro cuenta para la meta.' : 'Descanso.'}</Text>
-          <Button label="Ir a Enfoque" kind="secondary" size="sm" onPress={() => router.push('/enfoque' as any)} />
+          <Text style={{ color: C.muted, fontSize: 13.5, flex: 1 }}>{f.state.mode === 'work' ? t('Estás enfocado. Este pomodoro cuenta para la meta.') : t('Descanso.')}</Text>
+          <Button label={t('Ir a Enfoque')} kind="secondary" size="sm" onPress={() => router.push('/enfoque' as any)} />
         </View>
       ) : (
         <View style={{ gap: 10 }}>
-          <Text style={{ color: C.muted, fontSize: 13.5, lineHeight: 19 }}>Propón un pomodoro de {f.state.workMin} min. A los demás les llega un aviso y, si se unen, todos terminan a la misma hora.</Text>
-          <Button label={`Empezar juntos (${f.state.workMin} min)`} icon="people" onPress={() => { void proposeTogether(); }} disabled={live.status !== 'on'} style={{ alignSelf: 'flex-start' }} />
+          <Text style={{ color: C.muted, fontSize: 13.5, lineHeight: 19 }}>{t('Propón un pomodoro de {workMin} min. A los demás les llega un aviso y, si se unen, todos terminan a la misma hora.', { workMin: f.state.workMin })}</Text>
+          <Button label={t('Empezar juntos ({workMin} min)', { workMin: f.state.workMin })} icon="people" onPress={() => { void proposeTogether(); }} disabled={live.status !== 'on'} style={{ alignSelf: 'flex-start' }} />
         </View>
       )}
     </Card>
@@ -145,38 +146,38 @@ function Sala() {
         <Text style={{ color: C.text, fontSize: 15, fontWeight: '800', flex: 1 }}>{goal.label}</Text>
         {isOwner && (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <Pressable onPress={() => setGoal(room.goal - 1)} accessibilityRole="button" accessibilityLabel="Bajar la meta" hitSlop={6}><Ionicons name="remove-circle-outline" size={22} color={C.muted} /></Pressable>
-            <Text style={{ color: C.muted, fontSize: 12.5 }}>meta</Text>
-            <Pressable onPress={() => setGoal(room.goal + 1)} accessibilityRole="button" accessibilityLabel="Subir la meta" hitSlop={6}><Ionicons name="add-circle-outline" size={22} color={C.muted} /></Pressable>
+            <Pressable onPress={() => setGoal(room.goal - 1)} accessibilityRole="button" accessibilityLabel={t('Bajar la meta')} hitSlop={6}><Ionicons name="remove-circle-outline" size={22} color={C.muted} /></Pressable>
+            <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('meta')}</Text>
+            <Pressable onPress={() => setGoal(room.goal + 1)} accessibilityRole="button" accessibilityLabel={t('Subir la meta')} hitSlop={6}><Ionicons name="add-circle-outline" size={22} color={C.muted} /></Pressable>
           </View>
         )}
       </View>
       <View style={{ height: 10, borderRadius: 5, backgroundColor: C.surface2, overflow: 'hidden' }} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: goal.goal, now: goal.done }}>
         <View style={{ width: `${goal.frac * 100}%`, height: 10, borderRadius: 5, backgroundColor: goal.reached ? C.good : C.brand }} />
       </View>
-      <Text style={{ color: C.muted, fontSize: 12, marginTop: 8 }}>Cuentan los pomodoros de 10 min o más que cada quien termina con la sala abierta.</Text>
+      <Text style={{ color: C.muted, fontSize: 12, marginTop: 8 }}>{t('Cuentan los pomodoros de 10 min o más que cada quien termina con la sala abierta.')}</Text>
     </Card>
   );
 
   const list = (
     <Card>
       <View style={{ flexDirection: 'row', alignItems: 'baseline', marginBottom: 6 }}>
-        <Text style={{ color: C.text, fontSize: 15, fontWeight: '800', flex: 1 }}>En la sala · {rows.length}</Text>
+        <Text style={{ color: C.text, fontSize: 15, fontWeight: '800', flex: 1 }}>{t('En la sala · {length}', { length: rows.length })}</Text>
         <Text style={{ color: C.muted, fontSize: 12.5 }}>{live.status === 'on' ? stateCounts(rows) : live.status === 'error' ? (live.error ?? '') : 'Conectando...'}</Text>
       </View>
       {rows.map((r) => {
         const pill = PILL[r.state];
         return (
           <View key={r.user_id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: C.surface2 }}
-            accessibilityLabel={`${r.name}${r.me ? ' (tú)' : ''}: ${r.label}${r.detail ? ', ' + r.detail : ''}. ${r.pomodoros} pomodoros hoy.`}>
+            accessibilityLabel={t('{name}{v}: {label}{v2}. {pomodoros} pomodoros hoy.', { name: r.name, v: r.me ? ' (tú)' : '', label: r.label, v2: r.detail ? ', ' + r.detail : '', pomodoros: r.pomodoros })}>
             <Avatar name={r.name} state={r.state} size={36} />
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '700' }} numberOfLines={1}>{r.name}{r.me ? ' (tú)' : ''}</Text>
+              <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '700' }} numberOfLines={1}>{r.name}{r.me ? t(' (tú)') : ''}</Text>
               <Text style={{ color: C.muted, fontSize: 12.5 }} numberOfLines={1}>
-                {r.detail || (r.state === 'away' ? 'No está conectado' : 'Listo para empezar')}{r.live?.task ? ` · ${r.live.task}` : ''}{r.is_owner ? ' · creó la sala' : ''}
+                {r.detail || (r.state === 'away' ? t('No está conectado') : t('Listo para empezar'))}{r.live?.task ? ` · ${r.live.task}` : ''}{r.is_owner ? t(' · creó la sala') : ''}
               </Text>
             </View>
-            <Text style={{ color: C.muted, fontSize: 12, fontVariant: ['tabular-nums'] }}>{r.pomodoros} hoy</Text>
+            <Text style={{ color: C.muted, fontSize: 12, fontVariant: ['tabular-nums'] }}>{t('{pomodoros} hoy', { pomodoros: r.pomodoros })}</Text>
             <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: pill.bg, borderWidth: r.state === 'away' ? 1 : 0, borderColor: C.line }}>
               <Text style={{ color: pill.fg, fontSize: 12, fontWeight: '700' }}>{r.label}</Text>
             </View>
@@ -190,28 +191,28 @@ function Sala() {
     <Card>
       {room.code ? (
         <View style={{ gap: 10, marginBottom: 10 }}>
-          <Text style={{ color: C.muted, fontSize: 12.5 }}>Código para invitar</Text>
+          <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Código para invitar')}</Text>
           <Text style={{ color: C.text, fontSize: 26, fontWeight: '800', letterSpacing: 2 }} selectable>{formatCode(room.code)}</Text>
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-            <Button label={isWide ? 'Copiar enlace' : 'Invitar'} icon="link-outline" size="sm" onPress={share} />
-            {isOwner && <Button label="Cambiar código" kind="ghost" size="sm" onPress={regen} />}
+            <Button label={isWide ? t('Copiar enlace') : t('Invitar')} icon="link-outline" size="sm" onPress={share} />
+            {isOwner && <Button label={t('Cambiar código')} kind="ghost" size="sm" onPress={regen} />}
           </View>
         </View>
       ) : (
-        <Text style={{ color: C.muted, fontSize: 13, marginBottom: 6 }}>Sala del proyecto: entra cualquiera del equipo.</Text>
+        <Text style={{ color: C.muted, fontSize: 13, marginBottom: 6 }}>{t('Sala del proyecto: entra cualquiera del equipo.')}</Text>
       )}
       <View style={{ borderTopWidth: 1, borderTopColor: C.line }}>
-        <Toggle label="Mostrar en qué tarea estoy" hint="Si está apagado, solo ven si estás enfocado o en descanso." value={live.shareTask} onChange={setShareTask} />
+        <Toggle label={t('Mostrar en qué tarea estoy')} hint={t('Si está apagado, solo ven si estás enfocado o en descanso.')} value={live.shareTask} onChange={setShareTask} />
       </View>
       <View style={{ flexDirection: 'row', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-        <Button label="Desconectarme" kind="secondary" size="sm" onPress={async () => { await exitRoom(); router.replace('/enfoque' as any); }} />
-        <Button label="Salir de la sala" kind="ghost" size="sm" onPress={leave} />
+        <Button label={t('Desconectarme')} kind="secondary" size="sm" onPress={async () => { await exitRoom(); router.replace('/enfoque' as any); }} />
+        <Button label={t('Salir de la sala')} kind="ghost" size="sm" onPress={leave} />
       </View>
     </Card>
   );
 
   return (
-    <Screen title={room.name} subtitle={room.project_id ? 'Sala del proyecto' : 'Sala de estudio'} back="/enfoque" maxWidth={1100}>
+    <Screen title={room.name} subtitle={room.project_id ? t('Sala del proyecto') : t('Sala de estudio')} back="/enfoque" maxWidth={1100}>
       <View style={{ flexDirection: isWide ? 'row' : 'column', gap: 16, alignItems: 'flex-start' }}>
         <View style={{ flex: isWide ? 3 : undefined, width: isWide ? undefined : '100%', gap: 16, minWidth: 0 }}>
           {together}

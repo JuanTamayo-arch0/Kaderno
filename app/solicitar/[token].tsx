@@ -6,6 +6,7 @@ import { C } from '../../lib/theme';
 import { KadernoMark } from '../../components/brand/KadernoLogo';
 import { Button, Field } from '../../components/ds';
 import { publicFormInfo, submitRequest, type FormInfo } from '../../lib/clientLinks';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Formulario de solicitudes (v25, fase 4): público y sin cuenta. Lo que
@@ -23,10 +24,10 @@ export default function Solicitar() {
   useEffect(() => { if (Platform.OS === 'web' && typeof document !== 'undefined' && info) document.title = `Solicitud · ${info.name}`; }, [info]);
 
   async function send() {
-    if (due && !/^\d{4}-\d{2}-\d{2}$/.test(due)) { setErr('La fecha va como AAAA-MM-DD.'); return; }
+    if (due && !/^\d{4}-\d{2}-\d{2}$/.test(due)) { setErr(t('La fecha va como AAAA-MM-DD.')); return; }
     setBusy(true); setErr(null);
     try { await submitRequest(String(token), { name, email, title, detail, due: due || null, trap }); setSent(true); }
-    catch (e: any) { setErr(e?.message ?? 'No se pudo enviar.'); }
+    catch (e: any) { setErr(e?.message ?? t('No se pudo enviar.')); }
     finally { setBusy(false); }
   }
   const today = new Date(); const min = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
@@ -37,8 +38,8 @@ export default function Solicitar() {
         {info === null && (
           <View style={{ alignItems: 'center', gap: 10, paddingTop: 40 }}>
             <Ionicons name="lock-closed-outline" size={36} color={C.muted} />
-            <Text style={{ color: C.text, fontSize: 18, fontWeight: '800' }}>Este formulario no está disponible</Text>
-            <Text style={{ color: C.muted, fontSize: 14, textAlign: 'center' }}>Puede que lo hayan apagado o cambiado. Pídele el enlace nuevo a quien te lo mandó.</Text>
+            <Text style={{ color: C.text, fontSize: 18, fontWeight: '800' }}>{t('Este formulario no está disponible')}</Text>
+            <Text style={{ color: C.muted, fontSize: 14, textAlign: 'center' }}>{t('Puede que lo hayan apagado o cambiado. Pídele el enlace nuevo a quien te lo mandó.')}</Text>
           </View>
         )}
         {info && (
@@ -46,7 +47,7 @@ export default function Solicitar() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <View style={{ width: 46, height: 46, borderRadius: 13, backgroundColor: info.color + '26', alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 22 }}>{info.icon}</Text></View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: C.muted, fontSize: 13 }}>Solicitud para</Text>
+                <Text style={{ color: C.muted, fontSize: 13 }}>{t('Solicitud para')}</Text>
                 <Text style={{ color: C.text, fontSize: 22, fontWeight: '800' }}>{info.name}</Text>
               </View>
             </View>
@@ -54,32 +55,32 @@ export default function Solicitar() {
             {sent ? (
               <View style={{ alignItems: 'center', gap: 10, padding: 24, borderRadius: 16, borderWidth: 1, borderColor: C.good }}>
                 <Ionicons name="checkmark-circle" size={44} color={C.good} />
-                <Text style={{ color: C.text, fontSize: 17, fontWeight: '800' }}>¡Recibido!</Text>
-                <Text style={{ color: C.muted, fontSize: 14, textAlign: 'center' }}>El equipo ya tiene tu solicitud y te responde a {email.trim()}.</Text>
-                <Button label="Enviar otra" kind="secondary" onPress={() => { setSent(false); setTitle(''); setDetail(''); setDue(''); }} />
+                <Text style={{ color: C.text, fontSize: 17, fontWeight: '800' }}>{t('¡Recibido!')}</Text>
+                <Text style={{ color: C.muted, fontSize: 14, textAlign: 'center' }}>{t('El equipo ya tiene tu solicitud y te responde a {trim}.', { trim: email.trim() })}</Text>
+                <Button label={t('Enviar otra')} kind="secondary" onPress={() => { setSent(false); setTitle(''); setDetail(''); setDue(''); }} />
               </View>
             ) : (
               <View style={{ gap: 2 }}>
-                <Field label="Tu nombre" value={name} onChangeText={setName} maxLength={80} autoComplete="name" />
-                <Field label="Tu correo (para responderte)" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoComplete="email" maxLength={120} />
-                <Field label="¿Qué necesitas?" value={title} onChangeText={setTitle} maxLength={200} placeholder="Ej: informe de ventas de noviembre" />
-                <Field label="Detalles (opcional)" value={detail} onChangeText={setDetail} multiline maxLength={3000} inputStyle={{ minHeight: 100, textAlignVertical: 'top' }} />
+                <Field label={t('Tu nombre')} value={name} onChangeText={setName} maxLength={80} autoComplete="name" />
+                <Field label={t('Tu correo (para responderte)')} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoComplete="email" maxLength={120} />
+                <Field label={t('¿Qué necesitas?')} value={title} onChangeText={setTitle} maxLength={200} placeholder={t('Ej: informe de ventas de noviembre')} />
+                <Field label={t('Detalles (opcional)')} value={detail} onChangeText={setDetail} multiline maxLength={3000} inputStyle={{ minHeight: 100, textAlignVertical: 'top' }} />
                 {Platform.OS === 'web' ? (
                   <View style={{ marginBottom: 12 }}>
-                    <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600', marginBottom: 6 }}>¿Para cuándo? (opcional)</Text>
-                    {React.createElement('input', { type: 'date', value: due, min, 'aria-label': 'Para cuándo', onChange: (e: any) => setDue(e.target.value),
+                    <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600', marginBottom: 6 }}>{t('¿Para cuándo? (opcional)')}</Text>
+                    {React.createElement('input', { type: 'date', value: due, min, 'aria-label': t('Para cuándo'), onChange: (e: any) => setDue(e.target.value),
                       style: { background: C.surface2, color: C.text, border: `1px solid ${C.line}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, width: '100%', boxSizing: 'border-box' } })}
                   </View>
-                ) : <Field label="¿Para cuándo? (AAAA-MM-DD, opcional)" value={due} onChangeText={setDue} />}
+                ) : <Field label={t('¿Para cuándo? (AAAA-MM-DD, opcional)')} value={due} onChangeText={setDue} />}
                 {/* Campo trampa para robots: invisible para las personas. */}
                 <TextInput value={trap} onChangeText={setTrap} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ position: 'absolute', left: -9999, width: 1, height: 1, opacity: 0 }} {...({ tabIndex: -1, autoComplete: 'off', 'aria-hidden': true } as any)} />
                 {err && <Text style={{ color: C.badText, fontSize: 13.5, marginBottom: 8 }} accessibilityLiveRegion="polite">{err}</Text>}
-                <Button label="Enviar solicitud" icon="send" busy={busy} disabled={!name.trim() || !email.trim() || !title.trim()} onPress={send} />
+                <Button label={t('Enviar solicitud')} icon="send" busy={busy} disabled={!name.trim() || !email.trim() || !title.trim()} onPress={send} />
               </View>
             )}
             <View style={{ alignItems: 'center', gap: 6, marginTop: 10 }}>
               <KadernoMark size={22} />
-              <Text style={{ color: C.muted, fontSize: 12, textAlign: 'center' }}>Hecho con Kaderno. Tus datos solo los ve el equipo del proyecto.</Text>
+              <Text style={{ color: C.muted, fontSize: 12, textAlign: 'center' }}>{t('Hecho con Kaderno. Tus datos solo los ve el equipo del proyecto.')}</Text>
             </View>
           </>
         )}

@@ -12,6 +12,7 @@ import { Badge, Dot } from './ds';
 import { SubtaskList } from './SubtaskList';
 import { ActionMenu, type MenuAction } from './ActionMenu';
 import { play } from '../lib/sound';
+import { t } from '../lib/i18n';
 
 // ============================================================
 //  Fila de tarea compacta (Hoy, Materia, Papelera...).
@@ -79,25 +80,25 @@ export function TaskRow({
         <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, borderRadius: RAD.row, flexDirection: 'row', alignItems: 'center', justifyContent: dir > 0 ? 'flex-start' : 'flex-end', paddingHorizontal: 18, backgroundColor: dir > 0 ? C.good : C.warn }}
           accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
           <Ionicons name={dir > 0 ? 'checkmark-circle' : 'arrow-forward-circle'} size={22} color={inkOn(dir > 0 ? C.good : C.warn)} />
-          <Text style={{ color: inkOn(dir > 0 ? C.good : C.warn), fontSize: 14, fontWeight: '800', marginLeft: 8 }}>{dir > 0 ? 'Hecha' : 'Mañana'}</Text>
+          <Text style={{ color: inkOn(dir > 0 ? C.good : C.warn), fontSize: 14, fontWeight: '800', marginLeft: 8 }}>{dir > 0 ? t('Hecha') : t('Mañana')}</Text>
         </View>
       )}
     <Animated.View {...(swipe ? pan.panHandlers : {})} dataSet={{ petPerch: '1' }} style={{ backgroundColor: C.surface, borderColor: C.line, borderWidth: 1, borderRadius: RAD.row, opacity: done ? 0.75 : 1, transform: [{ translateX: dx }] }}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
         <Pressable onPress={() => { if (!tapOk()) return; play(done ? 'uncheck' : 'complete'); if (!done) tapHaptic(); onToggle(task); }} accessibilityRole="checkbox" accessibilityState={{ checked: done }}
-          accessibilityLabel={done ? `Marcar "${task.title}" como pendiente` : `Completar "${task.title}"`}
+          accessibilityLabel={done ? t('Marcar "{title}" como pendiente', { title: task.title }) : `Completar "${task.title}"`}
           style={{ width: 48, minHeight: compact ? 46 : 54, alignItems: 'center', justifyContent: 'center' }}>
           <View key={done ? 'hecha' : 'pendiente'} dataSet={done ? { anim: 'pop' } : undefined} style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: done ? C.good : (tm.key !== 'tarea' ? tm.color : C.muted), backgroundColor: done ? C.good : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
             {done && <Ionicons name="checkmark" size={14} color={inkOn(C.good)} />}
           </View>
         </Pressable>
         <Pressable onPress={() => { if (tapOk()) onOpen(task); }} onLongPress={actions?.length ? () => { if (tapOk()) { tapHaptic(8); setMenu(true); } } : undefined} delayLongPress={350}
-          accessibilityRole="button" accessibilityLabel={`${task.title}${due ? ', ' + due : ''}`} accessibilityHint="Abre la tarea"
+          accessibilityRole="button" accessibilityLabel={`${task.title}${due ? ', ' + due : ''}`} accessibilityHint={t('Abre la tarea')}
           style={{ flex: 1, minWidth: 0, paddingVertical: compact ? 10 : 12, paddingRight: 4 }}>
           <Text style={{ color: done ? C.muted : C.text, fontSize: 15, fontWeight: '600', lineHeight: 20, textDecorationLine: done ? 'line-through' : 'none' }} numberOfLines={2}>{task.title}</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 10, rowGap: 4, marginTop: 4 }}>
-            {!!task.important && !onStar && <Ionicons name="star" size={13} color={C.warnText} accessibilityLabel="Importante" />}
-            {!!task.frog && !done && task.plan_day === todayLocal() && <Text style={{ color: C.brand, fontSize: 12, fontWeight: '800' }}>Primero</Text>}
+            {!!task.important && !onStar && <Ionicons name="star" size={13} color={C.warnText} accessibilityLabel={t('Importante')} />}
+            {!!task.frog && !done && task.plan_day === todayLocal() && <Text style={{ color: C.brand, fontSize: 12, fontWeight: '800' }}>{t('Primero')}</Text>}
             {showSubject && subject && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                 <Dot color={subject.color} />
@@ -107,7 +108,7 @@ export function TaskRow({
             {tm.key !== 'tarea' && <Badge text={tm.label} color={tm.color} />}
             {!!due && <Text style={{ color: dueColor, fontSize: 12.5, fontWeight: overdue || b === 'today' ? '700' : '500' }}>{due}</Text>}
             {total > 0 && (
-              <Pressable onPress={() => setOpen((v) => !v)} accessibilityRole="button" accessibilityLabel={open ? 'Ocultar pasos' : `Ver pasos, ${doneSteps} de ${total}`}
+              <Pressable onPress={() => setOpen((v) => !v)} accessibilityRole="button" accessibilityLabel={open ? t('Ocultar pasos') : t('Ver pasos, {doneSteps} de {total}', { doneSteps, total })}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 2 }} hitSlop={8}>
                 <View style={{ width: 44, height: 4, borderRadius: 2, backgroundColor: C.surface2, overflow: 'hidden' }}>
                   <View style={{ width: `${(doneSteps / total) * 100}%`, height: '100%', backgroundColor: C.brand }} />
@@ -125,29 +126,29 @@ export function TaskRow({
               </View>
             ) : null}
             {!!task.repeat_rule && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }} accessibilityLabel={`Se repite ${ruleText(task.repeat_rule)}`}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }} accessibilityLabel={t('Se repite {repeat_rule}', { repeat_rule: ruleText(task.repeat_rule) })}>
                 <Ionicons name="repeat" size={13} color={C.muted} />
                 <Text style={{ color: C.muted, fontSize: 12 }} numberOfLines={1}>{ruleText({ ...task.repeat_rule, until: null, fromDone: false })}</Text>
               </View>
             )}
             {!!task.plan_at && task.status !== 'done' && new Date(task.plan_at).getTime() > Date.now() - 3600_000 && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }} accessibilityLabel={`Plan: ${slotLabel(new Date(task.plan_at), new Date())}`}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }} accessibilityLabel={t('Plan: {slotLabel}', { slotLabel: slotLabel(new Date(task.plan_at), new Date()) })}>
                 <Ionicons name="flag-outline" size={12} color={C.brand} />
                 <Text style={{ color: C.brand, fontSize: 12, fontWeight: '600' }}>{slotLabel(new Date(task.plan_at), new Date())}</Text>
               </View>
             )}
-            {!!task.description?.trim() && !compact && <Ionicons name="reader-outline" size={13} color={C.muted} accessibilityLabel="Tiene descripción" />}
+            {!!task.description?.trim() && !compact && <Ionicons name="reader-outline" size={13} color={C.muted} accessibilityLabel={t('Tiene descripción')} />}
           </View>
         </Pressable>
         {onStar && (
           <Pressable onPress={() => onStar(task)} accessibilityRole="checkbox" accessibilityState={{ checked: !!task.important }}
-            accessibilityLabel={task.important ? `Quitar importante a "${task.title}"` : `Marcar "${task.title}" como importante`}
+            accessibilityLabel={task.important ? t('Quitar importante a "{title}"', { title: task.title }) : t('Marcar "{title}" como importante', { title: task.title })}
             style={({ hovered }: any) => ({ width: 40, minHeight: compact ? 46 : 54, alignItems: 'center', justifyContent: 'center', borderRadius: 10, backgroundColor: hovered ? C.surface2 : 'transparent' })}>
             <Ionicons name={task.important ? 'star' : 'star-outline'} size={18} color={task.important ? C.warnText : C.muted} />
           </Pressable>
         )}
         {!!actions?.length && (
-          <Pressable onPress={() => setMenu(true)} accessibilityRole="button" accessibilityLabel={`Más acciones para "${task.title}"`}
+          <Pressable onPress={() => setMenu(true)} accessibilityRole="button" accessibilityLabel={t('Más acciones para "{title}"', { title: task.title })}
             style={({ hovered }: any) => ({ width: 44, minHeight: compact ? 46 : 54, alignItems: 'center', justifyContent: 'center', borderRadius: 10, backgroundColor: hovered ? C.surface2 : 'transparent' })}>
             <Ionicons name="ellipsis-horizontal" size={18} color={C.muted} />
           </Pressable>

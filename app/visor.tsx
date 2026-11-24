@@ -8,6 +8,7 @@ import { RequireAuth } from '../components/RequireAuth';
 import { PdfViewer } from '../components/pdf/PdfViewer';
 import { openUrlFor } from '../lib/highlightsDb';
 import type { FileKind } from '../lib/highlights';
+import { t } from '../lib/i18n';
 
 // react-native-webview NO funciona en web; solo lo cargamos en móvil.
 let WebView: any = null;
@@ -33,22 +34,22 @@ function Visor() {
   const isWeb = Platform.OS === 'web';
   const isPdf = /pdf/i.test(String(params.mime ?? '')) || /\.pdf($|\?)/i.test(String(name ?? '')) || /\.pdf($|\?)/i.test(clean.split('?')[0]);
   if (!clean && kind && fileId && resolved === null) {
-    return <Screen title="Documento" back="/materias" nav="materias" scroll={false} padded={false} noSidebar><View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator color={C.brand} /></View></Screen>;
+    return <Screen title={t('Documento')} back="/materias" nav="materias" scroll={false} padded={false} noSidebar><View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator color={C.brand} /></View></Screen>;
   }
   // Android WebView no renderiza PDF embebido → usar el visor de Google.
   const src = Platform.OS === 'android' ? `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(clean)}` : clean;
 
   return (
-    <Screen title={name || 'Documento'} back="/materias" nav="materias" scroll={false} padded={false} noSidebar
-      right={<IconButton icon="open-outline" label="Abrir en una pestaña nueva" onPress={() => Linking.openURL(clean)} />}>
+    <Screen title={name || t('Documento')} back="/materias" nav="materias" scroll={false} padded={false} noSidebar
+      right={<IconButton icon="open-outline" label={t('Abrir en una pestaña nueva')} onPress={() => Linking.openURL(clean)} />}>
       <View style={{ flex: 1 }}>
         {!clean ? (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: C.muted }}>No se pudo cargar el documento.</Text></View>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: C.muted }}>{t('No se pudo cargar el documento.')}</Text></View>
         ) : isWeb && isPdf ? (
           <PdfViewer url={clean} name={name || 'Documento.pdf'} kind={kind} fileId={fileId} subjectId={subjectId} startPage={Number(params.p) || 1} />
         ) : isWeb ? (
           // En web renderizamos un iframe nativo del navegador (muestra el PDF).
-          React.createElement('iframe', { src: clean, style: { border: 'none', width: '100%', height: '100%', backgroundColor: '#fff' }, title: name || 'Documento' })
+          React.createElement('iframe', { src: clean, style: { border: 'none', width: '100%', height: '100%', backgroundColor: '#fff' }, title: name || t('Documento') })
         ) : WebView ? (
           <WebView source={{ uri: src }} style={{ flex: 1, backgroundColor: C.bg }} startInLoadingState
             renderLoading={() => (
@@ -58,9 +59,9 @@ function Visor() {
             )} />
         ) : (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-            <Text style={{ color: C.muted, textAlign: 'center', marginBottom: 16 }}>No se pudo mostrar el visor aquí.</Text>
+            <Text style={{ color: C.muted, textAlign: 'center', marginBottom: 16 }}>{t('No se pudo mostrar el visor aquí.')}</Text>
             <Pressable onPress={() => Linking.openURL(clean)} style={{ backgroundColor: C.brand, borderRadius: 10, paddingVertical: 12, paddingHorizontal: 18 }}>
-              <Text style={{ color: C.onBrand, fontWeight: '700' }}>Abrir / descargar</Text>
+              <Text style={{ color: C.onBrand, fontWeight: '700' }}>{t('Abrir / descargar')}</Text>
             </Pressable>
           </View>
         )}
@@ -69,7 +70,7 @@ function Visor() {
       {!isWeb && !!clean && (
         <Pressable onPress={() => Linking.openURL(clean)} style={{ position: 'absolute', bottom: 24, right: 20, backgroundColor: C.surface, borderColor: C.line, borderWidth: 1, borderRadius: 999, paddingVertical: 10, paddingHorizontal: 16, flexDirection: 'row', gap: 8, alignItems: 'center' }}>
           <Ionicons name="download-outline" size={16} color={C.text} />
-          <Text style={{ color: C.text, fontSize: 13, fontWeight: '600' }}>Abrir / descargar</Text>
+          <Text style={{ color: C.text, fontSize: 13, fontWeight: '600' }}>{t('Abrir / descargar')}</Text>
         </Pressable>
       )}
     </Screen>

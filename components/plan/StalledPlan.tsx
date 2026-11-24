@@ -8,6 +8,7 @@ import { suggestSlots } from './WhenPicker';
 import { slotLabel } from '../../lib/planSlots';
 import { combine, fromISODate, dueTimeHHMM } from '../../lib/time';
 import { toast, friendlyError } from '../../lib/feedback';
+import { trn } from '../../lib/i18n';
 
 // "No arrancó el informe. ¿Lo movemos?" con tres horarios nuevos.
 export function StalledPlan({ t, onChanged, onStart, onDismiss }: { t: Task; onChanged: () => void; onStart: () => void; onDismiss: () => void }) {
@@ -23,7 +24,7 @@ export function StalledPlan({ t, onChanged, onStart, onDismiss }: { t: Task; onC
     setBusy(true);
     try {
       await updateTask(t.id, { plan_at: at ? at.toISOString() : null, plan_place: at ? t.plan_place ?? null : null });
-      toast(at ? `Movido a ${slotLabel(at, new Date()).toLowerCase()}` : 'Plan quitado', { tone: 'good' });
+      toast(at ? `Movido a ${slotLabel(at, new Date()).toLowerCase()}` : trn('Plan quitado'), { tone: 'good' });
       onChanged();
     } catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
     finally { setBusy(false); }
@@ -33,8 +34,8 @@ export function StalledPlan({ t, onChanged, onStart, onDismiss }: { t: Task; onC
     <Card style={{ marginBottom: 12, borderLeftWidth: 4, borderLeftColor: C.brand }}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
         <Ionicons name="time-outline" size={18} color={C.brand} style={{ marginTop: 1 }} />
-        <Text style={{ color: C.text, fontSize: 14, fontWeight: '700', flex: 1 }}>No arrancó "{t.title}". ¿Lo movemos?</Text>
-        <IconButton icon="close" label="Cerrar" onPress={onDismiss} />
+        <Text style={{ color: C.text, fontSize: 14, fontWeight: '700', flex: 1 }}>{trn('No arrancó "{title}". ¿Lo movemos?', { title: t.title })}</Text>
+        <IconButton icon="close" label={trn('Cerrar')} onPress={onDismiss} />
       </View>
       <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
         {slots.map((d) => (
@@ -43,11 +44,11 @@ export function StalledPlan({ t, onChanged, onStart, onDismiss }: { t: Task; onC
             <Text style={{ color: C.text, fontSize: 12.5, fontWeight: '600' }}>{slotLabel(d, new Date())}</Text>
           </Pressable>
         ))}
-        {slots.length === 0 && <Text style={{ color: C.muted, fontSize: 12.5 }}>No veo huecos libres antes de la entrega.</Text>}
+        {slots.length === 0 && <Text style={{ color: C.muted, fontSize: 12.5 }}>{trn('No veo huecos libres antes de la entrega.')}</Text>}
       </View>
       <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-        <Button label="Empezar ahora" icon="play" size="sm" onPress={onStart} />
-        <Button label="Quitar el plan" kind="ghost" size="sm" onPress={() => move(null)} disabled={busy} />
+        <Button label={trn('Empezar ahora')} icon="play" size="sm" onPress={onStart} />
+        <Button label={trn('Quitar el plan')} kind="ghost" size="sm" onPress={() => move(null)} disabled={busy} />
       </View>
     </Card>
   );

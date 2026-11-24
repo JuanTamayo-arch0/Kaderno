@@ -5,6 +5,7 @@ import { C } from '../lib/theme';
 import { RequireAuth } from '../components/RequireAuth';
 import { addTask } from '../lib/db';
 import { toast, friendlyError } from '../lib/feedback';
+import { t } from '../lib/i18n';
 
 // ============================================================
 //  Compartir hacia Kaderno (v21, sección 2; Android con Web Share Target):
@@ -15,7 +16,7 @@ import { toast, friendlyError } from '../lib/feedback';
 export function sharedToTask(p: { title?: string; text?: string; url?: string }): { title: string; description: string | null } {
   const text = (p.text ?? '').trim(), url = (p.url ?? '').trim();
   const firstLine = text.split('\n')[0].trim();
-  const title = ((p.title ?? '').trim() || firstLine || url || 'Compartido').slice(0, 120);
+  const title = ((p.title ?? '').trim() || firstLine || url || t('Compartido')).slice(0, 120);
   const rest = [text && text !== title ? text : '', url && !text.includes(url) ? url : ''].filter(Boolean).join('\n').slice(0, 2000);
   return { title, description: rest || null };
 }
@@ -30,14 +31,14 @@ function Compartir() {
     once.current = true;
     const { title, description } = sharedToTask(p);
     addTask({ title, description, subject_id: null, due_date: null, remind_days: 0, inbox: true })
-      .then(() => { toast(`A la bandeja: ${title}`, { tone: 'good' }); router.replace({ pathname: '/', params: { bandeja: '1' } } as any); })
+      .then(() => { toast(t('A la bandeja: {title}', { title }), { tone: 'good' }); router.replace({ pathname: '/', params: { bandeja: '1' } } as any); })
       .catch((e) => setErr(friendlyError(e)));
   }, []);
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, backgroundColor: C.bg, padding: 24 }}>
-      {err ? <Text style={{ color: C.badText, fontSize: 15, textAlign: 'center' }}>No se pudo guardar: {err}</Text> : <>
+      {err ? <Text style={{ color: C.badText, fontSize: 15, textAlign: 'center' }}>{t('No se pudo guardar: {err}', { err })}</Text> : <>
         <ActivityIndicator color={C.brand} />
-        <Text style={{ color: C.muted, fontSize: 14 }}>Guardando en tu bandeja…</Text>
+        <Text style={{ color: C.muted, fontSize: 14 }}>{t('Guardando en tu bandeja…')}</Text>
       </>}
     </View>
   );

@@ -86,7 +86,7 @@ export function hasV18(): boolean { return V18; }
 
 async function uid(): Promise<string> {
   const id = await currentUserId();
-  if (!id) throw new Error('No hay sesión activa');
+  if (!id) throw new Error(t('No hay sesión activa'));
   return id;
 }
 
@@ -139,7 +139,7 @@ export async function updateSubject(id: string, patch: SubjectPatch): Promise<vo
       const r = await supabase.from('subjects').update(rest).eq('id', id);
       if (r.error) throw r.error;
     }
-    if (had) throw new Error('Para guardar profesor, salón y enlace falta correr schema_v18.sql en Supabase.');
+    if (had) throw new Error(t('Para guardar profesor, salón y enlace falta correr schema_v18.sql en Supabase.'));
     return;
   }
   if (error) throw error;
@@ -218,24 +218,24 @@ export async function addTask(t: TaskInput): Promise<string> {
 }
 /** Marcar o quitar "importante" (schema_v26). Sin la migración avisa qué falta. */
 export async function setTaskImportant(id: string, on: boolean): Promise<void> {
-  if (MISSING.has('important')) throw new Error('Para marcar tareas importantes falta correr supabase/schema_v26.sql.');
+  if (MISSING.has('important')) throw new Error(t('Para marcar tareas importantes falta correr supabase/schema_v26.sql.'));
   const { error } = await withPlan({ important: on }, (pp) => supabase.from('assignments').update(pp).eq('id', id));
-  if (MISSING.has('important')) throw new Error('Para marcar tareas importantes falta correr supabase/schema_v26.sql.');
+  if (MISSING.has('important')) throw new Error(t('Para marcar tareas importantes falta correr supabase/schema_v26.sql.'));
   if (error) throw error;
 }
 export function hasImportantCol(): boolean { return !MISSING.has('important'); }
 /** Mandar a "Algún día" (queda en la bandeja, aparte) o rescatarla (vuelve a la bandeja para ordenarla). */
 export async function setSomeday(id: string, on: boolean): Promise<void> {
-  if (MISSING.has('someday')) throw new Error('Para "Algún día" falta correr supabase/schema_v26.sql.');
+  if (MISSING.has('someday')) throw new Error(t('Para "Algún día" falta correr supabase/schema_v26.sql.'));
   const { error } = await withPlan({ someday: on, inbox: true, due_date: null, due_at: null, plan_at: null, plan_day: null, plan_band: null, plan_order: null, frog: false } as any,
     (pp) => supabase.from('assignments').update(pp).eq('id', id));
-  if (MISSING.has('someday')) throw new Error('Para "Algún día" falta correr supabase/schema_v26.sql.');
+  if (MISSING.has('someday')) throw new Error(t('Para "Algún día" falta correr supabase/schema_v26.sql.'));
   if (error) throw error;
 }
 function needsV26_2(err: any): Error | null {
   const m = String(err?.message ?? '');
   return err?.code === 'PGRST202' || err?.code === '42883' || /Could not find the function|function .* does not exist/i.test(m)
-    ? new Error('Para la rana y la lista para mañana falta correr supabase/schema_v26.sql.') : null;
+    ? new Error(t('Para la rana y la lista para mañana falta correr supabase/schema_v26.sql.')) : null;
 }
 /** La rana de un día (null la quita). */
 export async function setFrog(taskId: string | null, dayISO: string): Promise<void> {
@@ -391,7 +391,7 @@ export async function getNote(id: string): Promise<Note | null> {
 }
 export async function setNotePinned(id: string, pinned: boolean): Promise<void> {
   const { error } = await supabase.from('notes').update({ pinned }).eq('id', id);
-  if (error && isMissingColumn(error)) { V18 = false; throw new Error('Para fijar notas falta correr schema_v18.sql en Supabase.'); }
+  if (error && isMissingColumn(error)) { V18 = false; throw new Error(t('Para fijar notas falta correr schema_v18.sql en Supabase.')); }
   if (error) throw error;
 }
 export async function updateNote(id: string, patch: { title?: string; content?: string; summary?: string }): Promise<void> {
@@ -475,6 +475,7 @@ export async function remapSlots(plan: { id: string; newSlot: number | null }[])
 // ---------- Subida de imagen + OCR ----------
 // Sube la foto al bucket privado y devuelve su ruta.
 import { decode } from 'base64-arraybuffer';
+import { t } from './i18n';
 export async function uploadPhoto(base64: string): Promise<string> {
   const u = await uid();
   const path = `${u}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
@@ -640,14 +641,14 @@ export async function getFocusDetail(): Promise<{
   rows.forEach((r) => { const k = keyOf(new Date(r.created_at)); minsByDay.set(k, (minsByDay.get(k) ?? 0) + r.minutes); });
 
   const todayMin = minsByDay.get(startToday.getTime()) ?? 0;
-  const names = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const names = [t('Dom'), t('Lun'), t('Mar'), t('Mié'), t('Jue'), t('Vie'), t('Sáb')];
   const byDay: { label: string; min: number }[] = [];
   let weekMin = 0;
   for (let i = 6; i >= 0; i--) {
     const d = new Date(startToday); d.setDate(d.getDate() - i);
     const m = minsByDay.get(d.getTime()) ?? 0;
     weekMin += m;
-    byDay.push({ label: i === 0 ? 'Hoy' : names[d.getDay()], min: m });
+    byDay.push({ label: i === 0 ? t('Hoy') : names[d.getDay()], min: m });
   }
   // Racha: días consecutivos con enfoque, contando hacia atrás desde hoy (o ayer si hoy va en 0).
   let streak = 0; const d = new Date(startToday);
@@ -727,11 +728,11 @@ export async function aiFlashcards(content: string): Promise<{ front: string; ba
 }
 
 export async function aiSteps(title: string, description: string | null): Promise<string[]> {
-  const content = `Título: ${title}${description ? `\nDescripción: ${description}` : ''}`;
+  const content = t('Título: {title}{v}', { title, v: description ? `\nDescripción: ${description}` : '' });
   const { data, error } = await supabase.functions.invoke('ai', { body: { task: 'steps', content } });
   if (error) throw error;
   const steps = (data as any)?.steps;
-  if (!Array.isArray(steps)) throw new Error('La función de IA no conoce la tarea "steps" (hay que volver a desplegarla).');
+  if (!Array.isArray(steps)) throw new Error(t('La función de IA no conoce la tarea "steps" (hay que volver a desplegarla).'));
   return steps.map((s: unknown) => String(s));
 }
 

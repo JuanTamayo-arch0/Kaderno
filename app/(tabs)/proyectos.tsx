@@ -15,6 +15,7 @@ import { useAuth } from '../../lib/auth';
 import { snapshotFor } from '../../lib/snapshot';
 import { useSpaceFilter } from '../../lib/useSpace';
 import { vtNavigate } from '../../lib/motion';
+import { t } from '../../lib/i18n';
 
 const PROJECT_ICONS = ['📦', '👥', '🧪', '🎤', '🔎', '📊', '🎬', '🏗️', '🎨', '💡', '📚', '⚙️'];
 
@@ -52,21 +53,21 @@ export default function Proyectos() {
 
   const actions = (
     <>
-      <Button label="Unirme con código" kind="secondary" icon="enter-outline" size="sm" onPress={() => setJoin(true)} />
-      {isWide && <Button label="Nuevo proyecto" icon="add" size="sm" onPress={() => setModal(true)} />}
+      <Button label={t('Unirme con código')} kind="secondary" icon="enter-outline" size="sm" onPress={() => setJoin(true)} />
+      {isWide && <Button label={t('Nuevo proyecto')} icon="add" size="sm" onPress={() => setModal(true)} />}
     </>
   );
 
   return (
-    <Screen title="Proyectos" subtitle="Trabajo en grupo con tablero y reparto" right={actions} maxWidth={1100}>
+    <Screen title={t('Proyectos')} subtitle={t('Trabajo en grupo con tablero y reparto')} right={actions} maxWidth={1100}>
       {loading ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>{[0, 1].map((i) => <Skeleton key={i} height={150} style={{ width: isWide ? 340 : '100%' }} />)}</View>
       ) : error ? (
         <ErrorState message={error} onRetry={load} />
       ) : rows.length === 0 ? (
-        <EmptyState icon="people-outline" title="Todavía no tienes proyectos"
-          text="Un proyecto es un tablero compartido: cada quien ve qué le toca, en qué va el grupo y qué falta para entregar."
-          action={{ label: 'Crear proyecto', icon: 'add', onPress: () => setModal(true) }} />
+        <EmptyState icon="people-outline" title={t('Todavía no tienes proyectos')}
+          text={t('Un proyecto es un tablero compartido: cada quien ve qué le toca, en qué va el grupo y qué falta para entregar.')}
+          action={{ label: t('Crear proyecto'), icon: 'add', onPress: () => setModal(true) }} />
       ) : (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
           {rows.map((r) => (
@@ -74,7 +75,7 @@ export default function Proyectos() {
           ))}
         </View>
       )}
-      {!isWide && rows.length > 0 && <Button label="Nuevo proyecto" icon="add" onPress={() => setModal(true)} style={{ marginTop: 16 }} full />}
+      {!isWide && rows.length > 0 && <Button label={t('Nuevo proyecto')} icon="add" onPress={() => setModal(true)} style={{ marginTop: 16 }} full />}
 
       <NewProjectModal visible={modal} subjects={subjects} onClose={() => setModal(false)}
         onCreated={(id) => { setModal(false); load(); router.push(`/proyectos/${id}`); }} />
@@ -87,7 +88,7 @@ function ProjectCard({ row, subjects, wide, onPress }: { row: Overview; subjects
   const p = row.project;
   const subj = subjects.find((s) => s.id === p.subject_id) ?? null;
   return (
-    <Card onPress={onPress} accessibilityLabel={`Abrir proyecto ${p.name}`} style={{ width: wide ? 340 : '100%', borderTopWidth: 3, borderTopColor: p.color }}>
+    <Card onPress={onPress} accessibilityLabel={t('Abrir proyecto {name}', { name: p.name })} style={{ width: wide ? 340 : '100%', borderTopWidth: 3, borderTopColor: p.color }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
         <View style={{ width: 38, height: 38, borderRadius: 11, backgroundColor: p.color + '26', alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ fontSize: 19 }}>{p.icon}</Text>
@@ -102,7 +103,7 @@ function ProjectCard({ row, subjects, wide, onPress }: { row: Overview; subjects
       <ProgressBar done={row.done} total={row.total} height={6} />
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
         <Avatars members={row.members} />
-        {row.mine > 0 ? <Badge text={`${row.mine} para ti`} color={C.brand} /> : <Text style={{ color: C.muted, fontSize: 12 }}>{row.total - row.done} pendientes</Text>}
+        {row.mine > 0 ? <Badge text={t('{mine} para ti', { mine: row.mine })} color={C.brand} /> : <Text style={{ color: C.muted, fontSize: 12 }}>{t('{v} pendientes', { v: row.total - row.done })}</Text>}
       </View>
     </Card>
   );
@@ -134,7 +135,7 @@ function Dialog({ visible, onClose, title, children, footer }: { visible: boolea
         <Pressable onPress={() => {}} dataSet={{ anim: 'sheet' }} accessibilityViewIsModal style={{ backgroundColor: C.surface, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: C.line, width: '100%', maxWidth: 520, maxHeight: '90%' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
             <Text style={{ color: C.text, fontSize: 18, fontWeight: '700', flex: 1 }} accessibilityRole="header">{title}</Text>
-            <IconButton icon="close" label="Cerrar" onPress={onClose} />
+            <IconButton icon="close" label={t('Cerrar')} onPress={onClose} />
           </View>
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">{children}</ScrollView>
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>{footer}</View>
@@ -151,12 +152,12 @@ function JoinModal({ visible, onClose, onJoined }: { visible: boolean; onClose: 
   useEffect(() => { if (visible) { setCode(''); setErr(null); } }, [visible]);
   async function go() {
     const c = code.trim().toUpperCase();
-    if (c.length < 6) { setErr('El código tiene 6 caracteres. Te lo pasa quien creó el proyecto.'); return; }
+    if (c.length < 6) { setErr(t('El código tiene 6 caracteres. Te lo pasa quien creó el proyecto.')); return; }
     setBusy(true);
     try {
       const peek = await peekProject(c);
-      if (!peek) { setErr('Ese código no existe. Revisa que esté bien escrito.'); return; }
-      const ok = await confirm(`${peek.icon}  ${peek.name}`, `${peek.members} ${peek.members === 1 ? 'integrante' : 'integrantes'}. ¿Entrar a este proyecto?`, 'Entrar');
+      if (!peek) { setErr(t('Ese código no existe. Revisa que esté bien escrito.')); return; }
+      const ok = await confirm(`${peek.icon}  ${peek.name}`, t('{members} {v}. ¿Entrar a este proyecto?', { members: peek.members, v: peek.members === 1 ? 'integrante' : 'integrantes' }), t('Entrar'));
       if (!ok) return;
       const id = await joinProject(c);
       toast(`Entraste a ${peek.name}`, { tone: 'good' });
@@ -165,12 +166,12 @@ function JoinModal({ visible, onClose, onJoined }: { visible: boolean; onClose: 
     finally { setBusy(false); }
   }
   return (
-    <Dialog visible={visible} onClose={onClose} title="Unirme a un proyecto"
-      footer={<><Button label="Cancelar" kind="secondary" onPress={onClose} style={{ flex: 1 }} /><Button label="Entrar" onPress={go} busy={busy} style={{ flex: 1 }} /></>}>
+    <Dialog visible={visible} onClose={onClose} title={t('Unirme a un proyecto')}
+      footer={<><Button label={t('Cancelar')} kind="secondary" onPress={onClose} style={{ flex: 1 }} /><Button label={t('Entrar')} onPress={go} busy={busy} style={{ flex: 1 }} /></>}>
       <Field value={code} onChangeText={(t) => { setCode(t.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)); setErr(null); }}
         placeholder="K7F2QX" autoCapitalize="characters" autoCorrect={false} maxLength={6} onSubmitEditing={go} autoFocus
-        label="Código de 6 caracteres" error={err} inputStyle={{ letterSpacing: 4, fontWeight: '800', fontSize: 18 }}
-        hint="Quien creó el proyecto lo encuentra en la pestaña Equipo." />
+        label={t('Código de 6 caracteres')} error={err} inputStyle={{ letterSpacing: 4, fontWeight: '800', fontSize: 18 }}
+        hint={t('Quien creó el proyecto lo encuentra en la pestaña Equipo.')} />
     </Dialog>
   );
 }
@@ -186,24 +187,24 @@ function NewProjectModal({ visible, subjects, onClose, onCreated }: { visible: b
   const [err, setErr] = useState<string | null>(null);
 
   async function save() {
-    if (!name.trim()) { setErr('Ponle nombre al proyecto.'); return; }
+    if (!name.trim()) { setErr(t('Ponle nombre al proyecto.')); return; }
     setBusy(true);
     try {
       const id = await createProject({ name: name.trim(), description: desc.trim() || null, subject_id: subjectId, color, icon, template });
       setName(''); setDesc(''); setSubjectId(null); setTemplate('blank');
       onCreated(id);
-    } catch (e) { notify('No se pudo crear', friendlyError(e)); }
+    } catch (e) { notify(t('No se pudo crear'), friendlyError(e)); }
     finally { setBusy(false); }
   }
   const tpl = TEMPLATES.find((t) => t.key === template) ?? TEMPLATES[0];
   const lbl = { color: C.muted, fontSize: 12.5, fontWeight: '600' as const, marginTop: 10, marginBottom: 8 };
 
   return (
-    <Dialog visible={visible} onClose={onClose} title="Nuevo proyecto"
-      footer={<><Button label="Cancelar" kind="secondary" onPress={onClose} style={{ flex: 1 }} /><Button label="Crear proyecto" onPress={save} busy={busy} style={{ flex: 2 }} /></>}>
-      <Field label="Nombre" value={name} onChangeText={(v) => { setName(v); setErr(null); }} placeholder="Ej: Informe de laboratorio" error={err} />
-      <Field label="Descripción (opcional)" value={desc} onChangeText={setDesc} placeholder="De qué se trata" multiline inputStyle={{ minHeight: 60, textAlignVertical: 'top' }} />
-      <Text style={lbl}>Plantilla</Text>
+    <Dialog visible={visible} onClose={onClose} title={t('Nuevo proyecto')}
+      footer={<><Button label={t('Cancelar')} kind="secondary" onPress={onClose} style={{ flex: 1 }} /><Button label={t('Crear proyecto')} onPress={save} busy={busy} style={{ flex: 2 }} /></>}>
+      <Field label={t('Nombre')} value={name} onChangeText={(v) => { setName(v); setErr(null); }} placeholder={t('Ej: Informe de laboratorio')} error={err} />
+      <Field label={t('Descripción (opcional)')} value={desc} onChangeText={setDesc} placeholder={t('De qué se trata')} multiline inputStyle={{ minHeight: 60, textAlignVertical: 'top' }} />
+      <Text style={lbl}>{t('Plantilla')}</Text>
       <View style={{ gap: 8 }}>
         {projectTemplatesFor(getMode()).map((t) => {
           const on = t.key === template;
@@ -221,12 +222,12 @@ function NewProjectModal({ visible, subjects, onClose, onCreated }: { visible: b
         })}
       </View>
       <Text style={{ color: C.muted, fontSize: 12, marginTop: 8, lineHeight: 17 }}>
-        Columnas: {tpl.columns.map((c) => c.label).join(', ')}.{tpl.tasks.length ? ` Incluye ${tpl.tasks.length} tarjetas de arranque.` : ''}
+        {t('Columnas: ')}{tpl.columns.map((c) => c.label).join(', ')}.{tpl.tasks.length ? t(' Incluye {length} tarjetas de arranque.', { length: tpl.tasks.length }) : ''}
       </Text>
-      <Text style={lbl}>Materia (opcional)</Text>
+      <Text style={lbl}>{t('Materia (opcional)')}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          {[{ id: null as string | null, name: 'Ninguna', color: C.muted }, ...subjects].map((s) => {
+          {[{ id: null as string | null, name: t('Ninguna'), color: C.muted }, ...subjects].map((s) => {
             const on = s.id === subjectId;
             return (
               <Pressable key={s.id ?? 'none'} onPress={() => { setSubjectId(s.id); if (s.id) setColor(s.color); }} accessibilityRole="radio" accessibilityState={{ checked: on }}
@@ -237,16 +238,16 @@ function NewProjectModal({ visible, subjects, onClose, onCreated }: { visible: b
           })}
         </View>
       </ScrollView>
-      <Text style={lbl}>Ícono</Text>
+      <Text style={lbl}>{t('Ícono')}</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         {PROJECT_ICONS.map((i) => (
-          <Pressable key={i} onPress={() => setIcon(i)} accessibilityRole="radio" accessibilityState={{ checked: icon === i }} accessibilityLabel={`Ícono ${i}`}
+          <Pressable key={i} onPress={() => setIcon(i)} accessibilityRole="radio" accessibilityState={{ checked: icon === i }} accessibilityLabel={t('Ícono {i}', { i })}
             style={{ width: 42, height: 42, borderRadius: 10, backgroundColor: C.surface2, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: icon === i ? C.brand : 'transparent' }}>
             <Text style={{ fontSize: 18 }}>{i}</Text>
           </Pressable>
         ))}
       </View>
-      <Text style={lbl}>Color</Text>
+      <Text style={lbl}>{t('Color')}</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
         {SUBJECT_COLORS.map((c) => (
           <Pressable key={c} onPress={() => setColor(c)} accessibilityRole="radio" accessibilityState={{ checked: color.toLowerCase() === c.toLowerCase() }} accessibilityLabel={`Color ${c}`}

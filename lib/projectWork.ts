@@ -1,14 +1,15 @@
-// ============================================================
+
+import { t } from './i18n';// ============================================================
 //  Proyectos de trabajo (v25, fase 3). Puro, con pruebas: prioridad,
 //  etiquetas, bloqueos, filtros, reglas y estado del proyecto.
 // ============================================================
 
 export type Priority = 'urgente' | 'alta' | 'normal' | 'baja';
 export const PRIORITIES: { key: Priority; label: string; color: string; rank: number }[] = [
-  { key: 'urgente', label: 'Urgente', color: '#ef5b5b', rank: 0 },
-  { key: 'alta', label: 'Alta', color: '#f5904c', rank: 1 },
-  { key: 'normal', label: 'Normal', color: '#6c8cff', rank: 2 },
-  { key: 'baja', label: 'Baja', color: '#9aa3b2', rank: 3 },
+  { key: 'urgente', label: t('Urgente'), color: '#ef5b5b', rank: 0 },
+  { key: 'alta', label: t('Alta'), color: '#f5904c', rank: 1 },
+  { key: 'normal', label: t('Normal'), color: '#6c8cff', rank: 2 },
+  { key: 'baja', label: t('Baja'), color: '#9aa3b2', rank: 3 },
 ];
 export const priorityOf = (p: string | null | undefined) => PRIORITIES.find((x) => x.key === p) ?? null;
 const rank = (p: string | null | undefined) => priorityOf(p)?.rank ?? 4;
@@ -48,27 +49,27 @@ export function byPriority<X extends T>(tasks: X[]): X[] {
 export type Rule = { id: string; project_id: string; trigger: 'moved' | 'created' | 'overdue'; column_key: string | null; action: 'assign' | 'notify' | 'notify_assignee'; user_id: string | null; enabled: boolean };
 /** "Cuando pase a En revisión, asignar a Ana". */
 export function ruleText(r: Pick<Rule, 'trigger' | 'column_key' | 'action' | 'user_id'>, cols: { key: string; label: string }[], nameOf: (id: string) => string): string {
-  const when = r.trigger === 'moved' ? `Cuando pase a ${cols.find((c) => c.key === r.column_key)?.label ?? r.column_key}` : r.trigger === 'created' ? 'Cuando se cree una tarea' : 'Cuando se venza una tarea';
+  const when = r.trigger === 'moved' ? t('Cuando pase a {v}', { v: cols.find((c) => c.key === r.column_key)?.label ?? r.column_key }) : r.trigger === 'created' ? t('Cuando se cree una tarea') : t('Cuando se venza una tarea');
   const what = r.action === 'assign' ? `asignar a ${r.user_id ? nameOf(r.user_id) : '…'}`
-    : r.action === 'notify_assignee' ? 'avisar a quien la tiene' : r.user_id ? `avisar a ${nameOf(r.user_id)}` : 'avisar al dueño del proyecto';
+    : r.action === 'notify_assignee' ? t('avisar a quien la tiene') : r.user_id ? `avisar a ${nameOf(r.user_id)}` : t('avisar al dueño del proyecto');
   return `${when}, ${what}`;
 }
 /** ¿La regla se puede guardar? (igual que las restricciones del servidor) */
 export function ruleError(r: Partial<Rule>): string | null {
-  if (!r.trigger) return 'Escoge cuándo.';
-  if (r.trigger === 'moved' && !r.column_key) return 'Escoge la columna.';
-  if (!r.action) return 'Escoge qué hacer.';
-  if (r.action === 'assign' && !r.user_id) return 'Escoge a quién asignar.';
-  if (r.trigger === 'overdue' && r.action === 'assign') return 'Al vencerse solo se puede avisar.';
+  if (!r.trigger) return t('Escoge cuándo.');
+  if (r.trigger === 'moved' && !r.column_key) return t('Escoge la columna.');
+  if (!r.action) return t('Escoge qué hacer.');
+  if (r.action === 'assign' && !r.user_id) return t('Escoge a quién asignar.');
+  if (r.trigger === 'overdue' && r.action === 'assign') return t('Al vencerse solo se puede avisar.');
   return null;
 }
 
 // ---------- Estado del proyecto ----------
 export type Health = 'en_curso' | 'en_riesgo' | 'atrasado';
 export const HEALTH: Record<Health, { label: string; color: string; icon: string }> = {
-  en_curso: { label: 'En curso', color: '#37c98b', icon: 'checkmark-circle' },
-  en_riesgo: { label: 'En riesgo', color: '#f5b64c', icon: 'alert-circle' },
-  atrasado: { label: 'Atrasado', color: '#ef5b5b', icon: 'close-circle' },
+  en_curso: { label: t('En curso'), color: '#37c98b', icon: 'checkmark-circle' },
+  en_riesgo: { label: t('En riesgo'), color: '#f5b64c', icon: 'alert-circle' },
+  atrasado: { label: t('Atrasado'), color: '#ef5b5b', icon: 'close-circle' },
 };
 /** Estado sugerido con los números del informe semanal. */
 export function suggestHealth(r: { late: unknown[]; next: unknown[]; total: number; doneTotal: number }): Health {

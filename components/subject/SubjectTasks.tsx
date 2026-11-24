@@ -15,6 +15,7 @@ import { refreshNavCounts } from '../../lib/navCounts';
 import { play } from '../../lib/sound';
 import { Button, EmptyState } from '../ds';
 import { TaskRow } from '../TaskRow';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Tareas de una materia: campo para escribir una tarea en una línea
@@ -45,14 +46,14 @@ export function QuickTaskInput({ subject, onCreated }: { subject: Subject; onCre
       refreshNavCounts(true);
       onCreated(); dataChanged();
       const when = fmtDue(row);
-      toast(`Agregada: ${parsed.title}${when ? ' · ' + when : ''}`, { actionLabel: 'Editar', onAction: () => openTask({ id, status: 'pending', description: null, ...row } as Task) });
-    } catch (e) { notify('No se pudo agregar', friendlyError(e)); }
+      toast(`Agregada: ${parsed.title}${when ? ' · ' + when : ''}`, { actionLabel: t('Editar'), onAction: () => openTask({ id, status: 'pending', description: null, ...row } as Task) });
+    } catch (e) { notify(t('No se pudo agregar'), friendlyError(e)); }
     finally { setBusy(false); }
   }
 
   const meta = parsed?.typeKey ? taskTypeMeta(parsed.typeKey) : null;
   const hint = parsed
-    ? [meta?.label ?? 'Tarea', parsed.dueDate ? fmtDay(fromISODate(parsed.dueDate)) + (parsed.dueTime ? ', ' + fmtHHMM(parsed.dueTime) : '') : 'sin fecha'].join(' · ')
+    ? [meta?.label ?? t('Tarea'), parsed.dueDate ? fmtDay(fromISODate(parsed.dueDate)) + (parsed.dueTime ? ', ' + fmtHHMM(parsed.dueTime) : '') : t('sin fecha')].join(' · ')
     : null;
 
   return (
@@ -61,16 +62,16 @@ export function QuickTaskInput({ subject, onCreated }: { subject: Subject; onCre
         <Ionicons name="add" size={20} color={C.muted} />
         <TextInput value={text} onChangeText={setText} onSubmitEditing={create} returnKeyType="done" blurOnSubmit={false}
           onFocus={() => setFocus(true)} onBlur={() => setFocus(false)}
-          placeholder={isWide ? `Agregar a ${subject.name}: "informe el jueves 6pm"` : 'Agregar tarea…'} placeholderTextColor={C.muted}
-          accessibilityLabel={`Agregar tarea a ${subject.name}`}
+          placeholder={isWide ? t('Agregar a {name}: "informe el jueves 6pm"', { name: subject.name }) : t('Agregar tarea…')} placeholderTextColor={C.muted}
+          accessibilityLabel={t('Agregar tarea a {name}', { name: subject.name })}
           style={[{ flex: 1, minWidth: 0, color: C.text, fontSize: 15, paddingVertical: 12 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
-        {!!text.trim() && <Button label="Agregar" size="sm" onPress={create} busy={busy} />}
-        {!text.trim() && <Pressable onPress={() => openTask(null, { subjectId: subject.id })} accessibilityRole="button" accessibilityLabel="Tarea con todos los detalles"
+        {!!text.trim() && <Button label={t('Agregar')} size="sm" onPress={create} busy={busy} />}
+        {!text.trim() && <Pressable onPress={() => openTask(null, { subjectId: subject.id })} accessibilityRole="button" accessibilityLabel={t('Tarea con todos los detalles')}
           style={{ paddingHorizontal: 10, height: 36, justifyContent: 'center' }}>
-          <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '700' }}>Con detalles</Text>
+          <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '700' }}>{t('Con detalles')}</Text>
         </Pressable>}
       </View>
-      {!!hint && <Text style={{ color: C.muted, fontSize: 12.5, paddingLeft: 4 }}>Se guarda como: {hint}</Text>}
+      {!!hint && <Text style={{ color: C.muted, fontSize: 12.5, paddingLeft: 4 }}>{t('Se guarda como: {hint}', { hint })}</Text>}
     </View>
   );
 }
@@ -84,8 +85,8 @@ export function SubjectTaskList({ pending, done, steps, onToggle, onRemove, onSt
   return (
     <View>
       {pending.length === 0 && (
-        <EmptyState compact icon="checkmark-done-outline" title="Nada pendiente en esta materia"
-          text={done.length ? 'Todo al día. Escribe arriba la próxima entrega cuando la tengas.' : 'Escribe arriba la primera tarea o examen.'} />
+        <EmptyState compact icon="checkmark-done-outline" title={t('Nada pendiente en esta materia')}
+          text={done.length ? t('Todo al día. Escribe arriba la próxima entrega cuando la tengas.') : t('Escribe arriba la primera tarea o examen.')} />
       )}
       {groups.map((g) => (
         <View key={g.key}>
@@ -96,9 +97,9 @@ export function SubjectTaskList({ pending, done, steps, onToggle, onRemove, onSt
             <TaskRow key={t.id} task={t} showSubject={false} steps={steps[t.id]} onToggle={onToggle} onOpen={(x) => openTask(x)}
               onStepsChange={onStepsChange}
               actions={[
-                { label: 'Abrir y editar', icon: 'create-outline', onPress: () => openTask(t) },
-                { label: 'Marcar hecha', icon: 'checkmark-circle-outline', onPress: () => onToggle(t) },
-                { label: 'Borrar', icon: 'trash-outline', danger: true, onPress: () => onRemove(t) },
+                { label: trn('Abrir y editar'), icon: 'create-outline', onPress: () => openTask(t) },
+                { label: trn('Marcar hecha'), icon: 'checkmark-circle-outline', onPress: () => onToggle(t) },
+                { label: trn('Borrar'), icon: 'trash-outline', danger: true, onPress: () => onRemove(t) },
               ]} />
           ))}
         </View>

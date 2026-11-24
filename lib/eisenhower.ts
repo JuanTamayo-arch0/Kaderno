@@ -1,4 +1,5 @@
-// ============================================================
+
+import { t } from './i18n';// ============================================================
 //  Matriz de Eisenhower (v27, fase 1). Puro, con pruebas.
 //
 //  Importante lo marca la persona (una estrella); en las tareas de proyecto
@@ -61,12 +62,12 @@ export function byQuadrant<X extends Dated & Rated>(items: X[], todayISO: string
 /** Nombre y explicación de cada cuadrante. En Trabajo el tercero es "Delegar". */
 export function quadrantInfo(q: Quadrant, work: boolean): { title: string; hint: string; empty: string } {
   switch (q) {
-    case 'hacer': return { title: 'Hacer ya', hint: 'Urgente e importante', empty: 'Nada que apague incendios. Bien.' };
-    case 'planear': return { title: 'Planear', hint: 'Importante, sin afán: ponle día y hora antes de que se vuelva urgente', empty: 'Marca con la estrella lo que importa aunque no tenga afán.' };
+    case 'hacer': return { title: t('Hacer ya'), hint: t('Urgente e importante'), empty: t('Nada que apague incendios. Bien.') };
+    case 'planear': return { title: t('Planear'), hint: t('Importante, sin afán: ponle día y hora antes de que se vuelva urgente'), empty: t('Marca con la estrella lo que importa aunque no tenga afán.') };
     case 'rapido': return work
-      ? { title: 'Delegar', hint: 'Urgente, no tan importante: ¿alguien más lo puede hacer?', empty: 'Nada para pasarle a otra persona.' }
-      : { title: 'Hacer rápido', hint: 'Urgente, no tan importante: despáchalo en poco tiempo', empty: 'Nada urgente de poca importancia.' };
-    default: return { title: 'Soltar', hint: 'Ni urgente ni importante: ¿de verdad hay que hacerlo?', empty: 'Nada de más. Bien.' };
+      ? { title: t('Delegar'), hint: t('Urgente, no tan importante: ¿alguien más lo puede hacer?'), empty: t('Nada para pasarle a otra persona.') }
+      : { title: t('Hacer rápido'), hint: t('Urgente, no tan importante: despáchalo en poco tiempo'), empty: t('Nada urgente de poca importancia.') };
+    default: return { title: t('Soltar'), hint: t('Ni urgente ni importante: ¿de verdad hay que hacerlo?'), empty: t('Nada de más. Bien.') };
   }
 }
 
@@ -105,7 +106,7 @@ export function weekBalance(tasks: Done[], weekStart: string, days = DEFAULT_URG
 export function balanceLine(b: ReturnType<typeof weekBalance>, work: boolean): string | null {
   if (b.total < 5) return null;
   const imp = Math.round(((b.counts.hacer + b.counts.planear) / b.total) * 100);
-  if (b.urgentOnlyPct >= 40) return `La semana pasada el ${b.urgentOnlyPct} % de lo que terminaste era urgente pero no tan importante. ${work ? 'Mira qué se puede delegar.' : 'Esta semana, primero lo que tiene estrella.'}`;
-  if (imp >= 60) return `La semana pasada el ${imp} % de lo que terminaste era importante. Buen enfoque.`;
-  return `La semana pasada terminaste ${b.total} tareas; el ${imp} % era importante.`;
+  if (b.urgentOnlyPct >= 40) return t('La semana pasada el {urgentOnlyPct} % de lo que terminaste era urgente pero no tan importante. {v}', { urgentOnlyPct: b.urgentOnlyPct, v: work ? 'Mira qué se puede delegar.' : 'Esta semana, primero lo que tiene estrella.' });
+  if (imp >= 60) return t('La semana pasada el {imp} % de lo que terminaste era importante. Buen enfoque.', { imp });
+  return t('La semana pasada terminaste {total} tareas; el {imp} % era importante.', { total: b.total, imp });
 }

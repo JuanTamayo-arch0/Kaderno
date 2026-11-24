@@ -1,4 +1,5 @@
-// ============================================================
+
+import { t } from './i18n';// ============================================================
 //  Plan de repaso del parcial (v20, sección G). Puro, con pruebas.
 //  Sesiones a 14, 7, 4, 2 y 1 días del examen (las que quepan), con un
 //  tipo según su lugar: preparar, mezclar, simulacro y repaso ligero.
@@ -9,10 +10,10 @@ export type SessionKind = 'prep' | 'mix' | 'sim' | 'light';
 export type PlannedSession = { offset: number; day: Date; kind: SessionKind; title: string; minutes: number };
 
 export const KIND_TEXT: Record<SessionKind, { short: string; long: string }> = {
-  prep: { short: 'Preparar', long: 'Preparar: repasa tus notas y crea tarjetas' },
-  mix: { short: 'Tarjetas y ejercicios', long: 'Tarjetas y ejercicios mezclados' },
-  sim: { short: 'Simulacro', long: 'Simulacro' },
-  light: { short: 'Repaso ligero', long: 'Repaso ligero, 20 min, y descansa' },
+  prep: { short: t('Preparar'), long: t('Preparar: repasa tus notas y crea tarjetas') },
+  mix: { short: t('Tarjetas y ejercicios'), long: t('Tarjetas y ejercicios mezclados') },
+  sim: { short: t('Simulacro'), long: t('Simulacro') },
+  light: { short: t('Repaso ligero'), long: t('Repaso ligero, 20 min, y descansa') },
 };
 
 function startOfDay(d: Date): Date { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
@@ -36,7 +37,7 @@ export function planSessions(exam: Date, now: Date): PlannedSession[] {
   if (D <= 2) {
     // Examen mañana o pasado: simulacro rápido hoy y repaso ligero el día antes (hoy si es mañana).
     return [
-      { offset: D, day: startOfDay(now), kind: 'sim', title: 'Simulacro rápido', minutes: 30 },
+      { offset: D, day: startOfDay(now), kind: 'sim', title: t('Simulacro rápido'), minutes: 30 },
       { offset: 1, day: addDays(ex, -1), kind: 'light', title: KIND_TEXT.light.short, minutes: 20 },
     ];
   }
@@ -53,7 +54,7 @@ export function planSessions(exam: Date, now: Date): PlannedSession[] {
 }
 
 export function sessionTitle(kind: SessionKind, examTitle: string, quick = false): string {
-  const base = quick && kind === 'sim' ? 'Simulacro rápido' : KIND_TEXT[kind].short;
+  const base = quick && kind === 'sim' ? t('Simulacro rápido') : KIND_TEXT[kind].short;
   return `${base} · ${examTitle.trim().slice(0, 120)}`;
 }
 
@@ -61,7 +62,7 @@ export function sessionTitle(kind: SessionKind, examTitle: string, quick = false
 export function planProgress(sessions: { status?: string | null }[]): { done: number; total: number; text: string } {
   const total = sessions.length;
   const done = sessions.filter((s) => s.status === 'done').length;
-  return { done, total, text: `Plan de repaso: ${done} de ${total} ${total === 1 ? 'sesión hecha' : 'sesiones hechas'}` };
+  return { done, total, text: t('Plan de repaso: {done} de {total} {v}', { done, total, v: total === 1 ? 'sesión hecha' : 'sesiones hechas' }) };
 }
 
 /**

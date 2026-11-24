@@ -36,6 +36,7 @@ import { play } from '../lib/sound';
 import { useSpaceFilter } from '../lib/useSpace';
 import { getModeSetting } from '../lib/mode';
 import { switchSpace } from '../lib/spaceSwitch';
+import { t } from '../lib/i18n';
 
 // ============================================================
 //  Paneles globales: hoja "Agregar", formulario de tarea, paleta de
@@ -157,62 +158,62 @@ function AddSheet({ visible, subjects, initialText = '' }: { visible: boolean; s
       // Si vence mañana o después, la acción invita a decidir cuándo hacerla.
       const askWhen = hasPlanCols() && needsPlan(row.due_date, new Date());
       if ((row as any).inbox) {
-        toast(`A la bandeja: ${parsed.title}`, { actionLabel: 'Ordenar', onAction: () => router.push({ pathname: '/', params: { bandeja: '1' } } as any) });
+        toast(t('A la bandeja: {title}', { title: parsed.title }), { actionLabel: t('Ordenar'), onAction: () => router.push({ pathname: '/', params: { bandeja: '1' } } as any) });
         return;
       }
       toast(`Agregada: ${parsed.title}${when ? ' · ' + when : ''}`, {
-        actionLabel: askWhen ? '¿Cuándo lo haces?' : 'Editar',
+        actionLabel: askWhen ? t('¿Cuándo lo haces?') : t('Editar'),
         onAction: () => openTask({ id, status: 'pending', description: null, ...row } as Task),
       });
-    } catch (e) { notify('No se pudo agregar', friendlyError(e)); }
+    } catch (e) { notify(t('No se pudo agregar'), friendlyError(e)); }
     finally { setBusy(false); }
   }
 
   async function blankNote() {
     closeAdd();
     try {
-      const id = await addNote({ subject_id: null, title: 'Nota sin título', content: '', image_path: null });
+      const id = await addNote({ subject_id: null, title: t('Nota sin título'), content: '', image_path: null });
       router.push({ pathname: '/nota/[id]', params: { id, edit: '1' } } as any);
-    } catch (e) { notify('No se pudo crear la nota', friendlyError(e)); }
+    } catch (e) { notify(t('No se pudo crear la nota'), friendlyError(e)); }
   }
 
   const subj = parsed?.subjectId ? subjects.find((s) => s.id === parsed.subjectId) : null;
   const tmeta = parsed?.typeKey ? taskTypeMeta(parsed.typeKey) : null;
   const actions: { icon: any; label: string; hint: string; onPress: () => void }[] = [
-    { icon: 'checkbox-outline', label: 'Tarea o examen', hint: 'Con todos los detalles', onPress: () => openTask(null, parsed ? { title: parsed.title, subjectId: parsed.subjectId, typeKey: parsed.typeKey, dueDate: parsed.dueDate, dueTime: parsed.dueTime } : null) },
-    { icon: 'camera-outline', label: 'Digitalizar apunte', hint: 'Foto o imagen a texto', onPress: () => { closeAdd(); router.push('/capturar'); } },
-    { icon: 'document-text-outline', label: 'Nota en blanco', hint: 'Escribe con formato', onPress: blankNote },
-    { icon: 'download-outline', label: 'Importar cronograma', hint: 'Todas las entregas del semestre', onPress: () => { closeAdd(); router.push('/importar'); } },
-    { icon: 'people-outline', label: 'Proyecto en grupo', hint: 'Tablero y reparto', onPress: () => { closeAdd(); router.push({ pathname: '/proyectos', params: { nuevo: '1' } } as any); } },
-    { icon: 'timer-outline', label: 'Sesión de enfoque', hint: 'Pomodoro de 25 min', onPress: () => { closeAdd(); startFocus(); router.push('/enfoque'); } },
+    { icon: 'checkbox-outline', label: t('Tarea o examen'), hint: t('Con todos los detalles'), onPress: () => openTask(null, parsed ? { title: parsed.title, subjectId: parsed.subjectId, typeKey: parsed.typeKey, dueDate: parsed.dueDate, dueTime: parsed.dueTime } : null) },
+    { icon: 'camera-outline', label: t('Digitalizar apunte'), hint: t('Foto o imagen a texto'), onPress: () => { closeAdd(); router.push('/capturar'); } },
+    { icon: 'document-text-outline', label: t('Nota en blanco'), hint: t('Escribe con formato'), onPress: blankNote },
+    { icon: 'download-outline', label: t('Importar cronograma'), hint: t('Todas las entregas del semestre'), onPress: () => { closeAdd(); router.push('/importar'); } },
+    { icon: 'people-outline', label: t('Proyecto en grupo'), hint: t('Tablero y reparto'), onPress: () => { closeAdd(); router.push({ pathname: '/proyectos', params: { nuevo: '1' } } as any); } },
+    { icon: 'timer-outline', label: t('Sesión de enfoque'), hint: t('Pomodoro de 25 min'), onPress: () => { closeAdd(); startFocus(); router.push('/enfoque'); } },
   ];
 
   return (
     <Panel visible={visible} onClose={closeAdd}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, marginTop: -6, marginRight: -8 }}>
-        <Text style={{ color: C.text, fontSize: 17, fontWeight: '700', flex: 1 }} accessibilityRole="header">Agregar</Text>
-        <IconButton icon="close" label="Cerrar" onPress={closeAdd} />
+        <Text style={{ color: C.text, fontSize: 17, fontWeight: '700', flex: 1 }} accessibilityRole="header">{t('Agregar')}</Text>
+        <IconButton icon="close" label={t('Cerrar')} onPress={closeAdd} />
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.surface2, borderWidth: 1, borderColor: text ? C.brand : C.line, borderRadius: 12, paddingLeft: 12, paddingRight: 4, overflow: 'hidden' }}>
         <Ionicons name="add" size={20} color={C.muted} />
-        <TextInput value={text} onChangeText={setText} autoFocus enterKeyHint="done" placeholder='Ej: "parcial cálculo viernes 10am"' placeholderTextColor={C.muted}
-          onSubmitEditing={quickCreate} returnKeyType="done" accessibilityLabel="Escribe una tarea"
+        <TextInput value={text} onChangeText={setText} autoFocus enterKeyHint="done" placeholder={t('Ej: "parcial cálculo viernes 10am"')} placeholderTextColor={C.muted}
+          onSubmitEditing={quickCreate} returnKeyType="done" accessibilityLabel={t('Escribe una tarea')}
           style={[{ flex: 1, minWidth: 0, color: C.text, fontSize: 15, paddingVertical: 12, minHeight: 46 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
         {!text.trim() && <MicButton onText={(t) => setText(t)} />}
-        {!!text.trim() && <Button label="Agregar" size="sm" onPress={quickCreate} busy={busy} style={{ marginRight: 6 }} />}
+        {!!text.trim() && <Button label={t('Agregar')} size="sm" onPress={quickCreate} busy={busy} style={{ marginRight: 6 }} />}
       </View>
       {parsed ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10, alignItems: 'center' }}>
-          <Text style={{ color: C.muted, fontSize: 12.5 }}>Se entiende como:</Text>
+          <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Se entiende como:')}</Text>
           <Chip text={parsed.title} strong />
           {tmeta && <Chip text={tmeta.label} color={tmeta.color} />}
           {subj && <Chip text={subj.name} color={subj.color} dot />}
           {parsed.dueDate && <Chip text={fmtDay(fromISODate(parsed.dueDate)) + (parsed.dueTime ? ', ' + fmtHHMM(parsed.dueTime) : '')} icon="calendar-outline" />}
           {parsed.repeat && <Chip text={ruleText(parsed.repeat)} icon="repeat" />}
-          {!parsed.dueDate && (goesToInbox(parsed) ? <Chip text="A la bandeja" icon="file-tray-outline" /> : <Chip text="Sin fecha" icon="calendar-outline" />)}
+          {!parsed.dueDate && (goesToInbox(parsed) ? <Chip text={t('A la bandeja')} icon="file-tray-outline" /> : <Chip text={t('Sin fecha')} icon="calendar-outline" />)}
         </View>
       ) : (
-        <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 8 }}>Escribe la tarea con su materia, día y hora; Kaderno entiende el resto. Enter para agregar.</Text>
+        <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 8 }}>{t('Escribe la tarea con su materia, día y hora; Kaderno entiende el resto. Enter para agregar.')}</Text>
       )}
       <ScrollView style={{ marginTop: 14 }}>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
@@ -245,14 +246,14 @@ function MicButton({ onText }: { onText: (t: string) => void }) {
     if (on) { try { recRef.current?.stop(); } catch { /* noop */ } return; }
     try {
       const rec = new SR();
-      rec.lang = 'es-CO'; rec.interimResults = true; rec.maxAlternatives = 1;
+      rec.lang = t('es-CO'); rec.interimResults = true; rec.maxAlternatives = 1;
       rec.onresult = (e: any) => { const t = Array.from(e.results).map((r: any) => r[0].transcript).join(' '); onText(t.trim()); };
       rec.onend = () => setOn(false);
-      rec.onerror = (e: any) => { setOn(false); if (e?.error === 'not-allowed') toast('Permite el micrófono para dictar.', { tone: 'bad' }); };
+      rec.onerror = (e: any) => { setOn(false); if (e?.error === 'not-allowed') toast(t('Permite el micrófono para dictar.'), { tone: 'bad' }); };
       recRef.current = rec; rec.start(); setOn(true);
     } catch { setOn(false); }
   };
-  return <IconButton icon={on ? 'mic' : 'mic-outline'} label={on ? 'Dejar de escuchar' : 'Dictar la tarea'} onPress={toggle} color={on ? C.bad : C.muted} />;
+  return <IconButton icon={on ? 'mic' : 'mic-outline'} label={on ? t('Dejar de escuchar') : t('Dictar la tarea')} onPress={toggle} color={on ? C.bad : C.muted} />;
 }
 
 function Chip({ text, color, dot, icon, strong }: { text: string; color?: string; dot?: boolean; icon?: any; strong?: boolean }) {
@@ -289,20 +290,20 @@ function CommandPalette({ visible }: { visible: boolean }) {
 
   const go = useCallback((href: string | object) => { closeCommand(); router.push(href as any); }, [router]);
   const base: Cmd[] = useMemo(() => [
-    { id: 'new', icon: 'add-circle-outline', label: 'Agregar tarea', hint: 'N', run: () => { closeCommand(); openAdd(); } },
-    { id: 'hoy', icon: 'today-outline', label: 'Ir a Hoy', run: () => go('/') },
-    { id: 'mat', icon: 'book-outline', label: 'Ir a Materias', run: () => go('/materias') },
-    { id: 'hor', icon: 'grid-outline', label: 'Ir a Horario', run: () => go('/horario') },
-    { id: 'pro', icon: 'people-outline', label: 'Ir a Proyectos', run: () => go('/proyectos') },
-    { id: 'est', icon: 'school-outline', label: 'Ir a Estudiar', run: () => go('/estudiar') },
-    { id: 'enf', icon: 'timer-outline', label: 'Empezar enfoque (25 min)', run: () => { startFocus(); go('/enfoque'); } },
-    { id: 'rep', icon: 'albums-outline', label: 'Repasar flashcards', run: () => go('/repaso') },
-    { id: 'ora', icon: 'sparkles-outline', label: 'Preguntar al Oráculo', run: () => go('/oraculo') },
-    { id: 'cap', icon: 'camera-outline', label: 'Digitalizar apunte', run: () => go('/capturar') },
-    { id: 'imp', icon: 'download-outline', label: 'Importar cronograma', run: () => go('/importar') },
-    { id: 'aju', icon: 'settings-outline', label: 'Ajustes y cuenta', run: () => go('/ajustes') },
-    { id: 'per', icon: 'color-palette-outline', label: 'Cambiar tema y apariencia', run: () => go('/personalizar') },
-    { id: 'pap', icon: 'trash-outline', label: 'Papelera', run: () => go('/papelera') },
+    { id: 'new', icon: 'add-circle-outline', label: t('Agregar tarea'), hint: t('N'), run: () => { closeCommand(); openAdd(); } },
+    { id: 'hoy', icon: 'today-outline', label: t('Ir a Hoy'), run: () => go('/') },
+    { id: 'mat', icon: 'book-outline', label: t('Ir a Materias'), run: () => go('/materias') },
+    { id: 'hor', icon: 'grid-outline', label: t('Ir a Horario'), run: () => go('/horario') },
+    { id: 'pro', icon: 'people-outline', label: t('Ir a Proyectos'), run: () => go('/proyectos') },
+    { id: 'est', icon: 'school-outline', label: t('Ir a Estudiar'), run: () => go('/estudiar') },
+    { id: 'enf', icon: 'timer-outline', label: t('Empezar enfoque (25 min)'), run: () => { startFocus(); go('/enfoque'); } },
+    { id: 'rep', icon: 'albums-outline', label: t('Repasar flashcards'), run: () => go('/repaso') },
+    { id: 'ora', icon: 'sparkles-outline', label: t('Preguntar al Oráculo'), run: () => go('/oraculo') },
+    { id: 'cap', icon: 'camera-outline', label: t('Digitalizar apunte'), run: () => go('/capturar') },
+    { id: 'imp', icon: 'download-outline', label: t('Importar cronograma'), run: () => go('/importar') },
+    { id: 'aju', icon: 'settings-outline', label: t('Ajustes y cuenta'), run: () => go('/ajustes') },
+    { id: 'per', icon: 'color-palette-outline', label: t('Cambiar tema y apariencia'), run: () => go('/personalizar') },
+    { id: 'pap', icon: 'trash-outline', label: t('Papelera'), run: () => go('/papelera') },
   ], [go]);
 
   const items: { section: string; cmds: Cmd[] }[] = useMemo(() => {
@@ -311,13 +312,13 @@ function CommandPalette({ visible }: { visible: boolean }) {
     const acts = qq ? base.filter((c) => n(c.label).includes(qq)) : base;
     const out: { section: string; cmds: Cmd[] }[] = [];
     if (hits) {
-      if (hits.subjects.length) out.push({ section: 'Materias', cmds: hits.subjects.map((s) => ({ id: 's' + s.id, icon: 'book-outline', color: s.color, label: s.name, run: () => go(`/materia/${s.id}`) })) });
-      if (hits.tasks.length) out.push({ section: 'Tareas', cmds: hits.tasks.map((t) => ({ id: 't' + t.id, icon: t.status === 'done' ? 'checkmark-circle' : 'ellipse-outline', label: t.title, hint: fmtDue(t), run: () => { closeCommand(); openTask(t); } })) });
-      if (hits.projectTasks.length) out.push({ section: 'Tareas de proyectos', cmds: hits.projectTasks.map((t) => ({ id: 'p' + t.id, icon: 'people-outline', label: t.title, hint: fmtDue(t), run: () => go(`/proyectos/${t.project_id}`) })) });
-      if (hits.notes.length) out.push({ section: 'Notas', cmds: hits.notes.map((x) => ({ id: 'n' + x.id, icon: 'document-text-outline', label: x.title || 'Nota', hint: (x.content ?? '').slice(0, 60), run: () => go(`/nota/${x.id}`) })) });
+      if (hits.subjects.length) out.push({ section: t('Materias'), cmds: hits.subjects.map((s) => ({ id: 's' + s.id, icon: 'book-outline', color: s.color, label: s.name, run: () => go(`/materia/${s.id}`) })) });
+      if (hits.tasks.length) out.push({ section: t('Tareas'), cmds: hits.tasks.map((t) => ({ id: 't' + t.id, icon: t.status === 'done' ? 'checkmark-circle' : 'ellipse-outline', label: t.title, hint: fmtDue(t), run: () => { closeCommand(); openTask(t); } })) });
+      if (hits.projectTasks.length) out.push({ section: t('Tareas de proyectos'), cmds: hits.projectTasks.map((t) => ({ id: 'p' + t.id, icon: 'people-outline', label: t.title, hint: fmtDue(t), run: () => go(`/proyectos/${t.project_id}`) })) });
+      if (hits.notes.length) out.push({ section: t('Notas'), cmds: hits.notes.map((x) => ({ id: 'n' + x.id, icon: 'document-text-outline', label: x.title || t('Nota'), hint: (x.content ?? '').slice(0, 60), run: () => go(`/nota/${x.id}`) })) });
       if (hits.flashcards.length) out.push({ section: 'Flashcards', cmds: hits.flashcards.map((c) => ({ id: 'f' + c.id, icon: 'albums-outline', label: c.front, hint: c.back.slice(0, 60), run: () => go('/repaso') })) });
     }
-    if (acts.length) out.push({ section: qq ? 'Acciones' : 'Ir a…', cmds: acts });
+    if (acts.length) out.push({ section: qq ? t('Acciones') : t('Ir a…'), cmds: acts });
     return out;
   }, [hits, q, base, go]);
   const flat = items.flatMap((s) => s.cmds);
@@ -354,16 +355,16 @@ function CommandPalette({ visible }: { visible: boolean }) {
     <Panel visible={visible} onClose={closeCommand} top maxWidth={620}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.line, borderRadius: 12, paddingHorizontal: 12 }}>
         <Ionicons name="search" size={18} color={C.muted} />
-        <TextInput value={q} onChangeText={setQ} autoFocus placeholder="Busca notas, tareas, materias… o escribe una acción" placeholderTextColor={C.muted}
-          accessibilityLabel="Buscar"
+        <TextInput value={q} onChangeText={setQ} autoFocus placeholder={t('Busca notas, tareas, materias… o escribe una acción')} placeholderTextColor={C.muted}
+          accessibilityLabel={t('Buscar')}
           style={[{ flex: 1, color: C.text, fontSize: 15, paddingVertical: 12, minHeight: 46 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
         {busy && <ActivityIndicator size="small" color={C.brand} />}
-        {Platform.OS === 'web' && <Kbd text="Esc" />}
-        <IconButton icon="close" label="Cerrar búsqueda" onPress={closeCommand} size={18} style={{ marginRight: -8 }} />
+        {Platform.OS === 'web' && <Kbd text={t('Esc')} />}
+        <IconButton icon="close" label={t('Cerrar búsqueda')} onPress={closeCommand} size={18} style={{ marginRight: -8 }} />
       </View>
       <ScrollView ref={listRef} style={{ marginTop: 10 }} keyboardShouldPersistTaps="handled">
         {q.trim() && hits && !items.some((s) => s.section !== 'Acciones') && !busy && (
-          <Text style={{ color: C.muted, textAlign: 'center', paddingVertical: 16 }}>Sin resultados para “{q.trim()}”.</Text>
+          <Text style={{ color: C.muted, textAlign: 'center', paddingVertical: 16 }}>{t('Sin resultados para “{trim}”.', { trim: q.trim() })}</Text>
         )}
         {items.map((s) => (
           <View key={s.section} style={{ marginBottom: 6 }}>
@@ -403,14 +404,14 @@ function InboxPanel({ visible }: { visible: boolean }) {
   return (
     <Panel visible={visible} onClose={closeInbox} top maxWidth={480}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-        <Text style={{ color: C.text, fontSize: 17, fontWeight: '700', flex: 1 }} accessibilityRole="header">Avisos</Text>
-        <IconButton icon="settings-outline" label="Configurar avisos" onPress={() => { closeInbox(); router.push({ pathname: '/ajustes', params: { s: 'avisos' } } as any); }} />
-        <IconButton icon="close" label="Cerrar" onPress={closeInbox} />
+        <Text style={{ color: C.text, fontSize: 17, fontWeight: '700', flex: 1 }} accessibilityRole="header">{t('Avisos')}</Text>
+        <IconButton icon="settings-outline" label={t('Configurar avisos')} onPress={() => { closeInbox(); router.push({ pathname: '/ajustes', params: { s: 'avisos' } } as any); }} />
+        <IconButton icon="close" label={t('Cerrar')} onPress={closeInbox} />
       </View>
       {items === null ? <ActivityIndicator color={C.brand} style={{ marginVertical: 24 }} /> : items.length === 0 ? (
-        <EmptyState compact icon="notifications-off-outline" title="Sin avisos por ahora"
-          text="Aquí llegan los recordatorios de entregas, el resumen del día y las tareas que te asignen en proyectos."
-          action={{ label: 'Activar notificaciones', onPress: () => { closeInbox(); router.push({ pathname: '/ajustes', params: { s: 'avisos' } } as any); } }} />
+        <EmptyState compact icon="notifications-off-outline" title={t('Sin avisos por ahora')}
+          text={t('Aquí llegan los recordatorios de entregas, el resumen del día y las tareas que te asignen en proyectos.')}
+          action={{ label: t('Activar notificaciones'), onPress: () => { closeInbox(); router.push({ pathname: '/ajustes', params: { s: 'avisos' } } as any); } }} />
       ) : (
         <ScrollView>
           {items.map((n) => (
@@ -436,9 +437,9 @@ function InboxPanel({ visible }: { visible: boolean }) {
 function timeAgo(iso: string): string {
   const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
   if (m < 1) return 'ahora';
-  if (m < 60) return `hace ${m} min`;
+  if (m < 60) return t('hace {m} min', { m });
   const h = Math.round(m / 60);
-  if (h < 24) return `hace ${h} h`;
+  if (h < 24) return t('hace {h} h', { h });
   const d = Math.round(h / 24);
-  return d === 1 ? 'ayer' : `hace ${d} días`;
+  return d === 1 ? 'ayer' : t('hace {d} días', { d });
 }

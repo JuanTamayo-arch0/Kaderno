@@ -9,6 +9,7 @@ import { uploadNewFile } from '../../lib/projectFiles';
 import { copyText, saveFile } from '../../lib/fileIO';
 import { openWhatsApp } from '../../lib/clientLinks';
 import { toast, friendlyError } from '../../lib/feedback';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Informe semanal del proyecto (v24, fase 5): lo hecho, lo que viene, lo
@@ -24,21 +25,21 @@ export function ReportSheet({ visible, project, tasks, members, editable, onClos
   const md = useMemo(() => (project && visible ? weeklyReportMarkdown(project.name, weeklyReport(tasks, people), people) : ''), [project, tasks, people, visible]);
   if (!project) return null;
   const file = `Informe semanal ${new Date().toISOString().slice(0, 10)}.md`;
-  async function copy() { const ok = await copyText(md); toast(ok ? 'Informe copiado: pégalo en un correo o un chat' : 'No se pudo copiar'); }
+  async function copy() { const ok = await copyText(md); toast(ok ? t('Informe copiado: pégalo en un correo o un chat') : t('No se pudo copiar')); }
   async function download() { try { await saveFile(file, md, 'text/markdown'); } catch (e) { toast(friendlyError(e), { tone: 'bad' }); } }
   async function toFiles() {
     setBusy(true);
-    try { const bytes = new TextEncoder().encode(md); await uploadNewFile(project!.id, { name: file, bytes, mime: 'text/markdown', size: bytes.length }, { description: 'Informe semanal hecho con Kaderno' }); toast('Guardado en Archivos', { tone: 'good' }); }
+    try { const bytes = new TextEncoder().encode(md); await uploadNewFile(project!.id, { name: file, bytes, mime: 'text/markdown', size: bytes.length }, { description: t('Informe semanal hecho con Kaderno') }); toast(t('Guardado en Archivos'), { tone: 'good' }); }
     catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
     finally { setBusy(false); }
   }
   return (
-    <Sheet visible={visible} onClose={onClose} title="Informe semanal" subtitle="Para tu jefe, tu cliente o el grupo. Se arma con las tareas del proyecto." maxWidth={680}
+    <Sheet visible={visible} onClose={onClose} title={t('Informe semanal')} subtitle={t('Para tu jefe, tu cliente o el grupo. Se arma con las tareas del proyecto.')} maxWidth={680}
       footer={<>
-        <Button label="Copiar" icon="copy-outline" onPress={copy} />
+        <Button label={t('Copiar')} icon="copy-outline" onPress={copy} />
         <Button label="WhatsApp" icon="logo-whatsapp" kind="secondary" onPress={() => openWhatsApp(md.replace(/^#+ /gm, '').replace(/\n{3,}/g, '\n\n').slice(0, 3500))} />
-        <Button label="Descargar" icon="download-outline" kind="secondary" onPress={download} />
-        {editable && <Button label="Guardar en Archivos" icon="folder-outline" kind="secondary" busy={busy} onPress={toFiles} />}
+        <Button label={t('Descargar')} icon="download-outline" kind="secondary" onPress={download} />
+        {editable && <Button label={t('Guardar en Archivos')} icon="folder-outline" kind="secondary" busy={busy} onPress={toFiles} />}
       </>}>
       <ScrollView style={{ maxHeight: 420, borderWidth: 1, borderColor: C.line, borderRadius: 12, backgroundColor: C.surface2 }} contentContainerStyle={{ padding: 14 }}>
         {md.split('\n').map((l, i) => (

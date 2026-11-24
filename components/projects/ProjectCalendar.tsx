@@ -7,6 +7,7 @@ import { BoardColumn, Member, PTask, colorOf, initialsOf, nameOf } from '../../l
 import {
   monthGrid, byDueDay, timelineRange, barOf, clashes, roadToFinal, isoDay, addDays, dueDayOf, monthLabel, shortDay, spanOf,
 } from '../../lib/projectCalendar';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Calendario del proyecto (v23, fase 3): el mes con las entregas, la
@@ -41,46 +42,46 @@ export function ProjectCalendar({ projectId, tasks, cols, members, editable, isW
 
   // ---------- Camino a la entrega final ----------
   const finalDay = road.final ? dueDayOf(road.final) : null;
-  const paceText = road.pace === 'late' ? (road.late ? `${road.late} ${road.late === 1 ? 'tarea vencida' : 'tareas vencidas'}: pónganse al día` : 'La entrega final ya pasó')
-    : road.pace === 'tight' ? `Apretado: quedan ${road.total - road.done} tareas para ${Math.max(0, road.daysLeft ?? 0)} días`
-    : road.pace === 'ok' ? 'Van a buen ritmo' : 'Pongan fecha a las tareas para ver el camino';
+  const paceText = road.pace === 'late' ? (road.late ? t('{late} {v}: pónganse al día', { late: road.late, v: road.late === 1 ? 'tarea vencida' : 'tareas vencidas' }) : t('La entrega final ya pasó'))
+    : road.pace === 'tight' ? t('Apretado: quedan {v} tareas para {max} días', { v: road.total - road.done, max: Math.max(0, road.daysLeft ?? 0) })
+    : road.pace === 'ok' ? t('Van a buen ritmo') : t('Pongan fecha a las tareas para ver el camino');
   const paceColor = road.pace === 'late' ? C.bad : road.pace === 'tight' ? C.warn : road.pace === 'ok' ? C.good : C.muted;
   const roadCard = (
     <View style={{ backgroundColor: C.surface, borderWidth: 1, borderColor: C.line, borderRadius: R.lg, padding: 14, gap: 10, marginBottom: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <Ionicons name="flag" size={18} color={paceColor} />
         <View style={{ flex: 1, minWidth: 200 }}>
-          <Text style={{ color: C.muted, fontSize: 11.5, fontWeight: '700' }}>ENTREGA FINAL</Text>
+          <Text style={{ color: C.muted, fontSize: 11.5, fontWeight: '700' }}>{t('ENTREGA FINAL')}</Text>
           <Text style={{ color: C.text, fontSize: 15, fontWeight: '800' }} numberOfLines={1}>
-            {road.final ? `${road.final.title}${finalDay ? ` · ${shortDay(finalDay)}` : ''}` : 'Sin fecha todavía'}
+            {road.final ? `${road.final.title}${finalDay ? ` · ${shortDay(finalDay)}` : ''}` : t('Sin fecha todavía')}
           </Text>
         </View>
         {road.daysLeft != null && (
           <View style={{ alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, backgroundColor: paceColor + '1f' }}>
             <Text style={{ color: C.text, fontSize: 20, fontWeight: '800' }}>{Math.abs(road.daysLeft)}</Text>
-            <Text style={{ color: C.muted, fontSize: 11 }}>{road.daysLeft >= 0 ? (road.daysLeft === 1 ? 'día' : 'días') : 'días tarde'}</Text>
+            <Text style={{ color: C.muted, fontSize: 11 }}>{road.daysLeft >= 0 ? (road.daysLeft === 1 ? t('día') : t('días')) : t('días tarde')}</Text>
           </View>
         )}
       </View>
-      <View style={{ height: 6, borderRadius: 3, backgroundColor: C.surface2, overflow: 'hidden' }} accessibilityLabel={`${road.done} de ${road.total} tareas hechas`}>
+      <View style={{ height: 6, borderRadius: 3, backgroundColor: C.surface2, overflow: 'hidden' }} accessibilityLabel={t('{done} de {total} tareas hechas', { done: road.done, total: road.total })}>
         <View style={{ width: `${road.total ? (road.done / road.total) * 100 : 0}%`, height: '100%', backgroundColor: C.good }} />
       </View>
       <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <Text style={{ color: paceColor, fontSize: 13, fontWeight: '700' }}>{paceText}</Text>
-        <Text style={{ color: C.muted, fontSize: 12.5 }}>· {road.done} de {road.total} hechas</Text>
-        {road.thisWeek > 0 && <Text style={{ color: C.muted, fontSize: 12.5 }}>· {road.thisWeek} esta semana</Text>}
-        {road.undated > 0 && <Text style={{ color: C.muted, fontSize: 12.5 }}>· {road.undated} sin fecha</Text>}
+        <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('· {done} de {total} hechas', { done: road.done, total: road.total })}</Text>
+        {road.thisWeek > 0 && <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('· {thisWeek} esta semana', { thisWeek: road.thisWeek })}</Text>}
+        {road.undated > 0 && <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('· {undated} sin fecha', { undated: road.undated })}</Text>}
         <View style={{ flex: 1 }} />
         {tasks.some((t) => dueDayOf(t)) && (
           <Pressable onPress={() => setChoosing(!choosing)} accessibilityRole="button" hitSlop={6}>
-            <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>{choosing ? 'Cerrar' : 'Cambiar la entrega final'}</Text>
+            <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>{choosing ? t('Cerrar') : t('Cambiar la entrega final')}</Text>
           </Pressable>
         )}
       </View>
       {choosing && (
-        <View style={{ gap: 4 }} accessibilityRole="radiogroup" accessibilityLabel="Entrega final">
+        <View style={{ gap: 4 }} accessibilityRole="radiogroup" accessibilityLabel={t('Entrega final')}>
           <Pressable onPress={() => saveFinal(null)} accessibilityRole="radio" accessibilityState={{ checked: !finalId }} style={{ padding: 8, borderRadius: 8, backgroundColor: !finalId ? C.brand + '1f' : 'transparent' }}>
-            <Text style={{ color: C.text, fontSize: 13 }}>La que vence de última (automático)</Text>
+            <Text style={{ color: C.text, fontSize: 13 }}>{t('La que vence de última (automático)')}</Text>
           </Pressable>
           {tasks.filter((t) => dueDayOf(t)).sort((a, b) => dueDayOf(b)!.getTime() - dueDayOf(a)!.getTime()).slice(0, 8).map((t) => (
             <Pressable key={t.id} onPress={() => saveFinal(t.id)} accessibilityRole="radio" accessibilityState={{ checked: finalId === t.id }}
@@ -94,7 +95,7 @@ export function ProjectCalendar({ projectId, tasks, cols, members, editable, isW
         <View key={i} style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start', padding: 10, borderRadius: 10, backgroundColor: C.warn + '14' }}>
           <Ionicons name="git-merge-outline" size={16} color={C.warnText} style={{ marginTop: 1 }} />
           <Text style={{ color: C.text, fontSize: 12.5, flex: 1, lineHeight: 18 }}>
-            <Text style={{ fontWeight: '800' }}>{nameOf(memberOf(c.user_id)?.profile)}</Text> tiene {c.count} tareas a la vez {c.from.getTime() === c.to.getTime() ? `el ${shortDay(c.from)}` : `del ${shortDay(c.from)} al ${shortDay(c.to)}`}: {c.titles.slice(0, 4).join(', ')}.
+            <Text style={{ fontWeight: '800' }}>{nameOf(memberOf(c.user_id)?.profile)}</Text> {t(' tiene ')}{c.count} {t(' tareas a la vez ')}{c.from.getTime() === c.to.getTime() ? `el ${shortDay(c.from)}` : t('del {from} al {to}', { from: shortDay(c.from), to: shortDay(c.to) })}: {c.titles.slice(0, 4).join(', ')}.
           </Text>
         </View>
       ))}
@@ -115,12 +116,12 @@ export function ProjectCalendar({ projectId, tasks, cols, members, editable, isW
         {(['mes', 'linea'] as Mode[]).map((k) => (
           <Pressable key={k} onPress={() => setMode(k)} accessibilityRole="radio" accessibilityState={{ checked: mode === k }}
             style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: mode === k ? C.surface : 'transparent' }}>
-            <Text style={{ color: mode === k ? C.text : C.muted, fontSize: 12.5, fontWeight: '700' }}>{k === 'mes' ? 'Mes' : 'Línea de tiempo'}</Text>
+            <Text style={{ color: mode === k ? C.text : C.muted, fontSize: 12.5, fontWeight: '700' }}>{k === 'mes' ? t('Mes') : t('Línea de tiempo')}</Text>
           </Pressable>
         ))}
       </View>
-      {chip(mine, 'Solo lo mío', mine ? 'person' : 'person-outline', () => setMine(!mine))}
-      {chip(hideDone, 'Ocultar hechas', 'eye-off-outline', () => setHideDone(!hideDone))}
+      {chip(mine, t('Solo lo mío'), mine ? 'person' : 'person-outline', () => setMine(!mine))}
+      {chip(hideDone, t('Ocultar hechas'), 'eye-off-outline', () => setHideDone(!hideDone))}
     </View>
   );
 
@@ -149,12 +150,12 @@ function MonthView({ ym, setYm, today, tasks, isWide, editable, colOf, memberOf,
   return (
     <View style={{ backgroundColor: C.surface, borderWidth: 1, borderColor: C.line, borderRadius: R.lg, padding: isWide ? 12 : 8 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-        <Pressable onPress={() => go(-1)} accessibilityRole="button" accessibilityLabel="Mes anterior" style={navBtn}><Ionicons name="chevron-back" size={17} color={C.text} /></Pressable>
+        <Pressable onPress={() => go(-1)} accessibilityRole="button" accessibilityLabel={t('Mes anterior')} style={navBtn}><Ionicons name="chevron-back" size={17} color={C.text} /></Pressable>
         <Text style={{ color: C.text, fontSize: 15, fontWeight: '800', minWidth: 140, textAlign: 'center' }}>{monthLabel(ym.y, ym.m)}</Text>
-        <Pressable onPress={() => go(1)} accessibilityRole="button" accessibilityLabel="Mes siguiente" style={navBtn}><Ionicons name="chevron-forward" size={17} color={C.text} /></Pressable>
+        <Pressable onPress={() => go(1)} accessibilityRole="button" accessibilityLabel={t('Mes siguiente')} style={navBtn}><Ionicons name="chevron-forward" size={17} color={C.text} /></Pressable>
         {(ym.y !== today.getFullYear() || ym.m !== today.getMonth()) && (
           <Pressable onPress={() => setYm({ y: today.getFullYear(), m: today.getMonth() })} accessibilityRole="button" style={{ paddingHorizontal: 10 }}>
-            <Text style={{ color: C.brand, fontSize: 13, fontWeight: '700' }}>Hoy</Text>
+            <Text style={{ color: C.brand, fontSize: 13, fontWeight: '700' }}>{t('Hoy')}</Text>
           </Pressable>
         )}
       </View>
@@ -183,13 +184,13 @@ function MonthView({ ym, setYm, today, tasks, isWide, editable, colOf, memberOf,
                 {isWide ? (
                   <View style={{ gap: 3, marginTop: 3 }}>
                     {list.slice(0, 3).map((t) => (
-                      <Pressable key={t.id} onPress={(e: any) => { e?.stopPropagation?.(); onOpen(t); }} accessibilityRole="button" accessibilityLabel={`Abrir ${t.title}`}
+                      <Pressable key={t.id} onPress={(e: any) => { e?.stopPropagation?.(); onOpen(t); }} accessibilityRole="button" accessibilityLabel={trn('Abrir {title}', { title: t.title })}
                         style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 5, paddingVertical: 2, borderRadius: 6, backgroundColor: (colOf(t)?.color ?? C.muted) + '26', borderLeftWidth: 3, borderLeftColor: colOf(t)?.color ?? C.muted }}>
                         {t.id === finalId && <Ionicons name="flag" size={10} color={C.bad} />}
                         <Text numberOfLines={1} style={{ color: t.done ? C.muted : C.text, fontSize: 11, fontWeight: '600', flex: 1, textDecorationLine: t.done ? 'line-through' : 'none' }}>{t.title}</Text>
                       </Pressable>
                     ))}
-                    {list.length > 3 && <Text style={{ color: C.muted, fontSize: 10.5, paddingLeft: 4 }}>+{list.length - 3} más</Text>}
+                    {list.length > 3 && <Text style={{ color: C.muted, fontSize: 10.5, paddingLeft: 4 }}>{t('+{v} más', { v: list.length - 3 })}</Text>}
                   </View>
                 ) : list.length > 0 && (
                   <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 2, marginTop: 4, flexWrap: 'wrap' }}>
@@ -206,13 +207,13 @@ function MonthView({ ym, setYm, today, tasks, isWide, editable, colOf, memberOf,
         <View style={{ marginTop: 10, gap: 6 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={{ color: C.text, fontSize: 14, fontWeight: '800', flex: 1 }}>{shortDay(new Date(pickDay + 'T00:00:00'))}</Text>
-            {editable && <Pressable onPress={() => onAddOn(new Date(pickDay + 'T00:00:00'))} accessibilityRole="button" hitSlop={6}><Text style={{ color: C.brand, fontSize: 13, fontWeight: '700' }}>+ Tarea este día</Text></Pressable>}
+            {editable && <Pressable onPress={() => onAddOn(new Date(pickDay + 'T00:00:00'))} accessibilityRole="button" hitSlop={6}><Text style={{ color: C.brand, fontSize: 13, fontWeight: '700' }}>{t('+ Tarea este día')}</Text></Pressable>}
           </View>
-          {dayList.length === 0 && <Text style={{ color: C.muted, fontSize: 13 }}>Nada vence este día.</Text>}
+          {dayList.length === 0 && <Text style={{ color: C.muted, fontSize: 13 }}>{t('Nada vence este día.')}</Text>}
           {dayList.map((t) => <TaskRow key={t.id} t={t} col={colOf(t)} who={memberOf(t.assignee_id)} onPress={() => onOpen(t)} />)}
         </View>
       )}
-      {isWide && editable && <Text style={{ color: C.muted, fontSize: 11.5, marginTop: 8 }}>Toca un día vacío para crear una tarea con esa fecha.</Text>}
+      {isWide && editable && <Text style={{ color: C.muted, fontSize: 11.5, marginTop: 8 }}>{t('Toca un día vacío para crear una tarea con esa fecha.')}</Text>}
     </View>
   );
 }
@@ -254,12 +255,12 @@ function TimelineView({ today, tasks, isWide, colOf, memberOf, onOpen, finalDay 
         {/* Nombres */}
         <View style={{ width: nameW, borderRightWidth: 1, borderRightColor: C.line }}>
           <View style={{ height: 52, borderBottomWidth: 1, borderBottomColor: C.line, justifyContent: 'flex-end', padding: 8 }}>
-            <Text style={{ color: C.muted, fontSize: 11.5, fontWeight: '700' }}>TAREA</Text>
+            <Text style={{ color: C.muted, fontSize: 11.5, fontWeight: '700' }}>{t('TAREA')}</Text>
           </View>
           {rows.map((t) => {
             const who = memberOf(t.assignee_id);
             return (
-              <Pressable key={t.id} onPress={() => onOpen(t)} accessibilityRole="button" accessibilityLabel={`Abrir ${t.title}`}
+              <Pressable key={t.id} onPress={() => onOpen(t)} accessibilityRole="button" accessibilityLabel={trn('Abrir {title}', { title: t.title })}
                 style={({ hovered }: any) => ({ height: rowH, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 8, backgroundColor: hovered ? C.surface2 : 'transparent' })}>
                 {who ? <Avatar m={who} size={18} /> : <View style={{ width: 18 }} />}
                 <Text numberOfLines={1} style={{ color: t.done ? C.muted : C.text, fontSize: 12.5, fontWeight: '600', flex: 1, textDecorationLine: t.done ? 'line-through' : 'none' }}>{t.title}</Text>
@@ -290,13 +291,13 @@ function TimelineView({ today, tasks, isWide, colOf, memberOf, onOpen, finalDay 
               {/* fines de semana */}
               {Array.from({ length: days }, (_, i) => { const d = addDays(from, i); return d.getDay() === 0 || d.getDay() === 6 ? <View key={i} style={{ position: 'absolute', left: i * dayW, top: 0, bottom: 0, width: dayW, backgroundColor: C.surface2 + '55' }} /> : null; })}
               {/* hoy y entrega final */}
-              <View style={{ position: 'absolute', left: todayX + dayW / 2, top: 0, bottom: 0, width: 2, backgroundColor: C.brand }} accessibilityLabel="Hoy" />
-              {finalX != null && finalX >= 0 && finalX < width && <View style={{ position: 'absolute', left: finalX + dayW / 2, top: 0, bottom: 0, width: 2, backgroundColor: C.bad, opacity: 0.8 }} accessibilityLabel="Entrega final" />}
+              <View style={{ position: 'absolute', left: todayX + dayW / 2, top: 0, bottom: 0, width: 2, backgroundColor: C.brand }} accessibilityLabel={t('Hoy')} />
+              {finalX != null && finalX >= 0 && finalX < width && <View style={{ position: 'absolute', left: finalX + dayW / 2, top: 0, bottom: 0, width: 2, backgroundColor: C.bad, opacity: 0.8 }} accessibilityLabel={t('Entrega final')} />}
               {rows.map((t, r) => {
                 const b = barOf(t as any, from, days); if (!b) return null;
                 const col = colOf(t), late = !t.done && (dueDayOf(t as any)?.getTime() ?? Infinity) < today.getTime();
                 return (
-                  <Pressable key={t.id} onPress={() => onOpen(t)} accessibilityRole="button" accessibilityLabel={`${t.title}: ${b.width} ${b.width === 1 ? 'día' : 'días'}`}
+                  <Pressable key={t.id} onPress={() => onOpen(t)} accessibilityRole="button" accessibilityLabel={`${t.title}: ${b.width} ${b.width === 1 ? trn('día') : trn('días')}`}
                     style={{ position: 'absolute', left: b.left * dayW + 2, top: r * rowH + 7, width: b.width * dayW - 4, height: rowH - 14, borderRadius: 6,
                       backgroundColor: (late ? C.bad : col?.color ?? C.brand) + (t.done ? '55' : 'cc'), borderWidth: late ? 1.5 : 0, borderColor: C.bad, justifyContent: 'center', paddingHorizontal: 6 }}>
                     {b.width * dayW > 70 && <Text numberOfLines={1} style={{ color: '#0f1115', fontSize: 10.5, fontWeight: '800' }}>{t.title}</Text>}
@@ -309,7 +310,7 @@ function TimelineView({ today, tasks, isWide, colOf, memberOf, onOpen, finalDay 
       </View>
       {undated.length > 0 && (
         <View style={{ borderTopWidth: 1, borderTopColor: C.line, padding: 10, gap: 6 }}>
-          <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700' }}>SIN FECHAS · {undated.length}</Text>
+          <Text style={{ color: C.muted, fontSize: 12, fontWeight: '700' }}>{t('SIN FECHAS · {length}', { length: undated.length })}</Text>
           <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
             {undated.map((t) => (
               <Pressable key={t.id} onPress={() => onOpen(t)} accessibilityRole="button" style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: R.pill, borderWidth: 1, borderColor: C.line }}>
@@ -320,8 +321,8 @@ function TimelineView({ today, tasks, isWide, colOf, memberOf, onOpen, finalDay 
         </View>
       )}
       <View style={{ flexDirection: 'row', gap: 14, padding: 10, borderTopWidth: 1, borderTopColor: C.line, flexWrap: 'wrap' }}>
-        <Legend color={C.brand} text="Hoy" /><Legend color={C.bad} text="Entrega final / vencida" />
-        <Text style={{ color: C.muted, fontSize: 11.5 }}>La barra va del inicio a la entrega; sin inicio, solo el día de entrega.</Text>
+        <Legend color={C.brand} text={t('Hoy')} /><Legend color={C.bad} text={t('Entrega final / vencida')} />
+        <Text style={{ color: C.muted, fontSize: 11.5 }}>{t('La barra va del inicio a la entrega; sin inicio, solo el día de entrega.')}</Text>
       </View>
     </View>
   );

@@ -12,6 +12,7 @@
 // ============================================================
 import type { Mood, Species } from './art';
 import { lineFor, dailyPhrase, type Situation } from './lines';
+import { trn } from '../i18n';
 
 export type TalkMode = 'importa' | 'conversador';
 export type ActionId = 'enfocar' | 'mover_hoy' | 'que_hago' | 'dos_min' | 'luego' | 'tienda' | 'terminar_enfoque' | 'seguir' | 'logros';
@@ -195,7 +196,7 @@ export function commit(s: BrainState, r: Reaction | null, now: number): BrainSta
 export function suggestion(overdue: TaskHint[], today: TaskHint[], sp: Species, seed = Math.random()): { say: string; task: TaskHint | null } {
   const t = nextTask(overdue, today);
   if (!t) return { say: lineFor('nada_pendiente', sp, {}, seed), task: null };
-  return { say: lineFor('sugerencia', sp, { tarea: t.overdue ? `${t.title}, que ya venció` : t.title }, seed), task: t };
+  return { say: lineFor('sugerencia', sp, { tarea: t.overdue ? trn('{title}, que ya venció', { title: t.title }) : t.title }, seed), task: t };
 }
 
 /** Detector de "paseo sin hacer nada": 3 cambios de pantalla en 2 min sin ninguna acción. */

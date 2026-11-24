@@ -4,6 +4,7 @@
 // ============================================================
 export * from '../supabase/functions/_shared/plans';
 import { LIMITS, LIMIT_TEXT, PRICES, type LimitKey, type Period, type PlanId } from '../supabase/functions/_shared/plans';
+import { t } from './i18n';
 
 export type MyPlan = {
   plan: PlanId; own_plan?: PlanId; status?: 'none' | 'trial' | 'active' | 'past_due' | 'canceled';
@@ -24,46 +25,46 @@ export function planView(mp: MyPlan | null | undefined, now = new Date()): PlanV
   if (plan === 'free') {
     const ended = mp?.own_plan && mp.own_plan !== 'free' && mp.period_end && new Date(mp.period_end) <= now;
     return {
-      name: 'Gratis', badge: 'free', daysLeft: null, canPay: true, isPaid: false,
-      line: ended ? `Tu plan ${mp!.status === 'trial' ? 'de prueba ' : ''}terminó el ${shortDate(mp!.period_end!)}. Todo lo tuyo sigue aquí.` : mp?.trial_available !== false ? 'Puedes probar Pro 7 días sin tarjeta.' : 'Todo lo básico, con topes diarios de IA.',
+      name: t('Gratis'), badge: 'free', daysLeft: null, canPay: true, isPaid: false,
+      line: ended ? t('Tu plan {v}terminó el {shortDate}. Todo lo tuyo sigue aquí.', { v: mp!.status === 'trial' ? 'de prueba ' : '', shortDate: shortDate(mp!.period_end!) }) : mp?.trial_available !== false ? t('Puedes probar Pro 7 días sin tarjeta.') : t('Todo lo básico, con topes diarios de IA.'),
     };
   }
   if (mp?.via_team) {
-    return { name: 'Equipo', badge: 'team', daysLeft: daysUntil(mp.via_team.until, now), canPay: false, isPaid: true, line: `Lo paga el equipo de ${mp.via_team.owner}, hasta el ${shortDate(mp.via_team.until)}.` };
+    return { name: t('Equipo'), badge: 'team', daysLeft: daysUntil(mp.via_team.until, now), canPay: false, isPaid: true, line: t('Lo paga el equipo de {owner}, hasta el {until}.', { owner: mp.via_team.owner, until: shortDate(mp.via_team.until) }) };
   }
   const end = mp?.period_end ?? null;
   const left = end ? daysUntil(end, now) : null;
-  const name = plan === 'team' ? 'Equipo' : 'Pro';
+  const name = plan === 'team' ? t('Equipo') : 'Pro';
   if (mp?.status === 'trial') {
-    return { name: 'Pro', badge: 'trial', daysLeft: left, canPay: true, isPaid: false, line: left != null ? `Prueba gratis: ${left <= 1 ? 'termina mañana' : `te quedan ${left} días`} (hasta el ${shortDate(end!)}).` : 'Prueba gratis.' };
+    return { name: t('Pro'), badge: 'trial', daysLeft: left, canPay: true, isPaid: false, line: left != null ? t('Prueba gratis: {v} (hasta el {shortDate}).', { v: left <= 1 ? 'termina mañana' : `te quedan ${left} días`, shortDate: shortDate(end!) }) : t('Prueba gratis.') };
   }
   if (mp?.status === 'past_due') {
-    const next = mp.next_charge_at ? ` Lo intentamos de nuevo el ${shortDate(mp.next_charge_at)}.` : '';
-    const keep = end && new Date(end) > now ? ` Tu plan sigue hasta el ${shortDate(end)}.` : ' Mientras tanto conservas tu plan.';
-    return { name, badge: 'warn', daysLeft: left, canPay: true, isPaid: true, line: `No pudimos cobrar la renovación${mp.source_label ? ` a ${mp.source_label}` : ''}.${next}${keep}` };
+    const next = mp.next_charge_at ? t(' Lo intentamos de nuevo el {next_charge_at}.', { next_charge_at: shortDate(mp.next_charge_at) }) : '';
+    const keep = end && new Date(end) > now ? t(' Tu plan sigue hasta el {end}.', { end: shortDate(end) }) : t(' Mientras tanto conservas tu plan.');
+    return { name, badge: 'warn', daysLeft: left, canPay: true, isPaid: true, line: t('No pudimos cobrar la renovación{v}.{next}{keep}', { v: mp.source_label ? ` a ${mp.source_label}` : '', next, keep }) };
   }
   if (mp?.auto_renew && end) {
-    return { name, badge: plan === 'team' ? 'team' : 'pro', daysLeft: left, canPay: false, isPaid: true, line: `Se renueva el ${shortDate(end)}${mp.source_label ? ` con ${mp.source_label}` : ''}.` };
+    return { name, badge: plan === 'team' ? 'team' : 'pro', daysLeft: left, canPay: false, isPaid: true, line: t('Se renueva el {end}{v}.', { end: shortDate(end), v: mp.source_label ? ` con ${mp.source_label}` : '' }) };
   }
-  return { name, badge: plan === 'team' ? 'team' : 'pro', daysLeft: left, canPay: true, isPaid: true, line: end ? `Pagado hasta el ${shortDate(end)}. No se renueva solo: te avisamos antes.` : 'Activo.' };
+  return { name, badge: plan === 'team' ? 'team' : 'pro', daysLeft: left, canPay: true, isPaid: true, line: end ? t('Pagado hasta el {end}. No se renueva solo: te avisamos antes.', { end: shortDate(end) }) : t('Activo.') };
 }
 
 /** Filas de la comparación de planes. */
 export type CompareRow = { label: string; free: string | boolean; pro: string | boolean; team: string | boolean };
-const lim = (k: LimitKey, unit?: string) => ({ label: cap(LIMIT_TEXT[k]) + ' al día', free: String(LIMITS.free[k]) + (unit ?? ''), pro: String(LIMITS.pro[k]) + (unit ?? ''), team: String(LIMITS.pro[k]) + (unit ?? '') });
+const lim = (k: LimitKey, unit?: string) => ({ label: cap(LIMIT_TEXT[k]) + t(' al día'), free: String(LIMITS.free[k]) + (unit ?? ''), pro: String(LIMITS.pro[k]) + (unit ?? ''), team: String(LIMITS.pro[k]) + (unit ?? '') });
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
 export const COMPARE: CompareRow[] = [
-  { label: 'Materias, tareas, notas, horario, enfoque, repaso, proyectos y mascota', free: true, pro: true, team: true },
+  { label: t('Materias, tareas, notas, horario, enfoque, repaso, proyectos y mascota'), free: true, pro: true, team: true },
   lim('summary'), lim('flashcards'), lim('quiz'), lim('ocr'), lim('class_summary'), lim('meeting'),
-  { label: 'Calendarios externos', free: '2', pro: '10', team: '10' },
-  { label: 'Registro de horas con informe en PDF', free: false, pro: true, team: true },
-  { label: 'Horas de todo el equipo en un proyecto', free: false, pro: false, team: true },
-  { label: 'Un solo pago para varias personas', free: false, pro: false, team: true },
+  { label: t('Calendarios externos'), free: '2', pro: '10', team: '10' },
+  { label: t('Registro de horas con informe en PDF'), free: false, pro: true, team: true },
+  { label: t('Horas de todo el equipo en un proyecto'), free: false, pro: false, team: true },
+  { label: t('Un solo pago para varias personas'), free: false, pro: false, team: true },
 ];
 
 /** "Pro mensual · $9.900" */
 export function planLabel(plan: 'pro' | 'team', period: Period, seats = 1): string {
-  return `${plan === 'pro' ? 'Pro' : `Equipo (${seats} personas)`} ${period === 'month' ? 'mensual' : 'anual'}`;
+  return `${plan === 'pro' ? 'Pro' : t('Equipo ({seats} personas)', { seats })} ${period === 'month' ? 'mensual' : 'anual'}`;
 }
 /** Precio por mes de un plan anual (para comparar). */
 export const perMonth = (plan: 'pro' | 'team', period: Period) => (period === 'month' ? PRICES[plan].month : Math.round(PRICES[plan].year / 12 / 100) * 100);
@@ -114,14 +115,14 @@ export function formatExp(s: string): string {
 export type CardInput = { number: string; exp: string; cvc: string; holder: string };
 /** Primer problema de la tarjeta, o null si se puede mandar. */
 export function cardError(c: CardInput, now = new Date()): string | null {
-  if (!luhn(c.number)) return 'Revisa el número de la tarjeta.';
+  if (!luhn(c.number)) return t('Revisa el número de la tarjeta.');
   const [mm, yy] = formatExp(c.exp).split('/').map(Number);
-  if (!mm || mm > 12 || yy == null || isNaN(yy)) return 'La fecha va como MM/AA.';
+  if (!mm || mm > 12 || yy == null || isNaN(yy)) return t('La fecha va como MM/AA.');
   const end = new Date(2000 + yy, mm, 1);
-  if (end <= new Date(now.getFullYear(), now.getMonth(), 1)) return 'La tarjeta está vencida.';
+  if (end <= new Date(now.getFullYear(), now.getMonth(), 1)) return t('La tarjeta está vencida.');
   const cvcLen = cardBrand(c.number) === 'AMEX' ? 4 : 3;
-  if (digits(c.cvc).length !== cvcLen) return `El código de seguridad tiene ${cvcLen} números.`;
-  if (c.holder.trim().length < 5) return 'Escribe el nombre como aparece en la tarjeta.';
+  if (digits(c.cvc).length !== cvcLen) return t('El código de seguridad tiene {cvcLen} números.', { cvcLen });
+  if (c.holder.trim().length < 5) return t('Escribe el nombre como aparece en la tarjeta.');
   return null;
 }
 /** Lo que pide Wompi en /tokens/cards. */
@@ -138,7 +139,7 @@ export function seatsProrated(period: Period, periodEnd: string | Date, seats: n
   return Math.max(2000, Math.round((PRICES.team[period] * frac) / 100) * 100) * Math.max(1, seats);
 }
 
-const STATUS_TEXT: Record<string, string> = { PENDING: 'Pendiente', APPROVED: 'Aprobado', DECLINED: 'Rechazado', VOIDED: 'Anulado', ERROR: 'Con error' };
-const KIND_TEXT: Record<string, string> = { checkout: 'Pago', first: 'Primer cobro', renewal: 'Renovación', seats: 'Puestos extra' };
+const STATUS_TEXT: Record<string, string> = { PENDING: t('Pendiente'), APPROVED: t('Aprobado'), DECLINED: t('Rechazado'), VOIDED: t('Anulado'), ERROR: t('Con error') };
+const KIND_TEXT: Record<string, string> = { checkout: t('Pago'), first: t('Primer cobro'), renewal: t('Renovación'), seats: t('Puestos extra') };
 export const paymentStatusText = (s: string) => STATUS_TEXT[s] ?? s;
 export const paymentKindText = (k: string) => KIND_TEXT[k] ?? k;

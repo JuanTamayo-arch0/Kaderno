@@ -1,5 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import { t } from './i18n';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -16,7 +17,7 @@ export async function ensureNotifPermission(): Promise<boolean> {
   const req = await Notifications.requestPermissionsAsync();
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('reminders', {
-      name: 'Recordatorios',
+      name: t('Recordatorios'),
       importance: Notifications.AndroidImportance.HIGH,
     });
   }
@@ -30,7 +31,7 @@ export async function scheduleReminder(title: string, dueDate: string, daysBefor
   target.setDate(target.getDate() - daysBefore);
   if (target.getTime() <= Date.now()) return; // ya pasó, no programar
   await Notifications.scheduleNotificationAsync({
-    content: { title: 'Entrega próxima', body: title },
+    content: { title: t('Entrega próxima'), body: title },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: target },
   });
 }
@@ -42,7 +43,7 @@ export async function scheduleLocalReminder(title: string, at: Date): Promise<vo
   if (at.getTime() <= Date.now()) return;
   if (!(await ensureNotifPermission())) return;
   await Notifications.scheduleNotificationAsync({
-    content: { title: 'Entrega próxima', body: title },
+    content: { title: t('Entrega próxima'), body: title },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at },
   });
 }

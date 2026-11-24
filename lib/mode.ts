@@ -4,12 +4,13 @@
 //  reunión, registro de horas). Se guarda en user_prefs.settings.mode.
 // ============================================================
 import { useEffect, useState } from 'react';
+import { t } from './i18n';
 
 export type Mode = 'estudio' | 'trabajo' | 'ambos';
 export const MODES: { key: Mode; label: string; hint: string; icon: string }[] = [
-  { key: 'estudio', label: 'Estudio', hint: 'Materias, parciales, clases y repaso', icon: 'school-outline' },
-  { key: 'trabajo', label: 'Trabajo', hint: 'Áreas o clientes, entregas, reuniones y horas', icon: 'briefcase-outline' },
-  { key: 'ambos', label: 'Los dos', hint: 'Dos espacios: Estudio y Trabajo, cada uno con lo suyo', icon: 'layers-outline' },
+  { key: 'estudio', label: t('Estudio'), hint: t('Materias, parciales, clases y repaso'), icon: 'school-outline' },
+  { key: 'trabajo', label: t('Trabajo'), hint: t('Áreas o clientes, entregas, reuniones y horas'), icon: 'briefcase-outline' },
+  { key: 'ambos', label: t('Los dos'), hint: t('Dos espacios: Estudio y Trabajo, cada uno con lo suyo'), icon: 'layers-outline' },
 ];
 
 export type Vocab = {
@@ -18,20 +19,20 @@ export type Vocab = {
 };
 
 const STUDY: Vocab = {
-  subjects: 'Materias', subject: 'Materia', subjectLower: 'materia', subjectsLower: 'materias', newSubject: 'Nueva materia', noSubjects: 'Aún no tienes materias',
-  noSubjectsText: 'Crea las materias del semestre para organizar tareas, notas y calificaciones.', subjectsCount: (n) => `${n} este semestre`,
-  schedule: 'Horario', studySection: 'Estudiar', studyTab: 'Estudiar', subjectsTab: 'Materias', subjectIcon: 'book', exam: 'Parcial', exams: 'Parciales', klass: 'clase', record: 'Grabar clase', transcriptOf: 'Transcripción de la clase', semester: 'Semestre', teacher: 'Profesor',
+  subjects: t('Materias'), subject: t('Materia'), subjectLower: 'materia', subjectsLower: 'materias', newSubject: t('Nueva materia'), noSubjects: t('Aún no tienes materias'),
+  noSubjectsText: t('Crea las materias del semestre para organizar tareas, notas y calificaciones.'), subjectsCount: (n) => t('{n} este semestre', { n }),
+  schedule: t('Horario'), studySection: t('Estudiar'), studyTab: t('Estudiar'), subjectsTab: t('Materias'), subjectIcon: 'book', exam: t('Parcial'), exams: t('Parciales'), klass: 'clase', record: t('Grabar clase'), transcriptOf: t('Transcripción de la clase'), semester: t('Semestre'), teacher: t('Profesor'),
 };
 const WORK: Vocab = {
-  subjects: 'Áreas', subject: 'Área', subjectLower: 'área', subjectsLower: 'áreas', newSubject: 'Nueva área o cliente', noSubjects: 'Aún no tienes áreas',
-  noSubjectsText: 'Crea tus áreas o clientes para organizar tareas, notas y horas.', subjectsCount: (n) => `${n} ${n === 1 ? 'activa' : 'activas'}`,
-  schedule: 'Agenda', studySection: 'Herramientas', studyTab: 'Enfoque', subjectsTab: 'Áreas', subjectIcon: 'briefcase', exam: 'Entrega', exams: 'Entregas', klass: 'reunión', record: 'Grabar reunión', transcriptOf: 'Transcripción de la reunión', semester: 'Trimestre', teacher: 'Responsable',
+  subjects: t('Áreas'), subject: t('Área'), subjectLower: t('área'), subjectsLower: t('áreas'), newSubject: t('Nueva área o cliente'), noSubjects: t('Aún no tienes áreas'),
+  noSubjectsText: t('Crea tus áreas o clientes para organizar tareas, notas y horas.'), subjectsCount: (n) => `${n} ${n === 1 ? 'activa' : 'activas'}`,
+  schedule: t('Agenda'), studySection: t('Herramientas'), studyTab: t('Enfoque'), subjectsTab: t('Áreas'), subjectIcon: 'briefcase', exam: t('Entrega'), exams: t('Entregas'), klass: t('reunión'), record: t('Grabar reunión'), transcriptOf: t('Transcripción de la reunión'), semester: t('Trimestre'), teacher: t('Responsable'),
 };
 const BOTH: Vocab = {
   ...STUDY,
-  subjects: 'Materias y áreas', newSubject: 'Nueva materia o área', noSubjects: 'Aún no tienes materias ni áreas',
-  noSubjectsText: 'Crea tus materias y tus áreas de trabajo para organizar tareas, notas y horas.', subjectsCount: (n) => `${n} en total`,
-  klass: 'grabación', transcriptOf: 'Transcripción',
+  subjects: t('Materias y áreas'), newSubject: t('Nueva materia o área'), noSubjects: t('Aún no tienes materias ni áreas'),
+  noSubjectsText: t('Crea tus materias y tus áreas de trabajo para organizar tareas, notas y horas.'), subjectsCount: (n) => t('{n} en total', { n }),
+  klass: t('grabación'), transcriptOf: t('Transcripción'),
 };
 
 export function vocab(mode: Mode | null | undefined): Vocab {

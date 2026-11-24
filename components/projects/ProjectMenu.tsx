@@ -3,6 +3,7 @@ import { Modal, Pressable, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { C, R, shadow } from '../../lib/theme';
 import { isWeb } from './projectUi';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Menú "Opciones" y botones del encabezado de la pantalla de proyecto.
@@ -52,7 +53,7 @@ export function MoreMenu({ visible, groups, anchor, onClose }: {
           <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: C.line, alignSelf: 'center', marginBottom: 8 }} />
           {body}
           <Pressable onPress={onClose} style={{ alignItems: 'center', marginTop: 10, paddingVertical: 8 }}>
-            <Text style={{ color: C.muted }}>Cancelar</Text>
+            <Text style={{ color: C.muted }}>{t('Cancelar')}</Text>
           </Pressable>
         </Pressable>
       </Pressable>
@@ -72,10 +73,10 @@ export function OptionsButton({ wide, open, onPress }: { wide: boolean; open: bo
     onPress(anchor);
   }
   return (
-    <Pressable ref={ref} onPress={press} hitSlop={6} accessibilityRole="button" accessibilityLabel="Opciones del proyecto" accessibilityState={{ expanded: open }}
+    <Pressable ref={ref} onPress={press} hitSlop={6} accessibilityRole="button" accessibilityLabel={t('Opciones del proyecto')} accessibilityState={{ expanded: open }}
       style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: open ? C.brand : C.line, backgroundColor: open ? C.brand + '18' : C.surface2, borderRadius: R.pill, paddingVertical: wide ? 7 : 10, paddingHorizontal: wide ? 12 : 11 }}>
       <Ionicons name={wide ? 'options-outline' : 'ellipsis-horizontal'} size={15} color={open ? C.brand : C.muted} />
-      {wide && <Text style={{ color: C.text, fontSize: 12.5, fontWeight: '600' }}>Opciones</Text>}
+      {wide && <Text style={{ color: C.text, fontSize: 12.5, fontWeight: '600' }}>{t('Opciones')}</Text>}
       {wide && <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={13} color={C.muted} />}
     </Pressable>
   );

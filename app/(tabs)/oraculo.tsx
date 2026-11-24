@@ -14,6 +14,7 @@ import { PetImage } from '../../components/pets/PetArt';
 import { PetRoom } from '../../components/pets/PetRoom';
 import { useMode } from '../../lib/mode';
 import { useSpaceFilter } from '../../lib/useSpace';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Oráculo: preguntas a la IA sobre tus apuntes.
@@ -24,16 +25,16 @@ import { useSpaceFilter } from '../../lib/useSpace';
 
 type Msg = { role: 'user' | 'assistant'; content: string; sources?: { title: string }[]; error?: boolean };
 const ABILITIES = [
-  { key: 'explain', icon: 'bulb-outline', label: 'Explícame', q: 'Explícame lo más importante de este material, con ejemplos.' },
-  { key: 'quiz', icon: 'help-circle-outline', label: 'Hazme un quiz', q: 'Hazme un quiz de práctica de 5 preguntas sobre este material.' },
-  { key: 'summary', icon: 'reader-outline', label: 'Guía de estudio', q: 'Dame una guía de estudio de este material.' },
-  { key: 'connect', icon: 'git-network-outline', label: 'Conecta temas', q: 'Conecta y relaciona los temas entre mis notas y materias.' },
+  { key: 'explain', icon: 'bulb-outline', label: t('Explícame'), q: t('Explícame lo más importante de este material, con ejemplos.') },
+  { key: 'quiz', icon: 'help-circle-outline', label: t('Hazme un quiz'), q: t('Hazme un quiz de práctica de 5 preguntas sobre este material.') },
+  { key: 'summary', icon: 'reader-outline', label: t('Guía de estudio'), q: t('Dame una guía de estudio de este material.') },
+  { key: 'connect', icon: 'git-network-outline', label: t('Conecta temas'), q: t('Conecta y relaciona los temas entre mis notas y materias.') },
 ] as const;
 // v25: preguntas sobre las actas de las reuniones (modo Trabajo).
 const MEETING_ABILITIES = [
-  { key: 'decided', icon: 'checkmark-done-outline', label: '¿Qué decidimos?', q: 'Resume lo que se decidió en mis últimas reuniones, con la fecha de cada una.' },
-  { key: 'owners', icon: 'people-outline', label: '¿Quién quedó con qué?', q: 'Lista las tareas que quedaron de mis reuniones recientes, con su responsable y fecha.' },
-  { key: 'open', icon: 'help-buoy-outline', label: 'Lo que sigue abierto', q: '¿Qué temas siguen pendientes de mis reuniones y desde cuándo?' },
+  { key: 'decided', icon: 'checkmark-done-outline', label: t('¿Qué decidimos?'), q: t('Resume lo que se decidió en mis últimas reuniones, con la fecha de cada una.') },
+  { key: 'owners', icon: 'people-outline', label: t('¿Quién quedó con qué?'), q: t('Lista las tareas que quedaron de mis reuniones recientes, con su responsable y fecha.') },
+  { key: 'open', icon: 'help-buoy-outline', label: t('Lo que sigue abierto'), q: t('¿Qué temas siguen pendientes de mis reuniones y desde cuándo?') },
 ] as const;
 
 export default function Oraculo() {
@@ -82,7 +83,7 @@ export default function Oraculo() {
       setAll((xs) => [...xs, { role: 'assistant', content: res.answer, sources: res.sources, scope: scopeStr }]);
       saveOracleMessage('assistant', res.answer, scopeStr).catch(() => {});
     } catch (e) {
-      setAll((xs) => [...xs, { role: 'assistant', content: `No pude responder. ${friendlyError(e)}`, scope: scopeStr, error: true }]);
+      setAll((xs) => [...xs, { role: 'assistant', content: t('No pude responder. {e}', { e: friendlyError(e) }), scope: scopeStr, error: true }]);
     } finally { setSending(false); }
   }, [all, scopeStr, sending, mode, subjectId, noteId, pet?.id, pet?.name]);
 
@@ -90,26 +91,26 @@ export default function Oraculo() {
   useEffect(() => { if (params.q && sentQ.current !== params.q) { sentQ.current = params.q; send(params.q, null); router.setParams({ q: undefined } as any); } }, [params.q]);
 
   async function clearAll() {
-    if (!(await confirm('¿Borrar toda la conversación?', 'Se borra el historial del Oráculo en todos los temas.', 'Borrar'))) return;
+    if (!(await confirm(t('¿Borrar toda la conversación?'), t('Se borra el historial del Oráculo en todos los temas.'), t('Borrar')))) return;
     setAll([]); clearOracleMessages().catch(() => {});
   }
   async function reindex() {
     setIndexing(true);
-    try { const n = await reindexNotes(); toast(`${n} ${n === 1 ? 'nota preparada' : 'notas preparadas'} para el Oráculo`, { tone: 'good' }); }
+    try { const n = await reindexNotes(); toast(t('{n} {v} para el Oráculo', { n, v: n === 1 ? 'nota preparada' : 'notas preparadas' }), { tone: 'good' }); }
     catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
     finally { setIndexing(false); }
   }
 
-  const scopeLabel = mode === 'meetings' ? 'tus actas de reunión' : mode === 'note' ? (params.noteTitle || 'la nota abierta') : mode === 'subject' ? (subjects.find((s) => s.id === subjectId)?.name ?? 'esta materia') : 'todas tus notas';
+  const scopeLabel = mode === 'meetings' ? t('tus actas de reunión') : mode === 'note' ? (params.noteTitle || t('la nota abierta')) : mode === 'subject' ? (subjects.find((s) => s.id === subjectId)?.name ?? t('esta materia')) : t('todas tus notas');
 
   return (
-    <Screen title="Oráculo" subtitle={`Pregúntale a la IA sobre ${scopeLabel}`} scroll={false} padded={false} maxWidth={860} back={isWide ? undefined : '/estudiar'}
-      right={<IconButton icon="trash-outline" label="Borrar conversación" onPress={clearAll} />}
+    <Screen title={t('Oráculo')} subtitle={t('Pregúntale a la IA sobre {scopeLabel}', { scopeLabel })} scroll={false} padded={false} maxWidth={860} back={isWide ? undefined : '/estudiar'}
+      right={<IconButton icon="trash-outline" label={t('Borrar conversación')} onPress={clearAll} />}
       header={
         <ChipRow style={{ marginBottom: 8 }}>
-          {noteId && <FilterChip label={params.noteTitle || 'Nota abierta'} icon={<Ionicons name="document-text-outline" size={14} color={mode === 'note' ? C.onBrand : C.muted} />} active={mode === 'note'} onPress={() => setMode('note')} />}
-          <FilterChip label="Todas mis notas" active={mode === 'all'} onPress={() => setMode('all')} />
-          {work && <FilterChip label="Mis reuniones" icon={<Ionicons name="people-outline" size={14} color={mode === 'meetings' ? C.onBrand : C.muted} />} active={mode === 'meetings'} onPress={() => setMode('meetings')} />}
+          {noteId && <FilterChip label={params.noteTitle || t('Nota abierta')} icon={<Ionicons name="document-text-outline" size={14} color={mode === 'note' ? C.onBrand : C.muted} />} active={mode === 'note'} onPress={() => setMode('note')} />}
+          <FilterChip label={t('Todas mis notas')} active={mode === 'all'} onPress={() => setMode('all')} />
+          {work && <FilterChip label={t('Mis reuniones')} icon={<Ionicons name="people-outline" size={14} color={mode === 'meetings' ? C.onBrand : C.muted} />} active={mode === 'meetings'} onPress={() => setMode('meetings')} />}
           {subjects.map((s) => <FilterChip key={s.id} label={s.name} color={s.color} active={mode === 'subject' && subjectId === s.id} onPress={() => { setMode('subject'); setSubjectId(s.id); }} />)}
         </ChipRow>
       }>
@@ -117,14 +118,14 @@ export default function Oraculo() {
         {pet && (
           <View style={{ paddingHorizontal: 16, maxWidth: 892, width: '100%', alignSelf: 'center' }}>
             <PetRoom pet={pet} height={isWide ? 230 : 150} mood={sending ? 'concentrado' : messages[messages.length - 1]?.error ? 'preocupado' : 'normal'}>
-              <Pressable onPress={() => router.push({ pathname: '/mascota', params: { tab: 'casa' } } as any)} accessibilityRole="button" accessibilityLabel={`Decorar la casa de ${pet.name}`}
+              <Pressable onPress={() => router.push({ pathname: '/mascota', params: { tab: 'casa' } } as any)} accessibilityRole="button" accessibilityLabel={t('Decorar la casa de {name}', { name: pet.name })}
                 style={{ position: 'absolute', right: 10, top: 10, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(15,17,21,.72)', borderRadius: 99, paddingVertical: 6, paddingHorizontal: 12 }}>
                 <Ionicons name="color-palette-outline" size={15} color="#ffffff" />
-                <Text style={{ color: '#ffffff', fontSize: 12.5, fontWeight: '800' }}>Decorar</Text>
+                <Text style={{ color: '#ffffff', fontSize: 12.5, fontWeight: '800' }}>{t('Decorar')}</Text>
               </Pressable>
               {sending && (
                 <View style={{ position: 'absolute', left: 10, bottom: 10, backgroundColor: 'rgba(246,242,234,.95)', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 10 }}>
-                  <Text style={{ color: '#1f2433', fontSize: 12.5, fontWeight: '800' }}>{pet.name} está buscando en tus notas…</Text>
+                  <Text style={{ color: '#1f2433', fontSize: 12.5, fontWeight: '800' }}>{t('{name} está buscando en tus notas…', { name: pet.name })}</Text>
                 </View>
               )}
             </PetRoom>
@@ -138,8 +139,8 @@ export default function Oraculo() {
                   <Ionicons name="sparkles" size={28} color={C.brand2} />
                 </View>
               )}
-              <Text style={{ color: C.text, fontSize: 17, fontWeight: '700' }}>{pet ? `${pet.name} te ayuda a entender` : '¿Qué quieres entender hoy?'}</Text>
-              <Text style={{ color: C.muted, fontSize: 13.5, textAlign: 'center', marginTop: 6, lineHeight: 20, maxWidth: 380 }}>Responde con base en {scopeLabel}. Prueba un atajo:</Text>
+              <Text style={{ color: C.text, fontSize: 17, fontWeight: '700' }}>{pet ? t('{name} te ayuda a entender', { name: pet.name }) : t('¿Qué quieres entender hoy?')}</Text>
+              <Text style={{ color: C.muted, fontSize: 13.5, textAlign: 'center', marginTop: 6, lineHeight: 20, maxWidth: 380 }}>{t('Responde con base en {scopeLabel}. Prueba un atajo:', { scopeLabel })}</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 16 }}>
                 {(mode === 'meetings' ? MEETING_ABILITIES : ABILITIES).map((a) => (
                   <Pressable key={a.key} onPress={() => send(a.q, a.key)} accessibilityRole="button"
@@ -151,7 +152,7 @@ export default function Oraculo() {
               </View>
               <Pressable onPress={reindex} disabled={indexing} style={{ marginTop: 22, flexDirection: 'row', alignItems: 'center', gap: 6, padding: 8 }} accessibilityRole="button">
                 {indexing ? <ActivityIndicator size="small" color={C.muted} /> : <Ionicons name="refresh" size={14} color={C.muted} />}
-                <Text style={{ color: C.muted, fontSize: 12.5, textDecorationLine: 'underline' }}>{indexing ? 'Preparando tus notas…' : 'Preparar mis notas para mejores respuestas'}</Text>
+                <Text style={{ color: C.muted, fontSize: 12.5, textDecorationLine: 'underline' }}>{indexing ? t('Preparando tus notas…') : t('Preparar mis notas para mejores respuestas')}</Text>
               </Pressable>
             </View>
           )}
@@ -166,8 +167,8 @@ export default function Oraculo() {
               {pet && <Text style={{ color: C.muted, fontSize: 12, fontWeight: '800', marginBottom: 4 }}>{pet.name}</Text>}
               <Markdown style={mdStyle()}>{m.content}</Markdown>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6, flexWrap: 'wrap' }}>
-                {!!m.sources?.length && <Text style={{ color: C.muted, fontSize: 12, flex: 1 }}>Fuentes: {m.sources.slice(0, 4).map((s) => s.title).join(', ')}</Text>}
-                {!m.error && <IconButton icon="copy-outline" label="Copiar respuesta" size={16} onPress={async () => { const ok = await copyText(m.content); if (ok) toast('Respuesta copiada'); }} />}
+                {!!m.sources?.length && <Text style={{ color: C.muted, fontSize: 12, flex: 1 }}>{t('Fuentes: ')}{m.sources.slice(0, 4).map((s) => s.title).join(', ')}</Text>}
+                {!m.error && <IconButton icon="copy-outline" label={t('Copiar respuesta')} size={16} onPress={async () => { const ok = await copyText(m.content); if (ok) toast(t('Respuesta copiada')); }} />}
               </View>
             </View>
             </View>
@@ -175,16 +176,16 @@ export default function Oraculo() {
           {sending && (
             <View style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12 }}>
               {pet ? <PetImage species={pet.species} outfit={pet.outfit} mood="concentrado" size={32} /> : <ActivityIndicator color={C.brand} size="small" />}
-              <Text style={{ color: C.muted, fontSize: 13 }}>{pet ? `${pet.name} está pensando…` : 'Pensando…'}</Text>
+              <Text style={{ color: C.muted, fontSize: 13 }}>{pet ? t('{name} está pensando…', { name: pet.name }) : t('Pensando…')}</Text>
             </View>
           )}
         </ScrollView>
         <View style={{ borderTopWidth: 1, borderTopColor: C.line, paddingHorizontal: isWide ? 40 : 12, paddingVertical: 10 }}>
           <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-end', maxWidth: 860, width: '100%', alignSelf: 'center' }}>
-            <TextInput value={input} onChangeText={setInput} placeholder="Escribe tu pregunta…" placeholderTextColor={C.muted} multiline enterKeyHint="send" accessibilityLabel="Pregunta"
+            <TextInput value={input} onChangeText={setInput} placeholder={t('Escribe tu pregunta…')} placeholderTextColor={C.muted} multiline enterKeyHint="send" accessibilityLabel={t('Pregunta')}
               onKeyPress={(e: any) => { if (Platform.OS === 'web' && e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) { e.preventDefault(); send(input, null); } }}
               style={[{ flex: 1, backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 14, color: C.text, paddingHorizontal: 14, paddingVertical: 11, fontSize: 15, maxHeight: 140, minHeight: 46 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
-            <Pressable onPress={() => send(input, null)} disabled={sending || !input.trim()} accessibilityRole="button" accessibilityLabel="Enviar pregunta"
+            <Pressable onPress={() => send(input, null)} disabled={sending || !input.trim()} accessibilityRole="button" accessibilityLabel={t('Enviar pregunta')}
               style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: input.trim() ? C.brand : C.surface2, alignItems: 'center', justifyContent: 'center' }}>
               <Ionicons name="arrow-up" size={22} color={input.trim() ? C.onBrand : C.muted} />
             </Pressable>

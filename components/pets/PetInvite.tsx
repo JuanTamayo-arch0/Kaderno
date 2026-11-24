@@ -7,6 +7,7 @@ import { C } from '../../lib/theme';
 import { usePets } from '../../lib/pets/store';
 import { Button, Card } from '../ds';
 import { PetImage } from './PetArt';
+import { t } from '../../lib/i18n';
 
 const KEY = 'pet_invite_closed';
 
@@ -20,8 +21,8 @@ export function PetInvite() {
   if (closed !== false || !s.loaded || s.available !== true || s.pets.length > 0 || !s.prefs.enabled) return null;
   const buttons = (
     <View style={narrow ? { flexDirection: 'row', gap: 8, marginTop: 12 } : { gap: 6 }}>
-      <Button label="Elegir" size="sm" onPress={() => router.push('/mascota')} />
-      <Button label="Ahora no" size="sm" kind="ghost" onPress={() => { setClosed(true); AsyncStorage.setItem(KEY, '1').catch(() => {}); }} />
+      <Button label={t('Elegir')} size="sm" onPress={() => router.push('/mascota')} />
+      <Button label={t('Ahora no')} size="sm" kind="ghost" onPress={() => { setClosed(true); AsyncStorage.setItem(KEY, '1').catch(() => {}); }} />
     </View>
   );
   return (
@@ -32,8 +33,8 @@ export function PetInvite() {
           <View style={{ marginLeft: -14 }}><PetImage species="gato" size={48} /></View>
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={{ color: C.text, fontSize: 15, fontWeight: '700' }}>Elige tu compañero de estudio</Text>
-          <Text style={{ color: C.muted, fontSize: 13, marginTop: 2 }}>Una mascota pixel que te acompaña, celebra lo que terminas y gana monedas contigo.</Text>
+          <Text style={{ color: C.text, fontSize: 15, fontWeight: '700' }}>{t('Elige tu compañero de estudio')}</Text>
+          <Text style={{ color: C.muted, fontSize: 13, marginTop: 2 }}>{t('Una mascota pixel que te acompaña, celebra lo que terminas y gana monedas contigo.')}</Text>
         </View>
         {!narrow && buttons}
       </View>

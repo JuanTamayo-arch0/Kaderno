@@ -80,6 +80,9 @@ export function t(es: string, vars?: Record<string, string | number | null | und
   return fill(out, vars);
 }
 
+/** Lo mismo que t, para donde `t` ya es otra cosa (por ejemplo `tasks.map((t) => ...)`). */
+export const trn = t;
+
 /** Igual que t, para un texto que en español tiene más de un sentido. */
 export function tc(context: string, es: string, vars?: Record<string, string | number | null | undefined>): string {
   const out = current === 'en' ? (EN[`${context}|${es}`] ?? EN[es] ?? es) : es;

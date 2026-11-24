@@ -14,6 +14,7 @@
 // ============================================================
 import type { Frame, Mood, Outfit, Species } from './art';
 import { ANIMS } from './art';
+import { t } from '../i18n';
 
 export type PatioState = 'work' | 'break' | 'online' | 'away';
 export type PatioMember = { uid: string; name: string; species: Species; outfit: Outfit; state: PatioState; left: number | null; me: boolean };
@@ -101,8 +102,8 @@ export class PatioSim {
     const a = this.actors.get(from), b = this.actors.get(to);
     const sa = members.find((m) => m.uid === from)?.state;
     if (a && b && sa !== 'work' && sa !== 'away') { a.tx = Math.max(MARGIN, Math.min(this.width - MARGIN, b.x + (a.x < b.x ? -10 : 10))); a.speed = RUN; a.wait = 3; }
-    if (a) { this.hop(from); this.sayFor(from, `¡Hola, ${toName}!`, now); }
-    if (b) { this.hop(to); this.sayFor(to, `¡Hola, ${fromName}!`, now + 400, 3000); }
+    if (a) { this.hop(from); this.sayFor(from, t('¡Hola, {toName}!', { toName }), now); }
+    if (b) { this.hop(to); this.sayFor(to, t('¡Hola, {fromName}!', { fromName }), now + 400, 3000); }
   }
 
   step(members: PatioMember[], dt: number, now: number): void {

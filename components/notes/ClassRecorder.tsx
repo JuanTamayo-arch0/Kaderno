@@ -19,6 +19,7 @@ import { copyText } from '../../lib/fileIO';
 import { MeetingPublish } from './MeetingPublish';
 import { openAdd } from '../../lib/uiBus';
 import { getMode, useMode } from '../../lib/mode';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Grabar la clase (v22, fase 1): el texto de la clase se escribe solo
@@ -62,7 +63,7 @@ export function useClassRecorder(noteId: string, getMd: () => string) {
     const tick = setInterval(() => {
       const t = now();
       setElapsed(t);
-      if (t >= MAX_SECONDS) { stop(); toast('Llegaste a 4 horas: la grabación se detuvo.'); }
+      if (t >= MAX_SECONDS) { stop(); toast(trn('Llegaste a 4 horas: la grabación se detuvo.')); }
     }, 1000);
     const save = setInterval(flush, 20_000);
     return () => { clearInterval(tick); clearInterval(save); };
@@ -81,14 +82,14 @@ export function useClassRecorder(noteId: string, getMd: () => string) {
 
   async function start() {
     if (!supported) {
-      notify('Este navegador no puede transcribir', `Abre Kaderno en Chrome, Edge o Safari para grabar la ${getMode() === 'trabajo' ? 'reunión' : 'clase'}. En Firefox no está disponible.`);
+      notify(t('Este navegador no puede transcribir'), t('Abre Kaderno en Chrome, Edge o Safari para grabar la {v}. En Firefox no está disponible.', { v: getMode() === 'trabajo' ? 'reunión' : 'clase' }));
       return false;
     }
     const ok = await AsyncStorage.getItem(CONSENT_KEY).catch(() => null);
     if (!ok) {
-      const yes = await confirm('Antes de grabar', getMode() === 'trabajo'
-        ? 'Avisa a quienes están en la reunión. El audio no se guarda: Kaderno solo escribe lo que se dice, y el texto queda solo en tu cuenta.'
-        : 'Pide permiso al profesor (o avisa en la reunión). El audio no se guarda: Kaderno solo escribe lo que se dice, y el texto queda solo en tu cuenta.', 'Entendido, grabar');
+      const yes = await confirm(t('Antes de grabar'), getMode() === 'trabajo'
+        ? t('Avisa a quienes están en la reunión. El audio no se guarda: Kaderno solo escribe lo que se dice, y el texto queda solo en tu cuenta.')
+        : t('Pide permiso al profesor (o avisa en la reunión). El audio no se guarda: Kaderno solo escribe lo que se dice, y el texto queda solo en tu cuenta.'), 'Entendido, grabar');
       if (!yes) return false;
       AsyncStorage.setItem(CONSENT_KEY, '1').catch(() => {});
     }
@@ -106,13 +107,13 @@ export function useClassRecorder(noteId: string, getMd: () => string) {
         },
         onInterim: setInterim,
         onState: (s) => setState(s),
-        onError: (m, fatal) => { setProblem(m); if (fatal) { notify('La grabación se detuvo', m); setTimeout(() => { stop(); }, 0); } },
+        onError: (m, fatal) => { setProblem(m); if (fatal) { notify(t('La grabación se detuvo'), m); setTimeout(() => { stop(); }, 0); } },
       });
       r.current.tr = tr;
       r.current.release = await keepAwake();
       tr.start();
       return true;
-    } catch (e) { notify('No se pudo empezar a grabar', friendlyError(e)); return false; }
+    } catch (e) { notify(t('No se pudo empezar a grabar'), friendlyError(e)); return false; }
   }
   function pause() {
     const c = r.current; if (!c.tr) return;
@@ -129,7 +130,7 @@ export function useClassRecorder(noteId: string, getMd: () => string) {
     c.dirty = true;
     await flush();
     setState('stopped'); setInterim('');
-    toast(c.segs.length ? `${getMode() === 'trabajo' ? 'Reunión guardada' : 'Grabación guardada'}: ${c.segs.length} ${c.segs.length === 1 ? 'frase' : 'frases'} y ${marksList(c.marks).length} apuntes con minuto` : 'No se alcanzó a escuchar nada.');
+    toast(c.segs.length ? t('{v}: {length} {v2} y {length2} apuntes con minuto', { v: getMode() === 'trabajo' ? 'Reunión guardada' : 'Grabación guardada', length: c.segs.length, v2: c.segs.length === 1 ? 'frase' : 'frases', length2: marksList(c.marks).length }) : t('No se alcanzó a escuchar nada.'));
     setVersion((v) => v + 1);
   }
   /** La nota cambió mientras se graba: marcar las líneas nuevas con el minuto. */
@@ -154,12 +155,12 @@ export function RecorderBar({ rec }: { rec: Recorder }) {
       <View style={[{ width: 10, height: 10, borderRadius: 5, backgroundColor: listening ? C.bad : C.muted }, listening && Platform.OS === 'web' ? ({ animation: 'kdRecPulse 1.4s ease-in-out infinite' } as any) : null]} />
       <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '800', fontVariant: ['tabular-nums'] }}>{fmtClock(rec.elapsed)}</Text>
       <Text style={{ color: rec.problem ? C.warnText : C.muted, fontSize: 12.5, flex: 1, minWidth: 0 }} numberOfLines={1}>
-        {rec.problem ?? (listening ? (line || 'Escuchando… escribe tus apuntes normal') : 'En pausa')}
+        {rec.problem ?? (listening ? (line || t('Escuchando… escribe tus apuntes normal')) : t('En pausa'))}
       </Text>
       {listening
-        ? <Button label="Pausar" size="sm" kind="ghost" icon="pause" onPress={rec.pause} />
-        : <Button label="Seguir" size="sm" kind="ghost" icon="play" onPress={rec.resume} />}
-      <Button label="Terminar" size="sm" kind="danger" icon="stop" onPress={rec.stop} />
+        ? <Button label={t('Pausar')} size="sm" kind="ghost" icon="pause" onPress={rec.pause} />
+        : <Button label={t('Seguir')} size="sm" kind="ghost" icon="play" onPress={rec.resume} />}
+      <Button label={t('Terminar')} size="sm" kind="danger" icon="stop" onPress={rec.stop} />
       {Platform.OS === 'web' && <style dangerouslySetInnerHTML={{ __html: '@keyframes kdRecPulse{0%,100%{opacity:1}50%{opacity:.25}}' }} />}
     </View>
   );
@@ -169,12 +170,12 @@ export function RecorderBar({ rec }: { rec: Recorder }) {
 export function RecordButton({ rec, onStarted }: { rec: Recorder; onStarted: () => void }) {
   const [open, setOpen] = useState(false);
   const { space: mode } = useMode();
-  const what = mode === 'trabajo' ? 'reunión' : 'clase';
+  const what = mode === 'trabajo' ? t('reunión') : 'clase';
   if (rec.active || Platform.OS !== 'web') return null;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      <Button label={mode === 'trabajo' ? 'Grabar reunión' : 'Grabar clase'} icon="mic-outline" size="sm" kind="secondary" onPress={async () => { if (await rec.start()) onStarted(); }} />
-      <Pressable onPress={() => setOpen(!open)} accessibilityRole="button" accessibilityLabel={`Idioma de la ${what}: ${LANGS.find((l) => l.code === rec.lang)?.label ?? rec.lang}`} hitSlop={6}
+      <Button label={mode === 'trabajo' ? t('Grabar reunión') : t('Grabar clase')} icon="mic-outline" size="sm" kind="secondary" onPress={async () => { if (await rec.start()) onStarted(); }} />
+      <Pressable onPress={() => setOpen(!open)} accessibilityRole="button" accessibilityLabel={t('Idioma de la {what}: {v}', { what, v: LANGS.find((l) => l.code === rec.lang)?.label ?? rec.lang })} hitSlop={6}
         style={{ paddingHorizontal: 6, paddingVertical: 6 }}>
         <Text style={{ color: C.muted, fontSize: 11.5, fontWeight: '700' }}>{rec.lang.slice(0, 2).toUpperCase()} ▾</Text>
       </Pressable>
@@ -183,7 +184,7 @@ export function RecordButton({ rec, onStarted }: { rec: Recorder; onStarted: () 
           {LANGS.map((l) => (
             <Pressable key={l.code} onPress={() => { rec.setLang(l.code); setOpen(false); }} accessibilityRole="menuitem"
               style={({ hovered }: any) => ({ padding: 8, borderRadius: 8, backgroundColor: hovered ? C.surface2 : 'transparent' })}>
-              <Text style={{ color: C.text, fontSize: 13, fontWeight: rec.lang === l.code ? '800' : '500' }}>{mode === 'trabajo' ? 'Reunión' : 'Clase'} en {l.label.toLowerCase()}</Text>
+              <Text style={{ color: C.text, fontSize: 13, fontWeight: rec.lang === l.code ? '800' : '500' }}>{t('{v} en {toLowerCase}', { v: mode === 'trabajo' ? t('Reunión') : t('Clase'), toLowerCase: l.label.toLowerCase() })}</Text>
             </Pressable>
           ))}
         </View>
@@ -211,7 +212,7 @@ export function TranscriptPanel({ noteId, version, focus, subjectName, getMd, on
 
   if (!list?.length) return null;
   return (
-    <View style={{ marginTop: 28, gap: 10 }} accessibilityLabel="Transcripciones">
+    <View style={{ marginTop: 28, gap: 10 }} accessibilityLabel={t('Transcripciones')}>
       {list.map((t) => (
         <TranscriptCard key={t.id} t={t} open={open === t.id} onToggle={() => setOpen(open === t.id ? null : t.id)} focusT={focus?.tid === t.id ? focus : null}
           subjectName={subjectName} getMd={getMd} onInsert={onInsert} onCards={onCards}
@@ -258,7 +259,7 @@ function TranscriptCard({ t, open, onToggle, focusT, subjectName, getMd, onInser
       const s = await summarizeClass(transcriptText(segs), getMd(), subjectName);
       await saveTranscript(t.id, { summary: s });
       onChanged({ summary: s });
-    } catch (e) { notify('No se pudo resumir', friendlyError(e)); }
+    } catch (e) { notify(trn('No se pudo resumir'), friendlyError(e)); }
     finally { setBusy(false); }
   }
   async function minutes() {
@@ -268,12 +269,12 @@ function TranscriptCard({ t, open, onToggle, focusT, subjectName, getMd, onInser
       const m = await meetingMinutes(transcriptText(segs), getMd(), [], { style, prevOpen });
       await saveTranscript(t.id, { summary: m });
       onChanged({ summary: m });
-    } catch (e) { notify('No se pudo armar el acta', friendlyError(e)); }
+    } catch (e) { notify(trn('No se pudo armar el acta'), friendlyError(e)); }
     finally { setBusy(false); }
   }
   async function remove() {
-    if (!(await confirm('¿Borrar esta transcripción?', 'Se borra el texto de la grabación. Tus apuntes no cambian.', 'Borrar'))) return;
-    try { await deleteTranscript(t.id); onDeleted(); toast('Transcripción borrada'); } catch (e) { notify('No se pudo borrar', friendlyError(e)); }
+    if (!(await confirm(trn('¿Borrar esta transcripción?'), trn('Se borra el texto de la grabación. Tus apuntes no cambian.'), trn('Borrar')))) return;
+    try { await deleteTranscript(t.id); onDeleted(); toast(trn('Transcripción borrada')); } catch (e) { notify(trn('No se pudo borrar'), friendlyError(e)); }
   }
 
   return (
@@ -283,7 +284,7 @@ function TranscriptCard({ t, open, onToggle, focusT, subjectName, getMd, onInser
         <Ionicons name="mic-outline" size={18} color={C.brand} />
         <View style={{ flex: 1 }}>
           <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '800' }}>{mv.transcriptOf} · {dateLabel}</Text>
-          <Text style={{ color: C.muted, fontSize: 12 }}>{fmtClock(t.duration_s)} · {segs.length} frases{t.marks?.length ? ` · ${t.marks.length} apuntes con minuto` : ''}{mtg ? ' · con acta' : cls ? ' · con resumen' : ''}</Text>
+          <Text style={{ color: C.muted, fontSize: 12 }}>{trn('{duration_s} · {length} frases{v}{v2}', { duration_s: fmtClock(t.duration_s), length: segs.length, v: t.marks?.length ? trn(' · {length} apuntes con minuto', { length: t.marks.length }) : '', v2: mtg ? trn(' · con acta') : cls ? trn(' · con resumen') : '' })}</Text>
         </View>
         <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={C.muted} />
       </Pressable>
@@ -291,44 +292,44 @@ function TranscriptCard({ t, open, onToggle, focusT, subjectName, getMd, onInser
         <View style={{ padding: 14, paddingTop: 0, gap: 12 }}>
           {cls ? (
             <View style={{ padding: 12, borderRadius: 12, backgroundColor: C.surface2, gap: 8 }}>
-              <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '800' }}>Resumen</Text>
+              <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '800' }}>{trn('Resumen')}</Text>
               {cls.ideas.map((x, i) => <Text key={i} style={{ color: C.text, fontSize: 13.5, lineHeight: 20 }}>• {x}</Text>)}
-              {cls.formulas.length > 0 && <Text style={{ color: C.muted, fontSize: 12.5 }}>{cls.formulas.length} {cls.formulas.length === 1 ? 'fórmula' : 'fórmulas'} (se ven al insertarlo en la nota)</Text>}
+              {cls.formulas.length > 0 && <Text style={{ color: C.muted, fontSize: 12.5 }}>{trn('{length} {v} (se ven al insertarlo en la nota)', { length: cls.formulas.length, v: cls.formulas.length === 1 ? 'fórmula' : 'fórmulas' })}</Text>}
               {cls.tasks.length > 0 && (
                 <View style={{ gap: 6, marginTop: 2 }}>
-                  <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>Lo que dejó el profesor</Text>
+                  <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{trn('Lo que dejó el profesor')}</Text>
                   {cls.tasks.map((k, i) => (
                     <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                       <Text style={{ color: C.text, fontSize: 13, flex: 1 }}>{k.title}{k.when ? ` · ${k.when}` : ''}</Text>
-                      <Button label="Crear tarea" size="sm" kind="ghost" onPress={() => openAdd(taskQuickText(k))} />
+                      <Button label={trn('Crear tarea')} size="sm" kind="ghost" onPress={() => openAdd(taskQuickText(k))} />
                     </View>
                   ))}
                 </View>
               )}
               <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
-                <Button label="Insertar en la nota" size="sm" icon="arrow-down-outline" onPress={() => { onInsert(summaryMarkdown(cls, dateLabel)); toast('Resumen agregado al final de la nota'); }} />
-                <Button label="Rehacer" size="sm" kind="ghost" busy={busy} onPress={summarize} />
+                <Button label={trn('Insertar en la nota')} size="sm" icon="arrow-down-outline" onPress={() => { onInsert(summaryMarkdown(cls, dateLabel)); toast(trn('Resumen agregado al final de la nota')); }} />
+                <Button label={trn('Rehacer')} size="sm" kind="ghost" busy={busy} onPress={summarize} />
               </View>
             </View>
           ) : mtg ? (
-            <MinutesBlock m={mtg} dateLabel={dateLabel} busy={busy} onRedo={minutes} onInsert={(md) => { onInsert(md); toast('Acta agregada al final de la nota'); }} onPublish={() => setPublish(true)} onStyle={() => setStyleOpen(true)} />
+            <MinutesBlock m={mtg} dateLabel={dateLabel} busy={busy} onRedo={minutes} onInsert={(md) => { onInsert(md); toast(trn('Acta agregada al final de la nota')); }} onPublish={() => setPublish(true)} onStyle={() => setStyleOpen(true)} />
           ) : (
             <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-              {study && <Button label="Resumir con IA" icon="sparkles-outline" size="sm" busy={busy} disabled={segs.length < 3} onPress={summarize} />}
-              {work && <Button label="Hacer acta con IA" icon="document-text-outline" size="sm" kind={study ? 'secondary' : 'primary'} busy={busy} disabled={segs.length < 3} onPress={minutes} />}
-              {work && <Button label="Formato del acta" size="sm" kind="ghost" onPress={() => setStyleOpen(true)} />}
+              {study && <Button label={trn('Resumir con IA')} icon="sparkles-outline" size="sm" busy={busy} disabled={segs.length < 3} onPress={summarize} />}
+              {work && <Button label={trn('Hacer acta con IA')} icon="document-text-outline" size="sm" kind={study ? 'secondary' : 'primary'} busy={busy} disabled={segs.length < 3} onPress={minutes} />}
+              {work && <Button label={trn('Formato del acta')} size="sm" kind="ghost" onPress={() => setStyleOpen(true)} />}
             </View>
           )}
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             <View style={{ flex: 1, minWidth: 180, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.surface2, borderRadius: 10, borderWidth: 1, borderColor: C.line, paddingHorizontal: 10 }}>
               <Ionicons name="search" size={15} color={C.muted} />
-              <TextInput value={q} onChangeText={setQ} placeholder={`Buscar en la ${mv.klass}`} placeholderTextColor={C.muted} accessibilityLabel="Buscar en la transcripción"
+              <TextInput value={q} onChangeText={setQ} placeholder={trn('Buscar en la {klass}', { klass: mv.klass })} placeholderTextColor={C.muted} accessibilityLabel={trn('Buscar en la transcripción')}
                 style={[{ flex: 1, color: C.text, fontSize: 13.5, paddingVertical: 8 }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null]} />
               {!!q && <Text style={{ color: C.muted, fontSize: 12 }}>{hits.size}</Text>}
             </View>
             <Pressable onPress={() => setMine(!mine)} accessibilityRole="switch" accessibilityState={{ checked: mine }} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: 6 }}>
               <Ionicons name={mine ? 'checkbox' : 'square-outline'} size={18} color={mine ? C.brand : C.muted} />
-              <Text style={{ color: C.text, fontSize: 12.5 }}>Con mis apuntes</Text>
+              <Text style={{ color: C.text, fontSize: 12.5 }}>{trn('Con mis apuntes')}</Text>
             </Pressable>
           </View>
           <ScrollView ref={scroller} style={{ maxHeight: 420 }} nestedScrollEnabled>
@@ -342,19 +343,19 @@ function TranscriptCard({ t, open, onToggle, focusT, subjectName, getMd, onInser
               <View key={k} style={{ flexDirection: 'row', gap: 10, paddingVertical: 4, paddingHorizontal: 6 }}>
                 <Text style={{ width: 52, color: C.brand, fontSize: 11.5, fontVariant: ['tabular-nums'], paddingTop: 2 }}>{fmtClock(it.t)}</Text>
                 <View style={{ flex: 1, borderLeftWidth: 3, borderLeftColor: C.brand, paddingLeft: 8 }}>
-                  <Text style={{ color: C.brand, fontSize: 11, fontWeight: '800' }}>ESCRIBISTE</Text>
+                  <Text style={{ color: C.brand, fontSize: 11, fontWeight: '800' }}>{trn('ESCRIBISTE')}</Text>
                   <Text style={{ color: C.text, fontSize: 13, fontStyle: 'italic' }}>{it.text}</Text>
                 </View>
               </View>
             ))}
-            {segs.length === 0 && <Text style={{ color: C.muted, fontSize: 13 }}>No se alcanzó a escuchar nada en esta grabación.</Text>}
+            {segs.length === 0 && <Text style={{ color: C.muted, fontSize: 13 }}>{trn('No se alcanzó a escuchar nada en esta grabación.')}</Text>}
           </ScrollView>
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-            <Button label="Crear tarjetas" icon="albums-outline" size="sm" kind="secondary" disabled={segs.length < 3}
+            <Button label={trn('Crear tarjetas')} icon="albums-outline" size="sm" kind="secondary" disabled={segs.length < 3}
               onPress={() => onCards((cls ? cls.ideas.join('\n') + '\n\n' : mtg ? mtg.summary.join('\n') + '\n\n' : '') + transcriptText(segs, 30_000, false))} />
-            <Button label="Borrar transcripción" icon="trash-outline" size="sm" kind="ghost" onPress={remove} />
+            <Button label={trn('Borrar transcripción')} icon="trash-outline" size="sm" kind="ghost" onPress={remove} />
           </View>
-          <Text style={{ color: C.muted, fontSize: 11.5 }}>Hecha con el reconocimiento del navegador: puede tener palabras mal entendidas. El audio no se guardó.</Text>
+          <Text style={{ color: C.muted, fontSize: 11.5 }}>{trn('Hecha con el reconocimiento del navegador: puede tener palabras mal entendidas. El audio no se guardó.')}</Text>
           {mtg && <MeetingPublish visible={publish} minutes={mtg} date={new Date(t.started_at)} onClose={() => setPublish(false)} />}
           {work && <MinutesStyleSheet visible={styleOpen} onClose={() => setStyleOpen(false)} />}
         </View>
@@ -380,37 +381,37 @@ function MinutesBlock({ m, dateLabel, busy, onRedo, onInsert, onPublish, onStyle
     </View>
   );
   return (
-    <View style={{ padding: 12, borderRadius: 12, backgroundColor: C.surface2, gap: 10 }} accessibilityLabel="Acta de la reunión">
-      <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>Acta{m.title ? `: ${m.title}` : ''}</Text>
-      {m.attendees.length > 0 && <Text style={{ color: C.muted, fontSize: 12.5 }}>Asistentes: {m.attendees.join(', ')}</Text>}
-      {sec('Resumen', m.summary)}
-      {sec('Decisiones', m.decisions)}
+    <View style={{ padding: 12, borderRadius: 12, backgroundColor: C.surface2, gap: 10 }} accessibilityLabel={t('Acta de la reunión')}>
+      <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>{t('Acta{v}', { v: m.title ? `: ${m.title}` : '' })}</Text>
+      {m.attendees.length > 0 && <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Asistentes: {join}', { join: m.attendees.join(', ') })}</Text>}
+      {sec(t('Resumen'), m.summary)}
+      {sec(t('Decisiones'), m.decisions)}
       {m.tasks.length > 0 && (
         <View style={{ gap: 6 }}>
-          <Text style={{ color: C.text, fontSize: 13, fontWeight: '800' }}>Tareas</Text>
+          <Text style={{ color: C.text, fontSize: 13, fontWeight: '800' }}>{t('Tareas')}</Text>
           {m.tasks.map((k, i) => (
             <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: C.text, fontSize: 13.5 }}>{k.title}</Text>
-                <Text style={{ color: C.muted, fontSize: 12 }}>{k.owner ?? 'Sin responsable'}{k.when ? ` · ${k.when}` : k.due ? ` · ${new Date(k.due + 'T12:00:00').toLocaleDateString('es', { day: 'numeric', month: 'short' })}` : ''}</Text>
+                <Text style={{ color: C.muted, fontSize: 12 }}>{k.owner ?? t('Sin responsable')}{k.when ? ` · ${k.when}` : k.due ? ` · ${new Date(k.due + 'T12:00:00').toLocaleDateString('es', { day: 'numeric', month: 'short' })}` : ''}</Text>
               </View>
-              <Button label="Para mí" size="sm" kind="ghost" onPress={() => openAdd(meetingTaskQuick(k))} accessibilityLabel={`Crear "${k.title}" en mis tareas`} />
+              <Button label={t('Para mí')} size="sm" kind="ghost" onPress={() => openAdd(meetingTaskQuick(k))} accessibilityLabel={t('Crear "{title}" en mis tareas', { title: k.title })} />
             </View>
           ))}
         </View>
       )}
-      {sec('Pendientes para la próxima', m.open)}
+      {sec(t('Pendientes para la próxima'), m.open)}
       <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 2 }}>
-        <Button label="Publicar en un proyecto" size="sm" icon="people-outline" onPress={onPublish} />
-        <Button label="Insertar en la nota" size="sm" kind="secondary" icon="arrow-down-outline" onPress={() => onInsert(minutesMarkdown(m, dateLabel))} />
-        <Button label="Rehacer" size="sm" kind="ghost" busy={busy} onPress={onRedo} />
-        <Button label="Formato" size="sm" kind="ghost" onPress={onStyle} accessibilityLabel="Formato del acta" />
+        <Button label={t('Publicar en un proyecto')} size="sm" icon="people-outline" onPress={onPublish} />
+        <Button label={t('Insertar en la nota')} size="sm" kind="secondary" icon="arrow-down-outline" onPress={() => onInsert(minutesMarkdown(m, dateLabel))} />
+        <Button label={t('Rehacer')} size="sm" kind="ghost" busy={busy} onPress={onRedo} />
+        <Button label={t('Formato')} size="sm" kind="ghost" onPress={onStyle} accessibilityLabel={t('Formato del acta')} />
       </View>
       <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        <Text style={{ color: C.muted, fontSize: 12.5 }}>Enviar:</Text>
-        <Button label="WhatsApp" size="sm" kind="secondary" icon="logo-whatsapp" onPress={() => openWhatsApp(minutesPlain(m, dateLabel, true))} accessibilityLabel="Enviar el acta por WhatsApp" />
-        <Button label="Correo" size="sm" kind="secondary" icon="mail-outline" onPress={() => Linking.openURL(mailtoUrl(subject, minutesPlain(m, dateLabel))).catch(() => toast('No se pudo abrir el correo'))} accessibilityLabel="Enviar el acta por correo" />
-        <Button label="Copiar" size="sm" kind="ghost" icon="copy-outline" onPress={async () => toast((await copyText(minutesPlain(m, dateLabel))) ? 'Acta copiada' : 'No se pudo copiar')} accessibilityLabel="Copiar el acta" />
+        <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Enviar:')}</Text>
+        <Button label="WhatsApp" size="sm" kind="secondary" icon="logo-whatsapp" onPress={() => openWhatsApp(minutesPlain(m, dateLabel, true))} accessibilityLabel={t('Enviar el acta por WhatsApp')} />
+        <Button label={t('Correo')} size="sm" kind="secondary" icon="mail-outline" onPress={() => Linking.openURL(mailtoUrl(subject, minutesPlain(m, dateLabel))).catch(() => toast(t('No se pudo abrir el correo')))} accessibilityLabel={t('Enviar el acta por correo')} />
+        <Button label={t('Copiar')} size="sm" kind="ghost" icon="copy-outline" onPress={async () => toast((await copyText(minutesPlain(m, dateLabel))) ? t('Acta copiada') : t('No se pudo copiar'))} accessibilityLabel={t('Copiar el acta')} />
       </View>
     </View>
   );

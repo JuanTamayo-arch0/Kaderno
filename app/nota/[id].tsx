@@ -7,6 +7,7 @@ import { RequireAuth } from '../../components/RequireAuth';
 import { Screen, EmptyState, useGoBack } from '../../components/ds';
 import { Note, Subject, getNote, getSubjects } from '../../lib/db';
 import { NoteDocument } from '../../components/notes/NoteDocument';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Nota a pantalla completa (celular, o notas sin materia en el computador).
@@ -40,8 +41,8 @@ function NotaDetalle() {
 
   if (note === undefined) return <Screen back={back} nav="materias"><ActivityIndicator color={C.brand} style={{ marginTop: 40 }} /></Screen>;
   if (note === null) return (
-    <Screen back="/materias" nav="materias" title="Nota">
-      <EmptyState icon="document-outline" title="No encontramos esta nota" text="Puede que esté en la papelera." action={{ label: 'Ir a la Papelera', onPress: () => router.replace('/papelera') }} />
+    <Screen back="/materias" nav="materias" title={t('Nota')}>
+      <EmptyState icon="document-outline" title={t('No encontramos esta nota')} text={t('Puede que esté en la papelera.')} action={{ label: t('Ir a la Papelera'), onPress: () => router.replace('/papelera') }} />
     </Screen>
   );
 

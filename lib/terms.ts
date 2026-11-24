@@ -4,6 +4,7 @@
 //  aquí se calcula igual para mostrarlo antes de cerrar.
 // ============================================================
 import { docFooter } from './brand';
+import { t, trn } from './i18n';
 
 export type GradeScale = { max: number; pass: number; decimals: 1 | 2 };
 export const DEFAULT_SCALE: GradeScale = { max: 5, pass: 3, decimals: 1 };
@@ -19,7 +20,7 @@ export function cleanScale(x: any): GradeScale {
 
 export const TERM_STATUS = ['aprobada', 'reprobada', 'homologada', 'retirada'] as const;
 export type TermStatus = typeof TERM_STATUS[number];
-export const STATUS_LABEL: Record<TermStatus, string> = { aprobada: 'Aprobada', reprobada: 'Reprobada', homologada: 'Homologada', retirada: 'Retirada' };
+export const STATUS_LABEL: Record<TermStatus, string> = { aprobada: t('Aprobada'), reprobada: t('Reprobada'), homologada: t('Homologada'), retirada: t('Retirada') };
 
 export type TermSubject = { name: string; credits: number; grade: number | null; status: TermStatus; hours?: number; color?: string };
 export type TermSummary = {
@@ -96,7 +97,7 @@ export function bestSubject(subjects: TermSubject[]): TermSubject | null {
 
 const esc = (s: string) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-const longDate = (iso: string | null) => { if (!iso) return ''; const [y, m, d] = iso.slice(0, 10).split('-').map(Number); return `${d} de ${MONTHS[m - 1]} de ${y}`; };
+const longDate = (iso: string | null) => { if (!iso) return ''; const [y, m, d] = iso.slice(0, 10).split('-').map(Number); return t('{d} de {v} de {y}', { d, v: MONTHS[m - 1], y }); };
 
 /** Historial en PDF: sobrio, Times New Roman, todo en negro. */
 export function historyHtml(o: { who: string; terms: Term[]; scale: GradeScale; today?: Date }): string {
@@ -107,7 +108,7 @@ export function historyHtml(o: { who: string; terms: Term[]; scale: GradeScale; 
     const s = t.summary as TermSummary;
     const rows = s.subjects.map((x) => `<tr><td>${esc(x.name)}</td><td class="n">${x.credits}</td><td class="n">${f(x.grade, s.max)}</td><td>${STATUS_LABEL[x.status] ?? esc(x.status)}</td></tr>`).join('');
     return `<h2>Semestre ${esc(t.name)}</h2>
-      <p class="meta">${[t.starts_on && t.ends_on ? `Del ${longDate(t.starts_on)} al ${longDate(t.ends_on)}` : '', s.manual ? 'Agregado a mano' : ''].filter(Boolean).join(' · ')}</p>
+      <p class="meta">${[t.starts_on && t.ends_on ? trn('Del {starts_on} al {ends_on}', { starts_on: longDate(t.starts_on), ends_on: longDate(t.ends_on) }) : '', s.manual ? trn('Agregado a mano') : ''].filter(Boolean).join(' · ')}</p>
       <table><thead><tr><th>Materia</th><th class="n">Créditos</th><th class="n">Nota final</th><th>Estado</th></tr></thead><tbody>${rows}</tbody>
       <tfoot><tr><td>Promedio del semestre</td><td class="n">${s.credits}</td><td class="n">${f(s.avg, s.max)}</td><td></td></tr></tfoot></table>`;
   }).join('');

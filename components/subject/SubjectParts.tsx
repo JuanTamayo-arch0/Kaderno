@@ -12,6 +12,7 @@ import { focusRingStyle, IconButton, type IconName } from '../ds';
 import { SubjectIcon } from '../SubjectIcon';
 import { useMode } from '../../lib/mode';
 import { vtRef } from '../../lib/motion';
+import { t, trn } from '../../lib/i18n';
 
 // ============================================================
 //  Piezas de la página de la materia: barra de arriba, ficha (grande o
@@ -22,7 +23,7 @@ import { vtRef } from '../../lib/motion';
 const web = (s: any) => (Platform.OS === 'web' ? s : null);
 const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 export function classWhen(n: NextClass, now = new Date()): string {
-  if (n.now) return `Ahora, hasta ${fmtHour(hhmm(n.end))}`;
+  if (n.now) return t('Ahora, hasta {fmtHour}', { fmtHour: fmtHour(hhmm(n.end)) });
   return `${dayWord(n.start, now)}, ${fmtHour(hhmm(n.start))}`;
 }
 export function shortDate(d: Date): string { return `${d.getDate()} ${MONTH_SHORT[d.getMonth()]}`; }
@@ -62,7 +63,7 @@ export function SubjectTopBar({ onBack, onFocus, onOracle, onNew, onMenu, compac
   const { v } = useMode();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-      <Pressable onPress={onBack} accessibilityRole="button" accessibilityLabel={`Volver a ${v.subjects}`} dataSet={{ press: '1' }}
+      <Pressable onPress={onBack} accessibilityRole="button" accessibilityLabel={t('Volver a {subjects}', { subjects: v.subjects })} dataSet={{ press: '1' }}
         style={({ focused }: any) => [{ flexDirection: 'row', alignItems: 'center', gap: 4, height: 44, paddingRight: 8, marginLeft: -6 }, focused ? focusRingStyle() : null]}>
         <Ionicons name="chevron-back" size={22} color={C.muted} />
         {!compact && <Text style={{ color: C.muted, fontSize: 14, fontWeight: '600' }}>{v.subjects}</Text>}
@@ -70,17 +71,17 @@ export function SubjectTopBar({ onBack, onFocus, onOracle, onNew, onMenu, compac
       <View style={{ flex: 1 }} />
       {compact ? (
         <>
-          <IconButton icon="timer-outline" label="Enfocar en esta materia" onPress={onFocus} color={C.text} />
-          <IconButton icon="sparkles-outline" label="Preguntar al Oráculo" onPress={onOracle} color={C.text} />
+          <IconButton icon="timer-outline" label={t('Enfocar en esta materia')} onPress={onFocus} color={C.text} />
+          <IconButton icon="sparkles-outline" label={t('Preguntar al Oráculo')} onPress={onOracle} color={C.text} />
         </>
       ) : (
         <>
-          <TopAction icon="timer-outline" label="Enfocar" onPress={onFocus} />
-          <TopAction icon="sparkles-outline" label="Oráculo" onPress={onOracle} />
-          <TopAction icon="add" label="Nueva tarea" onPress={onNew} primary />
+          <TopAction icon="timer-outline" label={t('Enfocar')} onPress={onFocus} />
+          <TopAction icon="sparkles-outline" label={t('Oráculo')} onPress={onOracle} />
+          <TopAction icon="add" label={t('Nueva tarea')} onPress={onNew} primary />
         </>
       )}
-      <IconButton icon="ellipsis-horizontal" label="Más opciones" onPress={onMenu} color={C.text} />
+      <IconButton icon="ellipsis-horizontal" label={t('Más opciones')} onPress={onMenu} color={C.text} />
     </View>
   );
 }
@@ -106,16 +107,16 @@ export function SubjectHero({ subject, days, isWide, onEdit, onSchedule }: {
   const missing = !subject.teacher && !subject.room && !link;
   // v26: en Trabajo no hay créditos ni "profesor": responsable, lugar y enlace.
   const { work } = useMode();
-  const who = work ? 'Responsable' : 'Profesor';
+  const who = work ? t('Responsable') : t('Profesor');
   const chips = (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-      {subject.teacher ? <MetaChip icon="person-outline" text={subject.teacher} onPress={() => onEdit('teacher')} label={`${who}: ${subject.teacher}. Editar`} /> : null}
-      {subject.room ? <MetaChip icon="location-outline" text={subject.room} onPress={() => onEdit('room')} label={`${work ? 'Lugar' : 'Salón'}: ${subject.room}. Editar`} /> : null}
-      {days === null ? null : days ? <MetaChip icon="time-outline" text={days} onPress={onSchedule} label={`${work ? 'Reuniones' : 'Clases'}: ${days}. Abrir ${work ? 'agenda' : 'horario'}`} />
-        : <MetaChip icon="time-outline" text={work ? 'Agregar a la agenda' : 'Agregar al horario'} onPress={onSchedule} dashed />}
-      {subject.credits && !work ? <MetaChip text={`${subject.credits} ${subject.credits === 1 ? 'crédito' : 'créditos'}`} /> : null}
-      {link ? <MetaChip icon="link-outline" text={work ? 'Enlace' : 'Aula virtual'} onPress={() => Linking.openURL(link).catch(() => {})} label={work ? 'Abrir el enlace' : 'Abrir el aula virtual'} /> : null}
-      {missing ? <MetaChip icon="add" text={work ? 'Responsable, lugar y enlace' : 'Profesor, salón y aula virtual'} onPress={() => onEdit('teacher')} dashed />
+      {subject.teacher ? <MetaChip icon="person-outline" text={subject.teacher} onPress={() => onEdit('teacher')} label={t('{who}: {teacher}. Editar', { who, teacher: subject.teacher })} /> : null}
+      {subject.room ? <MetaChip icon="location-outline" text={subject.room} onPress={() => onEdit('room')} label={t('{v}: {room}. Editar', { v: work ? 'Lugar' : 'Salón', room: subject.room })} /> : null}
+      {days === null ? null : days ? <MetaChip icon="time-outline" text={days} onPress={onSchedule} label={t('{v}: {days}. Abrir {v2}', { v: work ? 'Reuniones' : 'Clases', days, v2: work ? 'agenda' : 'horario' })} />
+        : <MetaChip icon="time-outline" text={work ? t('Agregar a la agenda') : t('Agregar al horario')} onPress={onSchedule} dashed />}
+      {subject.credits && !work ? <MetaChip text={`${subject.credits} ${subject.credits === 1 ? t('crédito') : t('créditos')}`} /> : null}
+      {link ? <MetaChip icon="link-outline" text={work ? t('Enlace') : t('Aula virtual')} onPress={() => Linking.openURL(link).catch(() => {})} label={work ? t('Abrir el enlace') : t('Abrir el aula virtual')} /> : null}
+      {missing ? <MetaChip icon="add" text={work ? 'Responsable, lugar y enlace' : t('Profesor, salón y aula virtual')} onPress={() => onEdit('teacher')} dashed />
         : !subject.teacher ? <MetaChip icon="add" text={who} onPress={() => onEdit('teacher')} dashed />
         : null}
     </View>
@@ -148,7 +149,7 @@ export function SubjectCompactBar({ subject, summary, onBack, tabs }: { subject:
   const { v } = useMode();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-      <IconButton icon="chevron-back" label={`Volver a ${v.subjects}`} onPress={onBack} color={C.muted} style={{ marginLeft: -12 }} />
+      <IconButton icon="chevron-back" label={t('Volver a {subjects}', { subjects: v.subjects })} onPress={onBack} color={C.muted} style={{ marginLeft: -12 }} />
       <SubjectAvatar subject={subject} size={36} />
       <Text style={{ color: C.text, fontSize: 18, fontWeight: '800' }} numberOfLines={1}>{subject.name}</Text>
       {!!summary && <Text style={{ color: C.muted, fontSize: 13 }} numberOfLines={1}>{summary}</Text>}
@@ -159,7 +160,7 @@ export function SubjectCompactBar({ subject, summary, onBack, tabs }: { subject:
 }
 
 export type TabKey = 'tareas' | 'notas' | 'cal' | 'files';
-export const TAB_LABEL: Record<TabKey, string> = { tareas: 'Tareas', notas: 'Notas', cal: 'Calificaciones', files: 'Archivos' };
+export const TAB_LABEL: Record<TabKey, string> = { tareas: t('Tareas'), notas: t('Notas'), cal: t('Calificaciones'), files: t('Archivos') };
 
 /** Pestañas: subrayadas en la ficha grande, en píldoras en la compacta y en el celular. */
 export function SubjectTabs({ value, onChange, counts, accent, pills, short }: {
@@ -168,7 +169,7 @@ export function SubjectTabs({ value, onChange, counts, accent, pills, short }: {
   // v26: Calificaciones es solo de Estudio.
   const { work } = useMode();
   const keys: TabKey[] = work ? ['tareas', 'notas', 'files'] : ['tareas', 'notas', 'cal', 'files'];
-  const label = (k: TabKey) => (short && k === 'cal' ? 'Calif.' : TAB_LABEL[k]);
+  const label = (k: TabKey) => (short && k === 'cal' ? t('Calif.') : TAB_LABEL[k]);
   if (pills) {
     return (
       <View accessibilityRole="tablist" style={{ flexDirection: 'row', gap: 4, padding: 4, borderRadius: 12, backgroundColor: C.surface, borderWidth: 1, borderColor: C.line, alignSelf: short ? 'stretch' : 'auto' }}>
@@ -241,7 +242,7 @@ export function SubjectStats({ d, accent, isWide, onGrades, onNext, onTasks, onS
   const w = isWide ? undefined : tileWidth(winW);
   const { work } = useMode();
   const allTiles = [
-    <Tile key="avg" label="Promedio" onPress={onGrades} a11y="Ver calificaciones" style={isWide ? { flex: 1 } : { width: w }}>
+    <Tile key="avg" label={t('Promedio')} onPress={onGrades} a11y="Ver calificaciones" style={isWide ? { flex: 1 } : { width: w }}>
       <Text style={{ color: C.text, ...big }}>{d.avg == null ? '–' : fmt(d.avg)}<Text style={{ color: C.muted, fontSize: 14, fontWeight: '600' }}> / {d.scale}</Text></Text>
       <View style={{ height: 6, borderRadius: 6, backgroundColor: C.surface2 }}>
         <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${Math.min(100, ((d.avg ?? 0) / d.scale) * 100)}%`, borderRadius: 6, backgroundColor: accent }} />
@@ -249,37 +250,35 @@ export function SubjectStats({ d, accent, isWide, onGrades, onNext, onTasks, onS
       </View>
       <Text style={sub} numberOfLines={2}>{d.neededText}</Text>
     </Tile>,
-    <Tile key="next" label="Próxima evaluación" onPress={d.next ? onNext : undefined} a11y={d.next ? `Abrir ${d.next.title}` : 'Sin evaluaciones'} style={isWide ? { flex: 1 } : { width: w }}>
+    <Tile key="next" label={t('Próxima evaluación')} onPress={d.next ? onNext : undefined} a11y={d.next ? `Abrir ${d.next.title}` : 'Sin evaluaciones'} style={isWide ? { flex: 1 } : { width: w }}>
       {d.next ? (
         <>
           <Text style={{ color: C.text, fontSize: 19, fontWeight: '800' }} numberOfLines={1}>{d.next.title}</Text>
           {d.next.due
             ? <Text style={{ color: soon ? C.warnText : C.text, fontSize: 13, fontWeight: '700' }} numberOfLines={1}>{countdown(d.next.due, now)} · {shortDate(d.next.due)}</Text>
-            : <Text style={{ color: C.muted, fontSize: 13, fontWeight: '600' }}>Sin fecha todavía</Text>}
-          {d.next.weight != null && <Text style={sub}>Vale {d.next.weight}% de la nota</Text>}
+            : <Text style={{ color: C.muted, fontSize: 13, fontWeight: '600' }}>{t('Sin fecha todavía')}</Text>}
+          {d.next.weight != null && <Text style={sub}>{t('Vale {weight}% de la nota', { weight: d.next.weight })}</Text>}
         </>
-      ) : <Text style={[sub, { marginTop: 4 }]}>Nada programado. Agrega parciales con su fecha o impórtalos del cronograma.</Text>}
+      ) : <Text style={[sub, { marginTop: 4 }]}>{t('Nada programado. Agrega parciales con su fecha o impórtalos del cronograma.')}</Text>}
     </Tile>,
-    <Tile key="pend" label="Pendientes" onPress={onTasks} a11y="Ver tareas" style={isWide ? { flex: 1 } : { width: w }}>
+    <Tile key="pend" label={t('Pendientes')} onPress={onTasks} a11y="Ver tareas" style={isWide ? { flex: 1 } : { width: w }}>
       <Text style={{ color: C.text, ...big }}>{d.pending}</Text>
       <Text style={[sub, d.overdue ? { color: C.badText, fontWeight: '700' } : null]}>
-        {d.overdue ? `${d.overdue} ${d.overdue === 1 ? 'vencida' : 'vencidas'}` : 'Ninguna vencida'}{d.done ? ` · ${d.done} ${d.done === 1 ? 'hecha' : 'hechas'}` : ''}
+        {d.overdue ? `${d.overdue} ${d.overdue === 1 ? 'vencida' : 'vencidas'}` : t('Ninguna vencida')}{d.done ? ` · ${d.done} ${d.done === 1 ? 'hecha' : 'hechas'}` : ''}
       </Text>
     </Tile>,
-    <Tile key="study" label="Estudio" onPress={onStudy} a11y={d.dueCards ? 'Repasar tarjetas' : 'Enfocar en esta materia'} style={isWide ? { flex: 1 } : { width: w }}>
+    <Tile key="study" label={t('Estudio')} onPress={onStudy} a11y={d.dueCards ? 'Repasar tarjetas' : 'Enfocar en esta materia'} style={isWide ? { flex: 1 } : { width: w }}>
       <Text style={{ color: C.text, ...big }}>{d.weekMin == null ? '–' : minutesLabel(d.weekMin)}</Text>
-      <Text style={sub} numberOfLines={2}>
-        de enfoque esta semana{d.dueCards ? ` · ${d.dueCards} ${d.dueCards === 1 ? 'tarjeta' : 'tarjetas'} para hoy` : ''}
-      </Text>
+      <Text style={sub} numberOfLines={2}>{t('de enfoque esta semana{v}', { v: d.dueCards ? ` · ${d.dueCards} ${d.dueCards === 1 ? 'tarjeta' : 'tarjetas'} para hoy` : '' })}</Text>
     </Tile>,
   ];
   // v26: en Trabajo no hay promedio ni evaluaciones: pendientes y horas.
   const tiles = work ? allTiles.filter((t) => t.key === 'pend' || t.key === 'study').map((t) => t.key === 'study' ? (
-    <Tile key="study" label="Horas" onPress={onStudy} a11y="Enfocar en esta área" style={isWide ? { flex: 1 } : { width: w }}>
+    <Tile key="study" label={trn('Horas')} onPress={onStudy} a11y="Enfocar en esta área" style={isWide ? { flex: 1 } : { width: w }}>
       <Text style={{ color: C.text, ...big }}>{d.weekMin == null ? '–' : minutesLabel(d.weekMin)}</Text>
-      <Text style={sub} numberOfLines={2}>registradas esta semana</Text>
+      <Text style={sub} numberOfLines={2}>{trn('registradas esta semana')}</Text>
     </Tile>
   ) : t) : allTiles;
-  if (isWide) return <View accessibilityLabel={work ? 'Resumen del área' : 'Resumen de la materia'} style={{ flexDirection: 'row', gap: 12 }}>{tiles}</View>;
-  return <View accessibilityLabel={work ? 'Resumen del área' : 'Resumen de la materia'} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>{tiles}</View>;
+  if (isWide) return <View accessibilityLabel={work ? t('Resumen del área') : t('Resumen de la materia')} style={{ flexDirection: 'row', gap: 12 }}>{tiles}</View>;
+  return <View accessibilityLabel={work ? t('Resumen del área') : t('Resumen de la materia')} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>{tiles}</View>;
 }

@@ -20,6 +20,7 @@ import {
 } from './ambientMix';
 import { whiteNoise, pinkNoise, brownNoise, impulses, seamless } from './noise';
 import { subscribeFocus, startFocus, pauseFocus, remainingMs, totalMs, type FocusState } from './focusTimer';
+import { t } from './i18n';
 
 const web = Platform.OS === 'web' && typeof window !== 'undefined';
 
@@ -313,7 +314,7 @@ let started = false;
 let hadLocal = false;
 
 export type AmbientStatus = { playing: boolean; label: string; needsTap: boolean; preview: boolean };
-const status: AmbientStatus = { playing: false, label: 'Silencio', needsTap: false, preview: false };
+const status: AmbientStatus = { playing: false, label: t('Silencio'), needsTap: false, preview: false };
 const listeners = new Set<() => void>();
 function emit() { listeners.forEach((l) => l()); }
 
@@ -346,7 +347,7 @@ function updateMediaSession(on: boolean, label: string) {
   try {
     if (on) {
       const MM = (window as any).MediaMetadata;
-      if (MM) ms.metadata = new MM({ title: `Kaderno · ${label}`, artist: 'Enfoque' });
+      if (MM) ms.metadata = new MM({ title: `Kaderno · ${label}`, artist: t('Enfoque') });
       ms.playbackState = 'playing';
       ms.setActionHandler('pause', () => pauseFocus());
       ms.setActionHandler('play', () => { unlockAmbient(); startFocus(); });

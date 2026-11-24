@@ -12,6 +12,7 @@ import { prefersReducedMotion, vtNavigate } from '../lib/motion';
 import { useResponsive, SIDEBAR_W } from '../lib/responsive';
 import { usePets } from '../lib/pets/store';
 import { type NavKey } from './SideNav';
+import { t } from '../lib/i18n';
 
 // ============================================================
 //  Sistema de diseño de Kaderno.
@@ -341,8 +342,8 @@ export function Skeleton({ height = 64, style }: { height?: number; style?: Styl
 // ---------- Error con reintentar ----------
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <EmptyState icon="cloud-offline-outline" title="No se pudo cargar" text={message}
-      action={onRetry ? { label: 'Reintentar', onPress: onRetry, icon: 'refresh' } : undefined} compact />
+    <EmptyState icon="cloud-offline-outline" title={t('No se pudo cargar')} text={message}
+      action={onRetry ? { label: t('Reintentar'), onPress: onRetry, icon: 'refresh' } : undefined} compact />
   );
 }
 
@@ -415,7 +416,7 @@ export function Screen({
       <View onLayout={isWide ? undefined : (e) => setRowW(e.nativeEvent.layout.width)}
         style={{ flexDirection: 'row', flexWrap: stackRight ? 'wrap' : 'nowrap', alignItems: 'flex-end', gap: 8, maxWidth: maxWidth && isWide ? maxWidth : undefined, width: '100%', alignSelf: maxWidth && isWide ? 'center' : 'auto' }}>
         {back ? (
-          <IconButton icon="chevron-back" label="Volver" onPress={goBack} color={C.text} size={24} style={{ marginLeft: -12, alignSelf: 'flex-start', marginTop: title ? (isWide ? -5 : -8) : 0 }} />
+          <IconButton icon="chevron-back" label={t('Volver')} onPress={goBack} color={C.text} size={24} style={{ marginLeft: -12, alignSelf: 'flex-start', marginTop: title ? (isWide ? -5 : -8) : 0 }} />
         ) : null}
         {leading ? <View style={{ alignSelf: 'center', marginRight: 4 }}>{leading}</View> : null}
         <View style={stackRight ? { flexBasis: '70%', flexGrow: 1, minWidth: 0 } : { flex: 1, minWidth: 0 }}>

@@ -5,6 +5,7 @@
 export type { MeetingMinutes, MeetingTask, MinutesStyle } from '../supabase/functions/_shared/meeting';
 export { minutesPlain, cleanMinutesStyle, DEFAULT_MINUTES_STYLE } from '../supabase/functions/_shared/meeting';
 import type { MeetingMinutes, MeetingTask } from '../supabase/functions/_shared/meeting';
+import { trn } from './i18n';
 
 export const isMeeting = (s: unknown): s is MeetingMinutes => !!s && (s as any).kind === 'meeting';
 
@@ -42,7 +43,7 @@ export function minutesMarkdown(m: MeetingMinutes, dateLabel: string, heading = 
   if (m.decisions.length) out.push('### Decisiones', '', ...m.decisions.map((x) => `- ${x}`), '');
   if (m.tasks.length) {
     out.push('### Tareas', '', '| Tarea | Responsable | Fecha |', '| --- | --- | --- |');
-    for (const t of m.tasks) out.push(`| ${cell(t.title)} | ${cell(t.owner ?? 'Sin asignar')} | ${t.due ? shortIso(t.due) : cell(t.when ?? '')} |`);
+    for (const t of m.tasks) out.push(`| ${cell(t.title)} | ${cell(t.owner ?? trn('Sin asignar'))} | ${t.due ? shortIso(t.due) : cell(t.when ?? '')} |`);
     out.push('');
   }
   if (m.open.length) out.push('### Pendientes para la próxima', '', ...m.open.map((x) => `- [ ] ${x}`), '');
@@ -51,7 +52,7 @@ export function minutesMarkdown(m: MeetingMinutes, dateLabel: string, heading = 
 
 /** "Acta 23 nov - Revisión del lanzamiento.md" */
 export function minutesFileName(m: MeetingMinutes, d: Date): string {
-  const t = (m.title || 'Reunión').replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
+  const t = (m.title || trn('Reunión')).replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
   return `Acta ${d.getDate()} ${MONTHS[d.getMonth()]} - ${t}.md`;
 }
 
@@ -94,7 +95,7 @@ export function carryOverMarkdown(prev: { minutes: MeetingMinutes | null; noteMd
   };
   if (prev.minutes) {
     for (const t of prev.minutes.tasks) {
-      const who = t.owner ?? 'sin responsable';
+      const who = t.owner ?? trn('sin responsable');
       const when = t.due ? shortIso(t.due) : t.when ?? '';
       if (!seen.has(norm(t.title))) { add(`${t.title} (${who}${when ? `, ${when}` : ''})`); seen.add(norm(t.title)); }
     }

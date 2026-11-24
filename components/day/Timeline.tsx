@@ -9,6 +9,7 @@ import { minToLabel } from '../../lib/agenda';
 import { ActionMenu } from '../ActionMenu';
 import { toast, friendlyError } from '../../lib/feedback';
 import { getMode } from '../../lib/mode';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Línea de tiempo (v21, sección 3): clases, planes con hora, eventos de
@@ -22,7 +23,7 @@ export type ExtEvent = { id: string; title: string; start: string; end: string; 
 type Kind = 'class' | 'plan' | 'focus' | 'event';
 type Item = { id: string; kind: Kind; start: number; end: number; title: string; color: string; task?: Task; sub?: string };
 
-const DAY_SHORT = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const DAY_SHORT = [t('Dom'), t('Lun'), t('Mar'), t('Mié'), t('Jue'), t('Vie'), t('Sáb')];
 
 function itemsFor(day: Date, tasks: Task[], slots: Slot[], subjects: Subject[], focus: FocusSession[], events: ExtEvent[], ratio: number | null): Item[] {
   const iso = localISO(day);
@@ -32,7 +33,7 @@ function itemsFor(day: Date, tasks: Task[], slots: Slot[], subjects: Subject[], 
   const blocks = SCHEDULE.blocks;
   slots.filter((s) => s.day === dow && blocks[s.slot]).forEach((s) => {
     const sub = subOf(s.subject_id); if (!sub) return;
-    out.push({ id: 'c' + s.id, kind: 'class', start: toMinutes(blocks[s.slot].start), end: toMinutes(blocks[s.slot].end), title: sub.name, color: sub.color, sub: getMode() === 'trabajo' ? 'Agenda fija' : 'Clase' });
+    out.push({ id: 'c' + s.id, kind: 'class', start: toMinutes(blocks[s.slot].start), end: toMinutes(blocks[s.slot].end), title: sub.name, color: sub.color, sub: getMode() === 'trabajo' ? t('Agenda fija') : t('Clase') });
   });
   for (const t of tasks) {
     if (!t.plan_at || t.status === 'done') continue;
@@ -45,13 +46,13 @@ function itemsFor(day: Date, tasks: Task[], slots: Slot[], subjects: Subject[], 
     const end = new Date(f.created_at);
     if (localISO(end) !== iso) continue;
     const e = end.getHours() * 60 + end.getMinutes();
-    out.push({ id: 'f' + f.id, kind: 'focus', start: Math.max(DAY_START, e - f.minutes), end: e, title: `Enfoque ${f.minutes} min`, color: C.muted });
+    out.push({ id: 'f' + f.id, kind: 'focus', start: Math.max(DAY_START, e - f.minutes), end: e, title: t('Enfoque {minutes} min', { minutes: f.minutes }), color: C.muted });
   }
   for (const ev of events) {
     if (ev.all_day) continue;
     const s = new Date(ev.start), e = new Date(ev.end);
     if (localISO(s) !== iso) continue;
-    out.push({ id: 'e' + ev.id, kind: 'event', start: s.getHours() * 60 + s.getMinutes(), end: Math.max(s.getHours() * 60 + s.getMinutes() + 15, e.getHours() * 60 + e.getMinutes()), title: ev.title, color: ev.color || '#8a93a6', sub: 'Calendario' });
+    out.push({ id: 'e' + ev.id, kind: 'event', start: s.getHours() * 60 + s.getMinutes(), end: Math.max(s.getHours() * 60 + s.getMinutes() + 15, e.getHours() * 60 + e.getMinutes()), title: ev.title, color: ev.color || '#8a93a6', sub: t('Calendario') });
   }
   return out.filter((x) => x.end > DAY_START && x.start < DAY_END);
 }
@@ -101,7 +102,7 @@ export function Timeline({ days, tasks, slots, subjects, focus, events = [], rat
                 if (!list.length && !target && wide) return null;
                 return (
                   <Pressable key={b} disabled={!target} onPress={() => { if (placing) { setBand(placing, day, b); onPlaced?.(); } }}
-                    accessibilityRole={target ? 'button' : undefined} accessibilityLabel={target ? `Poner en la ${BANDS[b].label.toLowerCase()}` : undefined}
+                    accessibilityRole={target ? 'button' : undefined} accessibilityLabel={target ? t('Poner en la {toLowerCase}', { toLowerCase: BANDS[b].label.toLowerCase() }) : undefined}
                     style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4, minHeight: 28, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderStyle: target ? 'dashed' : 'solid', borderColor: target ? C.brand : C.line, backgroundColor: target ? C.brand + '10' : 'transparent' }}>
                     <Text style={{ color: C.muted, fontSize: 11, fontWeight: '800' }}>{BANDS[b].label}</Text>
                     {list.map((t) => (
@@ -140,16 +141,16 @@ export function Timeline({ days, tasks, slots, subjects, focus, events = [], rat
       </View>
 
       <ActionMenu visible={!!menu} title={menu?.title ?? ''} onClose={() => setMenu(null)} actions={menu ? [
-        { label: 'Empezar enfoque', icon: 'timer-outline', onPress: () => onFocusTask(menu) },
-        { label: 'Marcar hecha', icon: 'checkmark-circle-outline', onPress: () => onDone(menu) },
-        { label: 'Mover a mañana', icon: 'arrow-forward-outline', onPress: async () => {
+        { label: t('Empezar enfoque'), icon: 'timer-outline', onPress: () => onFocusTask(menu) },
+        { label: t('Marcar hecha'), icon: 'checkmark-circle-outline', onPress: () => onDone(menu) },
+        { label: t('Mover a mañana'), icon: 'arrow-forward-outline', onPress: async () => {
           try {
             if (menu.plan_at) { const d = new Date(menu.plan_at); d.setDate(d.getDate() + 1); await updateTask(menu.id, { plan_at: d.toISOString() }); }
             else { const d = new Date(); d.setDate(d.getDate() + 1); await updateTask(menu.id, { plan_day: localISO(d) }); }
-            onChanged(); toast('Movida a mañana');
+            onChanged(); toast(t('Movida a mañana'));
           } catch (e) { toast(friendlyError(e), { tone: 'bad' }); }
         } },
-        { label: 'Quitar la hora', icon: 'close-circle-outline', onPress: async () => { try { await updateTask(menu.id, { plan_at: null, plan_day: null, plan_band: null }); onChanged(); } catch (e) { toast(friendlyError(e), { tone: 'bad' }); } } },
+        { label: t('Quitar la hora'), icon: 'close-circle-outline', onPress: async () => { try { await updateTask(menu.id, { plan_at: null, plan_day: null, plan_band: null }); onChanged(); } catch (e) { toast(friendlyError(e), { tone: 'bad' }); } } },
       ] : []} />
     </View>
   );
@@ -191,7 +192,7 @@ function DayColumn({ day, dayIndex, days, height, hourPx, hours, colW, items, is
         const y = r && typeof ne.clientY === 'number' ? ne.clientY - r.top : ne.locationY ?? 0;
         onPlace(minuteAt(y, hourPx));
       }}
-      accessibilityLabel={placing ? `Toca la hora para "${placing.title}"` : `${DAY_SHORT[day.getDay()]} ${day.getDate()}`}
+      accessibilityLabel={placing ? t('Toca la hora para "{title}"', { title: placing.title }) : `${DAY_SHORT[day.getDay()]} ${day.getDate()}`}
       style={{ flex: 1, height, borderRadius: 10, borderWidth: 1, borderColor: placing ? C.brand : C.line, borderStyle: placing ? 'dashed' : 'solid', backgroundColor: C.surface, overflow: 'hidden' }}>
       {hours.map((m) => <View key={m} pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: ((m - DAY_START) / 60) * hourPx, height: 1, backgroundColor: C.line + '88' }} />)}
       {placed.map((b) => (
@@ -257,7 +258,7 @@ function BlockView({ b, hourPx, colW, days, dayIndex, past, live, onMove, onResi
         {h > 34 && <Text style={{ color: C.muted, fontSize: 10.5 }} numberOfLines={1}>{minToLabel(b.start + (drag ? snap(drag.dy) : 0))}{b.sub ? ` · ${b.sub}` : ''}</Text>}
       </Pressable>
       {movable && (
-        <View {...resize.panHandlers} accessibilityLabel="Estirar para cambiar la duración"
+        <View {...resize.panHandlers} accessibilityLabel={t('Estirar para cambiar la duración')}
           style={{ position: 'absolute', left: 8, right: 8, bottom: 0, height: 8, alignItems: 'center', justifyContent: 'center', ...(Platform.OS === 'web' ? { cursor: 'ns-resize' } as any : null) }}>
           <View style={{ width: 22, height: 3, borderRadius: 2, backgroundColor: C.muted + '99' }} />
         </View>

@@ -1,5 +1,6 @@
 import { addMinutes, formatHuman } from './dates';
 import type { ExistingTask, ShiftTarget } from './types';
+import { t } from '../i18n';
 
 export interface ShiftPreviewItem {
   id: string;
@@ -71,7 +72,7 @@ export function previewShift(
   const la = latestAfter !== null ? new Date(latestAfter).toISOString() : null;
   const n = items.length;
   let summary = `${n} ${n === 1 ? 'tarea' : 'tareas'}`;
-  if (lb && la) summary += `. La última entrega pasa del ${formatHuman(lb, false)} al ${formatHuman(la, false)}`;
+  if (lb && la) summary += t('. La última entrega pasa del {lb} al {la}', { lb: formatHuman(lb, false), la: formatHuman(la, false) });
   return {
     items,
     withoutDates,

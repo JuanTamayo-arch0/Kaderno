@@ -79,7 +79,7 @@ const SKIP_CALLS = new Set([
   'createElement', 'get', 'set', 'has', 'require', 'log', 'warn', 'debug', 'info', 'trace', 'error', 'getElementById', 'matchMedia',
   'emitPetEvent', 'play', 'normalize', 'localeCompare', 'padStart', 'padEnd', 'join', 'createSignedUrl', 'upload', 'download',
   'list', 'remove', 'fetch', 'decode', 'encode', 'Date', 'RegExp', 'atob', 'btoa', 'track', 'vtRef', 'useLocalSearchParams',
-  't', 'tc', 'tp', 'fill', 'dataChanged', 'emit', 'subscribe', 'useState', 'useRef', 'textTone', 'hexA', 'raise',
+  't', 'tc', 'tp', 'trn', 'fill', 'dataChanged', 'emit', 'subscribe', 'useState', 'useRef', 'textTone', 'hexA', 'raise',
 ]);
 
 function calleeName(e: ts.Expression): string | null {
@@ -133,7 +133,7 @@ export function inNonUiPosition(node: ts.Node): boolean {
 /** ¿El nodo es un argumento de t/tc/tp? */
 export function insideT(node: ts.Node): boolean {
   for (let p = node.parent; p; p = p.parent) {
-    if (ts.isCallExpression(p)) { const n = calleeName(p.expression); if (n === 't' || n === 'tc' || n === 'tp') return true; }
+    if (ts.isCallExpression(p)) { const n = calleeName(p.expression); if (n === 't' || n === 'tc' || n === 'tp' || n === 'trn') return true; }
     if (ts.isFunctionLike(p) || ts.isSourceFile(p)) return false;
   }
   return false;
@@ -175,4 +175,21 @@ export function decodeEntities(s: string): string {
 /** Literal de JS en comillas simples. */
 export function q(s: string): string {
   return "'" + s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '') + "'";
+}
+
+/** Nombres propios que no se traducen. */
+export const KEEP = new Set(['Kaderno', 'kaderno', 'Pomodoro', 'Wompi', 'Nequi', 'Google', 'Outlook', 'Apple', 'Chrome', 'Safari', 'Supabase',
+  'Gemini', 'Claude', 'Markdown', 'KaTeX', 'Excel', 'Android', 'Telegram', 'WhatsApp', 'Bancolombia', 'Cornell', 'Daviplata', 'iCal', 'iPhone',
+  'PDF', 'CSV', 'JSON', 'URL', 'IA', 'OK', 'Pro', 'Flashcards', 'Esc', 'Ctrl', 'Alt', 'Shift', 'Enter', 'Tab', 'Cmd', 'Marketing', 'Quiz', 'Nginx']);
+
+/** Una o varias palabras con mayúscula inicial, como un rótulo ("Deshacer", "Permiso necesario"). */
+export function looksLabel(s: string): boolean {
+  const x = s.trim();
+  return /^[¿¡]?[A-ZÁÉÍÓÚÑ][a-záéíóúñü]+([ ,][a-záéíóúñüA-Z0-9]+)*[.!?…:]?$/.test(x) && !KEEP.has(x.replace(/[.!?…:]$/, ''));
+}
+
+/** ¿Texto de JSX para personas? (aunque sea una sola palabra en minúscula como "de"). */
+export function isJsxHuman(s: string): boolean {
+  const x = s.trim();
+  return /[A-Za-zÁÉÍÓÚáéíóúÑñ]/.test(x) && !KEEP.has(x) && !/^(https?:|\/)/.test(x);
 }

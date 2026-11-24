@@ -3,6 +3,7 @@ import { Text, View } from 'react-native';
 import { C } from '../../lib/theme';
 import { LazyMarkdown } from '../LazyMarkdown';
 import type { NoteEditorHandle, NoteEditorProps } from './editorTypes';
+import { t } from '../../lib/i18n';
 
 // El editor (TipTap + KaTeX) pesa bastante: se descarga solo al abrir una nota.
 // Mientras llega se muestra la nota ya formateada con el lector de siempre.
@@ -16,7 +17,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(function
     <View style={{ maxWidth: props.maxWidth ?? 720, width: '100%', minHeight: props.minHeight ?? 320 }}>
       {props.value?.trim()
         ? <LazyMarkdown style={{ body: { color: C.text, fontSize: 17, lineHeight: 29 } }}>{props.value}</LazyMarkdown>
-        : <Text style={{ color: C.muted, fontSize: 16 }}>Cargando el editor…</Text>}
+        : <Text style={{ color: C.muted, fontSize: 16 }}>{t('Cargando el editor…')}</Text>}
     </View>
   );
   return (

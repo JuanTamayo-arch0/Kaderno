@@ -16,6 +16,7 @@ import {
   type ColumnMapping, type DuplicatePolicy, type ExistingTask, type Field, type NormalizedTask,
   type ParsedFile, type RowIssue,
 } from '../../lib/import';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  Importar tareas a un proyecto (CSV o JSON), con vista previa.
@@ -97,14 +98,14 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
     try {
       p = source();
     } catch (e: any) {
-      return notify('No se pudo leer', e instanceof ImportError ? e.message : String(e?.message ?? e));
+      return notify(t('No se pudo leer'), e instanceof ImportError ? e.message : String(e?.message ?? e));
     }
     setBusy(true);
     try {
       setExisting(await getProjectTasksForBulk(project.id));
     } catch (e: any) {
       setBusy(false);
-      return notify('No se pudo preparar la importación', e.message);
+      return notify(t('No se pudo preparar la importación'), e.message);
     }
     setBusy(false);
     setParsed(p);
@@ -118,14 +119,14 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
     try {
       const f = await pickTextFile();
       if (f) load(() => parseImportFile(f), f.name);
-    } catch (e: any) { notify('No se pudo abrir el archivo', e.message); }
+    } catch (e: any) { notify(t('No se pudo abrir el archivo'), e.message); }
   }
 
   async function soltar(file: any) {
     try {
       const f = await readWebFile(file);
       load(() => parseImportFile(f), f.name);
-    } catch (e: any) { notify('No se pudo abrir el archivo', e.message); }
+    } catch (e: any) { notify(t('No se pudo abrir el archivo'), e.message); }
   }
 
   // ---------- Paso 2: corregir una fila ----------
@@ -166,35 +167,35 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
     try {
       if (isUpdate && diff) {
         const rows = toFilePayload(diff, firstCol);
-        if (!rows.length) { setBusy(false); return notify('No hay cambios para aplicar'); }
+        if (!rows.length) { setBusy(false); return notify(t('No hay cambios para aplicar')); }
         const r = await applyProjectFile(project.id, rows);
-        onDone({ batchId: r.batch_id, text: `Proyecto actualizado: ${diffSummary(diff)}` });
+        onDone({ batchId: r.batch_id, text: t('Proyecto actualizado: {diff}', { diff: diffSummary(diff) }) });
       } else {
         const payload = toImportPayload(importable, firstCol);
-        if (!payload.length) { setBusy(false); return notify('No hay tareas para importar'); }
+        if (!payload.length) { setBusy(false); return notify(t('No hay tareas para importar')); }
         // Aquí solo se llega sin coincidencias (o con "crearlas igual").
         const r = await importProjectTasks(project.id, payload, 'crear');
-        const parts = [`${r.created} ${r.created === 1 ? 'tarea importada' : 'tareas importadas'}`];
+        const parts = [`${r.created} ${r.created === 1 ? t('tarea importada') : t('tareas importadas')}`];
         if (r.updated) parts.push(`${r.updated} actualizadas`);
         if (r.skipped) parts.push(`${r.skipped} repetidas omitidas`);
         if (r.steps) parts.push(`${r.steps} ítems de checklist`);
         onDone({ batchId: r.batch_id, text: parts.join(' · ') });
       }
     } catch (e: any) {
-      notify('No se pudo importar', e.message);
+      notify(t('No se pudo importar'), e.message);
     } finally {
       setBusy(false);
     }
   }
 
   const nombre = (uid: string | null) => {
-    if (!uid) return 'Sin asignar';
+    if (!uid) return t('Sin asignar');
     const m = members.find((x) => x.user_id === uid);
-    return m ? nameOf(m.profile) : 'Integrante';
+    return m ? nameOf(m.profile) : t('Integrante');
   };
 
   const total = isUpdate && diff ? diff.updates.length + diff.creates.length + diff.deletes.length : importable.length;
-  const accion = isUpdate ? `Aplicar cambios` : `Importar ${importable.length} ${importable.length === 1 ? 'tarea' : 'tareas'}`;
+  const accion = isUpdate ? t('Aplicar cambios') : `Importar ${importable.length} ${importable.length === 1 ? 'tarea' : 'tareas'}`;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -203,19 +204,19 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
           {/* cabecera */}
           <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 18, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: C.line }}>
             {step === 'revisar' && (
-              <Pressable onPress={() => setStep('inicio')} hitSlop={10} accessibilityLabel="Volver" style={{ paddingTop: 2 }}>
+              <Pressable onPress={() => setStep('inicio')} hitSlop={10} accessibilityLabel={t('Volver')} style={{ paddingTop: 2 }}>
                 <Ionicons name="chevron-back" size={20} color={C.text} />
               </Pressable>
             )}
             <View style={{ flex: 1 }}>
               <Text style={{ color: C.text, fontSize: 17, fontWeight: '700' }}>
-                {step === 'inicio' ? 'Importar tareas' : isUpdate ? 'Revisar cambios' : 'Revisar antes de importar'}
+                {step === 'inicio' ? t('Importar tareas') : isUpdate ? t('Revisar cambios') : t('Revisar antes de importar')}
               </Text>
               <Text numberOfLines={1} style={{ color: C.muted, fontSize: 12.5, marginTop: 3 }}>
-                {step === 'inicio' ? 'CSV o JSON, con fechas, hora y checklist' : fileName}
+                {step === 'inicio' ? t('CSV o JSON, con fechas, hora y checklist') : fileName}
               </Text>
             </View>
-            <Pressable onPress={onClose} hitSlop={10} accessibilityLabel="Cerrar"><Ionicons name="close" size={20} color={C.muted} /></Pressable>
+            <Pressable onPress={onClose} hitSlop={10} accessibilityLabel={t('Cerrar')}><Ionicons name="close" size={20} color={C.muted} /></Pressable>
           </View>
 
           {step === 'inicio' ? (
@@ -223,7 +224,7 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
               project={project} members={members} subjectName={subjectName} ctxColumns={ctx.columns}
               paste={paste} setPaste={setPaste} busy={busy} dragOver={dragOver} setDragOver={setDragOver}
               onPick={elegir} onDropFile={soltar}
-              onPasteSubmit={() => load(() => parseImportText(paste), 'Texto pegado')}
+              onPasteSubmit={() => load(() => parseImportText(paste), t('Texto pegado'))}
             />
           ) : result && summary ? (
             <>
@@ -235,8 +236,8 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
                   ) : (
                     <Chip icon="checkmark-circle" color={C.good} text={`${summary.ok} ${summary.ok === 1 ? 'lista' : 'listas'}`} />
                   )}
-                  {summary.withWarnings > 0 && <Chip icon="alert-circle" color={C.warn} text={`${summary.withWarnings} con avisos`} />}
-                  {summary.withErrors > 0 && <Chip icon="close-circle" color={C.bad} text={`${summary.withErrors} con errores (no se importan)`} />}
+                  {summary.withWarnings > 0 && <Chip icon="alert-circle" color={C.warn} text={t('{withWarnings} con avisos', { withWarnings: summary.withWarnings })} />}
+                  {summary.withErrors > 0 && <Chip icon="close-circle" color={C.bad} text={t('{withErrors} con errores (no se importan)', { withErrors: summary.withErrors })} />}
                   {summary.skipped > 0 && <Chip icon="remove-circle-outline" color={C.muted} text={`${summary.skipped} omitidas`} />}
                 </View>
 
@@ -245,18 +246,16 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
                 <MappingEditor mapping={mapping} onChange={setMapping} />
 
                 {!isUpdate && !hasTitleColumn(mapping) && (
-                  <Note color={C.bad} text="No encontré la columna del título. Asígnala arriba (por ejemplo «titulo»)." />
+                  <Note color={C.bad} text={t('No encontré la columna del título. Asígnala arriba (por ejemplo «titulo»).')} />
                 )}
 
                 {/* duplicados */}
                 {dups.size > 0 && (
                   <View style={{ borderWidth: 1, borderColor: C.warn + '66', backgroundColor: C.warn + '12', borderRadius: 12, padding: 12, marginBottom: 12 }}>
-                    <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>
-                      {dups.size} {dups.size === 1 ? 'tarea ya existe' : 'tareas ya existen'} en el proyecto
-                    </Text>
-                    <Text style={{ color: C.muted, fontSize: 12, marginTop: 3, marginBottom: 9 }}>Las reconocí por el código del título (como H-009) o por el mismo título. ¿Qué hago con ellas?</Text>
+                    <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{t('{size} {v} en el proyecto', { size: dups.size, v: dups.size === 1 ? 'tarea ya existe' : 'tareas ya existen' })}</Text>
+                    <Text style={{ color: C.muted, fontSize: 12, marginTop: 3, marginBottom: 9 }}>{t('Las reconocí por el código del título (como H-009) o por el mismo título. ¿Qué hago con ellas?')}</Text>
                     <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-                      {([['actualizar', 'Actualizarlas (recomendado)'], ['omitir', 'Dejarlas como están'], ['crear', 'Crearlas otra vez']] as const).map(([k, l]) => (
+                      {([['actualizar', 'Actualizarlas (recomendado)'], ['omitir', t('Dejarlas como están')], ['crear', t('Crearlas otra vez')]] as const).map(([k, l]) => (
                         <Pressable key={k} onPress={() => setDupPolicy(k)}
                           style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: R.pill, borderWidth: 1, borderColor: dupPolicy === k ? C.brand : C.line, backgroundColor: dupPolicy === k ? C.brand + '22' : 'transparent' }}>
                           <Text style={{ color: dupPolicy === k ? C.brand : C.text, fontSize: 12.5, fontWeight: dupPolicy === k ? '700' : '500' }}>{l}</Text>
@@ -272,10 +271,9 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
                     style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderWidth: 1, borderColor: replaceBoard ? C.bad + '88' : C.line, backgroundColor: replaceBoard ? C.bad + '10' : 'transparent', borderRadius: 12, padding: 12, marginBottom: 12 }}>
                     <Ionicons name={replaceBoard ? 'checkbox' : 'square-outline'} size={19} color={replaceBoard ? C.bad : C.muted} />
                     <View style={{ flex: 1 }}>
-                      <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>Reemplazar el tablero con este archivo</Text>
+                      <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{t('Reemplazar el tablero con este archivo')}</Text>
                       <Text style={{ color: C.muted, fontSize: 12, marginTop: 2, lineHeight: 17 }}>
-                        Las tareas que están en el tablero y no vienen en el archivo se borran. Útil cuando el archivo es el plan completo. Se puede deshacer.
-                      </Text>
+                        {t('Las tareas que están en el tablero y no vienen en el archivo se borran. Útil cuando el archivo es el plan completo. Se puede deshacer.')}</Text>
                     </View>
                   </Pressable>
                 )}
@@ -283,15 +281,15 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
                 {/* actualización por archivo */}
                 {isUpdate && diff && (
                   <View style={{ marginBottom: 6 }}>
-                    {diff.deletes.some((d) => d.task) && <Note color={C.bad} text={`Se van a borrar ${diff.deletes.filter((d) => d.task).length} con «sí» en la columna eliminar: ${diff.deletes.filter((d) => d.task).map((d) => `«${d.existing.title}»`).join(', ')}.`} />}
-                    {diff.deletes.some((d) => !d.task) && <Note color={C.bad} text={`Se van a borrar ${diff.deletes.filter((d) => !d.task).length} ${diff.deletes.filter((d) => !d.task).length === 1 ? 'tarea que no está' : 'tareas que no están'} en el archivo: ${diff.deletes.filter((d) => !d.task).slice(0, 12).map((d) => `«${d.existing.title}»`).join(', ')}${diff.deletes.filter((d) => !d.task).length > 12 ? '…' : ''}`} />}
-                    {diff.skippedMatches > 0 && <Text style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>{diff.skippedMatches} ya {diff.skippedMatches === 1 ? 'estaba' : 'estaban'} en el tablero y se {diff.skippedMatches === 1 ? 'deja' : 'dejan'} como {diff.skippedMatches === 1 ? 'está' : 'están'}.</Text>}
-                    {diff.unknownIds.length > 0 && <Note color={C.warn} text={`${diff.unknownIds.length} ${diff.unknownIds.length === 1 ? 'fila tiene' : 'filas tienen'} un id que no está en este proyecto y se ignoran.`} />}
+                    {diff.deletes.some((d) => d.task) && <Note color={C.bad} text={t('Se van a borrar {length} con «sí» en la columna eliminar: {join}.', { length: diff.deletes.filter((d) => d.task).length, join: diff.deletes.filter((d) => d.task).map((d) => `«${d.existing.title}»`).join(', ') })} />}
+                    {diff.deletes.some((d) => !d.task) && <Note color={C.bad} text={t('Se van a borrar {length} {v} en el archivo: {join}{v2}', { length: diff.deletes.filter((d) => !d.task).length, v: diff.deletes.filter((d) => !d.task).length === 1 ? 'tarea que no está' : 'tareas que no están', join: diff.deletes.filter((d) => !d.task).slice(0, 12).map((d) => `«${d.existing.title}»`).join(', '), v2: diff.deletes.filter((d) => !d.task).length > 12 ? '…' : '' })} />}
+                    {diff.skippedMatches > 0 && <Text style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>{t('{skippedMatches} ya {v} en el tablero y se {v2} como {v3}.', { skippedMatches: diff.skippedMatches, v: diff.skippedMatches === 1 ? 'estaba' : 'estaban', v2: diff.skippedMatches === 1 ? 'deja' : 'dejan', v3: diff.skippedMatches === 1 ? 'está' : 'están' })}</Text>}
+                    {diff.unknownIds.length > 0 && <Note color={C.warn} text={t('{length} {v} un id que no está en este proyecto y se ignoran.', { length: diff.unknownIds.length, v: diff.unknownIds.length === 1 ? 'fila tiene' : 'filas tienen' })} />}
                     {diff.updates.map((u) => (
                       <View key={u.existing.id} style={rowBox}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                           <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '700', flex: 1 }} numberOfLines={1}>{u.existing.title}</Text>
-                          {u.by !== 'id' && <Text style={{ color: C.muted, fontSize: 11 }}>{u.by === 'codigo' ? 'por código' : 'por título'}</Text>}
+                          {u.by !== 'id' && <Text style={{ color: C.muted, fontSize: 11 }}>{u.by === 'codigo' ? t('por código') : t('por título')}</Text>}
                         </View>
                         {u.changes.map((c) => (
                           <Text key={c.field} style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>
@@ -305,11 +303,11 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
                     ))}
                     {diff.unchanged > 0 && (
                       <Text style={{ color: C.muted, fontSize: 12, marginTop: 2, marginBottom: 8 }}>
-                        {diff.unchanged} {diff.unchanged === 1 ? 'tarea queda igual' : 'tareas quedan iguales'}.
+                        {diff.unchanged} {diff.unchanged === 1 ? t('tarea queda igual') : t('tareas quedan iguales')}.
                       </Text>
                     )}
                     {diff.creates.length > 0 && (
-                      <Text style={{ color: C.text, fontSize: 12.5, fontWeight: '700', marginTop: 6, marginBottom: 8 }}>Nuevas ({diff.creates.length})</Text>
+                      <Text style={{ color: C.text, fontSize: 12.5, fontWeight: '700', marginTop: 6, marginBottom: 8 }}>{t('Nuevas ({length})', { length: diff.creates.length })}</Text>
                     )}
                   </View>
                 )}
@@ -335,7 +333,7 @@ export function ImportSheet({ visible, project, members, subjectName, onClose, o
               {/* pie */}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderTopWidth: 1, borderTopColor: C.line }}>
                 <Text style={{ color: C.muted, fontSize: 12, flex: 1 }}>
-                  {replaceBoard ? 'Lo que no está en el archivo se borra. Se puede deshacer al terminar.' : isUpdate ? 'Solo cambia lo que viene en el archivo. Nada se borra por faltar. Se puede deshacer.' : 'Se puede deshacer al terminar.'}
+                  {replaceBoard ? t('Lo que no está en el archivo se borra. Se puede deshacer al terminar.') : isUpdate ? t('Solo cambia lo que viene en el archivo. Nada se borra por faltar. Se puede deshacer.') : t('Se puede deshacer al terminar.')}
                 </Text>
                 <Pressable onPress={importar} disabled={busy || total === 0}
                   style={{ backgroundColor: total === 0 ? C.surface2 : C.brand, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -394,9 +392,9 @@ function Inicio({ project, members, subjectName, ctxColumns, paste, setPaste, bu
       style={{ borderWidth: 1.5, borderStyle: 'dashed', borderColor: dragOver ? C.brand : C.line, backgroundColor: dragOver ? C.brand + '12' : C.surface2 + '80', borderRadius: 14, paddingVertical: 22, paddingHorizontal: 16, alignItems: 'center', gap: 6 }}>
       {busy ? <ActivityIndicator color={C.brand} /> : <Ionicons name="cloud-upload-outline" size={28} color={C.brand} />}
       <Text style={{ color: C.text, fontSize: 14.5, fontWeight: '600', textAlign: 'center' }}>
-        {canDrop ? 'Arrastra tu archivo aquí o ' : ''}<Text style={{ color: C.brand }}>{canDrop ? 'elige uno' : 'Elegir archivo'}</Text>
+        {canDrop ? t('Arrastra tu archivo aquí o ') : ''}<Text style={{ color: C.brand }}>{canDrop ? 'elige uno' : t('Elegir archivo')}</Text>
       </Text>
-      <Text style={{ color: C.muted, fontSize: 12 }}>.csv (separado por , o ;) o .json</Text>
+      <Text style={{ color: C.muted, fontSize: 12 }}>{t('.csv (separado por , o ;) o .json')}</Text>
     </Pressable>
   );
 
@@ -415,26 +413,26 @@ function Inicio({ project, members, subjectName, ctxColumns, paste, setPaste, bu
         : zona}
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <Text style={{ color: C.muted, fontSize: 12.5 }}>Plantillas:</Text>
+        <Text style={{ color: C.muted, fontSize: 12.5 }}>{t('Plantillas:')}</Text>
         <Pressable onPress={() => saveFile('plantilla_tareas.csv', encodeUtf8(TEMPLATE_CSV, true), 'text/csv')} hitSlop={6}>
-          <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>Descargar CSV</Text>
+          <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>{t('Descargar CSV')}</Text>
         </Pressable>
         <Text style={{ color: C.muted }}>·</Text>
         <Pressable onPress={() => saveFile('plantilla_tareas.json', TEMPLATE_JSON, 'application/json')} hitSlop={6}>
-          <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>Descargar JSON</Text>
+          <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>{t('Descargar JSON')}</Text>
         </Pressable>
       </View>
 
       {/* pegar */}
       <View>
         <TextInput value={paste} onChangeText={setPaste} multiline
-          placeholder="…o pega aquí el JSON que te dio la IA (o el contenido de un CSV)"
+          placeholder={t('…o pega aquí el JSON que te dio la IA (o el contenido de un CSV)')}
           placeholderTextColor={C.muted}
           style={{ backgroundColor: C.surface2, borderColor: C.line, borderWidth: 1, borderRadius: 11, color: C.text, padding: 12, fontSize: 13, minHeight: 74, maxHeight: 160, textAlignVertical: 'top', fontFamily: isWeb ? 'ui-monospace, Menlo, monospace' : undefined }} />
         {paste.trim().length > 0 && (
           <Pressable onPress={onPasteSubmit} disabled={busy}
             style={{ alignSelf: 'flex-end', marginTop: 8, backgroundColor: C.brand, borderRadius: 10, paddingVertical: 9, paddingHorizontal: 14 }}>
-            <Text style={{ color: C.onBrand, fontWeight: '700', fontSize: 13 }}>Revisar texto pegado</Text>
+            <Text style={{ color: C.onBrand, fontWeight: '700', fontSize: 13 }}>{t('Revisar texto pegado')}</Text>
           </Pressable>
         )}
       </View>
@@ -443,31 +441,30 @@ function Inicio({ project, members, subjectName, ctxColumns, paste, setPaste, bu
       <View style={{ borderRadius: 14, borderWidth: 1, borderColor: C.brand + '55', backgroundColor: C.brand + '12', padding: 16, gap: 11 }}>
         <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
           <View style={{ flex: 1, minWidth: 220, gap: 5 }}>
-            <Text style={{ color: C.text, fontSize: 15.5, fontWeight: '700' }}>Planéalo con IA</Text>
+            <Text style={{ color: C.text, fontSize: 15.5, fontWeight: '700' }}>{t('Planéalo con IA')}</Text>
             <Text style={{ color: C.muted, fontSize: 12.5, lineHeight: 18 }}>
-              Copia el prompt, pégalo en tu IA junto con el enunciado del proyecto y pega aquí arriba el JSON que te devuelva.
-            </Text>
+              {t('Copia el prompt, pégalo en tu IA junto con el enunciado del proyecto y pega aquí arriba el JSON que te devuelva.')}</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 3 }}>
               <MiniChip text={`${editores} ${editores === 1 ? 'integrante' : 'integrantes'}`} />
               {subjectName ? <MiniChip text={subjectName} /> : null}
               <MiniChip text={`${ctxColumns.length} columnas`} />
-              {deadline ? <MiniChip text={`Entrega ${formatHuman(deadline)}`} /> : null}
+              {deadline ? <MiniChip text={t('Entrega {deadline}', { deadline: formatHuman(deadline) })} /> : null}
             </View>
           </View>
           <Pressable onPress={copiar}
             style={{ backgroundColor: copiado ? C.good : C.brand, borderRadius: 12, height: 44, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Ionicons name={copiado ? 'checkmark' : isWeb ? 'copy-outline' : 'share-outline'} size={17} color="#0f1115" />
-            <Text style={{ color: C.onBrand, fontWeight: '700' }}>{copiado ? 'Prompt copiado' : isWeb ? 'Copiar prompt para IA' : 'Compartir prompt para IA'}</Text>
+            <Text style={{ color: C.onBrand, fontWeight: '700' }}>{copiado ? t('Prompt copiado') : isWeb ? t('Copiar prompt para IA') : t('Compartir prompt para IA')}</Text>
           </Pressable>
         </View>
 
         <TextInput value={entregaFinal} onChangeText={setEntregaFinal}
-          placeholder="Entrega final del proyecto (opcional), ej. 30/10/2026 6:00 pm"
+          placeholder={t('Entrega final del proyecto (opcional), ej. 30/10/2026 6:00 pm')}
           placeholderTextColor={C.muted}
           style={{ backgroundColor: C.surface, borderColor: entregaFinal && !deadline ? C.bad : C.line, borderWidth: 1, borderRadius: 10, color: C.text, paddingVertical: 9, paddingHorizontal: 11, fontSize: 13 }} />
 
         <Pressable onPress={() => setVerPrompt((v) => !v)} hitSlop={6} style={{ alignSelf: 'flex-start' }}>
-          <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '600' }}>{verPrompt ? 'Ocultar prompt' : 'Ver prompt'}</Text>
+          <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '600' }}>{verPrompt ? t('Ocultar prompt') : t('Ver prompt')}</Text>
         </Pressable>
         {verPrompt && (
           <ScrollView style={{ maxHeight: 200, backgroundColor: C.bg, borderRadius: 10, borderWidth: 1, borderColor: C.line }} contentContainerStyle={{ padding: 12 }}>
@@ -477,8 +474,7 @@ function Inicio({ project, members, subjectName, ctxColumns, paste, setPaste, bu
       </View>
 
       <Text style={{ color: C.muted, fontSize: 11.5, lineHeight: 17 }}>
-        ¿Quieres cambiar muchas tareas que ya existen? Usa «Exportar», edita el archivo y súbelo aquí: se actualizan en vez de duplicarse.
-      </Text>
+        {t('¿Quieres cambiar muchas tareas que ya existen? Usa «Exportar», edita el archivo y súbelo aquí: se actualizan en vez de duplicarse.')}</Text>
     </ScrollView>
   );
 }
@@ -507,17 +503,11 @@ function TaskRow({ task, issues, colLabel, who, duplicate, dupPolicy, editing, o
         <Ionicons name={icon as any} size={18} color={color} style={{ marginTop: 1 }} />
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text numberOfLines={2} style={{ color: C.text, fontSize: 13.5, fontWeight: '600' }}>
-            {task.title ?? <Text style={{ color: C.muted, fontStyle: 'italic' }}>Sin título</Text>}
+            {task.title ?? <Text style={{ color: C.muted, fontStyle: 'italic' }}>{t('Sin título')}</Text>}
           </Text>
-          <Text style={{ color: C.muted, fontSize: 11.5, marginTop: 3 }}>
-            Fila {task.row} · {colLabel} · {who}
-            {task.due_at ? ` · ${formatHuman(task.due_at)}` : ''}
-            {task.checklist?.length ? ` · ${task.checklist.length} ítems` : ''}
-          </Text>
+          <Text style={{ color: C.muted, fontSize: 11.5, marginTop: 3 }}>{t('Fila {row} · {colLabel} · {who}{v}{v2}', { row: task.row, colLabel, who, v: task.due_at ? ` · ${formatHuman(task.due_at)}` : '', v2: task.checklist?.length ? ` · ${task.checklist.length} ítems` : '' })}</Text>
           {duplicate && (
-            <Text style={{ color: C.warn, fontSize: 11.5, marginTop: 3 }}>
-              Ya existe en el proyecto · {dupPolicy === 'omitir' ? 'se omitirá' : dupPolicy === 'actualizar' ? 'se actualizará' : 'se creará otra'}
-            </Text>
+            <Text style={{ color: C.warn, fontSize: 11.5, marginTop: 3 }}>{t('Ya existe en el proyecto · {v}', { v: dupPolicy === 'omitir' ? 'se omitirá' : dupPolicy === 'actualizar' ? 'se actualizará' : 'se creará otra' })}</Text>
           )}
           {issues.map((i, k) => (
             <Text key={k} style={{ color: i.level === 'error' ? C.bad : C.warn, fontSize: 11.5, marginTop: 3 }}>
@@ -526,10 +516,10 @@ function TaskRow({ task, issues, colLabel, who, duplicate, dupPolicy, editing, o
           ))}
         </View>
         <View style={{ flexDirection: 'row', gap: 4 }}>
-          <Pressable onPress={onEdit} hitSlop={6} accessibilityLabel="Corregir fila" style={{ padding: 4 }}>
+          <Pressable onPress={onEdit} hitSlop={6} accessibilityLabel={t('Corregir fila')} style={{ padding: 4 }}>
             <Ionicons name={editing ? 'chevron-up' : 'create-outline'} size={17} color={C.muted} />
           </Pressable>
-          <Pressable onPress={onToggleSkip} hitSlop={6} accessibilityLabel={task.skip ? 'Incluir fila' : 'Omitir fila'} style={{ padding: 4 }}>
+          <Pressable onPress={onToggleSkip} hitSlop={6} accessibilityLabel={task.skip ? t('Incluir fila') : t('Omitir fila')} style={{ padding: 4 }}>
             <Ionicons name={task.skip ? 'add-circle-outline' : 'remove-circle-outline'} size={17} color={C.muted} />
           </Pressable>
         </View>
@@ -542,7 +532,7 @@ function TaskRow({ task, issues, colLabel, who, duplicate, dupPolicy, editing, o
               <Text style={{ color: C.muted, fontSize: 12, width: 92 }}>{FIELD_LABELS[f]}</Text>
               <TextInput defaultValue={cell(f)} onEndEditing={(e) => setCell(f, e.nativeEvent.text)}
                 onBlur={(e: any) => { const v = e?.nativeEvent?.text ?? e?.target?.value; if (typeof v === 'string') setCell(f, v); }}
-                placeholder={f === 'start' || f === 'due' ? '15/10/2026 2:30 pm' : f === 'assignee' ? 'correo o nombre' : ''}
+                placeholder={f === 'start' || f === 'due' ? '15/10/2026 2:30 pm' : f === 'assignee' ? t('correo o nombre') : ''}
                 placeholderTextColor={C.muted}
                 style={{ flex: 1, backgroundColor: C.surface, borderColor: C.line, borderWidth: 1, borderRadius: 9, color: C.text, paddingVertical: 7, paddingHorizontal: 10, fontSize: 13 }} />
             </View>
@@ -562,8 +552,8 @@ function MappingEditor({ mapping, onChange }: { mapping: ColumnMapping; onChange
   const free = ASSIGNABLE.filter((f) => !used.has(f));
   return (
     <View style={{ borderWidth: 1, borderColor: C.line, borderRadius: 12, padding: 12, marginBottom: 12 }}>
-      <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>Columnas que no reconocí</Text>
-      <Text style={{ color: C.muted, fontSize: 12, marginTop: 3, marginBottom: 6 }}>Se ignoran, a menos que les digas qué son.</Text>
+      <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{t('Columnas que no reconocí')}</Text>
+      <Text style={{ color: C.muted, fontSize: 12, marginTop: 3, marginBottom: 6 }}>{t('Se ignoran, a menos que les digas qué son.')}</Text>
       {unmapped.map((h) => (
         <View key={h} style={{ marginTop: 6 }}>
           <Text style={{ color: C.text, fontSize: 12.5, fontWeight: '600', marginBottom: 5 }}>«{h}»</Text>

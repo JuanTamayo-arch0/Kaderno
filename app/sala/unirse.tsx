@@ -6,6 +6,7 @@ import { joinRoom } from '../../lib/roomsDb';
 import { enterRoom } from '../../lib/rooms';
 import { normalizeCode } from '../../lib/roomsLogic';
 import { Screen, EmptyState, Skeleton } from '../../components/ds';
+import { t } from '../../lib/i18n';
 
 // Enlace de invitación: /sala/unirse?codigo=KD7X4P → entra y abre la sala.
 // Sin sesión: se guarda el código, se pide entrar y luego se termina de unir
@@ -27,20 +28,20 @@ function Unirse() {
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => {
     const code = normalizeCode(String(codigo ?? ''));
-    if (!code) { setErr('El enlace no tiene un código válido.'); return; }
+    if (!code) { setErr(t('El enlace no tiene un código válido.')); return; }
     joinRoom(code)
       .then(async (r) => {
-        if (!r) { setErr('No encontramos una sala con ese código. Puede que lo hayan cambiado.'); return; }
+        if (!r) { setErr(t('No encontramos una sala con ese código. Puede que lo hayan cambiado.')); return; }
         void enterRoom({ id: r.id, name: r.name });
         router.replace(`/sala/${r.id}` as any);
       })
       .catch((e) => setErr(String(e.message ?? e)));
   }, [codigo, router]);
   return (
-    <Screen title="Unirse a la sala" back="/enfoque">
+    <Screen title={t('Unirse a la sala')} back="/enfoque">
       {err ? (
-        <EmptyState icon="people-outline" title="No pudimos entrar" text={err}
-          action={{ label: 'Ir a Enfoque', onPress: () => router.replace('/enfoque' as any) }} />
+        <EmptyState icon="people-outline" title={t('No pudimos entrar')} text={err}
+          action={{ label: t('Ir a Enfoque'), onPress: () => router.replace('/enfoque' as any) }} />
       ) : <Skeleton height={120} />}
     </Screen>
   );

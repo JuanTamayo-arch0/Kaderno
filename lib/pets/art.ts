@@ -1,4 +1,5 @@
-// ============================================================
+
+import { t } from '../i18n';// ============================================================
 //  Arte de las mascotas de Kaderno: pixel art.
 //
 //  Cada mascota es una cuadrícula de 32 x 32 píxeles. Se dibuja solo la mitad
@@ -82,7 +83,7 @@ const CHEEK = '#ff8fa3';
 
 export const SPECIES: Record<Species, SpeciesDef> = {
   pinguino: {
-    name: 'Pingüino',
+    name: t('Pingüino'),
     coin: { id: 'pescados', one: 'pescado', many: 'pescados' },
     palette: { o: PET_INK, b: '#2f3f60', h: '#4b6190', d: '#222e47', w: '#f6f2ea', s: '#d8d1c3', y: '#f39c34', Y: '#c4761f' },
     ink: PET_INK,
@@ -137,7 +138,7 @@ export const SPECIES: Record<Species, SpeciesDef> = {
     hand: { x: 24, y: 21 },
   },
   gato: {
-    name: 'Gato',
+    name: t('Gato'),
     coin: { id: 'ovillos', one: 'ovillo', many: 'ovillos' },
     palette: { o: PET_INK, b: '#f2a65a', h: '#f9c991', d: '#d9823c', w: '#fbe5cc', e: '#f4a9a0', n: '#e86f86' },
     ink: PET_INK,
@@ -206,7 +207,7 @@ export const SPECIES: Record<Species, SpeciesDef> = {
     hand: { x: 24, y: 22 },
   },
   perro: {
-    name: 'Perro',
+    name: t('Perro'),
     coin: { id: 'huesos', one: 'hueso', many: 'huesos' },
     palette: { o: PET_INK, b: '#dba468', h: '#ecc293', d: '#b97a45', w: '#f7e6ca', e: '#9b6337', E: '#7d4c28', n: '#2e2018', t: '#f2788d' },
     ink: PET_INK,
@@ -272,7 +273,7 @@ export const SPECIES: Record<Species, SpeciesDef> = {
     hand: { x: 24, y: 23 },
   },
   loro: {
-    name: 'Loro',
+    name: t('Loro'),
     coin: { id: 'semillas', one: 'semilla', many: 'semillas' },
     palette: { o: PET_INK, b: '#3fbf7f', h: '#79dca6', d: '#2c9563', y: '#f6d45a', Y: '#e0b53a', w: WHITE, k: '#f2b33d', K: '#c4861a', r: '#e8483b', R: '#f39c34', u: '#3a7bd5', g: '#8a8f99' },
     ink: PET_INK,
@@ -379,7 +380,7 @@ type ItemDef = {
 
 export const ITEMS: Record<ItemId, ItemDef> = {
   gorro: {
-    name: 'Gorro de lana', slot: 'cabeza', oy: 7,
+    name: t('Gorro de lana'), slot: 'cabeza', oy: 7,
     rows: [
       '......kk......',
       '.....kwwk.....',
@@ -393,7 +394,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     ],
   },
   birrete: {
-    name: 'Birrete de graduación', slot: 'cabeza', oy: 6,
+    name: t('Birrete de graduación'), slot: 'cabeza', oy: 6,
     rows: [
       '.......kkkk.......',
       '....kkknnnnkkk....',
@@ -407,7 +408,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     ],
   },
   audifonos: {
-    name: 'Audífonos', slot: 'cabeza', oy: 2,
+    name: t('Audífonos'), slot: 'cabeza', oy: 2,
     rows: [
       '........kkkkkkkk........',
       '.....kkkaaaaaaaakkk.....',
@@ -423,7 +424,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     ],
   },
   corona: {
-    name: 'Corona', slot: 'cabeza', oy: 7,
+    name: t('Corona'), slot: 'cabeza', oy: 7,
     rows: [
       '.......kk.......',
       '..kk..krrk..kk..',
@@ -437,7 +438,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     ],
   },
   boina: {
-    name: 'Boina de artista', slot: 'cabeza', oy: 5,
+    name: t('Boina de artista'), slot: 'cabeza', oy: 5,
     rows: [
       '.........kk.......',
       '.....kkkkVkkkk....',
@@ -449,7 +450,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     ],
   },
   gafas: {
-    name: 'Gafas de estudio', slot: 'ojos', oy: 2,
+    name: t('Gafas de estudio'), slot: 'ojos', oy: 2,
     rows: [
       '.kkkk......kkkk.',
       'k....kkkkkk....k',
@@ -459,7 +460,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     ],
   },
   gafas_sol: {
-    name: 'Gafas de sol', slot: 'ojos', oy: 2,
+    name: t('Gafas de sol'), slot: 'ojos', oy: 2,
     rows: [
       'kkkkkkkkkkkkkkkk',
       'kNqNNNkkkkNqNNNk',
@@ -469,7 +470,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     ],
   },
   bufanda: {
-    name: 'Bufanda', slot: 'cuello', oy: 0, trail: 3,
+    name: t('Bufanda'), slot: 'cuello', oy: 0, trail: 3,
     rows: [
       '.kkkkkkkkkkkkkkkk.',
       'kuuwuuwuuwuuwuuwuk',
@@ -482,7 +483,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     ],
   },
   corbatin: {
-    name: 'Corbatín', slot: 'cuello', oy: 0,
+    name: t('Corbatín'), slot: 'cuello', oy: 0,
     rows: [
       'kk......kk',
       'krkk..kkrk',
@@ -494,7 +495,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     ],
   },
   collar: {
-    name: 'Collar con placa', slot: 'cuello', oy: 0, trail: 3,
+    name: t('Collar con placa'), slot: 'cuello', oy: 0, trail: 3,
     rows: [
       'kk............kk',
       'krkkkkkkkkkkkkrk',
@@ -507,7 +508,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   },
   // ---------- De temporada ----------
   gorro_navidad: {
-    name: 'Gorro de Navidad', slot: 'cabeza', oy: 7,
+    name: t('Gorro de Navidad'), slot: 'cabeza', oy: 7,
     rows: [
       '.....kkkk..kkk..',
       '....krrrrkkwwwk.',
@@ -521,7 +522,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     ],
   },
   cuernos_reno: {
-    name: 'Cuernos de reno', slot: 'cabeza', oy: 7,
+    name: t('Cuernos de reno'), slot: 'cabeza', oy: 7,
     rows: [
       '.kk..............kk.',
       'kbbk.kk......kk.kbbk',
@@ -535,7 +536,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     ],
   },
   sombrero_bruja: {
-    name: 'Sombrero de bruja', slot: 'cabeza', oy: 10,
+    name: t('Sombrero de bruja'), slot: 'cabeza', oy: 10,
     rows: [
       '..............kk......',
       '.............kvvk.....',
@@ -552,7 +553,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     ],
   },
   sombrero_vueltiao: {
-    name: 'Sombrero vueltiao', slot: 'cabeza', oy: 7,
+    name: t('Sombrero vueltiao'), slot: 'cabeza', oy: 7,
     rows: [
       '........kkkkkkkkkk........',
       '.......kcccccccccck.......',
@@ -566,7 +567,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     ],
   },
   antifaz: {
-    name: 'Antifaz de carnaval', slot: 'ojos', oy: 2,
+    name: t('Antifaz de carnaval'), slot: 'ojos', oy: 2,
     rows: [
       '.gkkkkkkkkkkkkkkkkg.',
       'kvvvvvvvvvvvvvvvvvvk',
@@ -577,7 +578,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     ],
   },
   gafas_corazon: {
-    name: 'Gafas de corazón', slot: 'ojos', oy: 2,
+    name: t('Gafas de corazón'), slot: 'ojos', oy: 2,
     rows: [
       '.kk.kk....kk.kk.',
       'krrkrrk..krrkrrk',
@@ -588,7 +589,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     ],
   },
   luces: {
-    name: 'Luces de Navidad', slot: 'cuello', oy: 0,
+    name: t('Luces de Navidad'), slot: 'cuello', oy: 0,
     rows: [
       'k..................k',
       '.kk..............kk.',
@@ -600,7 +601,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   },
   // ---------- Juego de Estudio (v26) ----------
   lapiz_oreja: {
-    name: 'Lápiz en la oreja', slot: 'cabeza', oy: 2, dx: 7,
+    name: t('Lápiz en la oreja'), slot: 'cabeza', oy: 2, dx: 7,
     rows: [
       '....kk',
       '...kpk',
@@ -611,7 +612,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     ],
   },
   lentes: {
-    name: 'Lentes de lectura', slot: 'ojos', oy: 0,
+    name: t('Lentes de lectura'), slot: 'ojos', oy: 0,
     rows: [
       'A....A....A....A',
       'Aq...AAAAAA...qA',
@@ -619,7 +620,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     ],
   },
   mochila: {
-    name: 'Mochila', slot: 'espalda', oy: 0,
+    name: t('Mochila'), slot: 'espalda', oy: 0,
     rows: [
       'kuk......kuk',
       'kuk......kuk',
@@ -641,7 +642,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     ] },
   },
   lapiz: {
-    name: 'Lápiz', slot: 'mano', oy: 5, ox: 1,
+    name: t('Lápiz'), slot: 'mano', oy: 5, ox: 1,
     rows: [
       '.k.',
       'kck',
@@ -656,7 +657,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   },
   // ---------- Juego de Trabajo (v26) ----------
   corbata: {
-    name: 'Corbata', slot: 'cuello', oy: 0, trail: 3,
+    name: t('Corbata'), slot: 'cuello', oy: 0, trail: 3,
     rows: [
       '.kkkk.',
       '.kuuk.',
@@ -670,7 +671,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     ],
   },
   diadema: {
-    name: 'Audífonos con micrófono', slot: 'cabeza', oy: 2,
+    name: t('Audífonos con micrófono'), slot: 'cabeza', oy: 2,
     rows: [
       '........kkkkkkkk........',
       '......kkAAAAAAAAkk......',
@@ -690,7 +691,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     ],
   },
   carne: {
-    name: 'Carné', slot: 'cuello', oy: 0, trail: 4,
+    name: t('Carné'), slot: 'cuello', oy: 0, trail: 4,
     rows: [
       'r..........r',
       '.r........r.',
@@ -704,7 +705,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     ],
   },
   taza: {
-    name: 'Taza de café', slot: 'mano', oy: 3, ox: 0,
+    name: t('Taza de café'), slot: 'mano', oy: 3, ox: 0,
     rows: [
       '..kkkkk',
       '.kkbbbk',
@@ -715,7 +716,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     ],
   },
   maletin: {
-    name: 'Maletín', slot: 'mano', oy: 0, ox: 2,
+    name: t('Maletín'), slot: 'mano', oy: 0, ox: 2,
     rows: [
       '..kkkk..',
       '..k..k..',
@@ -728,7 +729,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   },
   // ---------- Para lucirse ----------
   capa: {
-    name: 'Capa de héroe', slot: 'espalda', oy: 0,
+    name: t('Capa de héroe'), slot: 'espalda', oy: 0,
     rows: [
       '.kk.',
       'kggk',

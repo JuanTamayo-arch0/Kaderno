@@ -9,6 +9,7 @@ import { calendarLinks, diagnoseCalendar, type CalendarLinks, type Diagnosis } f
 import { buildMyIcs } from '../lib/calendarLocal';
 import { confirm, friendlyError, notify, toast } from '../lib/feedback';
 import { copyText, saveFile } from '../lib/fileIO';
+import { t, trn } from '../lib/i18n';
 
 // ============================================================
 //  Ajustes, Calendario: enlace privado para suscribirse desde Google o
@@ -27,8 +28,8 @@ export function CalendarCard() {
       const t = await getCalendarToken(regen);
       setLinks(calendarLinks(t, SUPABASE_URL, CALENDAR_URL));
       setDiag(null);
-      if (regen) toast('Enlace nuevo creado. El anterior ya no funciona.');
-    } catch (e) { notify('No se pudo crear el enlace', friendlyError(e)); }
+      if (regen) toast(trn('Enlace nuevo creado. El anterior ya no funciona.'));
+    } catch (e) { notify(t('No se pudo crear el enlace'), friendlyError(e)); }
     finally { setBusy(null); }
   }
 
@@ -53,36 +54,34 @@ export function CalendarCard() {
     try {
       const ics = await buildMyIcs();
       await saveFile('kaderno.ics', ics, 'text/calendar');
-      toast('Calendario descargado. Ábrelo para importarlo (no se actualiza solo).');
-    } catch (e) { notify('No se pudo generar el calendario', friendlyError(e)); }
+      toast(t('Calendario descargado. Ábrelo para importarlo (no se actualiza solo).'));
+    } catch (e) { notify(t('No se pudo generar el calendario'), friendlyError(e)); }
     finally { setBusy(null); }
   }
 
-  const open = (url: string) => Linking.openURL(url).catch(() => notify('No se pudo abrir', 'Copia el enlace y pégalo en tu calendario.'));
+  const open = (url: string) => Linking.openURL(url).catch(() => notify(t('No se pudo abrir'), t('Copia el enlace y pégalo en tu calendario.')));
 
   return (
     <Card>
-      <Text style={{ color: C.text, fontSize: 15, fontWeight: '600' }}>Ver tus entregas y clases en Google Calendar o Apple</Text>
+      <Text style={{ color: C.text, fontSize: 15, fontWeight: '600' }}>{t('Ver tus entregas y clases en Google Calendar o Apple')}</Text>
       <Text style={{ color: C.muted, fontSize: 13, marginTop: 4, lineHeight: 19 }}>
-        Kaderno crea un enlace privado que se actualiza solo. Usa los botones de abajo o pega el enlace en Google Calendar
-        (Otros calendarios, Desde URL) o en el iPhone (Ajustes, Calendario, Cuentas, Agregar cuenta, Otra, Agregar calendario suscrito).
-      </Text>
+        {t('Kaderno crea un enlace privado que se actualiza solo. Usa los botones de abajo o pega el enlace en Google Calendar (Otros calendarios, Desde URL) o en el iPhone (Ajustes, Calendario, Cuentas, Agregar cuenta, Otra, Agregar calendario suscrito).')}</Text>
 
       {!links ? (
-        <Button label="Obtener mi enlace" icon="calendar-outline" kind="secondary" size="sm" busy={busy === 'get'} onPress={() => load(false)} style={{ marginTop: 12, alignSelf: 'flex-start' }} />
+        <Button label={t('Obtener mi enlace')} icon="calendar-outline" kind="secondary" size="sm" busy={busy === 'get'} onPress={() => load(false)} style={{ marginTop: 12, alignSelf: 'flex-start' }} />
       ) : (
         <View style={{ marginTop: 12, gap: 10 }}>
           <Text selectable style={{ color: C.text, fontSize: 12.5, backgroundColor: C.surface2, padding: 10, borderRadius: 8, fontFamily: Platform.OS === 'web' ? 'monospace' : undefined }}>{links.https}</Text>
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-            <Button label="Copiar enlace" icon="copy-outline" size="sm" onPress={async () => { if (await copyText(links.https)) toast('Enlace copiado'); }} />
-            <Button label="Google Calendar" icon="logo-google" kind="secondary" size="sm" onPress={() => open(links.google)} />
+            <Button label={t('Copiar enlace')} icon="copy-outline" size="sm" onPress={async () => { if (await copyText(links.https)) toast(t('Enlace copiado')); }} />
+            <Button label={t('Google Calendar')} icon="logo-google" kind="secondary" size="sm" onPress={() => open(links.google)} />
             <Button label="iPhone o Mac" icon="logo-apple" kind="secondary" size="sm" onPress={() => open(links.webcal)} />
           </View>
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-            <Button label="Probar enlace" icon="pulse-outline" kind="ghost" size="sm" busy={busy === 'test'} onPress={test} />
-            <Button label="Descargar .ics" icon="download-outline" kind="ghost" size="sm" busy={busy === 'download'} onPress={download} />
-            <Button label="Crear enlace nuevo" icon="refresh" kind="ghost" size="sm" busy={busy === 'regen'}
-              onPress={async () => { if (await confirm('¿Crear un enlace nuevo?', 'El enlace anterior dejará de funcionar en los calendarios donde lo hayas pegado.', 'Crear nuevo')) load(true); }} />
+            <Button label={t('Probar enlace')} icon="pulse-outline" kind="ghost" size="sm" busy={busy === 'test'} onPress={test} />
+            <Button label={t('Descargar .ics')} icon="download-outline" kind="ghost" size="sm" busy={busy === 'download'} onPress={download} />
+            <Button label={t('Crear enlace nuevo')} icon="refresh" kind="ghost" size="sm" busy={busy === 'regen'}
+              onPress={async () => { if (await confirm(t('¿Crear un enlace nuevo?'), t('El enlace anterior dejará de funcionar en los calendarios donde lo hayas pegado.'), t('Crear nuevo'))) load(true); }} />
           </View>
 
           {busy === 'test' && !diag && <ActivityIndicator color={C.brand} />}
@@ -96,9 +95,7 @@ export function CalendarCard() {
             </View>
           )}
           <Text style={{ color: C.muted, fontSize: 12, lineHeight: 17 }}>
-            Si el iPhone dice "No se puede conectar mediante SSL" o Google no lo agrega, toca Probar enlace: casi nunca es el
-            certificado, y aquí te dice qué falta. "Descargar .ics" sirve mientras tanto, pero es una copia de hoy que no se actualiza.
-          </Text>
+            {t('Si el iPhone dice "No se puede conectar mediante SSL" o Google no lo agrega, toca Probar enlace: casi nunca es el certificado, y aquí te dice qué falta. "Descargar .ics" sirve mientras tanto, pero es una copia de hoy que no se actualiza.')}</Text>
         </View>
       )}
     </Card>

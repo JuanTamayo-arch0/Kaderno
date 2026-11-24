@@ -13,6 +13,7 @@ import { toast, notify, friendlyError } from '../../lib/feedback';
 import { dataChanged } from '../../lib/uiBus';
 import { refreshNavCounts } from '../../lib/navCounts';
 import { lastChange } from '../../lib/examReviewDb';
+import { t } from '../../lib/i18n';
 
 // ============================================================
 //  "¿Armo tu plan de repaso para el Parcial 3?" (v20, sección G).
@@ -31,7 +32,7 @@ export async function markExamPlanAsked(id: string): Promise<void> {
 const ICON: Record<SessionKind, React.ComponentProps<typeof Ionicons>['name']> = {
   prep: 'reader-outline', mix: 'shuffle-outline', sim: 'clipboard-outline', light: 'leaf-outline',
 };
-const DAY = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const DAY = [t('Dom'), t('Lun'), t('Mar'), t('Mié'), t('Jue'), t('Vie'), t('Sáb')];
 
 export function ExamPlanSheet({ exam, onClose }: { exam: Task | null; onClose: () => void }) {
   const [drafts, setDrafts] = useState<DraftSession[] | null>(null);
@@ -57,31 +58,31 @@ export function ExamPlanSheet({ exam, onClose }: { exam: Task | null; onClose: (
     try {
       const count = await createPlan(exam, drafts.filter((_, i) => keep[i]));
       markExamPlanAsked(exam.id);
-      toast(`Plan listo: ${count} ${count === 1 ? 'sesión' : 'sesiones'}. Salen en Hoy y en el calendario.`, { tone: 'good' });
+      toast(t('Plan listo: {count} {v}. Salen en Hoy y en el calendario.', { count, v: count === 1 ? 'sesión' : 'sesiones' }), { tone: 'good' });
       dataChanged(); refreshNavCounts(true);
       onClose();
-    } catch (e) { notify('No se pudo crear el plan', friendlyError(e)); }
+    } catch (e) { notify(t('No se pudo crear el plan'), friendlyError(e)); }
     finally { setBusy(false); }
   }
   const later = () => { markExamPlanAsked(exam.id); onClose(); };
 
   return (
-    <Sheet visible={!!exam} onClose={later} title={`¿Armo tu plan de repaso para ${exam.title}?`}
-      subtitle={d > 0 ? `Faltan ${d} ${d === 1 ? 'día' : 'días'}. Sesiones cortas antes del examen, en horarios libres.` : undefined}
+    <Sheet visible={!!exam} onClose={later} title={t('¿Armo tu plan de repaso para {title}?', { title: exam.title })}
+      subtitle={d > 0 ? t('Faltan {d} {v}. Sesiones cortas antes del examen, en horarios libres.', { d, v: d === 1 ? 'día' : 'días' }) : undefined}
       footer={<>
-        <Button label="Ahora no" kind="secondary" onPress={later} style={{ flex: 1 }} />
-        <Button label={`Crear ${n} ${n === 1 ? 'sesión' : 'sesiones'}`} icon="checkmark" onPress={create} busy={busy} disabled={!drafts || n === 0} style={{ flex: 2 }} />
+        <Button label={t('Ahora no')} kind="secondary" onPress={later} style={{ flex: 1 }} />
+        <Button label={t('Crear {n} {v}', { n, v: n === 1 ? 'sesión' : 'sesiones' })} icon="checkmark" onPress={create} busy={busy} disabled={!drafts || n === 0} style={{ flex: 2 }} />
       </>}>
       {prev && (
         <View style={{ flexDirection: 'row', gap: 10, padding: 12, borderRadius: 12, backgroundColor: C.brand2 + '1a', borderWidth: 1, borderColor: C.brand2 + '55' }}>
           <Ionicons name="return-down-forward-outline" size={18} color={C.brand2} />
-          <Text style={{ color: C.text, fontSize: 13.5, flex: 1, lineHeight: 19 }}>Después de {prev.title} dijiste: <Text style={{ fontWeight: '700' }}>"{prev.change}"</Text></Text>
+          <Text style={{ color: C.text, fontSize: 13.5, flex: 1, lineHeight: 19 }}>{t('Después de ')}{prev.title} {t(' dijiste: ')}<Text style={{ fontWeight: '700' }}>"{prev.change}"</Text></Text>
         </View>
       )}
       {!drafts ? (
         <View style={{ padding: 24, alignItems: 'center' }}><ActivityIndicator color={C.brand} /></View>
       ) : drafts.length === 0 ? (
-        <Text style={{ color: C.muted, fontSize: 13.5 }}>El examen es hoy o ya pasó: no hay sesiones que armar.</Text>
+        <Text style={{ color: C.muted, fontSize: 13.5 }}>{t('El examen es hoy o ya pasó: no hay sesiones que armar.')}</Text>
       ) : drafts.map((s, i) => (
         <Pressable key={i} onPress={() => setKeep((k) => k.map((v, j) => (j === i ? !v : v)))} accessibilityRole="checkbox" accessibilityState={{ checked: keep[i] }}
           accessibilityLabel={`${KIND_TEXT[s.kind].long}, ${DAY[s.day.getDay()]} ${s.day.getDate()}`}
@@ -90,10 +91,8 @@ export function ExamPlanSheet({ exam, onClose }: { exam: Task | null; onClose: (
             <Ionicons name={ICON[s.kind]} size={18} color={C.brand} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: C.text, fontSize: 14, fontWeight: '700' }}>{s.title.split(' · ')[0] === 'Simulacro rápido' ? 'Simulacro rápido' : KIND_TEXT[s.kind].long}</Text>
-            <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>
-              {DAY[s.day.getDay()]} {s.day.getDate()} · {s.at ? timeLabel(s.at) : 'sin hueco libre, a cualquier hora'} · {s.minutes} min
-            </Text>
+            <Text style={{ color: C.text, fontSize: 14, fontWeight: '700' }}>{s.title.split(' · ')[0] === 'Simulacro rápido' ? t('Simulacro rápido') : KIND_TEXT[s.kind].long}</Text>
+            <Text style={{ color: C.muted, fontSize: 12.5, marginTop: 2 }}>{t('{v} {getDate} · {v2} · {minutes} min', { v: DAY[s.day.getDay()], getDate: s.day.getDate(), v2: s.at ? timeLabel(s.at) : t('sin hueco libre, a cualquier hora'), minutes: s.minutes })}</Text>
           </View>
           <Ionicons name={keep[i] ? 'checkbox' : 'square-outline'} size={20} color={keep[i] ? C.brand : C.muted} />
         </Pressable>
