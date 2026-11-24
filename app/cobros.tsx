@@ -15,7 +15,7 @@ import { createInvoice, deleteClient, getClients, getInvoices, getProfile, saveC
 import { copyText } from '../lib/fileIO';
 import { confirm, friendlyError, notify, toast } from '../lib/feedback';
 import { useMode } from '../lib/mode';
-import { t } from '../lib/i18n';
+import { t, decSep } from '../lib/i18n';
 
 // ============================================================
 //  Cobrar (v25, fase 1): cuentas de cobro desde el registro de horas, tus
@@ -252,7 +252,7 @@ function NewInvoice({ visible, initial, clients, projects, subjects, missing, on
           <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
             {it.hours != null ? (
               <>
-                <TextInput value={String(it.hours).replace('.', ',')} onChangeText={(t) => upd(i, { hours: num(t) })} keyboardType="decimal-pad" accessibilityLabel={t('Horas')} style={[inp, { width: 80 }]} />
+                <TextInput value={String(it.hours).replace('.', decSep())} onChangeText={(t) => upd(i, { hours: num(t) })} keyboardType="decimal-pad" accessibilityLabel={t('Horas')} style={[inp, { width: 80 }]} />
                 <Text style={{ color: C.muted }}>{t('h ×')}</Text>
                 <TextInput value={it.rate ? String(it.rate) : ''} onChangeText={(t) => upd(i, { rate: num(t) })} keyboardType="number-pad" placeholder={t('Tarifa')} placeholderTextColor={C.muted} accessibilityLabel={t('Tarifa por hora')} style={[inp, { width: 110 }]} />
               </>

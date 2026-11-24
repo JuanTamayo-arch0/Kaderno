@@ -190,3 +190,16 @@ test('v30 idiomas: todo mensaje del servidor que se traduce tiene su inglés', (
   }
   assert.deepEqual(missing, []);
 });
+
+test('v30 idiomas: fechas, decimales, pesos y CSV en el formato del idioma', async () => {
+  const i18n = await import('../lib/i18n');
+  const { cop } = await import('../lib/billing');
+  assert.deepEqual([i18n.decSep(), i18n.csvSep(), i18n.dayLetters().join(''), i18n.dayMonth(23, 'nov')], [',', ';', 'DLMMJVS', '23 nov']);
+  assert.equal(cop(89000), '$89.000');
+  _setLangForTests('en');
+  try {
+    assert.deepEqual([i18n.decSep(), i18n.csvSep(), i18n.dayLetters().join(''), i18n.dayLettersMon().join(''), i18n.dayMonth(23, 'Nov')], ['.', ',', 'SMTWTFS', 'MTWTFSS', 'Nov 23']);
+    assert.equal(cop(89000), '$89,000');
+    assert.deepEqual(i18n.daysShort(), ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
+  } finally { _setLangForTests('es'); }
+});

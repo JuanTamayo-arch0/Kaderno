@@ -124,6 +124,10 @@ const EN_DAYS_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'F
 export function daysShort(): string[] { return [...(current === 'en' ? EN_DAYS : ES_DAYS)]; }
 /** Días completos (0 = domingo): "miércoles" en español, "Wednesday" en inglés. */
 export function daysLong(): string[] { return [...(current === 'en' ? EN_DAYS_LONG : ES_DAYS_LONG)]; }
+/** Separador decimal del idioma: "," en español (4,5), "." en inglés (4.5). */
+export function decSep(): string { return current === 'en' ? '.' : ','; }
+/** Separador de columnas del CSV: ";" para Excel en español, "," en inglés. */
+export function csvSep(): string { return current === 'en' ? ',' : ';'; }
 /** Inicial de cada día (0 = domingo): D L M M J V S en español, S M T W T F S en inglés. */
 export function dayLetters(): string[] { return current === 'en' ? ['S', 'M', 'T', 'W', 'T', 'F', 'S'] : ['D', 'L', 'M', 'M', 'J', 'V', 'S']; }
 /** Lo mismo empezando en lunes. */

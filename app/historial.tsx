@@ -18,7 +18,7 @@ import { confirm, friendlyError, notify, toast } from '../lib/feedback';
 import { Field } from '../components/ds';
 import { Sheet } from '../components/cards/CardForms';
 import { DateField } from '../components/DateTime';
-import { t, trn, locale, monthsShort } from '../lib/i18n';
+import { t, trn, locale, monthsShort, decSep } from '../lib/i18n';
 
 // ============================================================
 //  Historial académico (v26, fase 3): los semestres, el promedio acumulado,
@@ -159,8 +159,8 @@ function Historial() {
         {stat(t('Créditos aprobados'), cum.credits, (n) => String(Math.round(n)))}
         <Card onPress={() => setScaleOpen(true)} accessibilityLabel={t('Cambiar la escala de notas')} style={{ flexGrow: 1, flexBasis: isWide ? 0 : 150, padding: 14 }}>
           <Text style={{ color: C.muted, fontSize: 12.5, fontWeight: '600' }}>{t('Escala de notas')}</Text>
-          <Text style={{ color: C.text, fontSize: 18, fontWeight: '800', marginTop: 4 }}>{t('0 a {replace}', { replace: String(scale.max).replace('.', ',') })}</Text>
-          <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>{t('Aprueba con {replace} · Cambiar', { replace: String(scale.pass).replace('.', ',') })}</Text>
+          <Text style={{ color: C.text, fontSize: 18, fontWeight: '800', marginTop: 4 }}>{t('0 a {replace}', { replace: String(scale.max).replace('.', decSep()) })}</Text>
+          <Text style={{ color: C.brand, fontSize: 12.5, fontWeight: '700' }}>{t('Aprueba con {replace} · Cambiar', { replace: String(scale.pass).replace('.', decSep()) })}</Text>
         </Card>
       </View>
       {terms === null ? <Skeleton height={220} /> : !terms.length ? (

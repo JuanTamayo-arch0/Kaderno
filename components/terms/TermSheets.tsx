@@ -12,7 +12,7 @@ import {
 } from '../../lib/terms';
 import { addPastTerm, closeTerm, saveGradeScale, termActivity } from '../../lib/termsDb';
 import { fmtHours } from '../../lib/day';
-import { t, locale, trn } from '../../lib/i18n';
+import { t, locale, trn, decSep } from '../../lib/i18n';
 
 // ============================================================
 //  Semestres (v26, fase 3): cerrar el semestre, agregar uno pasado y la
@@ -97,7 +97,7 @@ export function CloseTermSheet({ visible, term, subjects, scale, onClose, onClos
     setStep(0); setReflection(''); setNext(nextTermName(term.name)); setAct(null);
     setRows(subjects.map((s) => {
       const g = s.avg == null ? null : Math.round(s.avg * Math.pow(10, scale.decimals)) / Math.pow(10, scale.decimals);
-      return { key: s.id, subjectId: s.id, name: s.name, credits: String(s.credits ?? 0), grade: g == null ? '' : String(g).replace('.', ','), status: statusFor(g, scale), color: s.color };
+      return { key: s.id, subjectId: s.id, name: s.name, credits: String(s.credits ?? 0), grade: g == null ? '' : String(g).replace('.', decSep()), status: statusFor(g, scale), color: s.color };
     }));
     termActivity(subjects.map((s) => s.id), term.starts_on).then((a) => {
       setAct({ focusMinutes: a.focusMinutes, cards: a.cards, bestStreak: a.bestStreak });
@@ -221,7 +221,7 @@ export function ScaleSheet({ visible, scale, onClose }: { visible: boolean; scal
   const [pass, setPass] = useState(String(scale.pass));
   const [dec, setDec] = useState<1 | 2>(scale.decimals);
   const [busy, setBusy] = useState(false);
-  useEffect(() => { if (visible) { setMax(String(scale.max).replace('.', ',')); setPass(String(scale.pass).replace('.', ',')); setDec(scale.decimals); } }, [visible]);
+  useEffect(() => { if (visible) { setMax(String(scale.max).replace('.', decSep())); setPass(String(scale.pass).replace('.', decSep())); setDec(scale.decimals); } }, [visible]);
   const m = parseGrade(max), p = parseGrade(pass);
   const err = m == null || m <= 0 || m > 1000 ? t('La nota máxima va entre 1 y 1000.') : p == null || p <= 0 || p > m ? t('La nota para aprobar va entre 0 y la máxima.') : null;
   async function save() {

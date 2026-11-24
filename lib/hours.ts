@@ -1,4 +1,4 @@
-import { t, trn, monthsLong, lang, dayMonth } from './i18n';
+import { t, trn, monthsLong, lang, dayMonth, decSep, csvSep } from './i18n';
 // ============================================================
 import { locale } from './i18n';
 //  Registro de horas (v24, fase 5). Puro, con pruebas: periodos, sumas por
@@ -44,7 +44,7 @@ export function fmtHours(min: number): string {
   return r ? `${h} h ${r} min` : `${h} h`;
 }
 /** "3,33" (para hojas de cálculo en español). */
-export const decHours = (min: number) => (Math.round((min / 60) * 100) / 100).toFixed(2).replace('.', ',');
+export const decHours = (min: number) => (Math.round((min / 60) * 100) / 100).toFixed(2).replace('.', decSep());
 /** Valor en pesos con la tarifa por hora. */
 export const amountOf = (min: number, rate: number | null | undefined) => (rate && rate > 0 ? Math.round((min / 60) * rate) : 0);
 
@@ -96,7 +96,7 @@ export function hoursCsv(list: HourSession[], names: Record<string, Named>, rate
       s.subject_id ? names[s.subject_id]?.name ?? '' : '', s.project_id ? names[s.project_id]?.name ?? '' : '', s.note ?? '',
       s.source === 'manual' ? trn('A mano') : s.source === 'timer' ? t('Cronómetro') : t('Enfoque'), rate || '', rate ? amountOf(s.minutes, rate) : ''];
   });
-  return '﻿' + [head, ...rows].map((r) => r.map(csvCell).join(';')).join('\r\n') + '\r\n';
+  return '﻿' + [head, ...rows].map((r) => r.map(csvCell).join(csvSep())).join('\r\n') + '\r\n';
 }
 
 const esc = (s: string) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

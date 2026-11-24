@@ -2046,7 +2046,7 @@ Si una función se despliega antes que la app nueva, sigue respondiendo en espa�
 
 - Las traducciones están en `lib/i18n/src/*.tsv`: una línea por texto, el español y el inglés en JSON separados por un tabulador. Después de editar, `npx tsx scripts/i18n-build.ts` genera `lib/i18n/en.ts` (no se edita a mano).
 - `npm run i18n` cuenta lo que falta. `npm test` falla si un texto no tiene inglés, si una traducción pierde o inventa `{variables}`, o si queda español sin envolver. El revisor usa el vocabulario de las llaves: una palabra que solo existe en español ("Agregado", "vencidas") en una plantilla `...` o en un `?:` que se muestra se marca.
-- Fechas: `dayMonth(d, mes)`, `daysShort()`, `daysLong()`, `monthsShort()`, `monthsLong()` y `locale()`. No escribas `${d} ${mes}` a mano.
+- Fechas y números: `dayMonth(d, mes)`, `daysShort()`, `daysLong()`, `dayLetters()`, `monthsShort()`, `monthsLong()`, `locale()`, `decSep()` (4,5 o 4.5) y `csvSep()` (; o ,). No escribas `${d} ${mes}` ni `.replace('.', ',')` a mano. Los pesos (`cop`, `pesos`) usan el separador de miles del idioma.
 - Mensajes del servidor: `say(lang, '...')` con su inglés en `supabase/functions/_shared/lang.ts` (una prueba revisa que no falte ninguno). Prompts de IA: `+ answerIn(lang)`.
 - Avisos nuevos en SQL: escríbelos en español y agrega su regla en `kd_notif_en` (`schema_v27.sql`).
 - Para probar en inglés sin cambiar el navegador: `localStorage.setItem('kd-lang', 'en'); location.reload()`.

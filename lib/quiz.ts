@@ -4,7 +4,7 @@
 //  nota en la escala de la materia y armar las tarjetas de los errores.
 // ============================================================
 import type { QuizQuestion } from '../supabase/functions/_shared/quiz';
-import { t } from './i18n';
+import { t, decSep } from './i18n';
 export type { QuizQuestion } from '../supabase/functions/_shared/quiz';
 
 export const NOTES_BUDGET = 12000;
@@ -77,7 +77,7 @@ export function toScale(pct: number, scale: number): number {
 
 /** "3,8 / 5" (o "76 / 100"). */
 export function fmtGrade(v: number, scale: number): string {
-  const n = scale >= 20 ? String(Math.round(v)) : v.toFixed(1).replace('.', ',');
+  const n = scale >= 20 ? String(Math.round(v)) : v.toFixed(1).replace('.', decSep());
   return `${n} / ${scale}`;
 }
 

@@ -7,7 +7,7 @@
 // ============================================================
 import { dueMoment, type DueLike } from './time';
 import { localISO, fmtHours } from './day';
-import { t } from './i18n';
+import { t, decSep } from './i18n';
 
 export const WINDOW_DAYS = 21;
 export const ASK_DAYS = 21;
@@ -78,7 +78,7 @@ export type Verdict = { reached: boolean; pct: number; targetPct: number; headli
 
 const pctOf = (score: number, max: number) => (max > 0 ? Math.max(0, Math.min(100, (score / max) * 100)) : 0);
 const median = (xs: number[]) => { if (!xs.length) return null; const s = [...xs].sort((a, b) => a - b); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
-const fmtGrade = (n: number) => (Math.round(n * 10) / 10).toFixed(1).replace('.', ',');
+const fmtGrade = (n: number) => (Math.round(n * 10) / 10).toFixed(1).replace('.', decSep());
 
 /** Lo que dicen los datos: si alcanzó, y por qué sí o por qué no. */
 export function verdict(score: number, maxScore: number, target: number | null, e: Effort, history: PastResult[] = []): Verdict {

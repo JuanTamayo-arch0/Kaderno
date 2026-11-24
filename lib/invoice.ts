@@ -6,7 +6,7 @@
 //  cada texto lleva al lado su traducción (cuenta de cobro bilingüe).
 // ============================================================
 import type { HourSession, Named, Rates } from './hours';
-import { t, lang, monthsLong } from './i18n';
+import { t, lang, monthsLong, decSep } from './i18n';
 
 export type InvoiceItem = { concept: string; hours?: number | null; rate?: number | null; amount: number };
 export type BillingProfile = {
@@ -141,7 +141,7 @@ ${inv.status === 'anulada' ? `<p class="void">${bi('ANULADA', 'VOID')}</p>` : ''
 <p class="c"><b>${esc(is.full_name)}</b><br/>${esc(DOC[is.doc_type ?? 'CC'] ?? '')} ${esc(is.doc_number)}</p>
 <p style="margin-top:18px">${bi(`La suma de <b>${pesos(inv.total)}</b> (${esc(pesosEnLetras(inv.total))} m/cte), por concepto de:`, `The sum of <b>${pesos(inv.total)}</b> Colombian pesos, for:`, true)}</p>
 <table><thead><tr><th>${bi('Concepto', 'Description', true)}</th>${hasHours ? `<th class="r">${bi('Horas', 'Hours', true)}</th><th class="r">${bi('Tarifa', 'Rate', true)}</th>` : ''}<th class="r">${bi('Valor', 'Amount', true)}</th></tr></thead><tbody>
-${inv.items.map((i) => `<tr><td>${esc(i.concept)}</td>${hasHours ? `<td class="r">${i.hours != null ? String(i.hours).replace('.', ',') : ''}</td><td class="r">${i.rate != null ? pesos(i.rate) : ''}</td>` : ''}<td class="r">${pesos(itemAmount(i))}</td></tr>`).join('\n')}
+${inv.items.map((i) => `<tr><td>${esc(i.concept)}</td>${hasHours ? `<td class="r">${i.hours != null ? String(i.hours).replace('.', decSep()) : ''}</td><td class="r">${i.rate != null ? pesos(i.rate) : ''}</td>` : ''}<td class="r">${pesos(itemAmount(i))}</td></tr>`).join('\n')}
 <tr><td${hasHours ? ' colspan="3"' : ''}><b>Total</b></td><td class="r"><b>${pesos(inv.total)}</b></td></tr>
 </tbody></table>
 ${inv.period_from && inv.period_to ? `<p>${bi(`Periodo: del ${esc(longDate(inv.period_from))} al ${esc(longDate(inv.period_to))}.`, `Period: ${esc(longDateEn(inv.period_from))} to ${esc(longDateEn(inv.period_to))}.`, true)}</p>` : ''}

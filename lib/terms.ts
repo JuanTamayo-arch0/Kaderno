@@ -4,7 +4,7 @@
 //  aquí se calcula igual para mostrarlo antes de cerrar.
 // ============================================================
 import { docFooter } from './brand';
-import { t, trn, monthsLong, lang } from './i18n';
+import { t, trn, monthsLong, lang, decSep } from './i18n';
 
 export type GradeScale = { max: number; pass: number; decimals: 1 | 2 };
 export const DEFAULT_SCALE: GradeScale = { max: 5, pass: 3, decimals: 1 };
@@ -80,7 +80,7 @@ export function cumulative(terms: Pick<Term, 'status' | 'summary'>[], scale: Gra
 
 export function fmtGrade(v: number | null | undefined, scale: Pick<GradeScale, 'decimals'>): string {
   if (v == null || !Number.isFinite(v)) return '–';
-  return v.toFixed(scale.decimals).replace('.', ',');
+  return v.toFixed(scale.decimals).replace('.', decSep());
 }
 /** Lee "4,3" o "4.3". null si está vacío o no es número. */
 export function parseGrade(s: string): number | null {

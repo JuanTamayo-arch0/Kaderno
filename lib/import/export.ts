@@ -4,6 +4,7 @@ import { encodeUtf8 } from './encoding';
 import { EXPORT_HEADERS } from './fields';
 import { checklistToCell, columnLabel } from './values';
 import type { BoardColumnRef, ExistingTask, Member } from './types';
+import { csvSep } from '../i18n';
 
 function memberRef(members: Member[], id: string | null): string {
   if (!id) return '';
@@ -46,7 +47,7 @@ export function tasksToCsv(tasks: ExistingTask[], members: Member[], columns: Bo
       }
     }),
   );
-  return Papa.unparse({ fields: cols.map((c) => c.header), data: rows }, { delimiter: ';', newline: '\r\n', quotes: false });
+  return Papa.unparse({ fields: cols.map((c) => c.header), data: rows }, { delimiter: csvSep(), newline: '\r\n', quotes: false });
 }
 
 export function tasksToCsvBytes(tasks: ExistingTask[], members: Member[], columns: BoardColumnRef[]): Uint8Array {
