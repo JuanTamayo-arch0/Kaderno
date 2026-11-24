@@ -60,6 +60,7 @@ const EN: Record<string, string> = {
   'No encontré ese calendario': "I couldn't find that calendar",
   'Falta imageBase64': 'imageBase64 is missing',
   'ANTHROPIC_API_KEY no configurada': 'ANTHROPIC_API_KEY is not set',
+  'GEMINI_API_KEY no configurada': 'GEMINI_API_KEY is not set',
 };
 
 /** Texto fijo del servidor en el idioma pedido. */

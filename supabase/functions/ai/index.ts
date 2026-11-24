@@ -6,6 +6,7 @@
 //
 //  Desplegar:   npx supabase functions deploy ai
 //  (usa la misma ANTHROPIC_API_KEY que ya configuraste para "ocr")
+//  v31: con AI_PROVIDER=gemini usa Gemini (GEMINI_API_KEY). Ver _shared/llm.ts.
 //
 //  v20: las tarjetas vienen de dos tipos (pregunta y completar), no repiten
 //  las que ya existen y se validan. Con schema_v19 hay tope diario por
@@ -26,6 +27,7 @@ import { limitOf, limitMessage, type LimitKey } from '../_shared/plans.ts';
 import { meetingPrompt, parseMeeting } from '../_shared/meeting.ts';
 import { projectUpdatePrompt, parseProjectUpdate } from '../_shared/projectUpdate.ts';
 import { langOf, answerIn, say } from '../_shared/lang.ts';
+import { complete, providerOf } from '../_shared/llm.ts';
 
 const TASKS: LimitKey[] = ['flashcards', 'quiz', 'recall', 'grade', 'class_summary', 'meeting', 'summary', 'steps'];
 
@@ -48,8 +50,9 @@ Deno.serve(async (req) => {
     // "3 preguntas rápidas" de una nota cuenta como prueba de la nota, no como simulacro.
     const limitKey: LimitKey = task === 'quiz' && body.quick ? 'recall' : TASKS.includes(task) ? task : 'summary';
 
-    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
-    if (!apiKey) return json({ error: say(lang, 'ANTHROPIC_API_KEY no configurada') }, 500);
+    const env = (k: string) => Deno.env.get(k);
+    const keyName = providerOf(env) === 'gemini' ? 'GEMINI_API_KEY' : 'ANTHROPIC_API_KEY';
+    if (!env(keyName)) return json({ error: say(lang, `${keyName} no configurada`) }, 500);
 
     // v22: solo con sesión (antes, el resumen y los pasos no la pedían).
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!,
@@ -88,20 +91,13 @@ Deno.serve(async (req) => {
       : 'Resume estos apuntes en 3 a 5 frases claras, en español, capturando lo esencial. ' +
         'Devuelve solo el resumen, sin encabezados. Apuntes:\n\n' + content;
 
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({
-        model: Deno.env.get('AI_MODEL') ?? Deno.env.get('OCR_MODEL') ?? 'claude-sonnet-5',
-        max_tokens: task === 'quiz' ? 7000 : task === 'grade' || task === 'meeting' ? 3000 : 2500,
-        messages: [{ role: 'user', content: prompt + answerIn(lang) }],
-      }),
+    const res = await complete(env, {
+      kind: task === 'steps' ? 'light' : 'main',
+      maxTokens: task === 'quiz' ? 7000 : task === 'grade' || task === 'meeting' ? 3000 : 2500,
+      messages: [{ role: 'user', content: prompt + answerIn(lang) }],
     });
-
-    if (!res.ok) return json({ error: say(lang, 'Fallo del modelo'), detail: await res.text() }, 502);
-
-    const data = await res.json();
-    const text = (data.content ?? []).map((b: any) => b.text ?? '').join('').trim();
+    if (!res.ok) return json({ error: say(lang, 'Fallo del modelo'), detail: res.detail }, 502);
+    const text = res.text;
 
     if (task === 'project_update') {
       const up = parseProjectUpdate(text);

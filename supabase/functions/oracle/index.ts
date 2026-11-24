@@ -4,6 +4,7 @@
 //  Acciones: ask | index | reindex
 //
 //  Secretos:  ANTHROPIC_API_KEY (respuestas)  y  OPENAI_API_KEY (embeddings)
+//  v31: o GEMINI_API_KEY con AI_PROVIDER=gemini y EMBED_PROVIDER=gemini (ver _shared/llm.ts)
 //  Desplegar: npx supabase functions deploy oracle
 //
 //  Degradación elegante: si no hay OPENAI_API_KEY o embeddings, usa las
@@ -16,6 +17,7 @@
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { langOf, answerIn, say } from '../_shared/lang.ts';
+import { complete, providerOf, embedText, embedModelOf, type Msg } from '../_shared/llm.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { minutesPlain, type MeetingMinutes } from '../_shared/meeting.ts';
 
@@ -28,19 +30,20 @@ const CORS = {
 };
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...CORS, 'content-type': 'application/json' } });
 
-async function embed(text: string): Promise<number[] | null> {
-  const key = Deno.env.get('OPENAI_API_KEY');
-  if (!key) return null;
-  const r = await fetch('https://api.openai.com/v1/embeddings', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
-    body: JSON.stringify({ model: 'text-embedding-3-small', input: text.slice(0, 8000) }),
-  });
-  if (!r.ok) return null;
-  const j = await r.json();
-  return j.data?.[0]?.embedding ?? null;
-}
+// v31: los vectores salen de OpenAI o de Gemini (EMBED_PROVIDER, ver _shared/llm.ts).
+// Cada vector guarda su modelo (schema_v28): al cambiar de proveedor, los viejos no se
+// mezclan con los nuevos; "Preparar mis notas" los vuelve a armar.
+const env = (k: string) => Deno.env.get(k);
+const embed = (text: string) => embedText(env, text);
+const EMBED_MODEL = embedModelOf(env);
 const vecStr = (v: number[]) => `[${v.join(',')}]`;
+
+/** Guarda el vector con su modelo; sin schema_v28 (sin la columna), lo guarda como antes. */
+async function upsertVec(supabase: any, row: Record<string, unknown>) {
+  const r = await supabase.from('note_embeddings').upsert({ ...row, embed_model: EMBED_MODEL }, { onConflict: 'note_id' });
+  if (r.error && /embed_model/.test(r.error.message ?? '')) return supabase.from('note_embeddings').upsert(row, { onConflict: 'note_id' });
+  return r;
+}
 
 const ABILITY: Record<string, string> = {
   explain: 'El usuario quiere que le EXPLIQUES el tema de forma clara, con ejemplos y a un nivel adecuado para estudiar.',
@@ -70,11 +73,8 @@ Deno.serve(async (req) => {
     // ---------- INDEX (una nota) ----------
     if (action === 'index') {
       const vec = await embed(body.content ?? '');
-      if (!vec) return json({ ok: false, reason: 'sin OPENAI_API_KEY' });
-      const { error } = await supabase.from('note_embeddings').upsert(
-        { note_id: body.noteId, user_id: userId, subject_id: body.subjectId ?? null, content: body.content ?? '', embedding: vecStr(vec) },
-        { onConflict: 'note_id' },
-      );
+      if (!vec) return json({ ok: false, reason: 'sin proveedor de vectores (OPENAI_API_KEY o EMBED_PROVIDER=gemini)' });
+      const { error } = await upsertVec(supabase, { note_id: body.noteId, user_id: userId, subject_id: body.subjectId ?? null, content: body.content ?? '', embedding: vecStr(vec) });
       return json({ ok: !error, error: error?.message });
     }
 
@@ -86,10 +86,7 @@ Deno.serve(async (req) => {
         if (!note.content) continue;
         const vec = await embed(note.content);
         if (!vec) break;
-        await supabase.from('note_embeddings').upsert(
-          { note_id: note.id, user_id: userId, subject_id: note.subject_id, content: note.content, embedding: vecStr(vec) },
-          { onConflict: 'note_id' },
-        );
+        await upsertVec(supabase, { note_id: note.id, user_id: userId, subject_id: note.subject_id, content: note.content, embedding: vecStr(vec) });
         n++;
       }
       return json({ ok: true, indexed: n });
@@ -122,9 +119,13 @@ Deno.serve(async (req) => {
       try {
         const qvec = await embed(question);
         if (qvec) {
-          const { data, error } = await supabase.rpc('match_notes', {
-            query_embedding: vecStr(qvec), match_subject: mode === 'subject' ? subjectId : null, match_count: 6,
+          // Solo vectores del mismo modelo (schema_v28). Sin la migración, la búsqueda de antes.
+          let { data, error } = await supabase.rpc('match_notes_model', {
+            query_embedding: vecStr(qvec), match_subject: mode === 'subject' ? subjectId : null, match_count: 6, match_model: EMBED_MODEL,
           });
+          if (error && EMBED_MODEL === 'text-embedding-3-small') {
+            ({ data, error } = await supabase.rpc('match_notes', { query_embedding: vecStr(qvec), match_subject: mode === 'subject' ? subjectId : null, match_count: 6 }));
+          }
           if (!error && data && data.length) {
             contextNotes = data.map((d: any) => ({ note_id: d.note_id, title: d.title ?? 'Nota', content: d.content ?? '' }));
             usedSemantic = true;
@@ -154,8 +155,8 @@ Deno.serve(async (req) => {
       } catch (_) { /* sin actas */ }
     }
 
-    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
-    if (!apiKey) return json({ error: say(lang, 'ANTHROPIC_API_KEY no configurada') }, 500);
+    const keyName = providerOf(env) === 'gemini' ? 'GEMINI_API_KEY' : 'ANTHROPIC_API_KEY';
+    if (!env(keyName)) return json({ error: say(lang, `${keyName} no configurada`) }, 500);
 
     const contextBlock = contextNotes.length
       ? contextNotes.map((n, i) => `[Nota ${i + 1}: "${n.title}"]\n${n.content}`).join('\n\n---\n\n')
@@ -182,19 +183,14 @@ Deno.serve(async (req) => {
       (mode === 'meetings' ? 'Las notas de abajo son actas de reuniones de trabajo: cuando respondas, di de qué reunión y fecha sale cada cosa y quién quedó a cargo. ' : '') +
       (lang === 'en' ? answerIn(lang).trim() + '\n\n' : '') + '=== NOTAS DEL ESTUDIANTE ===\n' + contextBlock;
 
-    const messages = [
-      ...(Array.isArray(history) ? history.slice(-8).map((m: any) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: String(m.content) })) : []),
-      { role: 'user', content: question },
+    const messages: Msg[] = [
+      ...(Array.isArray(history) ? history.slice(-8).map((m: any): Msg => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: String(m.content) })) : []),
+      { role: 'user', content: String(question) },
     ];
 
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: Deno.env.get('OCR_MODEL') ?? 'claude-sonnet-5', max_tokens: 1500, system, messages }),
-    });
-    if (!res.ok) return json({ error: say(lang, 'Fallo del modelo'), detail: await res.text() }, 502);
-    const data = await res.json();
-    const answer = (data.content ?? []).map((b: any) => b.text ?? '').join('').trim();
+    const res = await complete(env, { system, messages, maxTokens: 1500 });
+    if (!res.ok) return json({ error: say(lang, 'Fallo del modelo'), detail: res.detail }, 502);
+    const answer = res.text;
 
     return json({ answer, usedSemantic, sources: contextNotes.map((n) => ({ note_id: n.note_id, title: n.title })) });
   } catch (e) {
